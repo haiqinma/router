@@ -13,3 +13,8 @@ cmd.md
 /router
 temp
 .DS_Store
+.gocache
+.gomodcache
+
+.gopath/
+.tiktoken_cache/
