@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/yeying-community/router/common/config"
@@ -56,6 +57,19 @@ func Init() {
 	if os.Getenv("WALLET_AUTO_REGISTER_ENABLED") != "" {
 		config.WalletAutoRegisterEnabled = os.Getenv("WALLET_AUTO_REGISTER_ENABLED") == "true"
 	}
+	if envSecret := os.Getenv("WALLET_JWT_SECRET"); envSecret != "" {
+		config.WalletJWTSecret = envSecret
+	}
+	if envExpire := os.Getenv("WALLET_JWT_EXPIRE_HOURS"); envExpire != "" {
+		if v, err := strconv.Atoi(envExpire); err == nil && v > 0 {
+			config.WalletJWTExpireHours = v
+		}
+	}
+	if envTTL := os.Getenv("WALLET_NONCE_TTL_MINUTES"); envTTL != "" {
+		if v, err := strconv.Atoi(envTTL); err == nil && v > 0 {
+			config.WalletNonceTTLMinutes = v
+		}
+	}
 	if envRoot := os.Getenv("WALLET_ROOT_ALLOWED_ADDRESSES"); envRoot != "" {
 		parts := strings.Split(envRoot, ",")
 		config.WalletRootAllowedAddresses = make([]string, 0, len(parts))
@@ -68,6 +82,11 @@ func Init() {
 	}
 	if os.Getenv("SQLITE_PATH") != "" {
 		SQLitePath = os.Getenv("SQLITE_PATH")
+	}
+
+	// Fallbacks
+	if config.WalletJWTSecret == "" {
+		config.WalletJWTSecret = config.SessionSecret
 	}
 	if *LogDir != "" {
 		var err error

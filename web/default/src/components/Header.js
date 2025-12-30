@@ -101,6 +101,8 @@ const Header = () => {
     showSuccess('注销成功!');
     userDispatch({ type: 'logout' });
     localStorage.removeItem('user');
+    localStorage.removeItem('wallet_token');
+    localStorage.removeItem('wallet_token_expires_at');
     navigate('/login');
   }
 

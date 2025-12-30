@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/yeying-community/router/common/config"
 	"github.com/yeying-community/router/common/random"
 )
 
@@ -39,10 +40,17 @@ func GenerateWalletNonce(address, messagePrefix, chainId string) (nonce string, 
 	walletNonceMap[addr] = walletNonceValue{
 		Nonce:    nonce,
 		Message:  message,
-		ExpireAt: now.Add(walletNonceTTL),
+		ExpireAt: now.Add(getWalletNonceTTL()),
 	}
 	cleanupWalletNonces()
 	return
+}
+
+func getWalletNonceTTL() time.Duration {
+	if config.WalletNonceTTLMinutes <= 0 {
+		return walletNonceTTL
+	}
+	return time.Duration(config.WalletNonceTTLMinutes) * time.Minute
 }
 
 // GetWalletNonce returns stored nonce entry if valid
