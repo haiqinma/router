@@ -88,6 +88,9 @@ var WalletLoginEnabled = false
 var WalletAllowedChains = []string{"1", "11155111", "5432"} // mainnet, sepolia, yeying
 var WalletAutoRegisterEnabled = false
 var WalletRootAllowedAddresses []string
+var WalletJWTSecret = ""
+var WalletJWTExpireHours = 72
+var WalletNonceTTLMinutes = 10
 
 var MessagePusherAddress = ""
 var MessagePusherToken = ""

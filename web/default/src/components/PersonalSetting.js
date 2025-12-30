@@ -106,13 +106,25 @@ const PersonalSetting = () => {
         method: 'eth_chainId',
       });
       const chain_id = parseInt(chainHex, 16).toString();
-      const nonceResp = await API.get(
-        `/api/oauth/wallet/nonce?address=${address}&chain_id=${chain_id}`
+      const nonceResp = await API.post(
+        '/api/v1/public/common/auth/challenge',
+        {
+          address,
+          chain_id,
+        }
       );
-      const { success: nonceOk, message: nonceMsg, data: nonceData } =
-        nonceResp.data;
-      if (!nonceOk) {
-        showError(nonceMsg);
+      const noncePayload =
+        nonceResp?.data?.data || nonceResp?.data?.body || nonceResp?.data;
+      if (nonceResp?.data?.success === false) {
+        showError(nonceResp.data?.message || '获取挑战失败');
+        return;
+      }
+      const nonceData = {
+        nonce: noncePayload?.nonce,
+        message: noncePayload?.message || noncePayload?.result,
+      };
+      if (!nonceData.nonce || !nonceData.message) {
+        showError('服务器返回的挑战数据异常');
         return;
       }
       const signature = await window.ethereum.request({
@@ -194,6 +206,8 @@ const PersonalSetting = () => {
       await API.get('/api/user/logout');
       userDispatch({ type: 'logout' });
       localStorage.removeItem('user');
+      localStorage.removeItem('wallet_token');
+      localStorage.removeItem('wallet_token_expires_at');
       navigate('/login');
     } else {
       showError(message);

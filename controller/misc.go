@@ -46,6 +46,8 @@ func GetStatus(c *gin.Context) {
 			"oidc_userinfo_endpoint":      config.OidcUserinfoEndpoint,
 			"wallet_login":                config.WalletLoginEnabled,
 			"wallet_allowed_chains":       config.WalletAllowedChains,
+			"wallet_jwt_enabled":          config.WalletJWTSecret != "",
+			"wallet_jwt_expire_hours":     config.WalletJWTExpireHours,
 		},
 	})
 	return

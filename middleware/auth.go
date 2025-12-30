@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"github.com/yeying-community/router/common"
 	"github.com/yeying-community/router/common/blacklist"
 	"github.com/yeying-community/router/common/ctxkey"
 	"github.com/yeying-community/router/common/network"
@@ -21,8 +22,8 @@ func authHelper(c *gin.Context, minRole int) {
 	status := session.Get("status")
 	if username == nil {
 		// Check access token
-		accessToken := c.Request.Header.Get("Authorization")
-		if accessToken == "" {
+		authHeader := strings.TrimSpace(c.Request.Header.Get("Authorization"))
+		if authHeader == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"success": false,
 				"message": "无权进行此操作，未登录且未提供 access token",
@@ -30,20 +31,42 @@ func authHelper(c *gin.Context, minRole int) {
 			c.Abort()
 			return
 		}
-		user := model.ValidateAccessToken(accessToken)
-		if user != nil && user.Username != "" {
-			// Token is valid
-			username = user.Username
-			role = user.Role
-			id = user.Id
-			status = user.Status
-		} else {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": "无权进行此操作，access token 无效",
-			})
-			c.Abort()
-			return
+		bearer := authHeader
+		if strings.HasPrefix(strings.ToLower(authHeader), "bearer ") {
+			bearer = strings.TrimSpace(authHeader[7:])
+		}
+
+		// Try wallet JWT first
+		if bearer != "" {
+			if claims, err := common.VerifyWalletJWT(bearer); err == nil {
+				user := model.User{Id: claims.UserID}
+				if err := user.FillUserById(); err == nil {
+					if strings.ToLower(user.WalletAddress) == strings.ToLower(claims.WalletAddress) && user.Status == model.UserStatusEnabled && !blacklist.IsUserBanned(user.Id) {
+						username = user.Username
+						role = user.Role
+						id = user.Id
+						status = user.Status
+					}
+				}
+			}
+		}
+
+		if username == nil {
+			user := model.ValidateAccessToken(bearer)
+			if user != nil && user.Username != "" {
+				// Token is valid
+				username = user.Username
+				role = user.Role
+				id = user.Id
+				status = user.Status
+			} else {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "无权进行此操作，access token 无效",
+				})
+				c.Abort()
+				return
+			}
 		}
 	}
 	if status.(int) == model.UserStatusDisabled || blacklist.IsUserBanned(id.(int)) {
