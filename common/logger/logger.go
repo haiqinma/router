@@ -29,6 +29,10 @@ const (
 )
 
 var setupLogOnce sync.Once
+var setupLoginLogOnce sync.Once
+var loginWriter io.Writer
+var setupApiLogOnce sync.Once
+var apiWriter io.Writer
 
 func SetupLogger() {
 	setupLogOnce.Do(func() {
@@ -46,6 +50,41 @@ func SetupLogger() {
 			gin.DefaultWriter = io.MultiWriter(os.Stdout, fd)
 			gin.DefaultErrorWriter = io.MultiWriter(os.Stderr, fd)
 		}
+	})
+}
+
+// SetupLoginLogger initializes a dedicated writer for login-related logs (login.log).
+// It is safe to call multiple times; initialization happens once.
+func SetupLoginLogger() {
+	setupLoginLogOnce.Do(func() {
+		logDir := LogDir
+		if logDir == "" {
+			logDir = "./logs"
+		}
+		_ = os.MkdirAll(logDir, 0755)
+		logPath := filepath.Join(logDir, "login.log")
+		fd, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatal("failed to open login log file")
+		}
+		loginWriter = fd
+	})
+}
+
+// SetupApiLogger initializes api.log writer.
+func SetupApiLogger() {
+	setupApiLogOnce.Do(func() {
+		logDir := LogDir
+		if logDir == "" {
+			logDir = "./logs"
+		}
+		_ = os.MkdirAll(logDir, 0755)
+		logPath := filepath.Join(logDir, "api.log")
+		fd, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			log.Fatal("failed to open api log file")
+		}
+		apiWriter = fd
 	})
 }
 
@@ -119,6 +158,21 @@ func FatalLogf(format string, a ...any) {
 	logHelper(nil, loggerFatal, fmt.Sprintf(format, a...))
 }
 
+// Loginf writes detailed login/auth related logs to login.log (and stdout if desired).
+// It supplements existing logs for troubleshooting authentication flows.
+func Loginf(ctx context.Context, format string, a ...any) {
+	loginLogHelper(ctx, loggerINFO, fmt.Sprintf(format, a...))
+}
+
+func LoginErrorf(ctx context.Context, format string, a ...any) {
+	loginLogHelper(ctx, loggerError, fmt.Sprintf(format, a...))
+}
+
+// ApiLogf writes per-request api logs to api.log
+func ApiLogf(ctx context.Context, level loggerLevel, format string, a ...any) {
+	apiLogHelper(ctx, level, fmt.Sprintf(format, a...))
+}
+
 func logHelper(ctx context.Context, level loggerLevel, msg string) {
 	writer := gin.DefaultErrorWriter
 	if level == loggerINFO {
@@ -138,6 +192,42 @@ func logHelper(ctx context.Context, level loggerLevel, msg string) {
 	if level == loggerFatal {
 		os.Exit(1)
 	}
+}
+
+// loginLogHelper mirrors logHelper but targets the dedicated login log file.
+func loginLogHelper(ctx context.Context, level loggerLevel, msg string) {
+	SetupLoginLogger()
+	if loginWriter == nil {
+		return
+	}
+	var requestId string
+	if ctx != nil {
+		rawRequestId := helper.GetRequestID(ctx)
+		if rawRequestId != "" {
+			requestId = fmt.Sprintf(" | %s", rawRequestId)
+		}
+	}
+	lineInfo, funcName := getLineInfo()
+	now := time.Now()
+	_, _ = fmt.Fprintf(loginWriter, "[%s] %v%s%s %s%s \n", level, now.Format("2006/01/02 - 15:04:05"), requestId, lineInfo, funcName, msg)
+}
+
+// apiLogHelper mirrors logHelper but targets api.log
+func apiLogHelper(ctx context.Context, level loggerLevel, msg string) {
+	SetupApiLogger()
+	if apiWriter == nil {
+		return
+	}
+	var requestId string
+	if ctx != nil {
+		rawRequestId := helper.GetRequestID(ctx)
+		if rawRequestId != "" {
+			requestId = fmt.Sprintf(" | %s", rawRequestId)
+		}
+	}
+	lineInfo, funcName := getLineInfo()
+	now := time.Now()
+	_, _ = fmt.Fprintf(apiWriter, "[%s] %v%s%s %s%s \n", level, now.Format("2006/01/02 - 15:04:05"), requestId, lineInfo, funcName, msg)
 }
 
 func getLineInfo() (string, string) {

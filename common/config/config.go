@@ -91,6 +91,8 @@ var WalletRootAllowedAddresses []string
 var WalletJWTSecret = ""
 var WalletJWTExpireHours = 72
 var WalletNonceTTLMinutes = 10
+// Optional fallback secrets (comma-separated env WALLET_JWT_FALLBACK_SECRETS) for verifying wallet JWTs issued by external services.
+var WalletJWTFallbackSecrets []string
 
 var MessagePusherAddress = ""
 var MessagePusherToken = ""

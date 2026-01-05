@@ -10,6 +10,7 @@ import (
 	"github.com/yeying-community/router/common"
 	"github.com/yeying-community/router/common/blacklist"
 	"github.com/yeying-community/router/common/ctxkey"
+	"github.com/yeying-community/router/common/logger"
 	"github.com/yeying-community/router/common/network"
 	"github.com/yeying-community/router/model"
 )
@@ -24,6 +25,7 @@ func authHelper(c *gin.Context, minRole int) {
 		// Check access token
 		authHeader := strings.TrimSpace(c.Request.Header.Get("Authorization"))
 		if authHeader == "" {
+			logger.Loginf(c.Request.Context(), "auth failed: no session and no Authorization header")
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"success": false,
 				"message": "无权进行此操作，未登录且未提供 access token",
@@ -35,19 +37,49 @@ func authHelper(c *gin.Context, minRole int) {
 		if strings.HasPrefix(strings.ToLower(authHeader), "bearer ") {
 			bearer = strings.TrimSpace(authHeader[7:])
 		}
+		logger.Loginf(c.Request.Context(), "auth header parsed raw_len=%d bearer_len=%d", len(authHeader), len(bearer))
 
 		// Try wallet JWT first
 		if bearer != "" {
 			if claims, err := common.VerifyWalletJWT(bearer); err == nil {
+				logger.Loginf(c.Request.Context(), "auth wallet jwt verified uid=%d addr=%s", claims.UserID, claims.WalletAddress)
 				user := model.User{Id: claims.UserID}
-				if err := user.FillUserById(); err == nil {
-					if user.WalletAddress != nil && strings.ToLower(*user.WalletAddress) == strings.ToLower(claims.WalletAddress) && user.Status == model.UserStatusEnabled && !blacklist.IsUserBanned(user.Id) {
+				foundById := false
+				if claims.UserID != 0 {
+					if err := user.FillUserById(); err == nil {
+						foundById = true
+					} else {
+						logger.Loginf(c.Request.Context(), "auth wallet jwt FillUserById fail uid=%d err=%v", claims.UserID, err)
+					}
+				}
+
+				if !foundById && claims.WalletAddress != "" {
+					addr := strings.ToLower(claims.WalletAddress)
+					user = model.User{WalletAddress: &addr}
+					if err := user.FillUserByWalletAddress(); err == nil {
+						logger.Loginf(c.Request.Context(), "auth wallet jwt fallback by address success addr=%s uid=%d", claims.WalletAddress, user.Id)
+						foundById = true
+					} else {
+						logger.Loginf(c.Request.Context(), "auth wallet jwt fallback by address fail addr=%s err=%v", claims.WalletAddress, err)
+					}
+				}
+
+				if foundById {
+					matched := user.WalletAddress != nil && strings.ToLower(*user.WalletAddress) == strings.ToLower(claims.WalletAddress)
+					enabled := user.Status == model.UserStatusEnabled
+					notBanned := !blacklist.IsUserBanned(user.Id)
+					if matched && enabled && notBanned {
 						username = user.Username
 						role = user.Role
 						id = user.Id
 						status = user.Status
+						logger.Loginf(c.Request.Context(), "auth via wallet jwt success user=%d addr=%s", user.Id, claims.WalletAddress)
+					} else {
+						logger.Loginf(c.Request.Context(), "auth wallet jwt reject uid=%d matched=%t enabled=%t notBanned=%t db_addr=%v token_addr=%s status=%d", user.Id, matched, enabled, notBanned, user.WalletAddress, claims.WalletAddress, user.Status)
 					}
 				}
+			} else {
+				logger.Loginf(c.Request.Context(), "auth wallet jwt verify failed err=%v token_len=%d", err, len(bearer))
 			}
 		}
 
@@ -59,7 +91,9 @@ func authHelper(c *gin.Context, minRole int) {
 				role = user.Role
 				id = user.Id
 				status = user.Status
+				logger.Loginf(c.Request.Context(), "auth via access token success user=%d", user.Id)
 			} else {
+				logger.Loginf(c.Request.Context(), "auth failed: invalid access token")
 				c.JSON(http.StatusOK, gin.H{
 					"success": false,
 					"message": "无权进行此操作，access token 无效",
@@ -70,6 +104,7 @@ func authHelper(c *gin.Context, minRole int) {
 		}
 	}
 	if status.(int) == model.UserStatusDisabled || blacklist.IsUserBanned(id.(int)) {
+		logger.Loginf(c.Request.Context(), "auth failed: user banned/disabled id=%d", id.(int))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "用户已被封禁",
@@ -81,6 +116,7 @@ func authHelper(c *gin.Context, minRole int) {
 		return
 	}
 	if role.(int) < minRole {
+		logger.Loginf(c.Request.Context(), "auth failed: role too low id=%d role=%d need=%d", id.(int), role.(int), minRole)
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "无权进行此操作，权限不足",
@@ -122,11 +158,13 @@ func TokenAuth() func(c *gin.Context) {
 		key = parts[0]
 		token, err := model.ValidateUserToken(key)
 		if err != nil {
+			logger.Loginf(c.Request.Context(), "token auth failed: %v", err)
 			abortWithMessage(c, http.StatusUnauthorized, err.Error())
 			return
 		}
 		if token.Subnet != nil && *token.Subnet != "" {
 			if !network.IsIpInSubnets(ctx, c.ClientIP(), *token.Subnet) {
+				logger.Loginf(c.Request.Context(), "token auth subnet deny user=%d ip=%s subnet=%s", token.UserId, c.ClientIP(), *token.Subnet)
 				abortWithMessage(c, http.StatusForbidden, fmt.Sprintf("该令牌只能在指定网段使用：%s，当前 ip：%s", *token.Subnet, c.ClientIP()))
 				return
 			}
@@ -137,6 +175,7 @@ func TokenAuth() func(c *gin.Context) {
 			return
 		}
 		if !userEnabled || blacklist.IsUserBanned(token.UserId) {
+			logger.Loginf(c.Request.Context(), "token auth banned user=%d", token.UserId)
 			abortWithMessage(c, http.StatusForbidden, "用户已被封禁")
 			return
 		}
@@ -160,6 +199,7 @@ func TokenAuth() func(c *gin.Context) {
 			if model.IsAdmin(token.UserId) {
 				c.Set(ctxkey.SpecificChannelId, parts[1])
 			} else {
+				logger.Loginf(c.Request.Context(), "token auth reject specific channel user=%d", token.UserId)
 				abortWithMessage(c, http.StatusForbidden, "普通用户不支持指定渠道")
 				return
 			}
@@ -169,6 +209,8 @@ func TokenAuth() func(c *gin.Context) {
 		if channelId := c.Param("channelid"); channelId != "" {
 			c.Set(ctxkey.SpecificChannelId, channelId)
 		}
+
+		logger.Loginf(c.Request.Context(), "token auth success user=%d tokenId=%d", token.UserId, token.Id)
 
 		c.Next()
 	}

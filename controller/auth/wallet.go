@@ -36,6 +36,7 @@ type walletLoginRequest struct {
 // WalletNonce issues a nonce & message to sign
 func WalletNonce(c *gin.Context) {
 	if !config.WalletLoginEnabled {
+		logger.Loginf(c.Request.Context(), "wallet nonce rejected: disabled")
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "管理员未开启钱包登录",
@@ -44,6 +45,7 @@ func WalletNonce(c *gin.Context) {
 	}
 	var req walletNonceRequest
 	if err := c.ShouldBind(&req); err != nil || !common.IsValidEthAddress(req.Address) {
+		logger.Loginf(c.Request.Context(), "wallet nonce invalid param addr=%s err=%v", req.Address, err)
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "参数错误，缺少 address",
@@ -52,6 +54,7 @@ func WalletNonce(c *gin.Context) {
 	}
 
 	nonce, message := common.GenerateWalletNonce(req.Address, "Login to "+config.SystemName, req.ChainId)
+	logger.Loginf(c.Request.Context(), "wallet nonce generated addr=%s chain=%s nonce=%s", strings.ToLower(req.Address), req.ChainId, nonce)
 	expireAt := time.Now().Add(time.Duration(config.WalletNonceTTLMinutes) * time.Minute)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -67,6 +70,7 @@ func WalletNonce(c *gin.Context) {
 // WalletLogin verifies signature and logs user in
 func WalletLogin(c *gin.Context) {
 	if !config.WalletLoginEnabled {
+		logger.Loginf(c.Request.Context(), "wallet login rejected: disabled")
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "管理员未开启钱包登录",
@@ -75,6 +79,7 @@ func WalletLogin(c *gin.Context) {
 	}
 	var req walletLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		logger.Loginf(c.Request.Context(), "wallet login bind json failed err=%v", err)
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "参数错误",
@@ -84,6 +89,7 @@ func WalletLogin(c *gin.Context) {
 
 	user, err := walletAuthenticate(c, req)
 	if err != nil {
+		logger.Loginf(c.Request.Context(), "wallet login authenticate failed addr=%s err=%v", strings.ToLower(req.Address), err)
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
@@ -92,6 +98,7 @@ func WalletLogin(c *gin.Context) {
 	}
 
 	if err := controller.SetupSession(user, c); err != nil {
+		logger.LoginErrorf(c.Request.Context(), "wallet login setup session failed user=%d err=%v", user.Id, err)
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "无法保存会话信息，请重试",
@@ -104,8 +111,9 @@ func WalletLogin(c *gin.Context) {
 	}
 	token, exp, tokenErr := common.GenerateWalletJWT(user.Id, addr)
 	if tokenErr != nil {
-		logger.SysError("wallet jwt generate failed: " + tokenErr.Error())
+		logger.LoginErrorf(c.Request.Context(), "wallet jwt generate failed user=%d err=%v", user.Id, tokenErr)
 	}
+	logger.Loginf(c.Request.Context(), "wallet login success user=%d addr=%s role=%d token=%t exp=%s", user.Id, addr, user.Role, token != "", exp.UTC().Format(time.RFC3339))
 	cleanUser := model.User{
 		Id:            user.Id,
 		Username:      user.Username,
@@ -200,10 +208,14 @@ func WalletBind(c *gin.Context) {
 
 func verifyWalletRequest(req walletLoginRequest) error {
 	if !common.IsValidEthAddress(req.Address) {
-		return errors.New("无效的钱包地址")
+		err := errors.New("无效的钱包地址")
+		logger.Loginf(nil, "wallet verify fail addr=%s err=%v", req.Address, err)
+		return err
 	}
 	if req.Signature == "" {
-		return errors.New("缺少签名或 nonce")
+		err := errors.New("缺少签名或 nonce")
+		logger.Loginf(nil, "wallet verify fail addr=%s err=%v", req.Address, err)
+		return err
 	}
 	// chainId check
 	if len(config.WalletAllowedChains) > 0 && req.ChainId != "" {
@@ -215,24 +227,34 @@ func verifyWalletRequest(req walletLoginRequest) error {
 			}
 		}
 		if !allowed {
-			return errors.New("不允许的链 ID")
+			err := errors.New("不允许的链 ID")
+			logger.Loginf(nil, "wallet verify fail addr=%s chain=%s err=%v", req.Address, req.ChainId, err)
+			return err
 		}
 	}
 	entry, ok := common.GetWalletNonce(req.Address)
 	if !ok {
-		return errors.New("nonce 无效或已过期")
+		err := errors.New("nonce 无效或已过期")
+		logger.Loginf(nil, "wallet verify fail addr=%s err=%v", req.Address, err)
+		return err
 	}
 	if req.Nonce != "" && entry.Nonce != req.Nonce {
-		return errors.New("nonce 无效或已过期")
+		err := errors.New("nonce 无效或已过期")
+		logger.Loginf(nil, "wallet verify fail addr=%s err=%v", req.Address, err)
+		return err
 	}
 	// verify signature
 	recovered, err := recoverAddress(entry.Message, req.Signature)
 	if err != nil {
 		logger.SysError("wallet login verify failed: " + err.Error())
-		return errors.New("签名验证失败")
+		err2 := errors.New("签名验证失败")
+		logger.Loginf(nil, "wallet verify fail addr=%s err=%v", req.Address, err2)
+		return err2
 	}
 	if strings.ToLower(recovered) != strings.ToLower(req.Address) {
-		return errors.New("签名地址与请求地址不一致")
+		err := errors.New("签名地址与请求地址不一致")
+		logger.Loginf(nil, "wallet verify fail addr=%s recovered=%s err=%v", req.Address, recovered, err)
+		return err
 	}
 	return nil
 }
@@ -245,12 +267,16 @@ func walletAuthenticate(c *gin.Context, req walletLoginRequest) (*model.User, er
 	addr := strings.ToLower(req.Address)
 	user, err := findOrCreateWalletUser(addr, c.Request.Context())
 	if err != nil {
+		logger.Loginf(c.Request.Context(), "wallet auth find/create failed addr=%s err=%v", addr, err)
 		return nil, err
 	}
 	if user.Status != model.UserStatusEnabled {
-		return nil, errors.New("用户已被封禁")
+		err := errors.New("用户已被封禁")
+		logger.Loginf(c.Request.Context(), "wallet auth user disabled addr=%s err=%v", addr, err)
+		return nil, err
 	}
 	common.ConsumeWalletNonce(addr)
+	logger.Loginf(c.Request.Context(), "wallet auth success user=%d addr=%s", user.Id, addr)
 	return user, nil
 }
 
@@ -337,20 +363,24 @@ func isRootAllowed(addr string) bool {
 // WalletChallengeProto implements /api/v1/public/common/auth/challenge
 func WalletChallengeProto(c *gin.Context) {
 	if !config.WalletLoginEnabled {
+		logger.Loginf(c.Request.Context(), "wallet proto challenge rejected: disabled")
 		writeProtoError(c, 12, "管理员未开启钱包登录")
 		return
 	}
 	var req walletNonceRequest
 	if err := c.ShouldBindJSON(&req); err != nil || !common.IsValidEthAddress(req.Address) {
+		logger.Loginf(c.Request.Context(), "wallet proto challenge bind fail addr=%s err=%v", req.Address, err)
 		writeProtoError(c, 2, "参数错误，缺少 address")
 		return
 	}
 	addr := strings.ToLower(req.Address)
 	if !model.IsWalletAddressAlreadyTaken(addr) && !config.WalletAutoRegisterEnabled && !isRootAllowed(addr) {
+		logger.Loginf(c.Request.Context(), "wallet proto challenge reject addr=%s not bound and auto-register disabled", addr)
 		writeProtoError(c, 5, "钱包未绑定账户，请先绑定或由管理员开启自动注册")
 		return
 	}
 	nonce, message := common.GenerateWalletNonce(addr, "Login to "+config.SystemName, req.ChainId)
+	logger.Loginf(c.Request.Context(), "wallet proto challenge success addr=%s nonce=%s chain=%s", addr, nonce, req.ChainId)
 	expireAt := time.Now().Add(time.Duration(config.WalletNonceTTLMinutes) * time.Minute)
 	body := gin.H{
 		"status":     protoStatus(1, "OK"),
@@ -374,20 +404,24 @@ func WalletChallengeProto(c *gin.Context) {
 // WalletVerifyProto implements /api/v1/public/common/auth/verify
 func WalletVerifyProto(c *gin.Context) {
 	if !config.WalletLoginEnabled {
+		logger.Loginf(c.Request.Context(), "wallet proto verify rejected: disabled")
 		writeProtoError(c, 12, "管理员未开启钱包登录")
 		return
 	}
 	var req walletLoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		logger.Loginf(c.Request.Context(), "wallet proto verify bind fail err=%v", err)
 		writeProtoError(c, 2, "参数错误")
 		return
 	}
 	user, err := walletAuthenticate(c, req)
 	if err != nil {
+		logger.Loginf(c.Request.Context(), "wallet proto verify auth fail addr=%s err=%v", req.Address, err)
 		writeProtoError(c, 3, err.Error())
 		return
 	}
 	if err := controller.SetupSession(user, c); err != nil {
+		logger.LoginErrorf(c.Request.Context(), "wallet proto verify setup session fail user=%d err=%v", user.Id, err)
 		writeProtoError(c, 8, "无法保存会话信息，请重试")
 		return
 	}
@@ -401,6 +435,7 @@ func WalletVerifyProto(c *gin.Context) {
 		writeProtoError(c, 8, "生成 token 失败")
 		return
 	}
+	logger.Loginf(c.Request.Context(), "wallet proto verify success user=%d addr=%s token_exp=%s", user.Id, addr, exp.UTC().Format(time.RFC3339))
 	body := gin.H{
 		"status":     protoStatus(1, "OK"),
 		"token":      token,
@@ -428,37 +463,49 @@ func WalletRefreshToken(c *gin.Context) {
 		authHeader = strings.TrimSpace(authHeader[7:])
 	}
 	if authHeader == "" {
+		logger.Loginf(c.Request.Context(), "wallet refresh missing token")
 		writeProtoError(c, 3, "缺少 token")
 		return
 	}
 	claims, err := common.VerifyWalletJWT(authHeader)
 	if err != nil {
+		logger.Loginf(c.Request.Context(), "wallet refresh verify failed err=%v", err)
 		writeProtoError(c, 3, "token 无效或已过期")
 		return
 	}
 	user := model.User{Id: claims.UserID}
 	if err := user.FillUserById(); err != nil {
+		logger.Loginf(c.Request.Context(), "wallet refresh user not found id=%d", claims.UserID)
 		writeProtoError(c, 5, "用户不存在")
 		return
 	}
-	if user.WalletAddress == nil || strings.ToLower(*user.WalletAddress) != strings.ToLower(claims.WalletAddress) {
+	userAddr := ""
+	if user.WalletAddress != nil {
+		userAddr = strings.ToLower(*user.WalletAddress)
+	}
+	if user.WalletAddress == nil || userAddr != strings.ToLower(claims.WalletAddress) {
+		logger.Loginf(c.Request.Context(), "wallet refresh addr mismatch token=%s user=%s", claims.WalletAddress, userAddr)
 		writeProtoError(c, 3, "钱包地址不匹配")
 		return
 	}
 	if user.Status != model.UserStatusEnabled {
+		logger.Loginf(c.Request.Context(), "wallet refresh user disabled id=%d", user.Id)
 		writeProtoError(c, 4, "用户已被封禁")
 		return
 	}
 	if err := controller.SetupSession(&user, c); err != nil {
+		logger.LoginErrorf(c.Request.Context(), "wallet refresh setup session failed user=%d err=%v", user.Id, err)
 		writeProtoError(c, 8, "无法保存会话信息，请重试")
 		return
 	}
 	addr := strings.ToLower(*user.WalletAddress)
 	token, exp, tokenErr := common.GenerateWalletJWT(user.Id, addr)
 	if tokenErr != nil {
+		logger.LoginErrorf(c.Request.Context(), "wallet refresh generate token failed user=%d err=%v", user.Id, tokenErr)
 		writeProtoError(c, 8, "生成 token 失败")
 		return
 	}
+	logger.Loginf(c.Request.Context(), "wallet refresh success user=%d addr=%s exp=%s", user.Id, addr, exp.UTC().Format(time.RFC3339))
 	body := gin.H{
 		"status":     protoStatus(1, "OK"),
 		"token":      token,

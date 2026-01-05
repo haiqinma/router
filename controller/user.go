@@ -14,6 +14,7 @@ import (
 	"github.com/yeying-community/router/common/config"
 	"github.com/yeying-community/router/common/ctxkey"
 	"github.com/yeying-community/router/common/i18n"
+	"github.com/yeying-community/router/common/logger"
 	"github.com/yeying-community/router/common/random"
 	"github.com/yeying-community/router/model"
 )
@@ -25,6 +26,7 @@ type LoginRequest struct {
 
 func Login(c *gin.Context) {
 	if !config.PasswordLoginEnabled {
+		logger.Loginf(c.Request.Context(), "password login rejected: disabled")
 		c.JSON(http.StatusOK, gin.H{
 			"message": "管理员关闭了密码登录",
 			"success": false,
@@ -55,6 +57,7 @@ func Login(c *gin.Context) {
 	}
 	err = user.ValidateAndFill()
 	if err != nil {
+		logger.Loginf(c.Request.Context(), "password login failed username=%s err=%v", username, err)
 		c.JSON(http.StatusOK, gin.H{
 			"message": err.Error(),
 			"success": false,
@@ -73,8 +76,10 @@ func SetupSession(user *model.User, c *gin.Context) error {
 	session.Set("status", user.Status)
 	err := session.Save()
 	if err != nil {
+		logger.LoginErrorf(c.Request.Context(), "setup session failed user=%d err=%v", user.Id, err)
 		return err
 	}
+	logger.Loginf(c.Request.Context(), "setup session ok user=%d role=%d", user.Id, user.Role)
 	return nil
 }
 
@@ -95,6 +100,7 @@ func SetupLogin(user *model.User, c *gin.Context) {
 		Status:        user.Status,
 		WalletAddress: user.WalletAddress,
 	}
+	logger.Loginf(c.Request.Context(), "password login success user=%d role=%d", user.Id, user.Role)
 	c.JSON(http.StatusOK, gin.H{
 		"message": "",
 		"success": true,
@@ -113,6 +119,7 @@ func Logout(c *gin.Context) {
 		})
 		return
 	}
+	logger.Loginf(c.Request.Context(), "logout success user=%v", c.GetInt("id"))
 	c.JSON(http.StatusOK, gin.H{
 		"message": "",
 		"success": true,
@@ -293,6 +300,7 @@ func GetUserDashboard(c *gin.Context) {
 
 func GenerateAccessToken(c *gin.Context) {
 	id := c.GetInt(ctxkey.Id)
+	logger.Loginf(c.Request.Context(), "generate access token request user=%d", id)
 	user, err := model.GetUserById(id, true)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -318,6 +326,7 @@ func GenerateAccessToken(c *gin.Context) {
 		})
 		return
 	}
+	logger.Loginf(c.Request.Context(), "generate access token success user=%d token=%s", user.Id, user.AccessToken)
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,

@@ -60,6 +60,16 @@ func Init() {
 	if envSecret := os.Getenv("WALLET_JWT_SECRET"); envSecret != "" {
 		config.WalletJWTSecret = envSecret
 	}
+	if envFallback := os.Getenv("WALLET_JWT_FALLBACK_SECRETS"); envFallback != "" {
+		parts := strings.Split(envFallback, ",")
+		config.WalletJWTFallbackSecrets = make([]string, 0, len(parts))
+		for _, p := range parts {
+			p = strings.TrimSpace(p)
+			if p != "" {
+				config.WalletJWTFallbackSecrets = append(config.WalletJWTFallbackSecrets, p)
+			}
+		}
+	}
 	if envExpire := os.Getenv("WALLET_JWT_EXPIRE_HOURS"); envExpire != "" {
 		if v, err := strconv.Atoi(envExpire); err == nil && v > 0 {
 			config.WalletJWTExpireHours = v

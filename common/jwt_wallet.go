@@ -40,21 +40,41 @@ func GenerateWalletJWT(userID int, walletAddress string) (token string, expiresA
 
 // VerifyWalletJWT validates token and returns claims.
 func VerifyWalletJWT(tokenString string) (*WalletClaims, error) {
-	secret := []byte(config.WalletJWTSecret)
-	if len(secret) == 0 {
-		return nil, errors.New("wallet jwt secret not configured")
-	}
-	parsed, err := jwt.ParseWithClaims(tokenString, &WalletClaims{}, func(token *jwt.Token) (interface{}, error) {
-		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errors.New("unexpected signing method")
-		}
-		return secret, nil
-	})
+	claims, err := verifyWithSecrets(tokenString, append([]string{config.WalletJWTSecret}, config.WalletJWTFallbackSecrets...))
 	if err != nil {
 		return nil, err
 	}
-	if claims, ok := parsed.Claims.(*WalletClaims); ok && parsed.Valid {
-		return claims, nil
+	return claims, nil
+}
+
+// verifyWithSecrets tries multiple secrets in order and returns on first success.
+func verifyWithSecrets(tokenString string, secrets []string) (*WalletClaims, error) {
+	if len(secrets) == 0 {
+		return nil, errors.New("wallet jwt secret not configured")
 	}
-	return nil, errors.New("invalid token")
+	var lastErr error
+	for _, sec := range secrets {
+		secBytes := []byte(sec)
+		if len(secBytes) == 0 {
+			continue
+		}
+		parsed, err := jwt.ParseWithClaims(tokenString, &WalletClaims{}, func(token *jwt.Token) (interface{}, error) {
+			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+				return nil, errors.New("unexpected signing method")
+			}
+			return secBytes, nil
+		})
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		if claims, ok := parsed.Claims.(*WalletClaims); ok && parsed.Valid {
+			return claims, nil
+		}
+		lastErr = errors.New("invalid token")
+	}
+	if lastErr == nil {
+		lastErr = errors.New("invalid token")
+	}
+	return nil, lastErr
 }
