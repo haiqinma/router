@@ -5,6 +5,14 @@
 
 ---
 
+## CodexDev 目录（仓库内）
+- 本仓库已自带 `CodexDev/` 用于放置各类 Codex 执行提示与临时说明。
+- 请在仓库根目录下使用：`/root/code/router/router_new/CodexDev/`  
+  例如：`CodexDev/UI`、`CodexDev/API`。
+- **不要在仓库外另建同名目录**，以免误用路径。
+
+---
+
 ## 当前实际运行方式
 - **systemd 服务**：`/etc/systemd/system/router.service`
 - **启动命令**：`/root/code/router/router_new/build/router --port 3011 --log-dir ./logs`
