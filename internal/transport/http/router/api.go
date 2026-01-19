@@ -40,6 +40,128 @@ func SetApiRouter(engine *gin.Engine) {
 	publicRouter.Use(middleware.GlobalAPIRateLimit())
 	{
 		publicRouter.GET("/profile", middleware.CriticalRateLimit(), auth.PublicProfile)
+
+		publicRouter.GET("/status", admin.GetStatus)
+		publicRouter.GET("/notice", admin.GetNotice)
+		publicRouter.GET("/about", admin.GetAbout)
+		publicRouter.GET("/home_page_content", admin.GetHomePageContent)
+
+		// 仅保留密码找回，无额外人机验证
+		publicRouter.GET("/reset_password", middleware.CriticalRateLimit(), admin.SendPasswordResetEmail)
+		publicRouter.POST("/user/reset", middleware.CriticalRateLimit(), admin.ResetPassword)
+
+		publicRouter.GET("/oauth/wallet/nonce", middleware.CriticalRateLimit(), auth.WalletNonce)
+		publicRouter.POST("/oauth/wallet/login", middleware.CriticalRateLimit(), auth.WalletLogin)
+		publicRouter.POST("/oauth/wallet/bind", middleware.CriticalRateLimit(), middleware.UserAuth(), auth.WalletBind)
+
+		publicUserRoute := publicRouter.Group("/user")
+		{
+			publicUserRoute.POST("/register", middleware.CriticalRateLimit(), user.Register)
+			publicUserRoute.POST("/login", middleware.CriticalRateLimit(), user.Login)
+			publicUserRoute.GET("/logout", user.Logout)
+
+			publicSelfRoute := publicUserRoute.Group("/")
+			publicSelfRoute.Use(middleware.UserAuth())
+			{
+				publicSelfRoute.GET("/self", user.GetSelf)
+				publicSelfRoute.GET("/dashboard", user.GetUserDashboard)
+				publicSelfRoute.GET("/available_models", admin.GetUserAvailableModels)
+				publicSelfRoute.PUT("/self", user.UpdateSelf)
+				publicSelfRoute.DELETE("/self", user.DeleteSelf)
+				publicSelfRoute.GET("/token", user.GenerateAccessToken)
+				publicSelfRoute.GET("/aff", user.GetAffCode)
+				publicSelfRoute.POST("/topup", user.TopUp)
+			}
+		}
+
+		publicTokenRoute := publicRouter.Group("/token")
+		publicTokenRoute.Use(middleware.UserAuth())
+		{
+			publicTokenRoute.GET("/", token.GetAllTokens)
+			publicTokenRoute.GET("/search", token.SearchTokens)
+			publicTokenRoute.GET("/:id", token.GetToken)
+			publicTokenRoute.POST("/", token.AddToken)
+			publicTokenRoute.PUT("/", token.UpdateToken)
+			publicTokenRoute.DELETE("/:id", token.DeleteToken)
+		}
+
+		publicLogRoute := publicRouter.Group("/log")
+		publicLogRoute.Use(middleware.UserAuth())
+		{
+			publicLogRoute.GET("/self/stat", log.GetLogsSelfStat)
+			publicLogRoute.GET("/self", log.GetUserLogs)
+			publicLogRoute.GET("/self/search", log.SearchUserLogs)
+		}
+
+		publicChannelRoute := publicRouter.Group("/channel")
+		{
+			// 模型列表对所有登录用户开放，方便前端展示供应商/模型
+			publicChannelRoute.GET("/models", middleware.UserAuth(), admin.DashboardListModels)
+		}
+
+		// Legacy /api/models mirror (avoid conflict with OpenAI-compatible /api/v1/public/models)
+		publicRouter.GET("/models-all", middleware.UserAuth(), admin.ListAllModels)
+	}
+
+	publicModelsRouter := engine.Group("/api/v1/public/models")
+	publicModelsRouter.Use(middleware.TokenAuth())
+	{
+		publicModelsRouter.GET("", admin.ListModels)
+		publicModelsRouter.GET("/:model", admin.RetrieveModel)
+	}
+
+	publicRelayRouter := engine.Group("/api/v1/public")
+	publicRelayRouter.Use(middleware.TokenAuth(), middleware.Distribute())
+	{
+		publicRelayRouter.POST("/completions", admin.Relay)
+		publicRelayRouter.POST("/chat/completions", admin.Relay)
+		publicRelayRouter.POST("/edits", admin.Relay)
+		publicRelayRouter.POST("/images/generations", admin.Relay)
+		publicRelayRouter.POST("/images/edits", admin.RelayNotImplemented)
+		publicRelayRouter.POST("/images/variations", admin.RelayNotImplemented)
+		publicRelayRouter.POST("/embeddings", admin.Relay)
+		publicRelayRouter.POST("/engines/:model/embeddings", admin.Relay)
+		publicRelayRouter.POST("/audio/transcriptions", admin.Relay)
+		publicRelayRouter.POST("/audio/translations", admin.Relay)
+		publicRelayRouter.POST("/audio/speech", admin.Relay)
+		publicRelayRouter.GET("/files", admin.RelayNotImplemented)
+		publicRelayRouter.POST("/files", admin.RelayNotImplemented)
+		publicRelayRouter.DELETE("/files/:id", admin.RelayNotImplemented)
+		publicRelayRouter.GET("/files/:id", admin.RelayNotImplemented)
+		publicRelayRouter.GET("/files/:id/content", admin.RelayNotImplemented)
+		publicRelayRouter.POST("/fine_tuning/jobs", admin.RelayNotImplemented)
+		publicRelayRouter.GET("/fine_tuning/jobs", admin.RelayNotImplemented)
+		publicRelayRouter.GET("/fine_tuning/jobs/:id", admin.RelayNotImplemented)
+		publicRelayRouter.POST("/fine_tuning/jobs/:id/cancel", admin.RelayNotImplemented)
+		publicRelayRouter.GET("/fine_tuning/jobs/:id/events", admin.RelayNotImplemented)
+		publicRelayRouter.DELETE("/models/:model", admin.RelayNotImplemented)
+		publicRelayRouter.POST("/moderations", admin.Relay)
+		publicRelayRouter.POST("/assistants", admin.RelayNotImplemented)
+		publicRelayRouter.GET("/assistants/:id", admin.RelayNotImplemented)
+		publicRelayRouter.POST("/assistants/:id", admin.RelayNotImplemented)
+		publicRelayRouter.DELETE("/assistants/:id", admin.RelayNotImplemented)
+		publicRelayRouter.GET("/assistants", admin.RelayNotImplemented)
+		publicRelayRouter.POST("/assistants/:id/files", admin.RelayNotImplemented)
+		publicRelayRouter.GET("/assistants/:id/files/:fileId", admin.RelayNotImplemented)
+		publicRelayRouter.DELETE("/assistants/:id/files/:fileId", admin.RelayNotImplemented)
+		publicRelayRouter.GET("/assistants/:id/files", admin.RelayNotImplemented)
+		publicRelayRouter.POST("/threads", admin.RelayNotImplemented)
+		publicRelayRouter.GET("/threads/:id", admin.RelayNotImplemented)
+		publicRelayRouter.POST("/threads/:id", admin.RelayNotImplemented)
+		publicRelayRouter.DELETE("/threads/:id", admin.RelayNotImplemented)
+		publicRelayRouter.POST("/threads/:id/messages", admin.RelayNotImplemented)
+		publicRelayRouter.GET("/threads/:id/messages/:messageId", admin.RelayNotImplemented)
+		publicRelayRouter.POST("/threads/:id/messages/:messageId", admin.RelayNotImplemented)
+		publicRelayRouter.GET("/threads/:id/messages/:messageId/files/:filesId", admin.RelayNotImplemented)
+		publicRelayRouter.GET("/threads/:id/messages/:messageId/files", admin.RelayNotImplemented)
+		publicRelayRouter.POST("/threads/:id/runs", admin.RelayNotImplemented)
+		publicRelayRouter.GET("/threads/:id/runs/:runsId", admin.RelayNotImplemented)
+		publicRelayRouter.POST("/threads/:id/runs/:runsId", admin.RelayNotImplemented)
+		publicRelayRouter.GET("/threads/:id/runs", admin.RelayNotImplemented)
+		publicRelayRouter.POST("/threads/:id/runs/:runsId/submit_tool_outputs", admin.RelayNotImplemented)
+		publicRelayRouter.POST("/threads/:id/runs/:runsId/cancel", admin.RelayNotImplemented)
+		publicRelayRouter.GET("/threads/:id/runs/:runsId/steps/:stepId", admin.RelayNotImplemented)
+		publicRelayRouter.GET("/threads/:id/runs/:runsId/steps", admin.RelayNotImplemented)
 	}
 
 	apiRouter := engine.Group("/api")
@@ -159,5 +281,78 @@ func SetApiRouter(engine *gin.Engine) {
 
 		// Models list for authenticated users
 		apiRouter.GET("/models", middleware.UserAuth(), admin.ListAllModels)
+	}
+
+	adminRouter := engine.Group("/api/v1/admin")
+	adminRouter.Use(gzip.Gzip(gzip.DefaultCompression))
+	adminRouter.Use(middleware.GlobalAPIRateLimit())
+	{
+		adminUserRoute := adminRouter.Group("/user")
+		adminUserRoute.Use(middleware.AdminAuth())
+		{
+			adminUserRoute.GET("/", user.GetAllUsers)
+			adminUserRoute.GET("/search", user.SearchUsers)
+			adminUserRoute.GET("/:id", user.GetUser)
+			adminUserRoute.POST("/", user.CreateUser)
+			adminUserRoute.POST("/manage", user.ManageUser)
+			adminUserRoute.PUT("/", user.UpdateUser)
+			adminUserRoute.DELETE("/:id", user.DeleteUser)
+		}
+
+		adminOptionRoute := adminRouter.Group("/option")
+		adminOptionRoute.Use(middleware.RootAuth())
+		{
+			adminOptionRoute.GET("/", option.GetOptions)
+			adminOptionRoute.PUT("/", option.UpdateOption)
+		}
+
+		adminChannelRoute := adminRouter.Group("/channel")
+		adminChannelRoute.Use(middleware.AdminAuth())
+		{
+			adminChannelRoute.GET("/", channel.GetAllChannels)
+			adminChannelRoute.GET("/search", channel.SearchChannels)
+			adminChannelRoute.GET("/:id", channel.GetChannel)
+			adminChannelRoute.GET("/test", channel.TestChannels)
+			adminChannelRoute.GET("/test/:id", channel.TestChannel)
+			adminChannelRoute.GET("/update_balance", channel.UpdateAllChannelsBalance)
+			adminChannelRoute.GET("/update_balance/:id", channel.UpdateChannelBalance)
+			adminChannelRoute.POST("/", channel.AddChannel)
+			adminChannelRoute.PUT("/", channel.UpdateChannel)
+			adminChannelRoute.DELETE("/disabled", channel.DeleteDisabledChannel)
+			adminChannelRoute.DELETE("/:id", channel.DeleteChannel)
+		}
+
+		adminRedemptionRoute := adminRouter.Group("/redemption")
+		adminRedemptionRoute.Use(middleware.AdminAuth())
+		{
+			adminRedemptionRoute.GET("/", admin.GetAllRedemptions)
+			adminRedemptionRoute.GET("/search", admin.SearchRedemptions)
+			adminRedemptionRoute.GET("/:id", admin.GetRedemption)
+			adminRedemptionRoute.POST("/", admin.AddRedemption)
+			adminRedemptionRoute.PUT("/", admin.UpdateRedemption)
+			adminRedemptionRoute.DELETE("/:id", admin.DeleteRedemption)
+		}
+
+		adminLogRoute := adminRouter.Group("/log")
+		adminLogRoute.Use(middleware.AdminAuth())
+		{
+			adminLogRoute.GET("/", log.GetAllLogs)
+			adminLogRoute.DELETE("/", log.DeleteHistoryLogs)
+			adminLogRoute.GET("/stat", log.GetLogsStat)
+			adminLogRoute.GET("/search", log.SearchAllLogs)
+		}
+
+		adminGroupRoute := adminRouter.Group("/group")
+		adminGroupRoute.Use(middleware.AdminAuth())
+		{
+			adminGroupRoute.GET("/", group.GetGroups)
+		}
+	}
+
+	internalRouter := engine.Group("/api/v1/internal")
+	internalRouter.Use(gzip.Gzip(gzip.DefaultCompression))
+	internalRouter.Use(middleware.GlobalAPIRateLimit())
+	{
+		// reserved for future internal endpoints
 	}
 }

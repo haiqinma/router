@@ -38,6 +38,7 @@ type Meta struct {
 }
 
 func GetByContext(c *gin.Context) *Meta {
+	normalizedPath := relaymode.NormalizePath(c.Request.URL.String())
 	meta := Meta{
 		Mode:               relaymode.GetByPath(c.Request.URL.Path),
 		ChannelType:        c.GetInt(ctxkey.Channel),
@@ -50,7 +51,7 @@ func GetByContext(c *gin.Context) *Meta {
 		OriginModelName:    c.GetString(ctxkey.RequestModel),
 		BaseURL:            c.GetString(ctxkey.BaseURL),
 		APIKey:             strings.TrimPrefix(c.Request.Header.Get("Authorization"), "Bearer "),
-		RequestURLPath:     c.Request.URL.String(),
+		RequestURLPath:     normalizedPath,
 		ForcedSystemPrompt: c.GetString(ctxkey.SystemPrompt),
 		StartTime:          time.Now(),
 	}

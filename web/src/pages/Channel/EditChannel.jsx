@@ -12,6 +12,58 @@ const MODEL_MAPPING_EXAMPLE = {
   'gpt-4-32k-0314': 'gpt-4-32k',
 };
 
+const normalizeModelId = (model) => {
+  if (typeof model === 'string') return model;
+  if (model && typeof model === 'object') {
+    if (typeof model.id === 'string') return model.id;
+    if (typeof model.name === 'string') return model.name;
+    if (typeof model.model === 'string') return model.model;
+  }
+  return null;
+};
+
+const flattenModels = (payload, meta) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(meta)) {
+    const set = new Set();
+    meta.forEach((entry) => {
+      const models = entry?.models;
+      if (Array.isArray(models)) {
+        models.forEach((model) => set.add(model));
+      }
+    });
+    return Array.from(set);
+  }
+  if (payload && typeof payload === 'object') {
+    const set = new Set();
+    Object.values(payload).forEach((models) => {
+      if (Array.isArray(models)) {
+        models.forEach((model) => set.add(model));
+      }
+    });
+    return Array.from(set);
+  }
+  return [];
+};
+
+const buildModelOptions = (models) => {
+  const seen = new Set();
+  const options = [];
+  const ids = [];
+  models.forEach((model) => {
+    const id = normalizeModelId(model);
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    options.push({
+      key: id,
+      text: id,
+      value: id,
+    });
+    ids.push(id);
+  });
+  return { options, ids };
+};
+
 function type2secretPrompt(type, t) {
   switch (type) {
     case 15:
@@ -115,15 +167,14 @@ const EditChannel = () => {
   const fetchModels = useCallback(async () => {
     try {
       let res = await API.get(`/api/channel/models`);
-      let localModelOptions = res.data.data.map((model) => ({
-        key: model.id,
-        text: model.id,
-        value: model.id,
-      }));
-      setOriginModelOptions(localModelOptions);
-      setFullModels(res.data.data.map((model) => model.id));
+      const payload = res?.data?.data;
+      const meta = res?.data?.meta;
+      const flattenedModels = flattenModels(payload, meta);
+      const { options, ids } = buildModelOptions(flattenedModels);
+      setOriginModelOptions(options);
+      setFullModels(ids);
     } catch (error) {
-      showError(error.message);
+      showError(error?.message || error);
     }
   }, []);
 

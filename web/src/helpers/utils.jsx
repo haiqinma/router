@@ -191,27 +191,100 @@ export function setPromptShown(id) {
 }
 
 let channelModels = undefined;
+const normalizeModelId = (model) => {
+  if (typeof model === 'string') return model;
+  if (model && typeof model === 'object') {
+    if (typeof model.id === 'string') return model.id;
+    if (typeof model.name === 'string') return model.name;
+    if (typeof model.model === 'string') return model.model;
+  }
+  return null;
+};
+
+const normalizeModelList = (models) => {
+  if (!Array.isArray(models)) return [];
+  const seen = new Set();
+  const list = [];
+  models.forEach((model) => {
+    const id = normalizeModelId(model);
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    list.push(id);
+  });
+  return list;
+};
+
 export async function loadChannelModels() {
-  const res = await API.get('/api/models');
-  const { success, data } = res.data;
+  const res = await API.get('/api/channel/models');
+  const { success, data, meta } = res.data;
   if (!success) {
     return;
   }
-  channelModels = data;
-  localStorage.setItem('channel_models', JSON.stringify(data));
+  if (data && typeof data === 'object' && !Array.isArray(data)) {
+    channelModels = data;
+    localStorage.setItem('channel_models', JSON.stringify(data));
+    return;
+  }
+
+  let modelMap = {};
+  if (Array.isArray(meta)) {
+    meta.forEach((entry) => {
+      if (!entry || entry.id === undefined) return;
+      const models = normalizeModelList(entry.models);
+      modelMap[entry.id] = models;
+    });
+  } else if (meta && typeof meta === 'object' && meta.id !== undefined) {
+    const models = normalizeModelList(data);
+    if (models.length > 0) {
+      modelMap[meta.id] = models;
+    }
+  }
+
+  if (Array.isArray(data)) {
+    if (Object.keys(modelMap).length === 0) {
+      data.forEach((entry) => {
+        if (!entry || typeof entry !== 'object' || entry.id === undefined) return;
+        const models = normalizeModelList(entry.models);
+        modelMap[entry.id] = models;
+      });
+    }
+    if (Object.keys(modelMap).length === 0) {
+      const models = normalizeModelList(data);
+      if (models.length > 0) {
+        modelMap.all = models;
+      }
+    }
+  }
+
+  channelModels = modelMap;
+  localStorage.setItem('channel_models', JSON.stringify(modelMap));
 }
 
 export function getChannelModels(type) {
-  if (channelModels !== undefined && type in channelModels) {
-    return channelModels[type];
+  if (channelModels !== undefined) {
+    if (Array.isArray(channelModels)) {
+      return normalizeModelList(channelModels);
+    }
+    if (type in channelModels) {
+      return normalizeModelList(channelModels[type]);
+    }
+    if (channelModels.all) {
+      return normalizeModelList(channelModels.all);
+    }
   }
   let models = localStorage.getItem('channel_models');
   if (!models) {
     return [];
   }
   channelModels = JSON.parse(models);
+  if (Array.isArray(channelModels)) {
+    return normalizeModelList(channelModels);
+  }
   if (type in channelModels) {
-    return channelModels[type];
+    return normalizeModelList(channelModels[type]);
+  }
+  if (channelModels.all) {
+    return normalizeModelList(channelModels.all);
   }
   return [];
 }

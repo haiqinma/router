@@ -21,28 +21,36 @@ func abortWithMessage(c *gin.Context, statusCode int, message string) {
 	logger.Error(c.Request.Context(), message)
 }
 
+func normalizeRelayPath(path string) string {
+	if strings.HasPrefix(path, "/api/v1/public/") {
+		return "/v1/" + strings.TrimPrefix(path, "/api/v1/public/")
+	}
+	return path
+}
+
 func getRequestModel(c *gin.Context) (string, error) {
 	var modelRequest ModelRequest
 	err := common.UnmarshalBodyReusable(c, &modelRequest)
 	if err != nil {
 		return "", fmt.Errorf("common.UnmarshalBodyReusable failed: %w", err)
 	}
-	if strings.HasPrefix(c.Request.URL.Path, "/v1/moderations") {
+	path := normalizeRelayPath(c.Request.URL.Path)
+	if strings.HasPrefix(path, "/v1/moderations") {
 		if modelRequest.Model == "" {
 			modelRequest.Model = "text-moderation-stable"
 		}
 	}
-	if strings.HasSuffix(c.Request.URL.Path, "embeddings") {
+	if strings.HasSuffix(path, "embeddings") {
 		if modelRequest.Model == "" {
 			modelRequest.Model = c.Param("model")
 		}
 	}
-	if strings.HasPrefix(c.Request.URL.Path, "/v1/images/generations") {
+	if strings.HasPrefix(path, "/v1/images/generations") {
 		if modelRequest.Model == "" {
 			modelRequest.Model = "dall-e-2"
 		}
 	}
-	if strings.HasPrefix(c.Request.URL.Path, "/v1/audio/transcriptions") || strings.HasPrefix(c.Request.URL.Path, "/v1/audio/translations") {
+	if strings.HasPrefix(path, "/v1/audio/transcriptions") || strings.HasPrefix(path, "/v1/audio/translations") {
 		if modelRequest.Model == "" {
 			modelRequest.Model = "whisper-1"
 		}

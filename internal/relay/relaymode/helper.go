@@ -2,7 +2,15 @@ package relaymode
 
 import "strings"
 
+func NormalizePath(path string) string {
+	if strings.HasPrefix(path, "/api/v1/public/") {
+		return "/v1/" + strings.TrimPrefix(path, "/api/v1/public/")
+	}
+	return path
+}
+
 func GetByPath(path string) int {
+	path = NormalizePath(path)
 	relayMode := Unknown
 	if strings.HasPrefix(path, "/v1/chat/completions") {
 		relayMode = ChatCompletions

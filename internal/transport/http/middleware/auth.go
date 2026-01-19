@@ -294,16 +294,17 @@ func TokenAuth() func(c *gin.Context) {
 }
 
 func shouldCheckModel(c *gin.Context) bool {
-	if strings.HasPrefix(c.Request.URL.Path, "/v1/completions") {
+	path := normalizeRelayPath(c.Request.URL.Path)
+	if strings.HasPrefix(path, "/v1/completions") {
 		return true
 	}
-	if strings.HasPrefix(c.Request.URL.Path, "/v1/chat/completions") {
+	if strings.HasPrefix(path, "/v1/chat/completions") {
 		return true
 	}
-	if strings.HasPrefix(c.Request.URL.Path, "/v1/images") {
+	if strings.HasPrefix(path, "/v1/images") {
 		return true
 	}
-	if strings.HasPrefix(c.Request.URL.Path, "/v1/audio") {
+	if strings.HasPrefix(path, "/v1/audio") {
 		return true
 	}
 	return false

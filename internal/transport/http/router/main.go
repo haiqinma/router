@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/yeying-community/router/common/config"
+	"github.com/yeying-community/router/common/env"
 	"github.com/yeying-community/router/common/logger"
 	"github.com/yeying-community/router/internal/transport/http/middleware"
 )
@@ -23,8 +24,12 @@ func SetRouter(engine *gin.Engine, buildFS embed.FS) {
 	engine.Use(middleware.CORS())
 
 	SetApiRouter(engine)
-	SetDashboardRouter(engine)
-	SetRelayRouter(engine)
+	if env.Bool("DISABLE_OPENAI_COMPAT", false) {
+		logger.SysLog("OpenAI-compatible routes disabled via DISABLE_OPENAI_COMPAT")
+	} else {
+		SetDashboardRouter(engine)
+		SetRelayRouter(engine)
+	}
 
 	frontendBaseURL := os.Getenv("FRONTEND_BASE_URL")
 	if config.IsMasterNode && frontendBaseURL != "" {
