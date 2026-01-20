@@ -145,6 +145,7 @@ const EditToken = () => {
         showSuccess(t('token.edit.messages.create_success'));
         setInputs(originInputs);
       }
+      navigate('/token');
     } else {
       showError(message);
     }

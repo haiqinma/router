@@ -64,19 +64,21 @@ const EditRedemption = () => {
     if (success) {
       if (isEdit) {
         showSuccess(t('redemption.messages.update_success'));
+        navigate('/redemption');
       } else {
         showSuccess(t('redemption.messages.create_success'));
+        if (data) {
+          let text = '';
+          for (let i = 0; i < data.length; i++) {
+            text += data[i] + '\n';
+          }
+          downloadTextAsFile(text, `${inputs.name}.txt`);
+        }
         setInputs(originInputs);
+        navigate('/redemption');
       }
     } else {
       showError(message);
-    }
-    if (!isEdit && data) {
-      let text = '';
-      for (let i = 0; i < data.length; i++) {
-        text += data[i] + '\n';
-      }
-      downloadTextAsFile(text, `${inputs.name}.txt`);
     }
   };
 
