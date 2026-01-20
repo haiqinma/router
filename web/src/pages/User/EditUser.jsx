@@ -88,6 +88,7 @@ const EditUser = () => {
     const { success, message } = res.data;
     if (success) {
       showSuccess(t('user.messages.update_success'));
+      navigate(userId ? '/user' : '/setting');
     } else {
       showError(message);
     }

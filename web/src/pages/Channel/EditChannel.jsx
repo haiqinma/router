@@ -278,6 +278,7 @@ const EditChannel = () => {
         showSuccess(t('channel.edit.messages.create_success'));
         setInputs(originInputs);
       }
+      navigate('/channel');
     } else {
       showError(message);
     }

@@ -1,6 +1,6 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Button, Dropdown, Form, Input, Label, Message, Pagination, Popup, Table,} from 'semantic-ui-react';
+import {Button, Dropdown, Form, Icon, Input, Label, Message, Pagination, Popup, Table,} from 'semantic-ui-react';
 import {Link} from 'react-router-dom';
 import {
   API,
@@ -318,6 +318,10 @@ const ChannelsTable = () => {
   };
 
   const testChannel = async (id, name, idx, m) => {
+    const preChannels = [...channels];
+    const preIdx = (activePage - 1) * ITEMS_PER_PAGE + idx;
+    preChannels[preIdx].testing = true;
+    setChannels(preChannels);
     const res = await API.get(`/api/channel/test/${id}?model=${m}`);
     const { success, message, time, model } = res.data;
     if (success) {
@@ -336,6 +340,7 @@ const ChannelsTable = () => {
     let realIdx = (activePage - 1) * ITEMS_PER_PAGE + idx;
     newChannels[realIdx].response_time = time * 1000;
     newChannels[realIdx].test_time = Date.now() / 1000;
+    newChannels[realIdx].testing = false;
     setChannels(newChannels);
   };
 
@@ -528,7 +533,13 @@ const ChannelsTable = () => {
                           : t('channel.table.not_tested')
                       }
                       key={channel.id}
-                      trigger={renderResponseTime(channel.response_time, t)}
+                      trigger={
+                        channel.testing ? (
+                          <Icon name='spinner' loading />
+                        ) : (
+                          renderResponseTime(channel.response_time, t)
+                        )
+                      }
                       basic
                     />
                   </Table.Cell>

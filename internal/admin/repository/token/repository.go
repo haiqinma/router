@@ -58,7 +58,7 @@ func GetFirstAvailable(userId int) (*model.Token, error) {
 	now := helper.GetTimestamp()
 	err := model.DB.Where("user_id = ? AND status = ?", userId, model.TokenStatusEnabled).
 		Where("(expired_time = -1 OR expired_time > ?)", now).
-		Where("(unlimited_quota <> 0 OR remain_quota > 0)").
+		Where("(unlimited_quota OR remain_quota > 0)").
 		Order("id asc").
 		First(&token).Error
 	if err != nil {

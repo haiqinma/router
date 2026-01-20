@@ -24,6 +24,9 @@ const PersonalSetting = () => {
     self_account_deletion_confirmation: '',
   });
   const [loading, setLoading] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   useEffect(() => {
     const cached = localStorage.getItem('status');
@@ -141,6 +144,52 @@ const PersonalSetting = () => {
     }
   };
 
+  const getCurrentUser = () => {
+    if (userState?.user) {
+      return userState.user;
+    }
+    const cached = localStorage.getItem('user');
+    if (!cached) return null;
+    try {
+      return JSON.parse(cached);
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const submitPasswordChange = async () => {
+    if (newPassword.length < 8) {
+      showError(t('messages.error.password_length'));
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      showError(t('messages.error.password_mismatch'));
+      return;
+    }
+    const currentUser = getCurrentUser();
+    if (!currentUser?.username) {
+      showError('用户信息不存在');
+      return;
+    }
+    setPasswordLoading(true);
+    const payload = {
+      username: currentUser.username,
+      display_name:
+        currentUser.display_name ?? currentUser.displayName ?? '',
+      password: newPassword,
+    };
+    const res = await API.put('/api/user/self', payload);
+    const { success, message } = res.data;
+    setPasswordLoading(false);
+    if (success) {
+      showSuccess(t('user.messages.update_success'));
+      setNewPassword('');
+      setConfirmPassword('');
+    } else {
+      showError(message);
+    }
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <Segment>
@@ -175,6 +224,37 @@ const PersonalSetting = () => {
             {affLink}
           </Message>
         )}
+      </Segment>
+
+      <Segment>
+        <Header as='h3'>
+          {t('setting.personal.password.title', '修改密码')}
+        </Header>
+        <Form>
+          <Form.Input
+            label={t('user.edit.password')}
+            placeholder={t('user.edit.password_placeholder')}
+            type='password'
+            value={newPassword}
+            onChange={(e, { value }) => setNewPassword(value)}
+            autoComplete='new-password'
+          />
+          <Form.Input
+            label={t('auth.register.confirm_password')}
+            placeholder={t('auth.register.confirm_password')}
+            type='password'
+            value={confirmPassword}
+            onChange={(e, { value }) => setConfirmPassword(value)}
+            autoComplete='new-password'
+          />
+          <Button
+            primary
+            loading={passwordLoading}
+            onClick={submitPasswordChange}
+          >
+            {t('user.edit.buttons.submit')}
+          </Button>
+        </Form>
       </Segment>
 
       <Segment>
