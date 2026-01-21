@@ -390,6 +390,8 @@ func UpdateUser(c *gin.Context) {
 		updatedUser.Password = "$I_LOVE_U" // make Validator happy :)
 	}
 	if err := common.Validate.Struct(&updatedUser); err != nil {
+		logger.Loginf(c.Request.Context(), "update user invalid input err=%v id=%d username=%s display=%s role=%d status=%d quota=%d used=%d email=%s",
+			err, updatedUser.Id, updatedUser.Username, updatedUser.DisplayName, updatedUser.Role, updatedUser.Status, updatedUser.Quota, updatedUser.UsedQuota, updatedUser.Email)
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": i18n.Translate(c, "invalid_input"),

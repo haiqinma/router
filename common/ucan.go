@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/yeying-community/router/common/config"
+	"github.com/yeying-community/router/common/logger"
 )
 
 type UcanCapability struct {
@@ -93,6 +94,7 @@ func VerifyUcanInvocation(token string, expectedAud string, required []UcanCapab
 		return "", err
 	}
 	if payload.Aud != expectedAud {
+		logger.Loginf(nil, "UCAN audience mismatch expected=%s actual=%s", expectedAud, payload.Aud)
 		return "", errors.New("UCAN audience mismatch")
 	}
 	if !capsAllow(payload.Cap, required) {
@@ -266,6 +268,7 @@ func verifyRootProof(root ucanRootProof) (ucanStatement, string, error) {
 		return ucanStatement{}, "", errors.New("invalid root claims")
 	}
 	if root.Aud != "" && root.Aud != aud {
+		logger.Loginf(nil, "UCAN root audience mismatch expected=%s actual=%s", root.Aud, aud)
 		return ucanStatement{}, "", errors.New("root audience mismatch")
 	}
 	if root.Exp != 0 && normalizeEpochMillis(root.Exp) != exp {
@@ -374,6 +377,7 @@ func verifyProofChain(currentDid string, required []UcanCapability, requiredExp 
 			return "", err
 		}
 		if payload.Aud != currentDid {
+			logger.Loginf(nil, "UCAN audience mismatch expected=%s actual=%s", currentDid, payload.Aud)
 			return "", errors.New("UCAN audience mismatch")
 		}
 		if !capsAllow(payload.Cap, required) {
@@ -398,6 +402,7 @@ func verifyProofChain(currentDid string, required []UcanCapability, requiredExp 
 		return "", err
 	}
 	if statement.Aud != currentDid {
+		logger.Loginf(nil, "UCAN root audience mismatch expected=%s actual=%s", currentDid, statement.Aud)
 		return "", errors.New("root audience mismatch")
 	}
 	if !capsAllow(statement.Cap, required) {
