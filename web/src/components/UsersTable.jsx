@@ -15,8 +15,7 @@ import { useTranslation } from 'react-i18next';
 import { ITEMS_PER_PAGE } from '../constants';
 import {
   renderGroup,
-  renderNumber,
-  renderQuota,
+  formatCompactNumber,
   renderText,
 } from '../helpers/render';
 
@@ -170,6 +169,46 @@ const UsersTable = () => {
     setActivePage(1);
   };
 
+  const quotaPerUnit = parseFloat(
+    localStorage.getItem('quota_per_unit') || '1'
+  );
+
+  const formatFullNumber = (value) => {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return '0';
+    return num.toLocaleString();
+  };
+
+  const formatFullAmount = (value) => {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return '0';
+    return num.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 6,
+    });
+  };
+
+  const renderQuotaValue = (value) => (
+    (() => {
+      const numericValue = Number(value);
+      const base = Number.isFinite(numericValue) ? numericValue : 0;
+      const amount = quotaPerUnit > 0 ? base / quotaPerUnit : base;
+      return (
+        <Popup
+          content={`$${formatFullAmount(amount)}`}
+          trigger={<span>{formatCompactNumber(amount)}</span>}
+        />
+      );
+    })()
+  );
+
+  const renderCountValue = (value) => (
+    <Popup
+      content={formatFullNumber(value)}
+      trigger={<span>{formatCompactNumber(value)}</span>}
+    />
+  );
+
   return (
     <>
       <Form onSubmit={searchUsers}>
@@ -217,7 +256,29 @@ const UsersTable = () => {
                 sortUser('quota');
               }}
             >
-              {t('user.table.quota')}
+              {t('user.table.remaining_quota')}
+              <span style={{ fontSize: '0.75em', opacity: 0.7, marginLeft: 4 }}>
+                $
+              </span>
+            </Table.HeaderCell>
+            <Table.HeaderCell
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                sortUser('used_quota');
+              }}
+            >
+              {t('user.table.used_quota')}
+              <span style={{ fontSize: '0.75em', opacity: 0.7, marginLeft: 4 }}>
+                $
+              </span>
+            </Table.HeaderCell>
+            <Table.HeaderCell
+              style={{ cursor: 'pointer' }}
+              onClick={() => {
+                sortUser('request_count');
+              }}
+            >
+              {t('user.table.request_count')}
             </Table.HeaderCell>
             <Table.HeaderCell
               style={{ cursor: 'pointer' }}
@@ -265,26 +326,9 @@ const UsersTable = () => {
                   {/*<Table.Cell>*/}
                   {/*  {user.email ? <Popup hoverable content={user.email} trigger={<span>{renderText(user.email, 24)}</span>} /> : '无'}*/}
                   {/*</Table.Cell>*/}
-                  <Table.Cell>
-                    <Popup
-                      content={t('user.table.remaining_quota')}
-                      trigger={
-                        <Label basic>{renderQuota(user.quota, t)}</Label>
-                      }
-                    />
-                    <Popup
-                      content={t('user.table.used_quota')}
-                      trigger={
-                        <Label basic>{renderQuota(user.used_quota, t)}</Label>
-                      }
-                    />
-                    <Popup
-                      content={t('user.table.request_count')}
-                      trigger={
-                        <Label basic>{renderNumber(user.request_count)}</Label>
-                      }
-                    />
-                  </Table.Cell>
+                  <Table.Cell>{renderQuotaValue(user.quota)}</Table.Cell>
+                  <Table.Cell>{renderQuotaValue(user.used_quota)}</Table.Cell>
+                  <Table.Cell>{renderCountValue(user.request_count)}</Table.Cell>
                   <Table.Cell>{renderRole(user.role, t)}</Table.Cell>
                   <Table.Cell>{renderStatus(user.status)}</Table.Cell>
                   <Table.Cell>
@@ -364,7 +408,7 @@ const UsersTable = () => {
 
         <Table.Footer>
           <Table.Row>
-            <Table.HeaderCell colSpan='7'>
+            <Table.HeaderCell colSpan='9'>
               <Button size='small' as={Link} to='/user/add' loading={loading}>
                 {t('user.buttons.add')}
               </Button>
