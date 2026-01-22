@@ -46,6 +46,37 @@ npm start --prefix web   # 自动代理到 http://localhost:3011
 ```
 如需把前端打包进后端：`npm run build --prefix web` 后重启后端。
 
+## 环境变量与启动（必读）
+**公网部署必须设置：**
+- `UCAN_AUD=did:web:<公网域名>`
+- `AUTO_REGISTER_ENABLED=true`（若希望钱包未绑定可自动注册）
+
+**systemd 不会自动加载 `.env`**  
+如使用 systemd，请在 service 文件或 `EnvironmentFile` 中显式设置 `UCAN_AUD` / `AUTO_REGISTER_ENABLED` / 其它 ROUTER 相关变量。
+
+### 最小可运行示例（开发）
+```bash
+cp .env.template .env
+# 需要自定义时直接编辑 .env
+go run ./cmd/router --log-dir ./logs
+```
+
+### 最小可运行示例（生产）
+示例：`/etc/systemd/system/router.service`（节选）
+```ini
+[Service]
+WorkingDirectory=/root/code/router/router_new
+ExecStart=/root/code/router/router_new/build/router --port 3011 --log-dir ./logs
+Environment=UCAN_AUD=did:web:llm.yeying.pub
+Environment=AUTO_REGISTER_ENABLED=true
+# 其它环境变量可放在 EnvironmentFile
+```
+重启命令（仅示例，不执行）：
+```bash
+systemctl daemon-reload
+systemctl restart router
+```
+
 ## 配置与文档
 - 环境变量说明与示例：`.env.template`
 - API 文档：`docs/API.md`
