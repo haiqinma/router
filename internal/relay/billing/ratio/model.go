@@ -722,6 +722,37 @@ func UpdateCompletionRatioByJSONString(jsonStr string) error {
 	return json.Unmarshal([]byte(jsonStr), &CompletionRatio)
 }
 
+func parseChannelRatioJSON(jsonStr string) map[string]float64 {
+	if strings.TrimSpace(jsonStr) == "" {
+		return nil
+	}
+	ratio := make(map[string]float64)
+	if err := json.Unmarshal([]byte(jsonStr), &ratio); err != nil {
+		logger.SysError("error unmarshalling channel ratio: " + err.Error())
+		return nil
+	}
+	return ratio
+}
+
+func GetChannelModelRatio(name string, channelType int, channelRatioJSON string) float64 {
+	if strings.HasPrefix(name, "qwen-") && strings.HasSuffix(name, "-internet") {
+		name = strings.TrimSuffix(name, "-internet")
+	}
+	if strings.HasPrefix(name, "command-") && strings.HasSuffix(name, "-internet") {
+		name = strings.TrimSuffix(name, "-internet")
+	}
+	if ratioMap := parseChannelRatioJSON(channelRatioJSON); ratioMap != nil {
+		model := fmt.Sprintf("%s(%d)", name, channelType)
+		if ratio, ok := ratioMap[model]; ok {
+			return ratio
+		}
+		if ratio, ok := ratioMap[name]; ok {
+			return ratio
+		}
+	}
+	return GetModelRatio(name, channelType)
+}
+
 func GetCompletionRatio(name string, channelType int) float64 {
 	if strings.HasPrefix(name, "qwen-") && strings.HasSuffix(name, "-internet") {
 		name = strings.TrimSuffix(name, "-internet")
@@ -832,4 +863,20 @@ func GetCompletionRatio(name string, channelType int) float64 {
 	}
 
 	return 1
+}
+
+func GetChannelCompletionRatio(name string, channelType int, channelRatioJSON string) float64 {
+	if strings.HasPrefix(name, "qwen-") && strings.HasSuffix(name, "-internet") {
+		name = strings.TrimSuffix(name, "-internet")
+	}
+	if ratioMap := parseChannelRatioJSON(channelRatioJSON); ratioMap != nil {
+		model := fmt.Sprintf("%s(%d)", name, channelType)
+		if ratio, ok := ratioMap[model]; ok {
+			return ratio
+		}
+		if ratio, ok := ratioMap[name]; ok {
+			return ratio
+		}
+	}
+	return GetCompletionRatio(name, channelType)
 }

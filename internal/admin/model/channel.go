@@ -35,6 +35,8 @@ type Channel struct {
 	Priority           *int64  `json:"priority" gorm:"bigint;default:0"`
 	Config             string  `json:"config"`
 	SystemPrompt       *string `json:"system_prompt" gorm:"type:text"`
+	ModelRatio         *string `json:"model_ratio" gorm:"type:text;default:''"`
+	CompletionRatio    *string `json:"completion_ratio" gorm:"type:text;default:''"`
 }
 
 type ChannelConfig struct {

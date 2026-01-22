@@ -97,6 +97,8 @@ const EditChannel = () => {
     base_url: '',
     other: '',
     model_mapping: '',
+    model_ratio: '',
+    completion_ratio: '',
     system_prompt: '',
     models: [],
     groups: ['default'],
@@ -152,6 +154,20 @@ const EditChannel = () => {
           null,
           2
         );
+      }
+      if (data.model_ratio) {
+        data.model_ratio = JSON.stringify(JSON.parse(data.model_ratio), null, 2);
+      } else {
+        data.model_ratio = '';
+      }
+      if (data.completion_ratio) {
+        data.completion_ratio = JSON.stringify(
+          JSON.parse(data.completion_ratio),
+          null,
+          2
+        );
+      } else {
+        data.completion_ratio = '';
       }
       setInputs(data);
       if (data.config !== '') {
@@ -243,6 +259,14 @@ const EditChannel = () => {
     }
     if (inputs.model_mapping !== '' && !verifyJSON(inputs.model_mapping)) {
       showInfo(t('channel.edit.messages.model_mapping_invalid'));
+      return;
+    }
+    if (inputs.model_ratio !== '' && !verifyJSON(inputs.model_ratio)) {
+      showInfo('模型倍率必须是合法的 JSON 格式！');
+      return;
+    }
+    if (inputs.completion_ratio !== '' && !verifyJSON(inputs.completion_ratio)) {
+      showInfo('补全倍率必须是合法的 JSON 格式！');
       return;
     }
     let localInputs = { ...inputs };
@@ -555,6 +579,40 @@ const EditChannel = () => {
                     name='model_mapping'
                     onChange={handleInputChange}
                     value={inputs.model_mapping}
+                    style={{
+                      minHeight: 150,
+                      fontFamily: 'JetBrains Mono, Consolas',
+                    }}
+                    autoComplete='new-password'
+                  />
+                </Form.Field>
+                <Form.Field>
+                  <Form.TextArea
+                    label={`${t('operation.ratio.model.title', '模型倍率')}（JSON）`}
+                    placeholder={t(
+                      'operation.ratio.model.placeholder',
+                      '为一个 JSON 文本，键为模型名称，值为倍率'
+                    )}
+                    name='model_ratio'
+                    onChange={handleInputChange}
+                    value={inputs.model_ratio}
+                    style={{
+                      minHeight: 150,
+                      fontFamily: 'JetBrains Mono, Consolas',
+                    }}
+                    autoComplete='new-password'
+                  />
+                </Form.Field>
+                <Form.Field>
+                  <Form.TextArea
+                    label={`${t('operation.ratio.completion.title', '补全倍率')}（JSON）`}
+                    placeholder={t(
+                      'operation.ratio.completion.placeholder',
+                      '为一个 JSON 文本，键为模型名称，值为倍率'
+                    )}
+                    name='completion_ratio'
+                    onChange={handleInputChange}
+                    value={inputs.completion_ratio}
                     style={{
                       minHeight: 150,
                       fontFamily: 'JetBrains Mono, Consolas',

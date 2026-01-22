@@ -54,7 +54,7 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		}
 	}
 
-	modelRatio := billingratio.GetModelRatio(audioModel, channelType)
+	modelRatio := billingratio.GetChannelModelRatio(audioModel, channelType, meta.ChannelModelRatio)
 	groupRatio := billingratio.GetGroupRatio(group)
 	ratio := modelRatio * groupRatio
 	var quota int64

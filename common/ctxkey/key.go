@@ -21,4 +21,6 @@ const (
 	AvailableModels   = "available_models"
 	KeyRequestBody    = "key_request_body"
 	SystemPrompt      = "system_prompt"
+	ModelRatio        = "model_ratio"
+	CompletionRatio   = "completion_ratio"
 )

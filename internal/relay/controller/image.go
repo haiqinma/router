@@ -168,7 +168,7 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		requestBody = bytes.NewBuffer(jsonStr)
 	}
 
-	modelRatio := billingratio.GetModelRatio(imageModel, meta.ChannelType)
+	modelRatio := billingratio.GetChannelModelRatio(imageModel, meta.ChannelType, meta.ChannelModelRatio)
 	groupRatio := billingratio.GetGroupRatio(meta.Group)
 	ratio := modelRatio * groupRatio
 	userQuota, err := model.CacheGetUserQuota(ctx, meta.UserId)

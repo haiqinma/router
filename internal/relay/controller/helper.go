@@ -107,7 +107,7 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 		return
 	}
 	var quota int64
-	completionRatio := billingratio.GetCompletionRatio(textRequest.Model, meta.ChannelType)
+	completionRatio := billingratio.GetChannelCompletionRatio(textRequest.Model, meta.ChannelType, meta.ChannelCompletionRatio)
 	promptTokens := usage.PromptTokens
 	completionTokens := usage.CompletionTokens
 	quota = int64(math.Ceil((float64(promptTokens) + float64(completionTokens)*completionRatio) * ratio))
