@@ -21,6 +21,10 @@ const AddUser = () => {
 
   const submit = async () => {
     if (inputs.username === '' || inputs.password === '') return;
+    if (password.length < 8 || password.length > 20) {
+      showError(t('messages.error.password_length_range'));
+      return;
+    }
     const res = await API.post(`/api/user/`, inputs);
     const { success, message } = res.data;
     if (success) {

@@ -819,6 +819,7 @@
     "error": {
       "login_expired": "未登录或登录已过期，请重新登录！",
       "password_length": "密码长度不得小于 8 位！",
+      "password_length_range": "密码长度需在 8-20 位",
       "password_mismatch": "两次输入的密码不一致",
       "turnstile_wait": "请稍后几秒重试，Turnstile 正在检查用户环境！",
       "root_password": "请立刻修改默认密码！"
