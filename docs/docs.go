@@ -531,7 +531,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/docs.StandardResponse"
+                            "$ref": "#/definitions/docs.UserLogListResponse"
                         }
                     },
                     "401": {
@@ -606,7 +606,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/docs.StandardResponse"
+                            "$ref": "#/definitions/docs.UserLogListResponse"
                         }
                     },
                     "401": {
@@ -680,7 +680,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/docs.StandardResponse"
+                            "$ref": "#/definitions/docs.UserLogStatResponse"
                         }
                     },
                     "401": {
@@ -1868,6 +1868,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
+                "description": "When provider is specified, the response shape becomes docs.ChannelModelsProviderResponse (data is string[] and meta is an object).",
                 "produces": [
                     "application/json"
                 ],
@@ -1887,7 +1888,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/docs.StandardResponse"
+                            "$ref": "#/definitions/docs.ChannelModelsResponse"
                         }
                     },
                     "401": {
@@ -2675,7 +2676,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/docs.StandardResponse"
+                            "$ref": "#/definitions/docs.UserLogListResponse"
                         }
                     },
                     "401": {
@@ -2713,7 +2714,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/docs.StandardResponse"
+                            "$ref": "#/definitions/docs.UserLogListResponse"
                         }
                     },
                     "401": {
@@ -2781,7 +2782,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/docs.StandardResponse"
+                            "$ref": "#/definitions/docs.UserLogStatResponse"
                         }
                     },
                     "401": {
@@ -3632,7 +3633,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/docs.StandardResponse"
+                            "$ref": "#/definitions/docs.TokenListResponse"
                         }
                     },
                     "401": {
@@ -3680,7 +3681,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/docs.StandardResponse"
+                            "$ref": "#/definitions/docs.TokenDetailResponse"
                         }
                     },
                     "401": {
@@ -3722,7 +3723,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/docs.StandardResponse"
+                            "$ref": "#/definitions/docs.TokenDetailResponse"
                         }
                     },
                     "401": {
@@ -3760,7 +3761,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/docs.StandardResponse"
+                            "$ref": "#/definitions/docs.TokenListResponse"
                         }
                     },
                     "401": {
@@ -3799,7 +3800,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/docs.StandardResponse"
+                            "$ref": "#/definitions/docs.TokenDetailResponse"
                         }
                     },
                     "401": {
@@ -3836,7 +3837,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/docs.StandardResponse"
+                            "$ref": "#/definitions/docs.TokenDeleteResponse"
                         }
                     },
                     "401": {
@@ -3866,7 +3867,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/docs.StandardResponse"
+                            "$ref": "#/definitions/docs.UserAffCodeResponse"
                         }
                     },
                     "401": {
@@ -3904,7 +3905,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/docs.StandardResponse"
+                            "$ref": "#/definitions/docs.UserAvailableModelsResponse"
                         }
                     },
                     "401": {
@@ -3966,7 +3967,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/docs.StandardResponse"
+                            "$ref": "#/definitions/docs.UserDashboardResponse"
                         }
                     },
                     "401": {
@@ -4138,7 +4139,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/docs.StandardResponse"
+                            "$ref": "#/definitions/docs.UserSelfResponse"
                         }
                     },
                     "401": {
@@ -4238,7 +4239,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/docs.StandardResponse"
+                            "$ref": "#/definitions/docs.UserAccessTokenResponse"
                         }
                     },
                     "401": {
@@ -4282,7 +4283,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/docs.StandardResponse"
+                            "$ref": "#/definitions/docs.UserTopUpResponse"
                         }
                     },
                     "401": {
@@ -4444,6 +4445,53 @@ const docTemplate = `{
                 "weight": {
                     "type": "integer",
                     "example": 0
+                }
+            }
+        },
+        "docs.ChannelModelsMeta": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "models": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string",
+                    "example": "openai"
+                }
+            }
+        },
+        "docs.ChannelModelsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": ""
+                },
+                "meta": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/docs.ChannelModelsMeta"
+                    }
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
@@ -5812,6 +5860,111 @@ const docTemplate = `{
                 }
             }
         },
+        "docs.TokenDeleteResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": ""
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "docs.TokenDetailResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/docs.TokenPublic"
+                },
+                "message": {
+                    "type": "string",
+                    "example": ""
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "docs.TokenListResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/docs.TokenPublic"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": ""
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "docs.TokenPublic": {
+            "type": "object",
+            "properties": {
+                "accessed_time": {
+                    "type": "integer",
+                    "example": 1700000000
+                },
+                "created_time": {
+                    "type": "integer",
+                    "example": 1700000000
+                },
+                "expired_time": {
+                    "type": "integer",
+                    "example": -1
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "key": {
+                    "type": "string",
+                    "example": "sk-***"
+                },
+                "models": {
+                    "type": "string",
+                    "example": "gpt-4o-mini,gpt-4o"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "default"
+                },
+                "remain_quota": {
+                    "type": "integer",
+                    "example": 100000
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "subnet": {
+                    "type": "string",
+                    "example": "192.168.0.0/16"
+                },
+                "unlimited_quota": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "used_quota": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "user_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
         "docs.TokenUpdateRequest": {
             "type": "object",
             "properties": {
@@ -5849,6 +6002,338 @@ const docTemplate = `{
                 }
             }
         },
+        "docs.UserAccessTokenResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "string",
+                    "example": "tok_abc123"
+                },
+                "message": {
+                    "type": "string",
+                    "example": ""
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "docs.UserAffCodeResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "string",
+                    "example": "ABCD"
+                },
+                "message": {
+                    "type": "string",
+                    "example": ""
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "docs.UserAvailableModelsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": ""
+                },
+                "provider": {
+                    "type": "string",
+                    "example": "openai"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "docs.UserDashboardItem": {
+            "type": "object",
+            "properties": {
+                "CompletionTokens": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "Day": {
+                    "type": "string",
+                    "example": "2024-01-01"
+                },
+                "ModelName": {
+                    "type": "string",
+                    "example": "gpt-4o-mini"
+                },
+                "PromptTokens": {
+                    "type": "integer",
+                    "example": 100
+                },
+                "Quota": {
+                    "type": "integer",
+                    "example": 12345
+                },
+                "RequestCount": {
+                    "type": "integer",
+                    "example": 10
+                }
+            }
+        },
+        "docs.UserDashboardMeta": {
+            "type": "object",
+            "properties": {
+                "end": {
+                    "type": "integer",
+                    "example": 1704671999
+                },
+                "granularity": {
+                    "type": "string",
+                    "example": "day"
+                },
+                "providers": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "start": {
+                    "type": "integer",
+                    "example": 1704067200
+                }
+            }
+        },
+        "docs.UserDashboardResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/docs.UserDashboardItem"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": ""
+                },
+                "meta": {
+                    "$ref": "#/definitions/docs.UserDashboardMeta"
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "docs.UserLogItem": {
+            "type": "object",
+            "properties": {
+                "channel": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "completion_tokens": {
+                    "type": "integer",
+                    "example": 34
+                },
+                "content": {
+                    "type": "string",
+                    "example": "request"
+                },
+                "created_at": {
+                    "type": "integer",
+                    "example": 1700000000
+                },
+                "elapsed_time": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "is_stream": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "model_name": {
+                    "type": "string",
+                    "example": "gpt-4o-mini"
+                },
+                "prompt_tokens": {
+                    "type": "integer",
+                    "example": 12
+                },
+                "quota": {
+                    "type": "integer",
+                    "example": 123
+                },
+                "request_id": {
+                    "type": "string",
+                    "example": "req_123"
+                },
+                "system_prompt_reset": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "token_name": {
+                    "type": "string",
+                    "example": "default"
+                },
+                "type": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "user_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "username": {
+                    "type": "string",
+                    "example": "alice"
+                }
+            }
+        },
+        "docs.UserLogListResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/docs.UserLogItem"
+                    }
+                },
+                "message": {
+                    "type": "string",
+                    "example": ""
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "docs.UserLogStatData": {
+            "type": "object",
+            "properties": {
+                "quota": {
+                    "type": "integer",
+                    "example": 12345
+                }
+            }
+        },
+        "docs.UserLogStatResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/docs.UserLogStatData"
+                },
+                "message": {
+                    "type": "string",
+                    "example": ""
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "docs.UserPublic": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string",
+                    "example": ""
+                },
+                "aff_code": {
+                    "type": "string",
+                    "example": "ABCD"
+                },
+                "display_name": {
+                    "type": "string",
+                    "example": "Alice"
+                },
+                "email": {
+                    "type": "string",
+                    "example": ""
+                },
+                "github_id": {
+                    "type": "string",
+                    "example": ""
+                },
+                "group": {
+                    "type": "string",
+                    "example": "default"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "inviter_id": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "lark_id": {
+                    "type": "string",
+                    "example": ""
+                },
+                "oidc_id": {
+                    "type": "string",
+                    "example": ""
+                },
+                "password": {
+                    "type": "string",
+                    "example": ""
+                },
+                "quota": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "request_count": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "role": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "status": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "used_quota": {
+                    "type": "integer",
+                    "example": 0
+                },
+                "username": {
+                    "type": "string",
+                    "example": "alice"
+                },
+                "verification_code": {
+                    "type": "string",
+                    "example": ""
+                },
+                "wallet_address": {
+                    "type": "string",
+                    "example": "0x1111111111111111111111111111111111111111"
+                },
+                "wechat_id": {
+                    "type": "string",
+                    "example": ""
+                }
+            }
+        },
         "docs.UserRegisterRequest": {
             "type": "object",
             "properties": {
@@ -5871,6 +6356,22 @@ const docTemplate = `{
                 "username": {
                     "type": "string",
                     "example": "alice"
+                }
+            }
+        },
+        "docs.UserSelfResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/docs.UserPublic"
+                },
+                "message": {
+                    "type": "string",
+                    "example": ""
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
@@ -5897,6 +6398,23 @@ const docTemplate = `{
                 "key": {
                     "type": "string",
                     "example": "redeem-xxxx-xxxx"
+                }
+            }
+        },
+        "docs.UserTopUpResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "integer",
+                    "example": 100000
+                },
+                "message": {
+                    "type": "string",
+                    "example": ""
+                },
+                "success": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },

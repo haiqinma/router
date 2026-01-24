@@ -143,11 +143,12 @@ func init() {
 
 // DashboardListModels godoc
 // @Summary List channel models for UI
+// @Description When provider is specified, the response shape becomes docs.ChannelModelsProviderResponse (data is string[] and meta is an object).
 // @Tags public
 // @Security BearerAuth
 // @Produce json
 // @Param provider query string false "Provider name"
-// @Success 200 {object} docs.StandardResponse
+// @Success 200 {object} docs.ChannelModelsResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/public/channel/models [get]
 func DashboardListModels(c *gin.Context) {
@@ -295,7 +296,7 @@ func RetrieveModel(c *gin.Context) {
 // @Security BearerAuth
 // @Produce json
 // @Param provider query string false "Provider name"
-// @Success 200 {object} docs.StandardResponse
+// @Success 200 {object} docs.UserAvailableModelsResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/public/user/available_models [get]
 func GetUserAvailableModels(c *gin.Context) {

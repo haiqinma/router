@@ -326,7 +326,7 @@ func GetUser(c *gin.Context) {
 // @Param granularity query string false "day|week|month|year"
 // @Param models query string false "Comma-separated model list"
 // @Param include_meta query int false "Include meta info (1)"
-// @Success 200 {object} docs.StandardResponse
+// @Success 200 {object} docs.UserDashboardResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/public/user/dashboard [get]
 func GetUserDashboard(c *gin.Context) {
@@ -428,7 +428,7 @@ func GetUserDashboard(c *gin.Context) {
 // @Tags public
 // @Security BearerAuth
 // @Produce json
-// @Success 200 {object} docs.StandardResponse
+// @Success 200 {object} docs.UserAccessTokenResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/public/user/token [get]
 func GenerateAccessToken(c *gin.Context) {
@@ -482,7 +482,7 @@ func GenerateAccessToken(c *gin.Context) {
 // @Tags public
 // @Security BearerAuth
 // @Produce json
-// @Success 200 {object} docs.StandardResponse
+// @Success 200 {object} docs.UserAffCodeResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/public/user/aff [get]
 func GetAffCode(c *gin.Context) {
@@ -518,7 +518,7 @@ func GetAffCode(c *gin.Context) {
 // @Tags public
 // @Security BearerAuth
 // @Produce json
-// @Success 200 {object} docs.StandardResponse
+// @Success 200 {object} docs.UserSelfResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/public/user/self [get]
 func GetSelf(c *gin.Context) {
@@ -1006,7 +1006,7 @@ type topUpRequest struct {
 // @Accept json
 // @Produce json
 // @Param body body docs.UserTopUpRequest true "Top up payload"
-// @Success 200 {object} docs.StandardResponse
+// @Success 200 {object} docs.UserTopUpResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/public/user/topup [post]
 func TopUp(c *gin.Context) {

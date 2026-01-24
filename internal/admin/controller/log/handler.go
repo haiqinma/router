@@ -23,7 +23,7 @@ import (
 // @Param token_name query string false "Token name"
 // @Param model_name query string false "Model name"
 // @Param channel query int false "Channel ID"
-// @Success 200 {object} docs.StandardResponse
+// @Success 200 {object} docs.UserLogListResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/admin/log [get]
 func GetAllLogs(c *gin.Context) {
@@ -65,7 +65,7 @@ func GetAllLogs(c *gin.Context) {
 // @Param end_timestamp query int false "End timestamp (unix)"
 // @Param token_name query string false "Token name"
 // @Param model_name query string false "Model name"
-// @Success 200 {object} docs.StandardResponse
+// @Success 200 {object} docs.UserLogListResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/public/log/self [get]
 func GetUserLogs(c *gin.Context) {
@@ -101,7 +101,7 @@ func GetUserLogs(c *gin.Context) {
 // @Security BearerAuth
 // @Produce json
 // @Param keyword query string false "Keyword"
-// @Success 200 {object} docs.StandardResponse
+// @Success 200 {object} docs.UserLogListResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/admin/log/search [get]
 func SearchAllLogs(c *gin.Context) {
@@ -128,7 +128,7 @@ func SearchAllLogs(c *gin.Context) {
 // @Security BearerAuth
 // @Produce json
 // @Param keyword query string false "Keyword"
-// @Success 200 {object} docs.StandardResponse
+// @Success 200 {object} docs.UserLogListResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/public/log/self/search [get]
 func SearchUserLogs(c *gin.Context) {
@@ -162,7 +162,7 @@ func SearchUserLogs(c *gin.Context) {
 // @Param username query string false "Username"
 // @Param model_name query string false "Model name"
 // @Param channel query int false "Channel ID"
-// @Success 200 {object} docs.StandardResponse
+// @Success 200 {object} docs.UserLogStatResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/admin/log/stat [get]
 func GetLogsStat(c *gin.Context) {
@@ -197,7 +197,7 @@ func GetLogsStat(c *gin.Context) {
 // @Param token_name query string false "Token name"
 // @Param model_name query string false "Model name"
 // @Param channel query int false "Channel ID"
-// @Success 200 {object} docs.StandardResponse
+// @Success 200 {object} docs.UserLogStatResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/public/log/self/stat [get]
 func GetLogsSelfStat(c *gin.Context) {

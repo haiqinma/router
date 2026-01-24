@@ -109,6 +109,38 @@ definitions:
         example: 0
         type: integer
     type: object
+  docs.ChannelModelsMeta:
+    properties:
+      id:
+        example: 1
+        type: integer
+      models:
+        items:
+          type: string
+        type: array
+      name:
+        example: openai
+        type: string
+    type: object
+  docs.ChannelModelsResponse:
+    properties:
+      data:
+        additionalProperties:
+          items:
+            type: string
+          type: array
+        type: object
+      message:
+        example: ""
+        type: string
+      meta:
+        items:
+          $ref: '#/definitions/docs.ChannelModelsMeta'
+        type: array
+      success:
+        example: true
+        type: boolean
+    type: object
   docs.ChannelUpdateRequest:
     properties:
       base_url:
@@ -1069,6 +1101,81 @@ definitions:
         example: false
         type: boolean
     type: object
+  docs.TokenDeleteResponse:
+    properties:
+      message:
+        example: ""
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  docs.TokenDetailResponse:
+    properties:
+      data:
+        $ref: '#/definitions/docs.TokenPublic'
+      message:
+        example: ""
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  docs.TokenListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/docs.TokenPublic'
+        type: array
+      message:
+        example: ""
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  docs.TokenPublic:
+    properties:
+      accessed_time:
+        example: 1700000000
+        type: integer
+      created_time:
+        example: 1700000000
+        type: integer
+      expired_time:
+        example: -1
+        type: integer
+      id:
+        example: 1
+        type: integer
+      key:
+        example: sk-***
+        type: string
+      models:
+        example: gpt-4o-mini,gpt-4o
+        type: string
+      name:
+        example: default
+        type: string
+      remain_quota:
+        example: 100000
+        type: integer
+      status:
+        example: 1
+        type: integer
+      subnet:
+        example: 192.168.0.0/16
+        type: string
+      unlimited_quota:
+        example: false
+        type: boolean
+      used_quota:
+        example: 0
+        type: integer
+      user_id:
+        example: 1
+        type: integer
+    type: object
   docs.TokenUpdateRequest:
     properties:
       expired_time:
@@ -1096,6 +1203,244 @@ definitions:
         example: false
         type: boolean
     type: object
+  docs.UserAccessTokenResponse:
+    properties:
+      data:
+        example: tok_abc123
+        type: string
+      message:
+        example: ""
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  docs.UserAffCodeResponse:
+    properties:
+      data:
+        example: ABCD
+        type: string
+      message:
+        example: ""
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  docs.UserAvailableModelsResponse:
+    properties:
+      data:
+        items:
+          type: string
+        type: array
+      message:
+        example: ""
+        type: string
+      provider:
+        example: openai
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  docs.UserDashboardItem:
+    properties:
+      CompletionTokens:
+        example: 200
+        type: integer
+      Day:
+        example: "2024-01-01"
+        type: string
+      ModelName:
+        example: gpt-4o-mini
+        type: string
+      PromptTokens:
+        example: 100
+        type: integer
+      Quota:
+        example: 12345
+        type: integer
+      RequestCount:
+        example: 10
+        type: integer
+    type: object
+  docs.UserDashboardMeta:
+    properties:
+      end:
+        example: 1704671999
+        type: integer
+      granularity:
+        example: day
+        type: string
+      providers:
+        additionalProperties:
+          items:
+            type: string
+          type: array
+        type: object
+      start:
+        example: 1704067200
+        type: integer
+    type: object
+  docs.UserDashboardResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/docs.UserDashboardItem'
+        type: array
+      message:
+        example: ""
+        type: string
+      meta:
+        $ref: '#/definitions/docs.UserDashboardMeta'
+      success:
+        example: true
+        type: boolean
+    type: object
+  docs.UserLogItem:
+    properties:
+      channel:
+        example: 1
+        type: integer
+      completion_tokens:
+        example: 34
+        type: integer
+      content:
+        example: request
+        type: string
+      created_at:
+        example: 1700000000
+        type: integer
+      elapsed_time:
+        example: 200
+        type: integer
+      id:
+        example: 1
+        type: integer
+      is_stream:
+        example: false
+        type: boolean
+      model_name:
+        example: gpt-4o-mini
+        type: string
+      prompt_tokens:
+        example: 12
+        type: integer
+      quota:
+        example: 123
+        type: integer
+      request_id:
+        example: req_123
+        type: string
+      system_prompt_reset:
+        example: false
+        type: boolean
+      token_name:
+        example: default
+        type: string
+      type:
+        example: 2
+        type: integer
+      user_id:
+        example: 1
+        type: integer
+      username:
+        example: alice
+        type: string
+    type: object
+  docs.UserLogListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/docs.UserLogItem'
+        type: array
+      message:
+        example: ""
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  docs.UserLogStatData:
+    properties:
+      quota:
+        example: 12345
+        type: integer
+    type: object
+  docs.UserLogStatResponse:
+    properties:
+      data:
+        $ref: '#/definitions/docs.UserLogStatData'
+      message:
+        example: ""
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  docs.UserPublic:
+    properties:
+      access_token:
+        example: ""
+        type: string
+      aff_code:
+        example: ABCD
+        type: string
+      display_name:
+        example: Alice
+        type: string
+      email:
+        example: ""
+        type: string
+      github_id:
+        example: ""
+        type: string
+      group:
+        example: default
+        type: string
+      id:
+        example: 1
+        type: integer
+      inviter_id:
+        example: 0
+        type: integer
+      lark_id:
+        example: ""
+        type: string
+      oidc_id:
+        example: ""
+        type: string
+      password:
+        example: ""
+        type: string
+      quota:
+        example: 0
+        type: integer
+      request_count:
+        example: 0
+        type: integer
+      role:
+        example: 1
+        type: integer
+      status:
+        example: 1
+        type: integer
+      used_quota:
+        example: 0
+        type: integer
+      username:
+        example: alice
+        type: string
+      verification_code:
+        example: ""
+        type: string
+      wallet_address:
+        example: 0x1111111111111111111111111111111111111111
+        type: string
+      wechat_id:
+        example: ""
+        type: string
+    type: object
   docs.UserRegisterRequest:
     properties:
       aff_code:
@@ -1114,6 +1459,17 @@ definitions:
         example: alice
         type: string
     type: object
+  docs.UserSelfResponse:
+    properties:
+      data:
+        $ref: '#/definitions/docs.UserPublic'
+      message:
+        example: ""
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
   docs.UserSelfUpdateRequest:
     properties:
       display_name:
@@ -1131,6 +1487,18 @@ definitions:
       key:
         example: redeem-xxxx-xxxx
         type: string
+    type: object
+  docs.UserTopUpResponse:
+    properties:
+      data:
+        example: 100000
+        type: integer
+      message:
+        example: ""
+        type: string
+      success:
+        example: true
+        type: boolean
     type: object
   docs.WalletChallengeRequest:
     properties:
@@ -1510,7 +1878,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/docs.StandardResponse'
+            $ref: '#/definitions/docs.UserLogListResponse'
         "401":
           description: Unauthorized
           schema:
@@ -1533,7 +1901,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/docs.StandardResponse'
+            $ref: '#/definitions/docs.UserLogListResponse'
         "401":
           description: Unauthorized
           schema:
@@ -1580,7 +1948,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/docs.StandardResponse'
+            $ref: '#/definitions/docs.UserLogStatResponse'
         "401":
           description: Unauthorized
           schema:
@@ -2313,6 +2681,8 @@ paths:
       - public
   /api/v1/public/channel/models:
     get:
+      description: When provider is specified, the response shape becomes docs.ChannelModelsProviderResponse
+        (data is string[] and meta is an object).
       parameters:
       - description: Provider name
         in: query
@@ -2324,7 +2694,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/docs.StandardResponse'
+            $ref: '#/definitions/docs.ChannelModelsResponse'
         "401":
           description: Unauthorized
           schema:
@@ -2807,7 +3177,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/docs.StandardResponse'
+            $ref: '#/definitions/docs.UserLogListResponse'
         "401":
           description: Unauthorized
           schema:
@@ -2830,7 +3200,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/docs.StandardResponse'
+            $ref: '#/definitions/docs.UserLogListResponse'
         "401":
           description: Unauthorized
           schema:
@@ -2873,7 +3243,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/docs.StandardResponse'
+            $ref: '#/definitions/docs.UserLogStatResponse'
         "401":
           description: Unauthorized
           schema:
@@ -3388,7 +3758,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/docs.StandardResponse'
+            $ref: '#/definitions/docs.TokenListResponse'
         "401":
           description: Unauthorized
           schema:
@@ -3414,7 +3784,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/docs.StandardResponse'
+            $ref: '#/definitions/docs.TokenDetailResponse'
         "401":
           description: Unauthorized
           schema:
@@ -3444,7 +3814,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/docs.StandardResponse'
+            $ref: '#/definitions/docs.TokenDetailResponse'
         "401":
           description: Unauthorized
           schema:
@@ -3468,7 +3838,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/docs.StandardResponse'
+            $ref: '#/definitions/docs.TokenDeleteResponse'
         "401":
           description: Unauthorized
           schema:
@@ -3491,7 +3861,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/docs.StandardResponse'
+            $ref: '#/definitions/docs.TokenDetailResponse'
         "401":
           description: Unauthorized
           schema:
@@ -3514,7 +3884,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/docs.StandardResponse'
+            $ref: '#/definitions/docs.TokenListResponse'
         "401":
           description: Unauthorized
           schema:
@@ -3532,7 +3902,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/docs.StandardResponse'
+            $ref: '#/definitions/docs.UserAffCodeResponse'
         "401":
           description: Unauthorized
           schema:
@@ -3555,7 +3925,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/docs.StandardResponse'
+            $ref: '#/definitions/docs.UserAvailableModelsResponse'
         "401":
           description: Unauthorized
           schema:
@@ -3594,7 +3964,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/docs.StandardResponse'
+            $ref: '#/definitions/docs.UserDashboardResponse'
         "401":
           description: Unauthorized
           schema:
@@ -3720,7 +4090,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/docs.StandardResponse'
+            $ref: '#/definitions/docs.UserSelfResponse'
         "401":
           description: Unauthorized
           schema:
@@ -3764,7 +4134,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/docs.StandardResponse'
+            $ref: '#/definitions/docs.UserAccessTokenResponse'
         "401":
           description: Unauthorized
           schema:
@@ -3791,7 +4161,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/docs.StandardResponse'
+            $ref: '#/definitions/docs.UserTopUpResponse'
         "401":
           description: Unauthorized
           schema:

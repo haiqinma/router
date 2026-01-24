@@ -93,6 +93,181 @@ type UserTopUpRequest struct {
 	Key string `json:"key" example:"redeem-xxxx-xxxx"`
 }
 
+// --- User/public responses ---
+
+type UserPublic struct {
+	ID               int     `json:"id" example:"1"`
+	Username         string  `json:"username" example:"alice"`
+	Password         string  `json:"password" example:""`
+	DisplayName      string  `json:"display_name" example:"Alice"`
+	Role             int     `json:"role" example:"1"`
+	Status           int     `json:"status" example:"1"`
+	Email            string  `json:"email" example:""`
+	GitHubID         string  `json:"github_id" example:""`
+	WeChatID         string  `json:"wechat_id" example:""`
+	LarkID           string  `json:"lark_id" example:""`
+	OIDCID           string  `json:"oidc_id" example:""`
+	WalletAddress    *string `json:"wallet_address" example:"0x1111111111111111111111111111111111111111"`
+	VerificationCode string  `json:"verification_code" example:""`
+	AccessToken      string  `json:"access_token" example:""`
+	Quota            int64   `json:"quota" example:"0"`
+	UsedQuota        int64   `json:"used_quota" example:"0"`
+	RequestCount     int     `json:"request_count" example:"0"`
+	Group            string  `json:"group" example:"default"`
+	AffCode          string  `json:"aff_code" example:"ABCD"`
+	InviterID        int     `json:"inviter_id" example:"0"`
+}
+
+type UserSelfResponse struct {
+	Success bool       `json:"success" example:"true"`
+	Message string     `json:"message" example:""`
+	Data    UserPublic `json:"data"`
+}
+
+type UserDashboardItem struct {
+	Day              string `json:"Day" example:"2024-01-01"`
+	ModelName        string `json:"ModelName" example:"gpt-4o-mini"`
+	RequestCount     int    `json:"RequestCount" example:"10"`
+	Quota            int    `json:"Quota" example:"12345"`
+	PromptTokens     int    `json:"PromptTokens" example:"100"`
+	CompletionTokens int    `json:"CompletionTokens" example:"200"`
+}
+
+type UserDashboardMeta struct {
+	Providers   map[string][]string `json:"providers"`
+	Granularity string              `json:"granularity" example:"day"`
+	Start       int64               `json:"start" example:"1704067200"`
+	End         int64               `json:"end" example:"1704671999"`
+}
+
+type UserDashboardResponse struct {
+	Success bool                `json:"success" example:"true"`
+	Message string              `json:"message" example:""`
+	Data    []UserDashboardItem `json:"data"`
+	Meta    *UserDashboardMeta  `json:"meta,omitempty"`
+}
+
+type UserAvailableModelsResponse struct {
+	Success  bool     `json:"success" example:"true"`
+	Message  string   `json:"message" example:""`
+	Data     []string `json:"data"`
+	Provider string   `json:"provider,omitempty" example:"openai"`
+}
+
+type UserAccessTokenResponse struct {
+	Success bool   `json:"success" example:"true"`
+	Message string `json:"message" example:""`
+	Data    string `json:"data" example:"tok_abc123"`
+}
+
+type UserAffCodeResponse struct {
+	Success bool   `json:"success" example:"true"`
+	Message string `json:"message" example:""`
+	Data    string `json:"data" example:"ABCD"`
+}
+
+type UserTopUpResponse struct {
+	Success bool  `json:"success" example:"true"`
+	Message string `json:"message" example:""`
+	Data    int64 `json:"data" example:"100000"`
+}
+
+// --- Token responses ---
+
+type TokenPublic struct {
+	ID             int     `json:"id" example:"1"`
+	UserID         int     `json:"user_id" example:"1"`
+	Key            string  `json:"key" example:"sk-***"`
+	Status         int     `json:"status" example:"1"`
+	Name           string  `json:"name" example:"default"`
+	CreatedTime    int64   `json:"created_time" example:"1700000000"`
+	AccessedTime   int64   `json:"accessed_time" example:"1700000000"`
+	ExpiredTime    int64   `json:"expired_time" example:"-1"`
+	RemainQuota    int64   `json:"remain_quota" example:"100000"`
+	UnlimitedQuota bool    `json:"unlimited_quota" example:"false"`
+	UsedQuota      int64   `json:"used_quota" example:"0"`
+	Models         *string `json:"models" example:"gpt-4o-mini,gpt-4o"`
+	Subnet         *string `json:"subnet" example:"192.168.0.0/16"`
+}
+
+type TokenListResponse struct {
+	Success bool          `json:"success" example:"true"`
+	Message string        `json:"message" example:""`
+	Data    []TokenPublic `json:"data"`
+}
+
+type TokenDetailResponse struct {
+	Success bool        `json:"success" example:"true"`
+	Message string      `json:"message" example:""`
+	Data    TokenPublic `json:"data"`
+}
+
+type TokenDeleteResponse struct {
+	Success bool   `json:"success" example:"true"`
+	Message string `json:"message" example:""`
+}
+
+// --- Log responses (public) ---
+
+type UserLogItem struct {
+	ID                int    `json:"id" example:"1"`
+	UserID            int    `json:"user_id" example:"1"`
+	CreatedAt         int64  `json:"created_at" example:"1700000000"`
+	Type              int    `json:"type" example:"2"`
+	Content           string `json:"content" example:"request"`
+	Username          string `json:"username" example:"alice"`
+	TokenName         string `json:"token_name" example:"default"`
+	ModelName         string `json:"model_name" example:"gpt-4o-mini"`
+	Quota             int    `json:"quota" example:"123"`
+	PromptTokens      int    `json:"prompt_tokens" example:"12"`
+	CompletionTokens  int    `json:"completion_tokens" example:"34"`
+	ChannelId         int    `json:"channel" example:"1"`
+	RequestId         string `json:"request_id" example:"req_123"`
+	ElapsedTime       int64  `json:"elapsed_time" example:"200"`
+	IsStream          bool   `json:"is_stream" example:"false"`
+	SystemPromptReset bool   `json:"system_prompt_reset" example:"false"`
+}
+
+type UserLogListResponse struct {
+	Success bool          `json:"success" example:"true"`
+	Message string        `json:"message" example:""`
+	Data    []UserLogItem `json:"data"`
+}
+
+type UserLogStatData struct {
+	Quota int64 `json:"quota" example:"12345"`
+}
+
+type UserLogStatResponse struct {
+	Success bool           `json:"success" example:"true"`
+	Message string         `json:"message" example:""`
+	Data    UserLogStatData `json:"data"`
+}
+
+// --- Channel models (public) ---
+
+type ChannelModelsMeta struct {
+	ID     int      `json:"id" example:"1"`
+	Name   string   `json:"name" example:"openai"`
+	Models []string `json:"models"`
+}
+
+type ChannelModelsResponse struct {
+	Success bool                `json:"success" example:"true"`
+	Message string              `json:"message" example:""`
+	Data    map[string][]string `json:"data"`
+	Meta    []ChannelModelsMeta `json:"meta"`
+}
+
+type ChannelModelsProviderResponse struct {
+	Success  bool             `json:"success" example:"true"`
+	Message  string           `json:"message" example:""`
+	Provider string           `json:"provider" example:"openai"`
+	ID       int              `json:"id" example:"1"`
+	Data     []string         `json:"data"`
+	Meta     ChannelModelsMeta `json:"meta"`
+}
+
 type TokenCreateRequest struct {
 	Name           string `json:"name" example:"default"`
 	ExpiredTime    int64  `json:"expired_time,omitempty" example:"-1"`

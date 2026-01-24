@@ -22,7 +22,7 @@ import (
 // @Produce json
 // @Param p query int false "Page index"
 // @Param order query string false "Order"
-// @Success 200 {object} docs.StandardResponse
+// @Success 200 {object} docs.TokenListResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/public/token [get]
 func GetAllTokens(c *gin.Context) {
@@ -56,7 +56,7 @@ func GetAllTokens(c *gin.Context) {
 // @Security BearerAuth
 // @Produce json
 // @Param keyword query string false "Keyword"
-// @Success 200 {object} docs.StandardResponse
+// @Success 200 {object} docs.TokenListResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/public/token/search [get]
 func SearchTokens(c *gin.Context) {
@@ -84,7 +84,7 @@ func SearchTokens(c *gin.Context) {
 // @Security BearerAuth
 // @Produce json
 // @Param id path int true "Token ID"
-// @Success 200 {object} docs.StandardResponse
+// @Success 200 {object} docs.TokenDetailResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/public/token/{id} [get]
 func GetToken(c *gin.Context) {
@@ -157,7 +157,7 @@ func validateToken(c *gin.Context, token model.Token) error {
 // @Accept json
 // @Produce json
 // @Param body body docs.TokenCreateRequest true "Token payload"
-// @Success 200 {object} docs.StandardResponse
+// @Success 200 {object} docs.TokenDetailResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/public/token [post]
 func AddToken(c *gin.Context) {
@@ -213,7 +213,7 @@ func AddToken(c *gin.Context) {
 // @Security BearerAuth
 // @Produce json
 // @Param id path int true "Token ID"
-// @Success 200 {object} docs.StandardResponse
+// @Success 200 {object} docs.TokenDeleteResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/public/token/{id} [delete]
 func DeleteToken(c *gin.Context) {
@@ -242,7 +242,7 @@ func DeleteToken(c *gin.Context) {
 // @Produce json
 // @Param body body docs.TokenUpdateRequest true "Token update payload"
 // @Param status_only query string false "Update status only if set"
-// @Success 200 {object} docs.StandardResponse
+// @Success 200 {object} docs.TokenDetailResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/public/token [put]
 func UpdateToken(c *gin.Context) {
