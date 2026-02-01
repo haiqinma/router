@@ -236,7 +236,7 @@ Authorization: Bearer <JWT>
 
 ## 示例（JWT 调用）
 ```bash
-BASE="https://llm.yeying.pub"
+BASE="https://router.yeying.pub"
 JWT="<YOUR_JWT>"
 
 # 模型列表

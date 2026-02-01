@@ -9,7 +9,7 @@
         "contact": {},
         "version": "v1"
     },
-    "host": "llm.yeying.pub",
+    "host": "router.yeying.pub",
     "basePath": "/",
     "paths": {
         "/api/v1/admin/channel": {

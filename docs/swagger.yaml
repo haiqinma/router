@@ -1586,7 +1586,7 @@ definitions:
       username:
         type: string
     type: object
-host: llm.yeying.pub
+host: router.yeying.pub
 info:
   contact: {}
   description: Router public/admin API (JWT/UCAN) under /api/v1.
