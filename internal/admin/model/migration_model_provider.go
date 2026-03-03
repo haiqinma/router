@@ -107,21 +107,25 @@ var mainstreamProviderSeeds = []modelProviderSeed{
 }
 
 func runModelProviderMigrations() error {
-	if err := normalizeChannelModelProviders(); err != nil {
+	return runModelProviderMigrationsWithDB(DB)
+}
+
+func runModelProviderMigrationsWithDB(db *gorm.DB) error {
+	if err := normalizeChannelModelProviders(db); err != nil {
 		return err
 	}
-	if err := backfillChannelModelProviderFromModels(); err != nil {
+	if err := backfillChannelModelProviderFromModels(db); err != nil {
 		return err
 	}
-	if err := ensureModelProviderCatalogTable(); err != nil {
+	if err := ensureModelProviderCatalogTable(db); err != nil {
 		return err
 	}
 	return nil
 }
 
-func normalizeChannelModelProviders() error {
+func normalizeChannelModelProviders(db *gorm.DB) error {
 	channels := make([]Channel, 0)
-	if err := DB.Select("id", "model_provider").
+	if err := db.Select("id", "model_provider").
 		Where("COALESCE(model_provider, '') <> ''").
 		Find(&channels).Error; err != nil {
 		return err
@@ -132,7 +136,7 @@ func normalizeChannelModelProviders() error {
 		if normalized == "" || normalized == channel.ModelProvider {
 			continue
 		}
-		if err := DB.Model(&Channel{}).
+		if err := db.Model(&Channel{}).
 			Where("id = ?", channel.Id).
 			Update("model_provider", normalized).Error; err != nil {
 			return err
@@ -145,9 +149,9 @@ func normalizeChannelModelProviders() error {
 	return nil
 }
 
-func backfillChannelModelProviderFromModels() error {
+func backfillChannelModelProviderFromModels(db *gorm.DB) error {
 	channels := make([]Channel, 0)
-	if err := DB.Select("id", "models", "model_provider").
+	if err := db.Select("id", "models", "model_provider").
 		Where("COALESCE(model_provider, '') = ''").
 		Find(&channels).Error; err != nil {
 		return err
@@ -158,7 +162,7 @@ func backfillChannelModelProviderFromModels() error {
 		if provider == "" {
 			continue
 		}
-		if err := DB.Model(&Channel{}).
+		if err := db.Model(&Channel{}).
 			Where("id = ? AND COALESCE(model_provider, '') = ''", channel.Id).
 			Update("model_provider", provider).Error; err != nil {
 			return err
@@ -202,14 +206,16 @@ func inferModelProviderFromModelList(modelList string) string {
 	return items[0].provider
 }
 
-func ensureModelProviderCatalogTable() error {
-	tableItems, err := loadModelProviderCatalogFromTable()
+func ensureModelProviderCatalogTable(db *gorm.DB) error {
+	tableItems, err := loadModelProviderCatalogFromTable(db)
 	if err != nil {
 		return err
 	}
+	mergeWithMainstreamDefaults := false
 
 	if len(tableItems) == 0 {
-		legacyItems, legacyErr := loadModelProviderCatalogFromLegacyOption()
+		mergeWithMainstreamDefaults = true
+		legacyItems, legacyErr := loadModelProviderCatalogFromLegacyOption(db)
 		if legacyErr != nil {
 			return legacyErr
 		}
@@ -222,29 +228,29 @@ func ensureModelProviderCatalogTable() error {
 		}
 	}
 
-	normalizedItems, normalizeErr := normalizeModelProviderCatalogItems(tableItems)
+	normalizedItems, normalizeErr := normalizeModelProviderCatalogItems(tableItems, mergeWithMainstreamDefaults)
 	if normalizeErr != nil {
 		logger.SysError("migration: normalize model providers failed, fallback to mainstream defaults: " + normalizeErr.Error())
 		normalizedItems = buildMainstreamModelProviderCatalog(helper.GetTimestamp())
 	}
 
-	if err := saveModelProviderCatalogToTable(normalizedItems); err != nil {
+	if err := saveModelProviderCatalogToTable(db, normalizedItems); err != nil {
 		return err
 	}
 
 	// Legacy fallback source is no longer used after table migration.
-	if err := DB.Where("key = ?", optionKeyModelProviderCatalog).Delete(&Option{}).Error; err != nil {
+	if err := db.Where("key = ?", optionKeyModelProviderCatalog).Delete(&Option{}).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
-func normalizeModelProviderCatalogItems(items []modelProviderCatalogMigrationItem) ([]modelProviderCatalogMigrationItem, error) {
+func normalizeModelProviderCatalogItems(items []modelProviderCatalogMigrationItem, mergeWithMainstreamDefaults bool) ([]modelProviderCatalogMigrationItem, error) {
 	raw, err := json.Marshal(items)
 	if err != nil {
 		return nil, err
 	}
-	normalizedRaw, err := normalizeModelProviderCatalogRaw(string(raw))
+	normalizedRaw, err := normalizeModelProviderCatalogRaw(string(raw), mergeWithMainstreamDefaults)
 	if err != nil {
 		return nil, err
 	}
@@ -255,9 +261,9 @@ func normalizeModelProviderCatalogItems(items []modelProviderCatalogMigrationIte
 	return normalized, nil
 }
 
-func loadModelProviderCatalogFromLegacyOption() ([]modelProviderCatalogMigrationItem, error) {
+func loadModelProviderCatalogFromLegacyOption(db *gorm.DB) ([]modelProviderCatalogMigrationItem, error) {
 	var option Option
-	err := DB.Where("key = ?", optionKeyModelProviderCatalog).First(&option).Error
+	err := db.Where("key = ?", optionKeyModelProviderCatalog).First(&option).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
@@ -268,7 +274,7 @@ func loadModelProviderCatalogFromLegacyOption() ([]modelProviderCatalogMigration
 	if raw == "" {
 		return nil, nil
 	}
-	normalizedRaw, normalizeErr := normalizeModelProviderCatalogRaw(raw)
+	normalizedRaw, normalizeErr := normalizeModelProviderCatalogRaw(raw, true)
 	if normalizeErr != nil {
 		logger.SysError("migration: failed to parse options.ModelProviderCatalog, fallback to defaults: " + normalizeErr.Error())
 		return nil, nil
@@ -320,9 +326,9 @@ func parseModelProviderModels(raw string) []string {
 	return models
 }
 
-func loadModelProviderCatalogFromTable() ([]modelProviderCatalogMigrationItem, error) {
+func loadModelProviderCatalogFromTable(db *gorm.DB) ([]modelProviderCatalogMigrationItem, error) {
 	rows := make([]ModelProvider, 0)
-	if err := DB.Order("provider asc").Find(&rows).Error; err != nil {
+	if err := db.Order("provider asc").Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	items := make([]modelProviderCatalogMigrationItem, 0, len(rows))
@@ -344,7 +350,7 @@ func loadModelProviderCatalogFromTable() ([]modelProviderCatalogMigrationItem, e
 	return items, nil
 }
 
-func saveModelProviderCatalogToTable(items []modelProviderCatalogMigrationItem) error {
+func saveModelProviderCatalogToTable(db *gorm.DB, items []modelProviderCatalogMigrationItem) error {
 	now := helper.GetTimestamp()
 	rows := make([]ModelProvider, 0, len(items))
 	for _, item := range items {
@@ -387,7 +393,7 @@ func saveModelProviderCatalogToTable(items []modelProviderCatalogMigrationItem) 
 			UpdatedAt: updatedAt,
 		})
 	}
-	return DB.Transaction(func(tx *gorm.DB) error {
+	return db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Where("1 = 1").Delete(&ModelProvider{}).Error; err != nil {
 			return err
 		}
@@ -435,10 +441,14 @@ func buildDefaultModelProviderCatalogRaw() (string, error) {
 	return string(raw), err
 }
 
-func normalizeModelProviderCatalogRaw(raw string) (string, error) {
+func normalizeModelProviderCatalogRaw(raw string, mergeWithMainstreamDefaults bool) (string, error) {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
-		return buildDefaultModelProviderCatalogRaw()
+		if mergeWithMainstreamDefaults {
+			return buildDefaultModelProviderCatalogRaw()
+		}
+		emptyRaw, err := json.Marshal([]modelProviderCatalogMigrationItem{})
+		return string(emptyRaw), err
 	}
 	items := make([]modelProviderCatalogMigrationItem, 0)
 	if err := json.Unmarshal([]byte(trimmed), &items); err != nil {
@@ -528,7 +538,9 @@ func normalizeModelProviderCatalogRaw(raw string) (string, error) {
 		indexByProvider[provider] = len(normalized)
 		normalized = append(normalized, entry)
 	}
-	normalized = reconcileWithMainstreamDefaults(normalized)
+	if mergeWithMainstreamDefaults {
+		normalized = reconcileWithMainstreamDefaults(normalized)
+	}
 
 	normalizedRaw, err := json.Marshal(normalized)
 	if err != nil {

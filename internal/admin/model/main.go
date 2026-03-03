@@ -148,12 +148,6 @@ func migrateDB() error {
 	if err = DB.AutoMigrate(&Redemption{}); err != nil {
 		return err
 	}
-	// PostgreSQL: ensure redemptions.id uses a sequence (legacy tables may lack default)
-	if DB.Dialector.Name() == "postgres" {
-		DB.Exec("CREATE SEQUENCE IF NOT EXISTS redemptions_id_seq OWNED BY redemptions.id")
-		DB.Exec("SELECT setval('redemptions_id_seq', COALESCE((SELECT MAX(id)+1 FROM redemptions),1), false)")
-		DB.Exec("ALTER TABLE redemptions ALTER COLUMN id SET DEFAULT nextval('redemptions_id_seq')")
-	}
 	if err = DB.AutoMigrate(&Ability{}); err != nil {
 		return err
 	}
@@ -166,7 +160,7 @@ func migrateDB() error {
 	if err = DB.AutoMigrate(&Channel{}); err != nil {
 		return err
 	}
-	if err = runModelProviderMigrations(); err != nil {
+	if err = runMainVersionedMigrations(DB); err != nil {
 		return err
 	}
 	return nil
@@ -206,11 +200,7 @@ func migrateLOGDB() error {
 	if err = LOG_DB.AutoMigrate(&Log{}); err != nil {
 		return err
 	}
-	// Ensure logs.id has a working sequence (for existing PG tables created without serial/identity)
-	LOG_DB.Exec("CREATE SEQUENCE IF NOT EXISTS logs_id_seq OWNED BY logs.id")
-	LOG_DB.Exec("SELECT setval('logs_id_seq', COALESCE((SELECT MAX(id)+1 FROM logs),1), false)")
-	LOG_DB.Exec("ALTER TABLE logs ALTER COLUMN id SET DEFAULT nextval('logs_id_seq')")
-	return nil
+	return runLogVersionedMigrations(LOG_DB)
 }
 
 func setDBConns(db *gorm.DB) *sql.DB {
