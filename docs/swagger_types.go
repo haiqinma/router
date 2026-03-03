@@ -350,6 +350,37 @@ type ChannelPreviewModelsRequest struct {
 	Config        any    `json:"config,omitempty"`
 }
 
+type ModelProviderCatalogItem struct {
+	Provider  string   `json:"provider" example:"openai"`
+	Name      string   `json:"name" example:"OpenAI"`
+	Models    []string `json:"models"`
+	Source    string   `json:"source,omitempty" example:"manual"`
+	UpdatedAt int64    `json:"updated_at,omitempty" example:"1710000000"`
+}
+
+type ModelProviderCatalogUpdateRequest struct {
+	Providers []ModelProviderCatalogItem `json:"providers"`
+}
+
+type ModelProviderCatalogResponse struct {
+	Success bool                       `json:"success" example:"true"`
+	Message string                     `json:"message" example:""`
+	Data    []ModelProviderCatalogItem `json:"data"`
+}
+
+type ModelProviderFetchRequest struct {
+	Provider string `json:"provider" example:"openai"`
+	Key      string `json:"key" example:"sk-***"`
+	BaseURL  string `json:"base_url,omitempty" example:"https://api.openai.com"`
+}
+
+type ModelProviderFetchResponse struct {
+	Success  bool     `json:"success" example:"true"`
+	Message  string   `json:"message" example:""`
+	Provider string   `json:"provider" example:"openai"`
+	Data     []string `json:"data"`
+}
+
 type RedemptionCreateRequest struct {
 	Name  string `json:"name" example:"InviteBonus"`
 	Count int    `json:"count" example:"5"`

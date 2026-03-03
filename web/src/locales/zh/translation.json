@@ -37,6 +37,10 @@
   },
   "channel": {
     "title": "管理渠道",
+    "tabs": {
+      "channels": "渠道管理",
+      "model_providers": "模型供应商"
+    },
     "search": "搜索渠道的 ID，名称和密钥 ...",
     "balance_notice": "OpenAI 渠道已经不再支持通过 key 获取余额，因此余额显示为 0。对于支持的渠道类型，请点击余额进行刷新。",
     "test_notice": "渠道测试仅支持 chat 模型，优先使用 gpt-3.5-turbo，如果该模型不可用则使用你所配置的模型列表中的第一个模型。",
@@ -88,6 +92,47 @@
       "balance_update_success": "渠道 {{name}} 余额更新成功！",
       "all_balance_updated": "已更新完毕所有已启用渠道余额！",
       "operation_success": "操作成功完成！"
+    },
+    "providers": {
+      "title": "模型供应商管理",
+      "fetch": {
+        "provider": "供应商",
+        "base_url": "Base URL",
+        "base_url_placeholder": "默认自动填充官方地址，可按需覆盖",
+        "key": "API Key",
+        "key_placeholder": "用于拉取该供应商模型列表"
+      },
+      "buttons": {
+        "fetch_from_api": "从供应商 API 拉取模型",
+        "reload": "加载已保存配置",
+        "load_defaults": "载入系统默认模型列表",
+        "add_provider": "新增供应商",
+        "save": "保存配置"
+      },
+      "table": {
+        "provider": "供应商标识",
+        "name": "展示名称",
+        "name_placeholder": "可选，默认等于供应商标识",
+        "models": "模型列表（每行一个，或逗号分隔）",
+        "models_placeholder": "例如：gpt-4o-mini",
+        "source": "来源",
+        "updated_at": "更新时间",
+        "actions": "操作",
+        "empty": "暂无模型供应商配置",
+        "model_count": "共 {{count}} 个模型"
+      },
+      "messages": {
+        "load_failed": "加载模型供应商配置失败",
+        "load_defaults_failed": "加载默认模型列表失败",
+        "defaults_loaded": "已载入系统默认模型列表",
+        "provider_required": "供应商标识不能为空",
+        "save_failed": "保存模型供应商配置失败",
+        "save_success": "模型供应商配置已保存",
+        "fetch_provider_required": "请先选择供应商",
+        "fetch_key_required": "请先填写 API Key",
+        "fetch_failed": "从供应商 API 拉取模型失败",
+        "fetch_success": "已完成模型拉取并回填到供应商配置"
+      }
     },
     "edit": {
       "title_edit": "更新渠道信息",

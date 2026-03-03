@@ -222,6 +222,73 @@ definitions:
       timestamp:
         type: integer
     type: object
+  docs.ModelProviderCatalogItem:
+    properties:
+      models:
+        items:
+          type: string
+        type: array
+      name:
+        example: OpenAI
+        type: string
+      provider:
+        example: openai
+        type: string
+      source:
+        example: manual
+        type: string
+      updated_at:
+        example: 1710000000
+        type: integer
+    type: object
+  docs.ModelProviderCatalogResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/docs.ModelProviderCatalogItem'
+        type: array
+      message:
+        example: ""
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
+  docs.ModelProviderCatalogUpdateRequest:
+    properties:
+      providers:
+        items:
+          $ref: '#/definitions/docs.ModelProviderCatalogItem'
+        type: array
+    type: object
+  docs.ModelProviderFetchRequest:
+    properties:
+      base_url:
+        example: https://api.openai.com
+        type: string
+      key:
+        example: sk-***
+        type: string
+      provider:
+        example: openai
+        type: string
+    type: object
+  docs.ModelProviderFetchResponse:
+    properties:
+      data:
+        items:
+          type: string
+        type: array
+      message:
+        example: ""
+        type: string
+      provider:
+        example: openai
+        type: string
+      success:
+        example: true
+        type: boolean
+    type: object
   docs.OpenAIAudioOutput:
     properties:
       format:
@@ -2044,6 +2111,95 @@ paths:
       security:
       - BearerAuth: []
       summary: Log stats (admin)
+      tags:
+      - admin
+  /api/v1/admin/model-provider:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/docs.ModelProviderCatalogResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/docs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get model provider catalog (admin)
+      tags:
+      - admin
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: Model provider catalog payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/docs.ModelProviderCatalogUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/docs.ModelProviderCatalogResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/docs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Update model provider catalog (admin)
+      tags:
+      - admin
+  /api/v1/admin/model-provider/defaults:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/docs.ModelProviderCatalogResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/docs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get default model providers from built-in model lists (admin)
+      tags:
+      - admin
+  /api/v1/admin/model-provider/fetch:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Provider fetch payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/docs.ModelProviderFetchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/docs.ModelProviderFetchResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/docs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Fetch models from provider API (admin)
       tags:
       - admin
   /api/v1/admin/option:

@@ -213,6 +213,41 @@ Authorization: Bearer <JWT>
 }
 ```
 
+### 2.1) 模型供应商管理
+- `GET  /api/v1/admin/model-provider`（读取当前模型供应商目录）
+- `PUT  /api/v1/admin/model-provider`（保存模型供应商目录）
+- `GET  /api/v1/admin/model-provider/defaults`（读取系统内置默认模型列表并按供应商聚合）
+- `POST /api/v1/admin/model-provider/fetch`（通过供应商 OpenAI 兼容 API 拉取模型并按供应商过滤）
+
+#### /api/v1/admin/model-provider
+用于读取/保存供应商模型目录（可手动编辑）。
+
+`PUT` 请求体示例：
+```json
+{
+  "providers": [
+    {
+      "provider": "openai",
+      "name": "OpenAI",
+      "models": ["gpt-4o-mini", "gpt-4o"],
+      "source": "manual"
+    }
+  ]
+}
+```
+
+#### /api/v1/admin/model-provider/fetch
+通过供应商 API 获取模型：
+```json
+{
+  "provider": "openai",
+  "base_url": "https://api.openai.com",
+  "key": "sk-***"
+}
+```
+- `provider` 必填，支持 `openai/gpt`、`google/gemini`、`anthropic/claude`、`deepseek`、`qwen/千问` 等别名。
+- `base_url` 可选，若不传则使用该供应商官方默认地址。
+
 ### 3) 兑换码管理
 - `GET    /api/v1/admin/redemption`
 - `GET    /api/v1/admin/redemption/search`

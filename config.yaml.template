@@ -45,7 +45,7 @@ cache:
 auth:
   # 必须替换为随机字符串
   session_secret: random_string
-  auto_register_enabled: false
+  auto_register_enabled: true
   wallet_jwt_secret: ""
   wallet_jwt_fallback_secrets: []
   wallet_jwt_expire_hours: 72

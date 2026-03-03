@@ -353,6 +353,15 @@ func SetApiRouter(engine *gin.Engine) {
 		{
 			adminGroupRoute.GET("/", group.GetGroups)
 		}
+
+		adminModelProviderRoute := adminRouter.Group("/model-provider")
+		adminModelProviderRoute.Use(middleware.AdminAuth())
+		{
+			adminModelProviderRoute.GET("/", channel.GetModelProviders)
+			adminModelProviderRoute.PUT("/", channel.UpdateModelProviders)
+			adminModelProviderRoute.GET("/defaults", channel.GetDefaultModelProviders)
+			adminModelProviderRoute.POST("/fetch", channel.FetchModelProviderModels)
+		}
 	}
 
 	internalRouter := engine.Group("/api/v1/internal")
