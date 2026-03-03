@@ -1,13 +1,8 @@
 package config
 
 import (
-	"os"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
-
-	"github.com/yeying-community/router/common/env"
 
 	"github.com/google/uuid"
 )
@@ -54,9 +49,9 @@ var EmailDomainWhitelist = []string{
 	"foxmail.com",
 }
 
-var DebugEnabled = strings.ToLower(os.Getenv("DEBUG")) == "true"
-var DebugSQLEnabled = strings.ToLower(os.Getenv("DEBUG_SQL")) == "true"
-var MemoryCacheEnabled = strings.ToLower(os.Getenv("MEMORY_CACHE_ENABLED")) == "true"
+var DebugEnabled = false
+var DebugSQLEnabled = false
+var MemoryCacheEnabled = false
 
 var LogConsumeEnabled = true
 
@@ -123,27 +118,26 @@ var RetryTimes = 0
 
 var RootUserEmail = ""
 
-var IsMasterNode = os.Getenv("NODE_TYPE") != "slave"
+var IsMasterNode = true
 
-var requestInterval, _ = strconv.Atoi(os.Getenv("POLLING_INTERVAL"))
-var RequestInterval = time.Duration(requestInterval) * time.Second
+var RequestInterval = time.Duration(0)
 
-var SyncFrequency = env.Int("SYNC_FREQUENCY", 10*60) // unit is second
+var SyncFrequency = 10 * 60 // unit is second
 
 var BatchUpdateEnabled = false
-var BatchUpdateInterval = env.Int("BATCH_UPDATE_INTERVAL", 5)
+var BatchUpdateInterval = 5
 
-var RelayTimeout = env.Int("RELAY_TIMEOUT", 0) // unit is second
+var RelayTimeout = 0 // unit is second
 
-var GeminiSafetySetting = env.String("GEMINI_SAFETY_SETTING", "BLOCK_NONE")
+var GeminiSafetySetting = "BLOCK_NONE"
 
 // All duration's unit is seconds
 // Shouldn't larger then RateLimitKeyExpirationDuration
 var (
-	GlobalApiRateLimitNum            = env.Int("GLOBAL_API_RATE_LIMIT", 480)
+	GlobalApiRateLimitNum            = 480
 	GlobalApiRateLimitDuration int64 = 3 * 60
 
-	GlobalWebRateLimitNum            = env.Int("GLOBAL_WEB_RATE_LIMIT", 240)
+	GlobalWebRateLimitNum            = 240
 	GlobalWebRateLimitDuration int64 = 3 * 60
 
 	UploadRateLimitNum            = 10
@@ -158,23 +152,23 @@ var (
 
 var RateLimitKeyExpirationDuration = 20 * time.Minute
 
-var EnableMetric = env.Bool("ENABLE_METRIC", false)
-var MetricQueueSize = env.Int("METRIC_QUEUE_SIZE", 10)
-var MetricSuccessRateThreshold = env.Float64("METRIC_SUCCESS_RATE_THRESHOLD", 0.8)
-var MetricSuccessChanSize = env.Int("METRIC_SUCCESS_CHAN_SIZE", 1024)
-var MetricFailChanSize = env.Int("METRIC_FAIL_CHAN_SIZE", 128)
+var EnableMetric = false
+var MetricQueueSize = 10
+var MetricSuccessRateThreshold = 0.8
+var MetricSuccessChanSize = 1024
+var MetricFailChanSize = 128
 
-var InitialRootToken = os.Getenv("INITIAL_ROOT_TOKEN")
+var InitialRootToken = ""
 
-var InitialRootAccessToken = os.Getenv("INITIAL_ROOT_ACCESS_TOKEN")
+var InitialRootAccessToken = ""
 
-var GeminiVersion = env.String("GEMINI_VERSION", "v1")
+var GeminiVersion = "v1"
 
-var OnlyOneLogFile = env.Bool("ONLY_ONE_LOG_FILE", false)
+var OnlyOneLogFile = false
 
-var RelayProxy = env.String("RELAY_PROXY", "")
-var UserContentRequestProxy = env.String("USER_CONTENT_REQUEST_PROXY", "")
-var UserContentRequestTimeout = env.Int("USER_CONTENT_REQUEST_TIMEOUT", 30)
+var RelayProxy = ""
+var UserContentRequestProxy = ""
+var UserContentRequestTimeout = 30
 
-var EnforceIncludeUsage = env.Bool("ENFORCE_INCLUDE_USAGE", false)
-var TestPrompt = env.String("TEST_PROMPT", "Output only your specific model name with no additional text.")
+var EnforceIncludeUsage = false
+var TestPrompt = "Output only your specific model name with no additional text."

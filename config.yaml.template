@@ -1,0 +1,106 @@
+# 复制为 config.yaml 后按需修改:
+# cp config.yaml.template config.yaml
+
+server:
+  # 监听端口，可被 --port 覆盖
+  port: 3011
+  # debug / release / test
+  gin_mode: release
+  # 日志目录，可被 --log-dir 覆盖
+  log_dir: ./logs
+
+database:
+  # PostgreSQL: postgres://user:pass@host:5432/db?sslmode=disable
+  # MySQL: user:pass@tcp(host:3306)/db?charset=utf8mb4&parseTime=True&loc=Local
+  # 留空时使用 SQLite
+  sql_dsn: ""
+  # 日志库 DSN，留空则复用 sql_dsn
+  log_sql_dsn: ""
+  sqlite_path: one-api.db
+  sqlite_busy_timeout: 3000
+  max_idle_conns: 100
+  max_open_conns: 1000
+  max_lifetime_seconds: 60
+
+redis:
+  # 留空时不启用 Redis
+  # 单机示例: redis://:password@127.0.0.1:6379/0
+  conn_string: ""
+  # 哨兵模式可填写主节点名，conn_string 为逗号分隔地址
+  master_name: ""
+  password: ""
+
+node:
+  # master / slave
+  type: master
+  polling_interval_seconds: 0
+
+cache:
+  memory_cache_enabled: false
+  sync_frequency_seconds: 600
+  channel_test_frequency: 0
+  batch_update_enabled: false
+  batch_update_interval_seconds: 5
+
+auth:
+  # 必须替换为随机字符串
+  session_secret: random_string
+  auto_register_enabled: false
+  wallet_jwt_secret: ""
+  wallet_jwt_fallback_secrets: []
+  wallet_jwt_expire_hours: 72
+  wallet_refresh_expire_hours: 720
+  wallet_nonce_ttl_minutes: 10
+  wallet_refresh_cookie_domain: ""
+  wallet_refresh_cookie_secure: false
+  wallet_refresh_cookie_samesite: lax
+
+cors:
+  # 为空表示不限制（回显 Origin）
+  # 示例:
+  # - https://router.example.com
+  # - http://localhost:5181
+  allowed_origins: []
+
+ucan:
+  # 公网部署建议显式设置 did:web:<your-domain>
+  aud: ""
+  resource: profile
+  action: read
+
+feature:
+  debug: false
+  debug_sql: false
+  disable_openai_compat: false
+  # slave 节点可配置前端跳转地址
+  frontend_base_url: ""
+
+relay:
+  timeout_seconds: 0
+  proxy: ""
+  user_content_request_proxy: ""
+  user_content_request_timeout_seconds: 30
+  gemini_safety_setting: BLOCK_NONE
+  gemini_version: v1
+  enforce_include_usage: false
+  test_prompt: "Output only your specific model name with no additional text."
+
+rate_limit:
+  global_api_rate_limit: 480
+  global_api_rate_limit_duration_seconds: 180
+  global_web_rate_limit: 240
+  global_web_rate_limit_duration_seconds: 180
+
+metrics:
+  enabled: false
+  queue_size: 10
+  success_rate_threshold: 0.8
+  success_chan_size: 1024
+  fail_chan_size: 128
+
+bootstrap:
+  initial_root_token: ""
+  initial_root_access_token: ""
+
+logging:
+  only_one_log_file: false

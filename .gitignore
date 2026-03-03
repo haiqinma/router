@@ -12,6 +12,7 @@ data
 /web/dist
 cmd.md
 .env
+config.yaml
 temp
 .DS_Store
 .gocache

@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -56,9 +55,6 @@ func ResolveUcanAudience() string {
 	value := strings.TrimSpace(config.UcanAud)
 	if value != "" {
 		return value
-	}
-	if envPort := strings.TrimSpace(os.Getenv("PORT")); envPort != "" {
-		return fmt.Sprintf("did:web:localhost:%s", envPort)
 	}
 	if Port != nil && *Port != 0 {
 		return fmt.Sprintf("did:web:localhost:%d", *Port)

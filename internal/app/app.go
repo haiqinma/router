@@ -2,13 +2,11 @@ package app
 
 import (
 	"fmt"
-	"os"
 	"strconv"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
-	_ "github.com/joho/godotenv/autoload"
 
 	rootapp "github.com/yeying-community/router"
 	"github.com/yeying-community/router/common"
@@ -30,9 +28,7 @@ func Run() {
 	logger.SetupLogger()
 	logger.SysLogf("Router %s started", common.Version)
 
-	if os.Getenv("GIN_MODE") != gin.DebugMode {
-		gin.SetMode(gin.ReleaseMode)
-	}
+	gin.SetMode(common.GinMode)
 	if config.DebugEnabled {
 		logger.SysLog("running in debug mode")
 	}
@@ -74,15 +70,10 @@ func Run() {
 		go model.SyncOptions(config.SyncFrequency)
 		go model.SyncChannelCache(config.SyncFrequency)
 	}
-	if os.Getenv("CHANNEL_TEST_FREQUENCY") != "" {
-		frequency, err := strconv.Atoi(os.Getenv("CHANNEL_TEST_FREQUENCY"))
-		if err != nil {
-			logger.FatalLog("failed to parse CHANNEL_TEST_FREQUENCY: " + err.Error())
-		}
-		go channel.AutomaticallyTestChannels(frequency)
+	if common.ChannelTestFrequency > 0 {
+		go channel.AutomaticallyTestChannels(common.ChannelTestFrequency)
 	}
-	if os.Getenv("BATCH_UPDATE_ENABLED") == "true" {
-		config.BatchUpdateEnabled = true
+	if config.BatchUpdateEnabled {
 		logger.SysLog("batch update enabled with interval " + strconv.Itoa(config.BatchUpdateInterval) + "s")
 		model.InitBatchUpdater()
 	}
@@ -111,10 +102,7 @@ func Run() {
 	server.Use(sessions.Sessions("session", store))
 
 	router.SetRouter(server, rootapp.BuildFS)
-	var port = os.Getenv("PORT")
-	if port == "" {
-		port = strconv.Itoa(*common.Port)
-	}
+	var port = strconv.Itoa(*common.Port)
 	logger.SysLogf("server started on http://localhost:%s", port)
 	err = server.Run(":" + port)
 	if err != nil {

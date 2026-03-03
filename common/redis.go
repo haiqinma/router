@@ -2,11 +2,11 @@ package common
 
 import (
 	"context"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/yeying-community/router/common/config"
 	"github.com/yeying-community/router/common/logger"
 )
 
@@ -15,18 +15,18 @@ var RedisEnabled = true
 
 // InitRedisClient This function is called after init()
 func InitRedisClient() (err error) {
-	if os.Getenv("REDIS_CONN_STRING") == "" {
+	if RedisConnString == "" {
 		RedisEnabled = false
-		logger.SysLog("REDIS_CONN_STRING not set, Redis is not enabled")
+		logger.SysLog("redis.conn_string not set, Redis is not enabled")
 		return nil
 	}
-	if os.Getenv("SYNC_FREQUENCY") == "" {
+	if config.SyncFrequency <= 0 {
 		RedisEnabled = false
-		logger.SysLog("SYNC_FREQUENCY not set, Redis is disabled")
+		logger.SysLog("cache.sync_frequency_seconds not set or invalid, Redis is disabled")
 		return nil
 	}
-	redisConnString := os.Getenv("REDIS_CONN_STRING")
-	if os.Getenv("REDIS_MASTER_NAME") == "" {
+	redisConnString := RedisConnString
+	if RedisMasterName == "" {
 		logger.SysLog("Redis is enabled")
 		opt, err := redis.ParseURL(redisConnString)
 		if err != nil {
@@ -38,8 +38,8 @@ func InitRedisClient() (err error) {
 		logger.SysLog("Redis cluster mode enabled")
 		RDB = redis.NewUniversalClient(&redis.UniversalOptions{
 			Addrs:      strings.Split(redisConnString, ","),
-			Password:   os.Getenv("REDIS_PASSWORD"),
-			MasterName: os.Getenv("REDIS_MASTER_NAME"),
+			Password:   RedisPassword,
+			MasterName: RedisMasterName,
 		})
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -53,7 +53,7 @@ func InitRedisClient() (err error) {
 }
 
 func ParseRedisOption() *redis.Options {
-	opt, err := redis.ParseURL(os.Getenv("REDIS_CONN_STRING"))
+	opt, err := redis.ParseURL(RedisConnString)
 	if err != nil {
 		logger.FatalLog("failed to parse Redis connection string: " + err.Error())
 	}

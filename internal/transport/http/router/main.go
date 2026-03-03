@@ -4,13 +4,12 @@ import (
 	"embed"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/yeying-community/router/common"
 	"github.com/yeying-community/router/common/config"
-	"github.com/yeying-community/router/common/env"
 	"github.com/yeying-community/router/common/logger"
 	"github.com/yeying-community/router/internal/transport/http/middleware"
 )
@@ -24,17 +23,17 @@ func SetRouter(engine *gin.Engine, buildFS embed.FS) {
 	engine.Use(middleware.CORS())
 
 	SetApiRouter(engine)
-	if env.Bool("DISABLE_OPENAI_COMPAT", false) {
-		logger.SysLog("OpenAI-compatible routes disabled via DISABLE_OPENAI_COMPAT")
+	if common.DisableOpenAICompat {
+		logger.SysLog("OpenAI-compatible routes disabled via feature.disable_openai_compat")
 	} else {
 		SetDashboardRouter(engine)
 		SetRelayRouter(engine)
 	}
 
-	frontendBaseURL := os.Getenv("FRONTEND_BASE_URL")
+	frontendBaseURL := common.FrontendBaseURL
 	if config.IsMasterNode && frontendBaseURL != "" {
 		frontendBaseURL = ""
-		logger.SysLog("FRONTEND_BASE_URL is ignored on master node")
+		logger.SysLog("feature.frontend_base_url is ignored on master node")
 	}
 	if frontendBaseURL == "" {
 		SetWebRouter(engine, buildFS, indexPage)
