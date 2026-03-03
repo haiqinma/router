@@ -24,6 +24,7 @@ import TopUp from './pages/TopUp';
 import Log from './pages/Log';
 import Chat from './pages/Chat';
 import Dashboard from './pages/Dashboard';
+import ModelProviders from './pages/ModelProviders';
 
 const Home = lazy(() => import('./pages/Home'));
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || '';
@@ -101,6 +102,14 @@ function App() {
         element={
           <PrivateRoute>
             <Channel />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path='/model-provider'
+        element={
+          <PrivateRoute>
+            <ModelProviders />
           </PrivateRoute>
         }
       />

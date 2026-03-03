@@ -2,6 +2,7 @@
   "header": {
     "home": "首页",
     "channel": "渠道",
+    "model_providers": "模型供应商",
     "token": "令牌",
     "redemption": "兑换",
     "topup": "充值",
@@ -100,7 +101,7 @@
         "base_url": "Base URL",
         "base_url_placeholder": "默认自动填充官方地址，可按需覆盖",
         "key": "API Key",
-        "key_placeholder": "用于拉取该供应商模型列表"
+        "key_placeholder": "可留空，若已保存供应商 Key 则自动使用"
       },
       "buttons": {
         "fetch_from_api": "从供应商 API 拉取模型",
@@ -112,24 +113,42 @@
       "table": {
         "provider": "供应商标识",
         "name": "展示名称",
-        "name_placeholder": "可选，默认等于供应商标识",
-        "models": "模型列表（每行一个，或逗号分隔）",
-        "models_placeholder": "例如：gpt-4o-mini",
+        "key": "API Key",
+        "key_set": "已配置",
+        "key_not_set": "未配置",
+        "models": "支持模型",
         "source": "来源",
         "updated_at": "更新时间",
         "actions": "操作",
         "empty": "暂无模型供应商配置",
         "model_count": "共 {{count}} 个模型"
       },
+      "dialog": {
+        "title_create": "新增模型供应商",
+        "title_edit": "编辑模型供应商",
+        "provider": "供应商标识",
+        "provider_placeholder": "例如 openai / google / anthropic",
+        "name": "展示名称",
+        "name_placeholder": "可选，默认等于供应商标识",
+        "base_url": "Base URL",
+        "base_url_placeholder": "留空时自动使用官方默认地址",
+        "key": "API Key",
+        "key_placeholder": "用于从供应商 API 拉取模型",
+        "models": "模型列表（每行一个，或逗号分隔）",
+        "models_placeholder": "例如：gpt-4o-mini",
+        "cancel": "回退",
+        "confirm": "确认"
+      },
       "messages": {
         "load_failed": "加载模型供应商配置失败",
         "load_defaults_failed": "加载默认模型列表失败",
         "defaults_loaded": "已载入系统默认模型列表",
         "provider_required": "供应商标识不能为空",
+        "provider_exists": "该供应商已存在，请直接编辑",
         "save_failed": "保存模型供应商配置失败",
         "save_success": "模型供应商配置已保存",
         "fetch_provider_required": "请先选择供应商",
-        "fetch_key_required": "请先填写 API Key",
+        "fetch_key_required": "请先填写 API Key，或在供应商配置中保存 Key",
         "fetch_failed": "从供应商 API 拉取模型失败",
         "fetch_success": "已完成模型拉取并回填到供应商配置"
       }

@@ -2,6 +2,7 @@
   "header": {
     "home": "Home",
     "channel": "Channel",
+    "model_providers": "Model Providers",
     "token": "Token",
     "redemption": "Redemption",
     "topup": "Top Up",
@@ -100,7 +101,7 @@
         "base_url": "Base URL",
         "base_url_placeholder": "Official default URL is auto-filled, override if needed",
         "key": "API Key",
-        "key_placeholder": "Used to fetch models from provider API"
+        "key_placeholder": "Optional if API key is already saved for this provider"
       },
       "buttons": {
         "fetch_from_api": "Fetch Models from Provider API",
@@ -112,24 +113,42 @@
       "table": {
         "provider": "Provider ID",
         "name": "Display Name",
-        "name_placeholder": "Optional, defaults to provider id",
-        "models": "Models (one per line, or comma-separated)",
-        "models_placeholder": "e.g. gpt-4o-mini",
+        "key": "API Key",
+        "key_set": "Configured",
+        "key_not_set": "Not Set",
+        "models": "Supported Models",
         "source": "Source",
         "updated_at": "Updated At",
         "actions": "Actions",
         "empty": "No model provider catalog",
         "model_count": "{{count}} models"
       },
+      "dialog": {
+        "title_create": "Add Model Provider",
+        "title_edit": "Edit Model Provider",
+        "provider": "Provider ID",
+        "provider_placeholder": "e.g. openai / google / anthropic",
+        "name": "Display Name",
+        "name_placeholder": "Optional, defaults to provider id",
+        "base_url": "Base URL",
+        "base_url_placeholder": "Leave empty to use official default URL",
+        "key": "API Key",
+        "key_placeholder": "Used when fetching models from provider API",
+        "models": "Models (one per line, or comma-separated)",
+        "models_placeholder": "e.g. gpt-4o-mini",
+        "cancel": "Back",
+        "confirm": "Confirm"
+      },
       "messages": {
         "load_failed": "Failed to load model provider catalog",
         "load_defaults_failed": "Failed to load default model list",
         "defaults_loaded": "Built-in default model list loaded",
         "provider_required": "Provider id is required",
+        "provider_exists": "This provider already exists, please edit it directly",
         "save_failed": "Failed to save model provider catalog",
         "save_success": "Model provider catalog saved",
         "fetch_provider_required": "Please choose a provider first",
-        "fetch_key_required": "Please provide API key first",
+        "fetch_key_required": "Please provide API key first, or save one in provider config",
         "fetch_failed": "Failed to fetch models from provider API",
         "fetch_success": "Models fetched and applied to catalog"
       }

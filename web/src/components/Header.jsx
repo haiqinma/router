@@ -31,6 +31,12 @@ let headerButtons = [
     admin: true,
   },
   {
+    name: 'header.model_providers',
+    to: '/model-provider',
+    icon: 'cubes',
+    admin: true,
+  },
+  {
     name: 'header.token',
     to: '/token',
     icon: 'key',
