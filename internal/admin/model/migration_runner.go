@@ -61,6 +61,13 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return runChannelTestModelMigrationsWithDB(tx)
 			},
 		},
+		{
+			Version:     "202603040002_group_catalog",
+			Description: "initialize group catalog from db and ratios",
+			Up: func(tx *gorm.DB) error {
+				return runGroupCatalogMigrationsWithDB(tx)
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }

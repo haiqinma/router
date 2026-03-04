@@ -32,6 +32,7 @@ import Log from './pages/Log';
 import Chat from './pages/Chat';
 import Dashboard from './pages/Dashboard';
 import ModelProviders from './pages/ModelProviders';
+import Group from './pages/Group';
 import AdminLayout from './layouts/AdminLayout';
 import UserLayout from './layouts/UserLayout';
 
@@ -315,6 +316,10 @@ function App() {
         <Route
           path='/admin/model-provider'
           element={<ModelProviders />}
+        />
+        <Route
+          path='/admin/group'
+          element={<Group />}
         />
         <Route
           path='/admin/redemption'

@@ -3,6 +3,7 @@
     "home": "Home",
     "channel": "Channel",
     "model_providers": "Model Providers",
+    "group": "Group",
     "token": "Token",
     "redemption": "Redemption",
     "topup": "Top Up",
@@ -75,6 +76,8 @@
     "buttons": {
       "test": "Test",
       "test_channel": "Test Channels",
+      "disable_channel": "Disable Channels",
+      "delete_channel": "Delete Channels",
       "delete": "Delete",
       "confirm_delete": "Delete Channel",
       "confirm": "Confirm",
@@ -85,9 +88,6 @@
       "copy": "Copy",
       "add": "Add New Channel",
       "test_all": "Test All Channels",
-      "test_disabled": "Test Disabled Channels",
-      "delete_disabled": "Delete Disabled Channels",
-      "confirm_delete_disabled": "Confirm Delete",
       "refresh": "Refresh",
       "show_detail": "Details",
       "hide_detail": "Hide Details"
@@ -97,7 +97,10 @@
       "test_all_started": "Channel testing started successfully, please refresh page to see results.",
       "batch_test_select_required": "Please select at least one channel first.",
       "batch_test_done": "Batch testing finished: {{success}} succeeded, {{failed}} failed.",
-      "delete_disabled_success": "Deleted all disabled channels, total: {{count}}",
+      "batch_disable_select_required": "Please select at least one channel to disable.",
+      "batch_disable_done": "Batch disable finished: {{success}} succeeded, {{failed}} failed.",
+      "batch_delete_select_required": "Please select at least one channel to delete.",
+      "batch_delete_done": "Batch deletion finished: {{success}} succeeded, {{failed}} failed.",
       "balance_update_success": "Channel {{name}} balance updated successfully!",
       "all_balance_updated": "All enabled channel balances have been updated!",
       "operation_success": "Operation completed successfully!"
@@ -250,6 +253,59 @@
         "fastgpt": "Enter in format: APIKey-AppId, e.g.: fastgpt-0sp2gtvfdgyi4k30jwlgwf1i-64f335d84283f05518e9e041",
         "tencent": "Enter in format: AppId|SecretId|SecretKey"
       }
+    }
+  },
+  "group_manage": {
+    "title": "Group Management",
+    "table": {
+      "name": "Group Name",
+      "display_name": "Display Name",
+      "description": "Description",
+      "source": "Source",
+      "status": "Status",
+      "sort_order": "Sort Order",
+      "updated_at": "Updated At",
+      "actions": "Actions"
+    },
+    "status": {
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "form": {
+      "name": "Group Name",
+      "name_placeholder": "e.g. enterprise",
+      "display_name": "Display Name",
+      "display_name_placeholder": "e.g. Enterprise",
+      "description": "Description",
+      "description_placeholder": "Optional description for this group",
+      "sort_order": "Sort Value"
+    },
+    "buttons": {
+      "add": "Add Group",
+      "edit": "Edit",
+      "enable": "Enable",
+      "disable": "Disable",
+      "delete": "Delete",
+      "confirm": "Confirm",
+      "cancel": "Cancel"
+    },
+    "modal": {
+      "create_title": "Create Group",
+      "edit_title": "Edit Group",
+      "delete_title": "Confirm Delete Group",
+      "delete_confirm": "Are you sure you want to delete group {{name}}?"
+    },
+    "messages": {
+      "loading": "Loading...",
+      "empty": "No groups",
+      "name_required": "Group name is required",
+      "load_failed": "Failed to load groups",
+      "create_success": "Group created successfully",
+      "create_failed": "Failed to create group",
+      "update_success": "Group updated successfully",
+      "update_failed": "Failed to update group",
+      "delete_success": "Group deleted successfully",
+      "delete_failed": "Failed to delete group"
     }
   },
   "token": {

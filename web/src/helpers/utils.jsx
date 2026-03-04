@@ -81,25 +81,25 @@ export function showError(error) {
       switch (error.response.status) {
         case 401:
           // toast.error('错误：未登录或登录已过期，请重新登录！', showErrorOptions);
-          window.location.href = '/login?expired=true';
+          window.location.href = `/login?expired=${Date.now()}`;
           break;
         case 429:
-          toast.error('错误：请求次数过多，请稍后再试！', showErrorOptions);
+          toast.error('请求次数过多，请稍后再试！', showErrorOptions);
           break;
         case 500:
-          toast.error('错误：服务器内部错误，请联系管理员！', showErrorOptions);
+          toast.error('服务器内部错误，请联系管理员！', showErrorOptions);
           break;
         case 405:
           toast.info('本站仅作演示之用，无服务端！');
           break;
         default:
-          toast.error('错误：' + error.message, showErrorOptions);
+          toast.error(error.message, showErrorOptions);
       }
       return;
     }
-    toast.error('错误：' + error.message, showErrorOptions);
+    toast.error(error.message, showErrorOptions);
   } else {
-    toast.error('错误：' + error, showErrorOptions);
+    toast.error(`${error}`, showErrorOptions);
   }
 }
 

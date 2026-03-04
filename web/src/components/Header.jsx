@@ -27,6 +27,11 @@ const ADMIN_HEADER_BUTTONS = [
     icon: 'cubes',
   },
   {
+    name: 'header.group',
+    to: '/admin/group',
+    icon: 'layer group',
+  },
+  {
     name: 'header.channel',
     to: '/admin/channel',
     icon: 'sitemap',

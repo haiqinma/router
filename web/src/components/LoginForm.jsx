@@ -41,10 +41,20 @@ const LoginForm = () => {
     Number(role) >= 10 ? '/admin/dashboard' : '/workspace/token';
 
   useEffect(() => {
-    if (searchParams.get('expired')) {
-      showError(t('messages.error.login_expired'));
+    const expiredMarker = searchParams.get('expired');
+    if (expiredMarker) {
+      const lastMarker = sessionStorage.getItem('last_login_expired_marker');
+      if (lastMarker !== expiredMarker) {
+        sessionStorage.setItem('last_login_expired_marker', expiredMarker);
+        showError(t('messages.error.login_expired'));
+      }
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('expired');
+      const nextSearch = nextParams.toString();
+      navigate(`/login${nextSearch ? `?${nextSearch}` : ''}`, { replace: true });
+      return;
     }
-  }, [searchParams, t]);
+  }, [searchParams, t, navigate]);
 
   const onWalletLoginClicked = async () => {
     try {

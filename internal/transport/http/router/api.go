@@ -283,6 +283,10 @@ func SetApiRouter(engine *gin.Engine) {
 		groupRoute.Use(middleware.AdminAuth())
 		{
 			groupRoute.GET("/", group.GetGroups)
+			groupRoute.GET("/catalog", group.GetGroupCatalog)
+			groupRoute.POST("/", group.CreateGroup)
+			groupRoute.PUT("/", group.UpdateGroup)
+			groupRoute.DELETE("/:name", group.DeleteGroup)
 		}
 
 		// Models list for authenticated users
@@ -355,6 +359,10 @@ func SetApiRouter(engine *gin.Engine) {
 		adminGroupRoute.Use(middleware.AdminAuth())
 		{
 			adminGroupRoute.GET("/", group.GetGroups)
+			adminGroupRoute.GET("/catalog", group.GetGroupCatalog)
+			adminGroupRoute.POST("/", group.CreateGroup)
+			adminGroupRoute.PUT("/", group.UpdateGroup)
+			adminGroupRoute.DELETE("/:name", group.DeleteGroup)
 		}
 
 		adminModelProviderRoute := adminRouter.Group("/model-provider")

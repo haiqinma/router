@@ -1,7 +1,5 @@
 # Router API（统一文档）
 
-本文件整合原 `docs/API.md` 与 `docs/API.v1.md`，作为当前唯一 API 文档入口。
-
 > Swagger/OpenAPI  
 > 本文档对应的 OpenAPI 文件为 `docs/openapi.json`，由 swag 注释生成：`scripts/gen-openapi.sh`。
 

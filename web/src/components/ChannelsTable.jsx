@@ -81,6 +81,10 @@ function isShowDetail() {
 }
 
 const promptID = 'detail';
+const selectionModeNone = '';
+const selectionModeTest = 'test';
+const selectionModeDelete = 'delete';
+const selectionModeDisable = 'disable';
 
 const ChannelsTable = () => {
   const { t } = useTranslation();
@@ -91,8 +95,10 @@ const ChannelsTable = () => {
   const [searching, setSearching] = useState(false);
   const [showPrompt, setShowPrompt] = useState(shouldShowPrompt(promptID));
   const [showDetail, setShowDetail] = useState(isShowDetail());
-  const [batchTestMode, setBatchTestMode] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(selectionModeNone);
   const [batchTesting, setBatchTesting] = useState(false);
+  const [batchDeleting, setBatchDeleting] = useState(false);
+  const [batchDisabling, setBatchDisabling] = useState(false);
   const [selectedChannelIds, setSelectedChannelIds] = useState([]);
   const [typeMap, setTypeMap] = useState(() =>
     buildTypeMap(getChannelOptions(), t)
@@ -191,12 +197,12 @@ const ChannelsTable = () => {
   }, [t]);
 
   useEffect(() => {
-    if (!batchTestMode) {
+    if (selectionMode === selectionModeNone) {
       return;
     }
     const validIds = new Set(channels.map((channel) => channel.id));
     setSelectedChannelIds((prev) => prev.filter((id) => validIds.has(id)));
-  }, [batchTestMode, channels]);
+  }, [selectionMode, channels]);
 
   const manageChannel = async (id, action, idx, value) => {
     let data = { id };
@@ -460,29 +466,6 @@ const ChannelsTable = () => {
     await runChannelTest(channel, absoluteIndex, false);
   };
 
-  const testChannels = async (scope) => {
-    const res = await API.get(`/api/v1/admin/channel/test?scope=${scope}`);
-    const { success, message } = res.data;
-    if (success) {
-      showInfo(t('channel.messages.test_all_started'));
-    } else {
-      showError(message);
-    }
-  };
-
-  const deleteAllDisabledChannels = async () => {
-    const res = await API.delete(`/api/v1/admin/channel/disabled`);
-    const { success, message, data } = res.data;
-    if (success) {
-      showSuccess(
-        t('channel.messages.delete_disabled_success', { count: data })
-      );
-      await refresh();
-    } else {
-      showError(message);
-    }
-  };
-
   const updateChannelBalance = async (id, name, idx) => {
     const res = await API.get(`/api/v1/admin/channel/update_balance/${id}/`);
     const { success, message, balance } = res.data;
@@ -530,7 +513,9 @@ const ChannelsTable = () => {
   const allPagedSelected =
     pagedChannelIds.length > 0 &&
     pagedChannelIds.every((id) => selectedChannelIds.includes(id));
-  const footerColSpan = (showDetail ? 10 : 8) + (batchTestMode ? 1 : 0);
+  const inBatchSelectMode = selectionMode !== selectionModeNone;
+  const footerColSpan = (showDetail ? 10 : 8) + (inBatchSelectMode ? 1 : 0);
+  const actionBusy = batchTesting || batchDeleting || batchDisabling;
 
   const toggleChannelSelection = (channelId, checked) => {
     setSelectedChannelIds((prev) => {
@@ -558,9 +543,23 @@ const ChannelsTable = () => {
     });
   };
 
-  const cancelBatchTest = () => {
-    setBatchTestMode(false);
+  const cancelBatchSelection = () => {
+    setSelectionMode(selectionModeNone);
     setSelectedChannelIds([]);
+  };
+
+  const collectSelectedTargets = () => {
+    return selectedChannelIds
+      .map((id) => {
+        const absoluteIndex = channels.findIndex((channel) => channel.id === id);
+        if (absoluteIndex < 0) return null;
+        return {
+          id,
+          absoluteIndex,
+          channel: channels[absoluteIndex],
+        };
+      })
+      .filter(Boolean);
   };
 
   const confirmBatchTest = async () => {
@@ -568,17 +567,7 @@ const ChannelsTable = () => {
       showInfo(t('channel.messages.batch_test_select_required'));
       return;
     }
-    const selectedIdsSnapshot = [...selectedChannelIds];
-    const targets = selectedIdsSnapshot
-      .map((id) => {
-        const absoluteIndex = channels.findIndex((channel) => channel.id === id);
-        if (absoluteIndex < 0) return null;
-        return {
-          absoluteIndex,
-          channel: channels[absoluteIndex],
-        };
-      })
-      .filter(Boolean);
+    const targets = collectSelectedTargets();
 
     if (targets.length === 0) {
       showInfo(t('channel.messages.batch_test_select_required'));
@@ -586,7 +575,7 @@ const ChannelsTable = () => {
     }
 
     // Exit selection mode immediately after confirm.
-    setBatchTestMode(false);
+    setSelectionMode(selectionModeNone);
     setSelectedChannelIds([]);
     setBatchTesting(true);
 
@@ -611,6 +600,135 @@ const ChannelsTable = () => {
     setBatchTesting(false);
   };
 
+  const confirmBatchDelete = async () => {
+    if (selectedChannelIds.length === 0) {
+      showInfo(t('channel.messages.batch_delete_select_required'));
+      return;
+    }
+    const targets = collectSelectedTargets();
+    if (targets.length === 0) {
+      showInfo(t('channel.messages.batch_delete_select_required'));
+      return;
+    }
+
+    setSelectionMode(selectionModeNone);
+    setSelectedChannelIds([]);
+    setBatchDeleting(true);
+
+    const results = await Promise.allSettled(
+      targets.map(async (target) => {
+        const res = await API.delete(`/api/v1/admin/channel/${target.id}/`);
+        const { success, message } = res.data || {};
+        return {
+          id: target.id,
+          success: !!success,
+          message: message || '',
+        };
+      })
+    );
+
+    const succeededIds = [];
+    let firstFailedMessage = '';
+    results.forEach((result) => {
+      if (result.status === 'fulfilled' && result.value.success) {
+        succeededIds.push(result.value.id);
+      } else if (!firstFailedMessage) {
+        if (result.status === 'fulfilled') {
+          firstFailedMessage = result.value.message || 'Delete failed';
+        } else {
+          firstFailedMessage = result.reason?.message || `${result.reason}`;
+        }
+      }
+    });
+
+    if (succeededIds.length > 0) {
+      const succeededSet = new Set(succeededIds);
+      setChannels((prev) =>
+        prev.map((channel) =>
+          succeededSet.has(channel.id) ? { ...channel, deleted: true } : channel
+        )
+      );
+    }
+
+    const failedCount = results.length - succeededIds.length;
+    showInfo(
+      t('channel.messages.batch_delete_done', {
+        success: succeededIds.length,
+        failed: failedCount,
+      })
+    );
+    if (firstFailedMessage) {
+      showError(firstFailedMessage);
+    }
+    setBatchDeleting(false);
+  };
+
+  const confirmBatchDisable = async () => {
+    if (selectedChannelIds.length === 0) {
+      showInfo(t('channel.messages.batch_disable_select_required'));
+      return;
+    }
+    const targets = collectSelectedTargets();
+    if (targets.length === 0) {
+      showInfo(t('channel.messages.batch_disable_select_required'));
+      return;
+    }
+
+    setSelectionMode(selectionModeNone);
+    setSelectedChannelIds([]);
+    setBatchDisabling(true);
+
+    const results = await Promise.allSettled(
+      targets.map(async (target) => {
+        const res = await API.put('/api/v1/admin/channel/', {
+          id: target.id,
+          status: 2,
+        });
+        const { success, message } = res.data || {};
+        return {
+          id: target.id,
+          success: !!success,
+          message: message || '',
+        };
+      })
+    );
+
+    const succeededIds = [];
+    let firstFailedMessage = '';
+    results.forEach((result) => {
+      if (result.status === 'fulfilled' && result.value.success) {
+        succeededIds.push(result.value.id);
+      } else if (!firstFailedMessage) {
+        if (result.status === 'fulfilled') {
+          firstFailedMessage = result.value.message || 'Disable failed';
+        } else {
+          firstFailedMessage = result.reason?.message || `${result.reason}`;
+        }
+      }
+    });
+
+    if (succeededIds.length > 0) {
+      const succeededSet = new Set(succeededIds);
+      setChannels((prev) =>
+        prev.map((channel) =>
+          succeededSet.has(channel.id) ? { ...channel, status: 2 } : channel
+        )
+      );
+    }
+
+    const failedCount = results.length - succeededIds.length;
+    showInfo(
+      t('channel.messages.batch_disable_done', {
+        success: succeededIds.length,
+        failed: failedCount,
+      })
+    );
+    if (firstFailedMessage) {
+      showError(firstFailedMessage);
+    }
+    setBatchDisabling(false);
+  };
+
   return (
     <>
       <div
@@ -624,60 +742,77 @@ const ChannelsTable = () => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-          {!batchTestMode ? (
-            <Button
-              size='tiny'
-              loading={loading || batchTesting}
-              disabled={loading || batchTesting}
-              onClick={() => {
-                setBatchTestMode(true);
-                setSelectedChannelIds([]);
-              }}
-            >
-              {t('channel.buttons.test_channel')}
-            </Button>
+          {selectionMode === selectionModeNone ? (
+            <>
+              <Button
+                size='tiny'
+                disabled={actionBusy}
+                onClick={() => {
+                  setSelectionMode(selectionModeTest);
+                  setSelectedChannelIds([]);
+                }}
+              >
+                {t('channel.buttons.test_channel')}
+              </Button>
+              <Button
+                size='tiny'
+                color='orange'
+                disabled={actionBusy}
+                onClick={() => {
+                  setSelectionMode(selectionModeDisable);
+                  setSelectedChannelIds([]);
+                }}
+              >
+                {t('channel.buttons.disable_channel')}
+              </Button>
+              <Button
+                size='tiny'
+                negative
+                disabled={actionBusy}
+                onClick={() => {
+                  setSelectionMode(selectionModeDelete);
+                  setSelectedChannelIds([]);
+                }}
+              >
+                {t('channel.buttons.delete_channel')}
+              </Button>
+            </>
           ) : (
             <>
-              <Button size='tiny' positive onClick={confirmBatchTest}>
+              <Button
+                size='tiny'
+                positive={selectionMode === selectionModeTest}
+                negative={selectionMode === selectionModeDelete}
+                color={selectionMode === selectionModeDisable ? 'orange' : undefined}
+                loading={batchTesting || batchDeleting || batchDisabling}
+                disabled={batchTesting || batchDeleting || batchDisabling}
+                onClick={() => {
+                  if (selectionMode === selectionModeTest) {
+                    confirmBatchTest();
+                    return;
+                  }
+                  if (selectionMode === selectionModeDisable) {
+                    confirmBatchDisable();
+                    return;
+                  }
+                  confirmBatchDelete();
+                }}
+              >
                 {t('channel.buttons.confirm')}
               </Button>
-              <Button size='tiny' onClick={cancelBatchTest}>
+              <Button
+                size='tiny'
+                disabled={batchTesting || batchDeleting || batchDisabling}
+                onClick={cancelBatchSelection}
+              >
                 {t('channel.buttons.cancel')}
               </Button>
             </>
           )}
-          <Button
-            size='tiny'
-            loading={loading}
-            onClick={() => {
-              testChannels('disabled');
-            }}
-          >
-            {t('channel.buttons.test_disabled')}
-          </Button>
-          <Popup
-            trigger={
-              <Button size='tiny' loading={loading}>
-                {t('channel.buttons.delete_disabled')}
-              </Button>
-            }
-            on='click'
-            flowing
-            hoverable
-          >
-            <Button
-              size='tiny'
-              loading={loading}
-              negative
-              onClick={deleteAllDisabledChannels}
-            >
-              {t('channel.buttons.confirm_delete_disabled')}
-            </Button>
-          </Popup>
-          <Button size='tiny' onClick={refresh} loading={loading}>
+          <Button size='tiny' onClick={refresh} loading={loading} disabled={actionBusy}>
             {t('channel.buttons.refresh')}
           </Button>
-          <Button size='tiny' onClick={toggleShowDetail}>
+          <Button size='tiny' onClick={toggleShowDetail} disabled={actionBusy}>
             {showDetail
               ? t('channel.buttons.hide_detail')
               : t('channel.buttons.show_detail')}
@@ -712,7 +847,7 @@ const ChannelsTable = () => {
       <Table basic={'very'} compact size='small'>
         <Table.Header>
           <Table.Row>
-            {batchTestMode && (
+            {inBatchSelectMode && (
               <Table.HeaderCell collapsing textAlign='center'>
                 <Form.Checkbox
                   checked={allPagedSelected}
@@ -800,7 +935,7 @@ const ChannelsTable = () => {
               if (channel.deleted) return <></>;
               return (
                 <Table.Row key={channel.id}>
-                  {batchTestMode && (
+                  {inBatchSelectMode && (
                     <Table.Cell collapsing textAlign='center'>
                       <Form.Checkbox
                         checked={selectedChannelIds.includes(channel.id)}
@@ -903,26 +1038,6 @@ const ChannelsTable = () => {
                       >
                         {t('channel.buttons.test')}
                       </Button>
-                      <Popup
-                        trigger={
-                          <Button size='tiny' negative>
-                            {t('channel.buttons.delete')}
-                          </Button>
-                        }
-                        on='click'
-                        flowing
-                        hoverable
-                      >
-                        <Button
-                          size={'tiny'}
-                          negative
-                          onClick={() => {
-                            manageChannel(channel.id, 'delete', idx);
-                          }}
-                        >
-                          {t('channel.buttons.confirm_delete')} {channel.name}
-                        </Button>
-                      </Popup>
                       <Button
                         size={'tiny'}
                         onClick={() => {
