@@ -9,8 +9,6 @@ import (
 var groupRatioLock sync.RWMutex
 var GroupRatio = map[string]float64{
 	"default": 1,
-	"vip":     1,
-	"svip":    1,
 }
 
 func GroupRatio2JSONString() string {

@@ -4,7 +4,6 @@ import {Button, Card, Form, Input, Message} from 'semantic-ui-react';
 import {useLocation, useNavigate, useParams} from 'react-router-dom';
 import {API, copy, getChannelModels, showError, showInfo, showSuccess, verifyJSON,} from '../../helpers';
 import {getChannelOptions, loadChannelOptions} from '../../helpers/helper';
-import {renderChannelTip} from '../../helpers/render';
 
 const MODEL_MAPPING_EXAMPLE = {
   'gpt-3.5-turbo-0301': 'gpt-3.5-turbo',
@@ -796,7 +795,6 @@ const EditChannel = () => {
                 options={groupOptions}
               />
             </Form.Field>
-            {renderChannelTip(inputs.type)}
 
             {/* Azure OpenAI specific fields */}
             {inputs.type === 3 && (

@@ -1,12 +1,10 @@
 import React, {useCallback, useEffect, useState} from 'react';
 import {useTranslation} from 'react-i18next';
-import {Button, Dropdown, Form, Icon, Input, Label, Message, Pagination, Popup, Table,} from 'semantic-ui-react';
+import {Button, Dropdown, Form, Icon, Input, Label, Pagination, Popup, Table,} from 'semantic-ui-react';
 import {Link} from 'react-router-dom';
 import {
   API,
   loadChannelModels,
-  setPromptShown,
-  shouldShowPrompt,
   showError,
   showInfo,
   showSuccess,
@@ -80,7 +78,6 @@ function isShowDetail() {
   return localStorage.getItem('show_detail') === 'true';
 }
 
-const promptID = 'detail';
 const selectionModeNone = '';
 const selectionModeTest = 'test';
 const selectionModeDelete = 'delete';
@@ -93,7 +90,6 @@ const ChannelsTable = () => {
   const [activePage, setActivePage] = useState(1);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searching, setSearching] = useState(false);
-  const [showPrompt, setShowPrompt] = useState(shouldShowPrompt(promptID));
   const [showDetail, setShowDetail] = useState(isShowDetail());
   const [selectionMode, setSelectionMode] = useState(selectionModeNone);
   const [batchTesting, setBatchTesting] = useState(false);
@@ -830,20 +826,6 @@ const ChannelsTable = () => {
           />
         </Form>
       </div>
-      {showPrompt && (
-        <Message
-          onDismiss={() => {
-            setShowPrompt(false);
-            setPromptShown(promptID);
-          }}
-        >
-          {t('channel.balance_notice')}
-          <br />
-          {t('channel.test_notice')}
-          <br />
-          {t('channel.detail_notice')}
-        </Message>
-      )}
       <Table basic={'very'} compact size='small'>
         <Table.Header>
           <Table.Row>
