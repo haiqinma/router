@@ -277,7 +277,6 @@ const EditChannel = () => {
     vertex_ai_project_id: '',
     vertex_ai_adc: '',
     user_agent: '',
-    use_responses: false,
   });
   const fallbackModelProviderOptions = useMemo(
     () => buildFallbackModelProviderOptions(t),
@@ -351,7 +350,9 @@ const EditChannel = () => {
       }
       setInputs(data);
       if (data.config !== '') {
-        setConfig((prev) => ({ ...prev, ...JSON.parse(data.config) }));
+        const parsedConfig = JSON.parse(data.config);
+        delete parsedConfig.use_responses;
+        setConfig((prev) => ({ ...prev, ...parsedConfig }));
       }
       setBasicModels(getChannelModels(data.type));
     } else {
@@ -552,7 +553,9 @@ const EditChannel = () => {
     let res;
     localInputs.models = localInputs.models.join(',');
     localInputs.group = localInputs.groups.join(',');
-    localInputs.config = JSON.stringify(config);
+    const submitConfig = { ...config };
+    delete submitConfig.use_responses;
+    localInputs.config = JSON.stringify(submitConfig);
     if (isEdit) {
       res = await API.put(`/api/v1/admin/channel/`, {
         ...localInputs,
@@ -740,37 +743,6 @@ const EditChannel = () => {
               ))}
             {isOpenAICompatibleType(inputs.type) && (
               <>
-                <Form.Checkbox
-                  label={t('channel.edit.use_responses.label')}
-                  checked={!!config.use_responses}
-                  onChange={(e, { checked }) => {
-                    setConfig((prev) => {
-                      const next = {
-                        ...prev,
-                        use_responses: !!checked,
-                      };
-                      if (checked && !next.user_agent) {
-                        next.user_agent = 'codex-cli';
-                      }
-                      return next;
-                    });
-                  }}
-                />
-                <div
-                  style={{ color: 'rgba(0, 0, 0, 0.6)', margin: '4px 0 8px' }}
-                >
-                  {t('channel.edit.use_responses.help')}
-                </div>
-                <Form.Checkbox
-                  label={t('channel.edit.user_agent.codex_checkbox')}
-                  checked={config.user_agent === 'codex-cli'}
-                  onChange={(e, { checked }) => {
-                    setConfig((prev) => ({
-                      ...prev,
-                      user_agent: checked ? 'codex-cli' : '',
-                    }));
-                  }}
-                />
                 <Form.Field>
                   <Form.Input
                     label={t('channel.edit.user_agent.label')}

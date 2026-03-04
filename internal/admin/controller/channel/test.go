@@ -100,6 +100,18 @@ func parseResponsesTestResponse(resp string) (string, error) {
 	return "", errors.New("response has no output text, content types: " + strings.Join(contentTypes, ","))
 }
 
+func parseChannelTestResponse(resp string) (string, error) {
+	_, chatText, chatErr := parseTestResponse(resp)
+	if chatErr == nil {
+		return chatText, nil
+	}
+	responsesText, responsesErr := parseResponsesTestResponse(resp)
+	if responsesErr == nil {
+		return responsesText, nil
+	}
+	return "", fmt.Errorf("parse as chat failed: %v; parse as responses failed: %v", chatErr, responsesErr)
+}
+
 func testChannel(ctx context.Context, channel *model.Channel, request *relaymodel.GeneralOpenAIRequest) (responseMessage string, err error, openaiErr *relaymodel.Error) {
 	startTime := time.Now()
 	w := httptest.NewRecorder()
@@ -116,23 +128,10 @@ func testChannel(ctx context.Context, channel *model.Channel, request *relaymode
 	c.Set(ctxkey.BaseURL, channel.GetBaseURL())
 	cfg, _ := channel.LoadConfig()
 	relayMode := relaymode.ChatCompletions
-	if cfg.UseResponses {
-		relayMode = relaymode.Responses
-		c.Request.URL.Path = "/v1/responses"
-	}
 	if cfg.UserAgent != "" {
 		c.Request.Header.Set("User-Agent", cfg.UserAgent)
 	}
-	if cfg.UseResponses {
-		request.Messages = nil
-		request.Input = []relaymodel.Message{
-			{
-				Role:    "user",
-				Content: config.TestPrompt,
-			},
-		}
-	}
-	logger.SysLog(fmt.Sprintf("[testChannel] channel_id=%d name=%s use_responses=%v path=%s", channel.Id, channel.Name, cfg.UseResponses, c.Request.URL.Path))
+	logger.SysLog(fmt.Sprintf("[testChannel] channel_id=%d name=%s path=%s", channel.Id, channel.Name, c.Request.URL.Path))
 	c.Set(ctxkey.Config, cfg)
 	middleware.SetupContextForSelectedChannel(c, channel, "")
 	meta := meta.GetByContext(c)
@@ -206,11 +205,7 @@ func testChannel(ctx context.Context, channel *model.Channel, request *relaymode
 		return "", errors.New("usage is nil"), nil
 	}
 	rawResponse := w.Body.String()
-	if cfg.UseResponses {
-		responseMessage, err = parseResponsesTestResponse(rawResponse)
-	} else {
-		_, responseMessage, err = parseTestResponse(rawResponse)
-	}
+	responseMessage, err = parseChannelTestResponse(rawResponse)
 	if err != nil {
 		logger.SysError(fmt.Sprintf("failed to parse error: %s, \nresponse: %s", err.Error(), rawResponse))
 		return "", err, nil

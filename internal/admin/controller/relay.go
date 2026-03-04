@@ -110,13 +110,7 @@ func Relay(c *gin.Context) {
 }
 
 func getEffectiveRelayMode(c *gin.Context) int {
-	relayMode := relaymode.GetByPath(c.Request.URL.Path)
-	if cfgValue, ok := c.Get(ctxkey.Config); ok {
-		if cfg, ok := cfgValue.(dbmodel.ChannelConfig); ok && cfg.UseResponses {
-			return relaymode.Responses
-		}
-	}
-	return relayMode
+	return relaymode.GetByPath(c.Request.URL.Path)
 }
 
 func shouldRetry(c *gin.Context, statusCode int) bool {

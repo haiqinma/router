@@ -51,7 +51,6 @@ type ChannelConfig struct {
 	VertexAIProjectID string `json:"vertex_ai_project_id,omitempty"`
 	VertexAIADC       string `json:"vertex_ai_adc,omitempty"`
 	UserAgent         string `json:"user_agent,omitempty"`
-	UseResponses      bool   `json:"use_responses,omitempty"`
 }
 
 func GetAllChannels(startIdx int, num int, scope string) ([]*Channel, error) {
