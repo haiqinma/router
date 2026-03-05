@@ -39,6 +39,22 @@ const buildModelOptions = (models) => {
   return { options, ids };
 };
 
+const normalizeModelIDs = (models) => {
+  if (!Array.isArray(models)) {
+    return [];
+  }
+  const seen = new Set();
+  const result = [];
+  models.forEach((item) => {
+    const id = (item || '').toString().trim();
+    if (!id || seen.has(id)) return;
+    seen.add(id);
+    result.push(id);
+  });
+  result.sort();
+  return result;
+};
+
 const normalizeBaseURL = (baseURL) =>
   (baseURL || '').trim().replace(/\/+$/, '');
 
@@ -152,7 +168,7 @@ const EditChannel = () => {
   const [draftChannelId, setDraftChannelId] = useState(draftIdFromQuery);
   const [channelKeySet, setChannelKeySet] = useState(false);
   const handleCancel = () => {
-    navigate('/channel');
+    navigate('/admin/channel');
   };
 
   const [inputs, setInputs] = useState(CHANNEL_ORIGIN_INPUTS);
@@ -167,6 +183,7 @@ const EditChannel = () => {
   const [verifiedModelSignature, setVerifiedModelSignature] = useState('');
   const [config, setConfig] = useState(CHANNEL_DEFAULT_CONFIG);
   const fetchingModelsRef = useRef(false);
+  const draftChannelIdRef = useRef(draftIdFromQuery);
 
   const buildEffectiveKey = useCallback(() => {
     let effectiveKey = inputs.key || '';
@@ -208,7 +225,6 @@ const EditChannel = () => {
     [effectivePreviewKey, inputs.base_url, inputs.type, previewChannelID]
   );
   const requiresConnectionVerification = !isEdit && inputs.type !== 43;
-  const showCreateModelFlowGuide = !isEdit && inputs.type !== 43;
   const showStepOne = isEdit || createStep === 1;
   const showStepTwo = isEdit || createStep === 2;
   const showStepThree = isEdit || createStep === 3;
@@ -216,45 +232,10 @@ const EditChannel = () => {
     requiresConnectionVerification &&
     verifiedModelSignature !== '' &&
     currentModelSignature === verifiedModelSignature;
-  const visibleModelOptions =
-    requiresConnectionVerification && !isCurrentSignatureVerified
-      ? []
-      : modelOptions;
-  const modelSyncStatusText = useMemo(() => {
-    if (!requiresConnectionVerification) {
-      return null;
-    }
-    if (fetchModelsLoading) {
-      return t('channel.edit.model_selector.verify_in_progress');
-    }
-    if (!hasModelPreviewCredentials) {
-      return t('channel.edit.model_selector.verify_prerequisite');
-    }
-    if (isCurrentSignatureVerified) {
-      return t('channel.edit.model_selector.verify_ready');
-    }
-    if (
-      verifiedModelSignature !== '' &&
-      verifiedModelSignature !== currentModelSignature
-    ) {
-      return t('channel.edit.model_selector.verify_stale');
-    }
-    return t('channel.edit.model_selector.verify_required');
-  }, [
-    currentModelSignature,
-    fetchModelsLoading,
-    hasModelPreviewCredentials,
-    isCurrentSignatureVerified,
-    requiresConnectionVerification,
-    t,
-    verifiedModelSignature,
-  ]);
-  const modelSyncStatusColor =
-    isCurrentSignatureVerified ? '#1f8f4b' : 'rgba(0, 0, 0, 0.6)';
-  const fetchModelsButtonText = t('channel.edit.buttons.verify_and_fetch_models');
-  const flowStepsText = t('channel.edit.model_selector.flow_steps');
-  const unifiedModelStatusText = modelSyncStatusText;
-  const unifiedModelStatusColor = modelSyncStatusColor;
+  const requireVerificationBeforeProceed =
+    requiresConnectionVerification && inputs.models.length === 0;
+  const visibleModelOptions = modelOptions;
+  const fetchModelsButtonText = t('channel.edit.buttons.fetch_models');
 
   const handleInputChange = (e, { name, value }) => {
     setInputs((inputs) => ({ ...inputs, [name]: value }));
@@ -319,7 +300,9 @@ const EditChannel = () => {
         setVerifiedModelSignature(draft.verifiedModelSignature);
       }
       if (typeof draft.draft_channel_id === 'string') {
-        setDraftChannelId(draft.draft_channel_id.trim());
+        const restoredDraftID = draft.draft_channel_id.trim();
+        setDraftChannelId(restoredDraftID);
+        draftChannelIdRef.current = restoredDraftID;
       }
       if (typeof draft.channel_key_set === 'boolean') {
         setChannelKeySet(draft.channel_key_set);
@@ -390,6 +373,7 @@ const EditChannel = () => {
       return '';
     }
     setDraftChannelId(id);
+    draftChannelIdRef.current = id;
     if ((payload.key || '').trim() !== '') {
       setChannelKeySet(true);
     }
@@ -397,13 +381,21 @@ const EditChannel = () => {
   }, [buildChannelPayload, t]);
 
   const saveDraftChannel = useCallback(async () => {
-    if (!draftChannelId) {
-      return true;
+    let targetDraftID = (draftChannelIdRef.current || draftChannelId || '').trim();
+    if (targetDraftID === '') {
+      if (!isCreateMode) {
+        return true;
+      }
+      const createdID = await createDraftChannel();
+      if (createdID === '') {
+        return false;
+      }
+      targetDraftID = createdID;
     }
     const payload = buildChannelPayload();
     const res = await API.put('/api/v1/admin/channel/', {
       ...payload,
-      id: draftChannelId,
+      id: targetDraftID,
       status: 4,
     });
     const { success, message } = res.data || {};
@@ -415,7 +407,39 @@ const EditChannel = () => {
       setChannelKeySet(true);
     }
     return true;
-  }, [buildChannelPayload, draftChannelId, t]);
+  }, [buildChannelPayload, createDraftChannel, draftChannelId, isCreateMode, t]);
+
+  const verifyDraftModelsPersisted = useCallback(async (expectedModels) => {
+    const targetDraftID = (draftChannelIdRef.current || draftChannelId || '').trim();
+    if (targetDraftID === '') {
+      return false;
+    }
+    try {
+      const checkRes = await API.get(`/api/v1/admin/channel/${targetDraftID}?select_all=1`);
+      const { success, data } = checkRes.data || {};
+      if (!success || !data) {
+        return false;
+      }
+      const remoteModels = normalizeModelIDs(
+        (data.models || '')
+          .split(',')
+          .map((item) => item.trim())
+          .filter((item) => item !== '')
+      );
+      const localModels = normalizeModelIDs(expectedModels);
+      if (remoteModels.length !== localModels.length) {
+        return false;
+      }
+      for (let i = 0; i < localModels.length; i += 1) {
+        if (localModels[i] !== remoteModels[i]) {
+          return false;
+        }
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }, [draftChannelId]);
 
   const ensureDraftChannel = useCallback(async () => {
     if (!isCreateMode) {
@@ -455,7 +479,7 @@ const EditChannel = () => {
   ]);
 
   const moveToStepThree = useCallback(async () => {
-    if (requiresConnectionVerification) {
+    if (requireVerificationBeforeProceed) {
       if (!hasModelPreviewCredentials) {
         showInfo(t('channel.edit.model_selector.verify_prerequisite'));
         return;
@@ -474,18 +498,46 @@ const EditChannel = () => {
       if (!ok) {
         return;
       }
+      const expectedModels = [...inputs.models];
+      let persisted = await verifyDraftModelsPersisted(expectedModels);
+      if (!persisted) {
+        // Retry once with a minimal payload to force model persistence.
+        const targetDraftID = (draftChannelIdRef.current || draftChannelId || '').trim();
+        if (targetDraftID !== '') {
+          try {
+            const retryRes = await API.put('/api/v1/admin/channel/', {
+              id: targetDraftID,
+              status: 4,
+              models: expectedModels.join(','),
+            });
+            if (retryRes?.data?.success) {
+              persisted = await verifyDraftModelsPersisted(expectedModels);
+            }
+          } catch {
+            persisted = false;
+          }
+        }
+      }
+      if (!persisted) {
+        showError(t('channel.edit.messages.update_draft_failed'));
+        return;
+      }
     }
     goToCreateStep(3);
   }, [
+    draftChannelId,
     goToCreateStep,
     hasModelPreviewCredentials,
     inputs.models.length,
+    inputs.models,
     inputs.type,
     isCreateMode,
     isCurrentSignatureVerified,
+    requireVerificationBeforeProceed,
     requiresConnectionVerification,
     saveDraftChannel,
     t,
+    verifyDraftModelsPersisted,
   ]);
 
   const loadChannelById = useCallback(
@@ -570,40 +622,6 @@ const EditChannel = () => {
     });
     return ids;
   }, []);
-
-  const fetchModels = useCallback(
-    async (silent = false) => {
-      try {
-        const key = buildEffectiveKey().trim();
-        const res = await API.post(`/api/v1/admin/channel/preview/models`, {
-          type: inputs.type,
-          key,
-          base_url: normalizeBaseURL(inputs.base_url),
-          draft_id: previewChannelID,
-          config,
-        });
-        const { success, message, data } = res.data || {};
-        if (!success) {
-          throw new Error(message || t('channel.edit.messages.fetch_models_failed'));
-        }
-        const models = Array.isArray(data) ? data.filter((model) => model) : [];
-        applyModelCandidates(models, false);
-      } catch (error) {
-        if (!silent) {
-          showError(error?.message || error);
-        }
-      }
-    },
-    [
-      applyModelCandidates,
-      buildEffectiveKey,
-      config,
-      inputs.base_url,
-      inputs.type,
-      previewChannelID,
-      t,
-    ]
-  );
 
   const handleFetchModels = useCallback(
     async ({ silent = false, selectAll = true } = {}) => {
@@ -733,6 +751,7 @@ const EditChannel = () => {
       return;
     }
     setDraftChannelId(draftIdFromQuery);
+    draftChannelIdRef.current = draftIdFromQuery;
   }, [draftIdFromQuery, isEdit]);
 
   useEffect(() => {
@@ -866,7 +885,6 @@ const EditChannel = () => {
       return;
     }
     setOriginModelOptions([]);
-    setInputs((prev) => ({ ...prev, models: [] }));
     setModelsLastSyncedAt(0);
     setModelsSyncError(t('channel.edit.model_selector.verify_stale'));
   }, [
@@ -887,50 +905,8 @@ const EditChannel = () => {
   }, [requiresConnectionVerification, verifiedModelSignature]);
 
   useEffect(() => {
-    if (loading) {
-      return;
-    }
-    if (isEdit) {
-      return;
-    }
-    if (createStep !== 2) {
-      return;
-    }
-    if (inputs.type === 43) {
-      return;
-    }
-    if (requiresConnectionVerification && hasModelPreviewCredentials) {
-      const timer = setTimeout(() => {
-        handleFetchModels({ silent: true, selectAll: true }).then();
-      }, 700);
-      return () => clearTimeout(timer);
-    }
-    if (requiresConnectionVerification) {
-      return;
-    }
-    const timer = setTimeout(() => {
-      fetchModels(true).then();
-    }, 700);
-    return () => clearTimeout(timer);
-  }, [
-    fetchModels,
-    hasModelPreviewCredentials,
-    handleFetchModels,
-    inputs.base_url,
-    inputs.key,
-    inputs.type,
-    isEdit,
-    requiresConnectionVerification,
-    loading,
-    createStep,
-  ]);
-
-  useEffect(() => {
-    if (isEdit || copyFromId > 0) {
-      fetchModels(true).then();
-    }
     fetchChannelTypes().then();
-  }, [copyFromId, fetchModels, fetchChannelTypes, isEdit]);
+  }, [fetchChannelTypes]);
 
   const submit = async () => {
     const effectiveKey = buildEffectiveKey();
@@ -942,7 +918,7 @@ const EditChannel = () => {
       showInfo(t('channel.edit.messages.name_required'));
       return;
     }
-    if (requiresConnectionVerification) {
+    if (requireVerificationBeforeProceed) {
       if (!hasModelPreviewCredentials) {
         showInfo(t('channel.edit.model_selector.verify_prerequisite'));
         return;
@@ -990,24 +966,14 @@ const EditChannel = () => {
         showSuccess(t('channel.edit.messages.update_success'));
       } else {
         showSuccess(t('channel.edit.messages.create_success'));
-        setInputs(CHANNEL_ORIGIN_INPUTS);
-        setConfig(CHANNEL_DEFAULT_CONFIG);
-        setOriginModelOptions([]);
-        setModelsSyncError('');
-        setModelsLastSyncedAt(0);
-        setVerifiedModelSignature('');
-        setDraftChannelId('');
-        setChannelKeySet(false);
-        setCreateStep(1);
         clearCreateDraft();
       }
-      navigate('/channel');
+      navigate('/admin/channel', { replace: true });
+      return;
     } else {
       showError(message);
     }
   };
-
-  const isRealtimeModelFetchAvailable = hasModelPreviewCredentials;
 
   return (
     <div className='dashboard-container'>
@@ -1257,16 +1223,6 @@ const EditChannel = () => {
             {showStepTwo && inputs.type !== 43 && (
               <Form.Field>
                 <label>{t('channel.edit.models')}</label>
-                {showCreateModelFlowGuide && (
-                  <Message info style={{ marginBottom: '10px' }}>
-                    <Message.Header>
-                      {t('channel.edit.model_selector.flow_title')}
-                    </Message.Header>
-                    <p style={{ marginTop: '6px', marginBottom: 0 }}>
-                      {flowStepsText}
-                    </p>
-                  </Message>
-                )}
                 <div
                   style={{
                     display: 'flex',
@@ -1287,22 +1243,6 @@ const EditChannel = () => {
                     <Button
                       type='button'
                       size='tiny'
-                      onClick={selectAllModels}
-                      disabled={visibleModelOptions.length === 0}
-                    >
-                      {t('channel.edit.buttons.select_all')}
-                    </Button>
-                    <Button
-                      type='button'
-                      size='tiny'
-                      onClick={clearSelectedModels}
-                      disabled={inputs.models.length === 0}
-                    >
-                      {t('channel.edit.buttons.clear')}
-                    </Button>
-                    <Button
-                      type='button'
-                      size='tiny'
                       color='green'
                       loading={fetchModelsLoading}
                       disabled={
@@ -1316,18 +1256,24 @@ const EditChannel = () => {
                     >
                       {fetchModelsButtonText}
                     </Button>
+                    <Button
+                      type='button'
+                      size='tiny'
+                      onClick={selectAllModels}
+                      disabled={visibleModelOptions.length === 0}
+                    >
+                      {t('channel.edit.buttons.select_all')}
+                    </Button>
+                    <Button
+                      type='button'
+                      size='tiny'
+                      onClick={clearSelectedModels}
+                      disabled={inputs.models.length === 0}
+                    >
+                      {t('channel.edit.buttons.clear')}
+                    </Button>
                   </div>
                 </div>
-                <div style={{ color: 'rgba(0, 0, 0, 0.6)', marginBottom: '8px' }}>
-                  {isRealtimeModelFetchAvailable
-                    ? t('channel.edit.model_selector.realtime_enabled')
-                    : t('channel.edit.model_selector.realtime_hint')}
-                </div>
-                {unifiedModelStatusText && (
-                  <div style={{ color: unifiedModelStatusColor, marginBottom: '8px' }}>
-                    {unifiedModelStatusText}
-                  </div>
-                )}
                 <div
                   style={{
                     border: '1px solid rgba(34, 36, 38, 0.15)',
@@ -1360,13 +1306,6 @@ const EditChannel = () => {
                 {modelsSyncError && (
                   <div style={{ color: '#d9534f', marginTop: '8px' }}>
                     {modelsSyncError}
-                  </div>
-                )}
-                {modelsLastSyncedAt > 0 && (
-                  <div style={{ color: 'rgba(0, 0, 0, 0.55)', marginTop: '8px' }}>
-                    {t('channel.edit.model_selector.last_synced', {
-                      time: new Date(modelsLastSyncedAt).toLocaleString(),
-                    })}
                   </div>
                 )}
               </Form.Field>
@@ -1536,7 +1475,9 @@ const EditChannel = () => {
                   type='button'
                   positive
                   onClick={submit}
-                  disabled={requiresConnectionVerification && !isCurrentSignatureVerified}
+                  disabled={
+                    requireVerificationBeforeProceed && !isCurrentSignatureVerified
+                  }
                 >
                   {t('channel.edit.buttons.submit')}
                 </Button>
@@ -1564,7 +1505,9 @@ const EditChannel = () => {
                     type='button'
                     positive
                     onClick={submit}
-                    disabled={requiresConnectionVerification && !isCurrentSignatureVerified}
+                    disabled={
+                      requireVerificationBeforeProceed && !isCurrentSignatureVerified
+                    }
                   >
                     {t('channel.edit.buttons.submit')}
                   </Button>

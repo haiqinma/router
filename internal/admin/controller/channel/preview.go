@@ -10,11 +10,10 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/yeying-community/router/common/client"
+	"github.com/yeying-community/router/common/logger"
 	commonutils "github.com/yeying-community/router/common/utils"
 	channelsvc "github.com/yeying-community/router/internal/admin/service/channel"
-	relay "github.com/yeying-community/router/internal/relay"
 	"github.com/yeying-community/router/internal/relay/channeltype"
-	"github.com/yeying-community/router/internal/relay/meta"
 )
 
 type previewModelsRequest struct {
@@ -35,10 +34,6 @@ type openAIModelsResponse struct {
 	} `json:"error,omitempty"`
 }
 
-func isOpenAICompatibleType(channelType int) bool {
-	return channelType == channeltype.OpenAI || channelType == channeltype.GeminiOpenAICompatible
-}
-
 func resolveModelsURL(baseURL string) string {
 	resolvedBaseURL := strings.TrimRight(strings.TrimSpace(baseURL), "/")
 	lower := strings.ToLower(resolvedBaseURL)
@@ -50,49 +45,49 @@ func resolveModelsURL(baseURL string) string {
 	return resolvedBaseURL + "/v1/models"
 }
 
-func fetchOpenAICompatibleModelIDsByBaseURL(key, baseURL, modelProvider string) ([]string, error) {
-	if strings.TrimSpace(key) == "" {
-		return nil, fmt.Errorf("请先填写 Key")
+func fetchModelsByConfiguredChannelDetailed(key, baseURL, modelProvider string) ([]string, string, error) {
+	trimmedKey := strings.TrimSpace(key)
+	if trimmedKey == "" {
+		return nil, "", fmt.Errorf("请先填写 Key")
+	}
+	trimmedBaseURL := strings.TrimSpace(baseURL)
+	if trimmedBaseURL == "" {
+		return nil, "", fmt.Errorf("请先填写 Base URL")
 	}
 
-	provider := commonutils.NormalizeModelProvider(modelProvider)
-	if strings.TrimSpace(baseURL) == "" {
-		return nil, fmt.Errorf("请先填写 Base URL")
-	}
-	modelsURL := resolveModelsURL(baseURL)
-
+	modelsURL := resolveModelsURL(trimmedBaseURL)
 	httpReq, err := http.NewRequest(http.MethodGet, modelsURL, nil)
 	if err != nil {
-		return nil, fmt.Errorf("创建请求失败")
+		return nil, "", fmt.Errorf("创建请求失败")
 	}
-	httpReq.Header.Set("Authorization", "Bearer "+strings.TrimSpace(key))
+	httpReq.Header.Set("Authorization", "Bearer "+trimmedKey)
 
 	resp, err := client.HTTPClient.Do(httpReq)
 	if err != nil {
-		return nil, fmt.Errorf("请求模型列表失败")
+		return nil, "", fmt.Errorf("请求模型列表失败")
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("读取模型列表失败")
+		return nil, "", fmt.Errorf("读取模型列表失败")
 	}
 
 	var parsed openAIModelsResponse
 	if err := json.Unmarshal(body, &parsed); err != nil {
-		return nil, fmt.Errorf("解析模型列表失败")
+		return nil, "", fmt.Errorf("解析模型列表失败")
 	}
-
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		msg := fmt.Sprintf("模型列表请求失败（HTTP %d）", resp.StatusCode)
-		if parsed.Error != nil && parsed.Error.Message != "" {
-			msg = parsed.Error.Message
+		message := fmt.Sprintf("模型列表请求失败（HTTP %d）", resp.StatusCode)
+		if parsed.Error != nil && strings.TrimSpace(parsed.Error.Message) != "" {
+			message = parsed.Error.Message
 		}
-		return nil, fmt.Errorf("%s", msg)
+		return nil, modelsURL, fmt.Errorf("%s", message)
 	}
 
-	modelIDs := make([]string, 0, len(parsed.Data))
+	provider := commonutils.NormalizeModelProvider(modelProvider)
 	seen := make(map[string]struct{}, len(parsed.Data))
+	modelIDs := make([]string, 0, len(parsed.Data))
 	for _, item := range parsed.Data {
 		id := strings.TrimSpace(item.ID)
 		if id == "" {
@@ -109,53 +104,31 @@ func fetchOpenAICompatibleModelIDsByBaseURL(key, baseURL, modelProvider string) 
 	}
 	if len(modelIDs) == 0 {
 		if provider != "" {
-			return nil, fmt.Errorf("未找到符合所选模型供应商的模型")
+			return nil, modelsURL, fmt.Errorf("未找到符合所选模型供应商的模型")
 		}
-		return nil, fmt.Errorf("未返回可用模型")
+		return nil, modelsURL, fmt.Errorf("未返回可用模型")
 	}
-	return modelIDs, nil
+	return modelIDs, modelsURL, nil
 }
 
-func fetchOpenAICompatibleModelIDs(channelType int, key, baseURL string) ([]string, error) {
+func fetchModelsByConfiguredChannel(key, baseURL, modelProvider string) ([]string, error) {
+	modelIDs, _, err := fetchModelsByConfiguredChannelDetailed(key, baseURL, modelProvider)
+	return modelIDs, err
+}
+
+func fetchOpenAICompatibleModelIDsByBaseURL(key, baseURL, modelProvider string) ([]string, error) {
+	return fetchModelsByConfiguredChannel(key, baseURL, modelProvider)
+}
+
+func resolvePreviewBaseURL(channelType int, baseURL string) string {
+	trimmedBaseURL := strings.TrimSpace(baseURL)
+	if trimmedBaseURL != "" {
+		return trimmedBaseURL
+	}
 	if channelType <= 0 || channelType >= channeltype.Dummy {
-		return nil, fmt.Errorf("当前渠道类型暂不支持自动获取模型")
+		return ""
 	}
-
-	if isOpenAICompatibleType(channelType) {
-		trimmedKey := strings.TrimSpace(key)
-		if trimmedKey != "" {
-			resolvedBaseURL := strings.TrimSpace(baseURL)
-			if resolvedBaseURL == "" {
-				resolvedBaseURL = channeltype.ChannelBaseURLs[channelType]
-				if resolvedBaseURL == "" {
-					resolvedBaseURL = channeltype.ChannelBaseURLs[channeltype.OpenAI]
-				}
-			}
-			return fetchOpenAICompatibleModelIDsByBaseURL(trimmedKey, resolvedBaseURL, "")
-		}
-	}
-
-	adaptor := relay.GetAdaptor(channeltype.ToAPIType(channelType))
-	metaObj := &meta.Meta{ChannelType: channelType}
-	adaptor.Init(metaObj)
-	models := adaptor.GetModelList()
-	seen := make(map[string]struct{}, len(models))
-	modelIDs := make([]string, 0, len(models))
-	for _, item := range models {
-		id := strings.TrimSpace(item)
-		if id == "" {
-			continue
-		}
-		if _, ok := seen[id]; ok {
-			continue
-		}
-		seen[id] = struct{}{}
-		modelIDs = append(modelIDs, id)
-	}
-	if len(modelIDs) == 0 {
-		return nil, fmt.Errorf("当前渠道类型未返回可用模型")
-	}
-	return modelIDs, nil
+	return strings.TrimSpace(channeltype.ChannelBaseURLs[channelType])
 }
 
 // PreviewChannelModels godoc
@@ -182,6 +155,7 @@ func PreviewChannelModels(c *gin.Context) {
 	key := strings.TrimSpace(req.Key)
 	baseURL := strings.TrimSpace(req.BaseURL)
 	draftID := strings.TrimSpace(req.DraftID)
+	keySource := "request"
 	if draftID != "" && key == "" {
 		channel, err := channelsvc.GetByID(draftID, true)
 		if err != nil {
@@ -192,6 +166,7 @@ func PreviewChannelModels(c *gin.Context) {
 			return
 		}
 		key = strings.TrimSpace(channel.Key)
+		keySource = "draft"
 		if channelType == 0 {
 			channelType = channel.Type
 		}
@@ -200,18 +175,27 @@ func PreviewChannelModels(c *gin.Context) {
 		}
 	}
 
-	modelIDs, err := fetchOpenAICompatibleModelIDs(channelType, key, baseURL)
+	baseURL = resolvePreviewBaseURL(channelType, baseURL)
+	modelIDs, modelsURL, err := fetchModelsByConfiguredChannelDetailed(key, baseURL, "")
 	if err != nil {
+		logger.SysWarnf("channel preview models failed: source=%s draft_id=%s models_url=%s err=%v", keySource, draftID, modelsURL, err)
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
 		})
 		return
 	}
+	logger.SysLogf("channel preview models fetched: source=%s draft_id=%s models_url=%s count=%d", keySource, draftID, modelsURL, len(modelIDs))
 
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
 		"data":    modelIDs,
+		"meta": gin.H{
+			"source":     "channel",
+			"key_source": keySource,
+			"draft_id":   draftID,
+			"models_url": modelsURL,
+		},
 	})
 }
