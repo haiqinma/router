@@ -142,6 +142,9 @@ func migrateDB() error {
 	if err = DB.AutoMigrate(&ModelProvider{}); err != nil {
 		return err
 	}
+	if err = DB.AutoMigrate(&ModelProviderModel{}); err != nil {
+		return err
+	}
 	if err = DB.AutoMigrate(&ChannelTypeCatalog{}); err != nil {
 		return err
 	}

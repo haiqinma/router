@@ -351,13 +351,26 @@ type ChannelPreviewModelsRequest struct {
 }
 
 type ModelProviderCatalogItem struct {
-	Provider  string   `json:"provider" example:"openai"`
-	Name      string   `json:"name" example:"OpenAI"`
-	Models    []string `json:"models"`
-	BaseURL   string   `json:"base_url,omitempty" example:"https://api.openai.com"`
-	APIKey    string   `json:"api_key,omitempty" example:"sk-***"`
-	Source    string   `json:"source,omitempty" example:"manual"`
-	UpdatedAt int64    `json:"updated_at,omitempty" example:"1710000000"`
+	Provider     string                     `json:"provider" example:"openai"`
+	Name         string                     `json:"name" example:"OpenAI"`
+	Models       []string                   `json:"models"`
+	ModelDetails []ModelProviderModelDetail `json:"model_details,omitempty"`
+	BaseURL      string                     `json:"base_url,omitempty" example:"https://api.openai.com"`
+	APIKey       string                     `json:"api_key,omitempty" example:"sk-***"`
+	SortOrder    int                        `json:"sort_order,omitempty" example:"10"`
+	Source       string                     `json:"source,omitempty" example:"manual"`
+	UpdatedAt    int64                      `json:"updated_at,omitempty" example:"1710000000"`
+}
+
+type ModelProviderModelDetail struct {
+	Model       string  `json:"model" example:"gpt-4o-mini"`
+	Type        string  `json:"type,omitempty" example:"text"`
+	InputPrice  float64 `json:"input_price,omitempty" example:"0.00015"`
+	OutputPrice float64 `json:"output_price,omitempty" example:"0.0006"`
+	PriceUnit   string  `json:"price_unit,omitempty" example:"per_1k_tokens"`
+	Currency    string  `json:"currency,omitempty" example:"USD"`
+	Source      string  `json:"source,omitempty" example:"default"`
+	UpdatedAt   int64   `json:"updated_at,omitempty" example:"1710000000"`
 }
 
 type ModelProviderCatalogUpdateRequest struct {

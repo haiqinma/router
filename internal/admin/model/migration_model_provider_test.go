@@ -50,10 +50,11 @@ func TestNormalizeModelProviderCatalogRawWithMainstreamDefaults(t *testing.T) {
 		t.Fatalf("normalizeModelProviderCatalogRaw returned error: %v", err)
 	}
 	items := decodeProviderCatalog(t, normalizedRaw)
-	if len(items) < len(mainstreamProviderSeeds) {
-		t.Fatalf("expected at least %d providers, got %d", len(mainstreamProviderSeeds), len(items))
+	defaultSeeds := BuildDefaultModelProviderCatalogSeeds(1700000000)
+	if len(items) < len(defaultSeeds) {
+		t.Fatalf("expected at least %d providers, got %d", len(defaultSeeds), len(items))
 	}
-	for _, seed := range mainstreamProviderSeeds {
+	for _, seed := range defaultSeeds {
 		if !hasProvider(items, seed.Provider) {
 			t.Fatalf("expected provider %s in merged catalog", seed.Provider)
 		}

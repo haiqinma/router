@@ -3,6 +3,7 @@ package model
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sort"
 	"strings"
 
@@ -15,95 +16,57 @@ import (
 const optionKeyModelProviderCatalog = "ModelProviderCatalog"
 
 type modelProviderCatalogMigrationItem struct {
-	Provider  string   `json:"provider"`
-	Name      string   `json:"name,omitempty"`
-	Models    []string `json:"models"`
-	BaseURL   string   `json:"base_url,omitempty"`
-	APIKey    string   `json:"api_key,omitempty"`
-	Source    string   `json:"source,omitempty"`
-	UpdatedAt int64    `json:"updated_at,omitempty"`
+	Provider     string                     `json:"provider"`
+	Name         string                     `json:"name,omitempty"`
+	Models       []string                   `json:"models"`
+	ModelDetails []ModelProviderModelDetail `json:"model_details,omitempty"`
+	BaseURL      string                     `json:"base_url,omitempty"`
+	APIKey       string                     `json:"api_key,omitempty"`
+	SortOrder    int                        `json:"sort_order,omitempty"`
+	Source       string                     `json:"source,omitempty"`
+	UpdatedAt    int64                      `json:"updated_at,omitempty"`
 }
 
-type modelProviderSeed struct {
-	Provider string
-	Name     string
-	BaseURL  string
-	Models   []string
+func normalizeModelProviderSortOrderValue(sortOrder int) int {
+	if sortOrder > 0 {
+		return sortOrder
+	}
+	return 0
 }
 
-var mainstreamProviderSeeds = []modelProviderSeed{
-	{
-		Provider: "anthropic",
-		Name:     "Anthropic Claude",
-		BaseURL:  "https://api.anthropic.com",
-		Models:   []string{"claude-opus-4-1", "claude-sonnet-4-5", "claude-3-7-sonnet-latest"},
-	},
-	{
-		Provider: "cohere",
-		Name:     "Cohere",
-		BaseURL:  "https://api.cohere.com/compatibility/v1",
-		Models:   []string{"command-r-plus", "command-r"},
-	},
-	{
-		Provider: "deepseek",
-		Name:     "DeepSeek",
-		BaseURL:  "https://api.deepseek.com",
-		Models:   []string{"deepseek-chat", "deepseek-reasoner"},
-	},
-	{
-		Provider: "google",
-		Name:     "Google Gemini",
-		BaseURL:  "https://generativelanguage.googleapis.com/v1beta/openai",
-		Models:   []string{"gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash"},
-	},
-	{
-		Provider: "hunyuan",
-		Name:     "Tencent Hunyuan",
-		BaseURL:  "https://api.hunyuan.cloud.tencent.com/v1",
-		Models:   []string{"hunyuan-large", "hunyuan-turbo", "hunyuan-lite"},
-	},
-	{
-		Provider: "minimax",
-		Name:     "MiniMax",
-		BaseURL:  "https://api.minimax.chat/v1",
-		Models:   []string{"minimax-m1", "abab6.5s-chat"},
-	},
-	{
-		Provider: "mistral",
-		Name:     "Mistral",
-		BaseURL:  "https://api.mistral.ai",
-		Models:   []string{"mistral-large-latest", "mistral-small-latest"},
-	},
-	{
-		Provider: "openai",
-		Name:     "OpenAI",
-		BaseURL:  "https://api.openai.com",
-		Models:   []string{"gpt-5", "gpt-5-mini", "gpt-4.1", "gpt-4.1-mini", "gpt-4o", "gpt-4o-mini", "o3", "o4-mini"},
-	},
-	{
-		Provider: "qwen",
-		Name:     "Qwen",
-		BaseURL:  "https://dashscope.aliyuncs.com/compatible-mode",
-		Models:   []string{"qwen-max", "qwen-plus", "qwen-turbo"},
-	},
-	{
-		Provider: "volcengine",
-		Name:     "Volcengine Doubao",
-		BaseURL:  "https://ark.cn-beijing.volces.com/api/v3",
-		Models:   []string{"doubao-1.5-pro-32k", "doubao-1.5-lite-32k"},
-	},
-	{
-		Provider: "xai",
-		Name:     "xAI Grok",
-		BaseURL:  "https://api.x.ai",
-		Models:   []string{"grok-4", "grok-3", "grok-3-mini"},
-	},
-	{
-		Provider: "zhipu",
-		Name:     "Zhipu GLM",
-		BaseURL:  "https://open.bigmodel.cn/api/paas/v4",
-		Models:   []string{"glm-4-plus", "glm-4-air", "glm-4-flash"},
-	},
+func finalizeModelProviderCatalogSortOrders(items []modelProviderCatalogMigrationItem) []modelProviderCatalogMigrationItem {
+	sort.SliceStable(items, func(i, j int) bool {
+		leftOrder := normalizeModelProviderSortOrderValue(items[i].SortOrder)
+		rightOrder := normalizeModelProviderSortOrderValue(items[j].SortOrder)
+		if leftOrder > 0 && rightOrder > 0 {
+			if leftOrder != rightOrder {
+				return leftOrder < rightOrder
+			}
+			return items[i].Provider < items[j].Provider
+		}
+		if leftOrder > 0 {
+			return true
+		}
+		if rightOrder > 0 {
+			return false
+		}
+		return items[i].Provider < items[j].Provider
+	})
+
+	nextOrder := 10
+	for i := range items {
+		order := normalizeModelProviderSortOrderValue(items[i].SortOrder)
+		if order > 0 {
+			items[i].SortOrder = order
+			if order >= nextOrder {
+				nextOrder = order + 10
+			}
+			continue
+		}
+		items[i].SortOrder = nextOrder
+		nextOrder += 10
+	}
+	return items
 }
 
 func runModelProviderMigrationsWithDB(db *gorm.DB) error {
@@ -116,6 +79,115 @@ func runModelProviderMigrationsWithDB(db *gorm.DB) error {
 	if err := ensureModelProviderCatalogTable(db); err != nil {
 		return err
 	}
+	return nil
+}
+
+func runModelProviderSortOrderMigrationWithDB(db *gorm.DB) error {
+	rows := make([]ModelProvider, 0)
+	if err := db.Order("sort_order asc, provider asc").Find(&rows).Error; err != nil {
+		return err
+	}
+	updated := 0
+	nextOrder := 10
+	for _, row := range rows {
+		targetOrder := normalizeModelProviderSortOrderValue(row.SortOrder)
+		if targetOrder > 0 {
+			if targetOrder >= nextOrder {
+				nextOrder = targetOrder + 10
+			}
+		} else {
+			targetOrder = nextOrder
+			nextOrder += 10
+		}
+		if row.SortOrder == targetOrder {
+			continue
+		}
+		if err := db.Model(&ModelProvider{}).
+			Where("provider = ?", row.Provider).
+			Update("sort_order", targetOrder).Error; err != nil {
+			return err
+		}
+		updated++
+	}
+	if updated > 0 {
+		logger.SysLogf("migration: normalized sort_order for %d model providers", updated)
+	}
+	return nil
+}
+
+func runModelProviderModelsTableMigrationWithDB(db *gorm.DB) error {
+	if err := db.AutoMigrate(&ModelProviderModel{}); err != nil {
+		return err
+	}
+
+	detailsByProvider, err := LoadModelProviderModelDetailsMap(db)
+	if err != nil {
+		return err
+	}
+	legacyRawByProvider, legacyErr := LoadLegacyModelProviderModelsRawMap(db)
+	if legacyErr != nil {
+		return legacyErr
+	}
+
+	if len(legacyRawByProvider) > 0 {
+		now := helper.GetTimestamp()
+		rowsToCreate := make([]ModelProviderModel, 0)
+		for provider, raw := range legacyRawByProvider {
+			if len(detailsByProvider[provider]) > 0 {
+				continue
+			}
+			details := MergeModelProviderDetails(provider, ParseModelProviderModelsRaw(raw), nil, false, now)
+			rowsToCreate = append(rowsToCreate, BuildModelProviderModelRows(provider, details, now)...)
+		}
+		if len(rowsToCreate) > 0 {
+			if err := db.Create(&rowsToCreate).Error; err != nil {
+				return err
+			}
+			logger.SysLogf("migration: backfilled %d provider-model rows from legacy model_providers.models", len(rowsToCreate))
+		}
+	}
+
+	if db.Migrator().HasColumn("model_providers", "models") {
+		if err := db.Migrator().DropColumn("model_providers", "models"); err != nil {
+			return err
+		}
+		logger.SysLog("migration: dropped legacy model_providers.models column")
+	}
+	return nil
+}
+
+func runModelProviderModelsTableRenameMigrationWithDB(db *gorm.DB) error {
+	oldTable := LegacyModelProviderModelsTableName
+	newTable := ModelProviderModelsTableName
+
+	hasOld := db.Migrator().HasTable(oldTable)
+	if !hasOld {
+		return nil
+	}
+	hasNew := db.Migrator().HasTable(newTable)
+
+	if !hasNew {
+		if err := db.Migrator().RenameTable(oldTable, newTable); err != nil {
+			return err
+		}
+		logger.SysLogf("migration: renamed table %s -> %s", oldTable, newTable)
+		return nil
+	}
+
+	copySQL := fmt.Sprintf(
+		"INSERT INTO %s (provider, model, type, input_price, output_price, price_unit, currency, source, updated_at) "+
+			"SELECT provider, model, type, input_price, output_price, price_unit, currency, source, updated_at FROM %s "+
+			"ON CONFLICT (provider, model) DO NOTHING",
+		newTable,
+		oldTable,
+	)
+	if err := db.Exec(copySQL).Error; err != nil {
+		return err
+	}
+	if err := db.Migrator().DropTable(oldTable); err != nil {
+		return err
+	}
+	logger.SysLogf("migration: merged table %s into %s and dropped %s", oldTable, newTable, oldTable)
 	return nil
 }
 
@@ -184,7 +256,6 @@ func inferModelProviderFromModelList(modelList string) string {
 	if len(counts) == 0 {
 		return ""
 	}
-	// Deterministic selection: highest frequency, then lexical order.
 	type item struct {
 		provider string
 		count    int
@@ -207,10 +278,8 @@ func ensureModelProviderCatalogTable(db *gorm.DB) error {
 	if err != nil {
 		return err
 	}
-	mergeWithMainstreamDefaults := false
 
 	if len(tableItems) == 0 {
-		mergeWithMainstreamDefaults = true
 		legacyItems, legacyErr := loadModelProviderCatalogFromLegacyOption(db)
 		if legacyErr != nil {
 			return legacyErr
@@ -219,41 +288,113 @@ func ensureModelProviderCatalogTable(db *gorm.DB) error {
 			tableItems = legacyItems
 			logger.SysLog("migration: imported model providers from options.ModelProviderCatalog")
 		} else {
-			tableItems = buildMainstreamModelProviderCatalog(helper.GetTimestamp())
-			logger.SysLog("migration: initialized model providers from mainstream defaults")
+			tableItems = buildDefaultModelProviderCatalogMigration(helper.GetTimestamp())
+			logger.SysLog("migration: initialized model providers from code model catalog")
 		}
 	}
 
-	normalizedItems, normalizeErr := normalizeModelProviderCatalogItems(tableItems, mergeWithMainstreamDefaults)
+	normalizedItems, normalizeErr := normalizeModelProviderCatalogItems(tableItems, true)
 	if normalizeErr != nil {
-		logger.SysError("migration: normalize model providers failed, fallback to mainstream defaults: " + normalizeErr.Error())
-		normalizedItems = buildMainstreamModelProviderCatalog(helper.GetTimestamp())
+		logger.SysError("migration: normalize model providers failed, fallback to code defaults: " + normalizeErr.Error())
+		normalizedItems = buildDefaultModelProviderCatalogMigration(helper.GetTimestamp())
 	}
 
 	if err := saveModelProviderCatalogToTable(db, normalizedItems); err != nil {
 		return err
 	}
 
-	// Legacy fallback source is no longer used after table migration.
 	if err := db.Where("key = ?", optionKeyModelProviderCatalog).Delete(&Option{}).Error; err != nil {
 		return err
 	}
 	return nil
 }
 
-func normalizeModelProviderCatalogItems(items []modelProviderCatalogMigrationItem, mergeWithMainstreamDefaults bool) ([]modelProviderCatalogMigrationItem, error) {
-	raw, err := json.Marshal(items)
-	if err != nil {
-		return nil, err
+func normalizeModelProviderCatalogItems(items []modelProviderCatalogMigrationItem, mergeWithCodeDefaults bool) ([]modelProviderCatalogMigrationItem, error) {
+	now := helper.GetTimestamp()
+	indexByProvider := make(map[string]int, len(items))
+	normalized := make([]modelProviderCatalogMigrationItem, 0, len(items))
+
+	for _, item := range items {
+		provider := commonutils.NormalizeModelProvider(item.Provider)
+		if provider == "" {
+			provider = commonutils.NormalizeModelProvider(item.Name)
+		}
+		if provider == "" {
+			continue
+		}
+		name := strings.TrimSpace(item.Name)
+		if name == "" {
+			name = provider
+		}
+		source := strings.TrimSpace(strings.ToLower(item.Source))
+		if source == "" {
+			source = "manual"
+		}
+		details := make([]ModelProviderModelDetail, 0, len(item.ModelDetails)+len(item.Models))
+		details = append(details, item.ModelDetails...)
+		for _, modelName := range item.Models {
+			details = append(details, ModelProviderModelDetail{Model: strings.TrimSpace(modelName)})
+		}
+		details = MergeModelProviderDetails(provider, details, item.Models, false, now)
+		entry := modelProviderCatalogMigrationItem{
+			Provider:     provider,
+			Name:         name,
+			Models:       ModelProviderModelNames(details),
+			ModelDetails: details,
+			BaseURL:      strings.TrimSpace(item.BaseURL),
+			APIKey:       strings.TrimSpace(item.APIKey),
+			SortOrder:    normalizeModelProviderSortOrderValue(item.SortOrder),
+			Source:       source,
+			UpdatedAt:    item.UpdatedAt,
+		}
+
+		if idx, ok := indexByProvider[provider]; ok {
+			existing := normalized[idx]
+			existing.ModelDetails = MergeModelProviderDetails(
+				provider,
+				append(existing.ModelDetails, entry.ModelDetails...),
+				append(existing.Models, entry.Models...),
+				false,
+				now,
+			)
+			existing.Models = ModelProviderModelNames(existing.ModelDetails)
+			if existing.Name == existing.Provider && entry.Name != entry.Provider {
+				existing.Name = entry.Name
+			}
+			if existing.BaseURL == "" && entry.BaseURL != "" {
+				existing.BaseURL = entry.BaseURL
+			}
+			if entry.BaseURL != "" && entry.Source != "default" {
+				existing.BaseURL = entry.BaseURL
+			}
+			if existing.APIKey == "" && entry.APIKey != "" {
+				existing.APIKey = entry.APIKey
+			}
+			if entry.APIKey != "" && entry.Source != "default" {
+				existing.APIKey = entry.APIKey
+			}
+			if entry.SortOrder > 0 && entry.Source != "default" {
+				existing.SortOrder = entry.SortOrder
+			}
+			if existing.SortOrder <= 0 && entry.SortOrder > 0 {
+				existing.SortOrder = entry.SortOrder
+			}
+			if entry.UpdatedAt > existing.UpdatedAt {
+				existing.UpdatedAt = entry.UpdatedAt
+			}
+			existing.Source = entry.Source
+			normalized[idx] = existing
+			continue
+		}
+
+		indexByProvider[provider] = len(normalized)
+		normalized = append(normalized, entry)
 	}
-	normalizedRaw, err := normalizeModelProviderCatalogRaw(string(raw), mergeWithMainstreamDefaults)
-	if err != nil {
-		return nil, err
+
+	if mergeWithCodeDefaults {
+		normalized = reconcileWithCodeDefaults(normalized, now)
 	}
-	normalized := make([]modelProviderCatalogMigrationItem, 0)
-	if err := json.Unmarshal([]byte(normalizedRaw), &normalized); err != nil {
-		return nil, err
-	}
+	normalized = finalizeModelProviderCatalogSortOrders(normalized)
 	return normalized, nil
 }
 
@@ -282,49 +423,18 @@ func loadModelProviderCatalogFromLegacyOption(db *gorm.DB) ([]modelProviderCatal
 	return items, nil
 }
 
-func parseModelProviderModels(raw string) []string {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return make([]string, 0)
-	}
-	modelSet := make(map[string]struct{})
-	jsonModels := make([]string, 0)
-	if err := json.Unmarshal([]byte(trimmed), &jsonModels); err == nil {
-		for _, modelName := range jsonModels {
-			name := strings.TrimSpace(modelName)
-			if name == "" {
-				continue
-			}
-			modelSet[name] = struct{}{}
-		}
-		models := make([]string, 0, len(modelSet))
-		for name := range modelSet {
-			models = append(models, name)
-		}
-		sort.Strings(models)
-		return models
-	}
-
-	for _, modelName := range strings.FieldsFunc(trimmed, func(r rune) bool {
-		return r == ',' || r == '\n' || r == '\r'
-	}) {
-		name := strings.TrimSpace(modelName)
-		if name == "" {
-			continue
-		}
-		modelSet[name] = struct{}{}
-	}
-	models := make([]string, 0, len(modelSet))
-	for name := range modelSet {
-		models = append(models, name)
-	}
-	sort.Strings(models)
-	return models
-}
-
 func loadModelProviderCatalogFromTable(db *gorm.DB) ([]modelProviderCatalogMigrationItem, error) {
+	detailsByProvider, err := LoadModelProviderModelDetailsMap(db)
+	if err != nil {
+		return nil, err
+	}
+	legacyRawByProvider, legacyErr := LoadLegacyModelProviderModelsRawMap(db)
+	if legacyErr != nil {
+		return nil, legacyErr
+	}
+
 	rows := make([]ModelProvider, 0)
-	if err := db.Order("provider asc").Find(&rows).Error; err != nil {
+	if err := db.Order("sort_order asc, provider asc").Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	items := make([]modelProviderCatalogMigrationItem, 0, len(rows))
@@ -333,14 +443,24 @@ func loadModelProviderCatalogFromTable(db *gorm.DB) ([]modelProviderCatalogMigra
 		if provider == "" {
 			continue
 		}
+		details := detailsByProvider[provider]
+		if len(details) == 0 {
+			legacyRaw := strings.TrimSpace(legacyRawByProvider[provider])
+			if legacyRaw != "" {
+				details = ParseModelProviderModelsRaw(legacyRaw)
+			}
+		}
+		details = MergeModelProviderDetails(provider, details, nil, false, helper.GetTimestamp())
 		items = append(items, modelProviderCatalogMigrationItem{
-			Provider:  provider,
-			Name:      strings.TrimSpace(row.Name),
-			Models:    parseModelProviderModels(row.Models),
-			BaseURL:   strings.TrimSpace(row.BaseURL),
-			APIKey:    strings.TrimSpace(row.APIKey),
-			Source:    strings.TrimSpace(strings.ToLower(row.Source)),
-			UpdatedAt: row.UpdatedAt,
+			Provider:     provider,
+			Name:         strings.TrimSpace(row.Name),
+			Models:       ModelProviderModelNames(details),
+			ModelDetails: details,
+			BaseURL:      strings.TrimSpace(row.BaseURL),
+			APIKey:       strings.TrimSpace(row.APIKey),
+			SortOrder:    normalizeModelProviderSortOrderValue(row.SortOrder),
+			Source:       strings.TrimSpace(strings.ToLower(row.Source)),
+			UpdatedAt:    row.UpdatedAt,
 		})
 	}
 	return items, nil
@@ -348,29 +468,15 @@ func loadModelProviderCatalogFromTable(db *gorm.DB) ([]modelProviderCatalogMigra
 
 func saveModelProviderCatalogToTable(db *gorm.DB, items []modelProviderCatalogMigrationItem) error {
 	now := helper.GetTimestamp()
-	rows := make([]ModelProvider, 0, len(items))
+	items = finalizeModelProviderCatalogSortOrders(items)
+	providerRows := make([]ModelProvider, 0, len(items))
+	modelRows := make([]ModelProviderModel, 0)
 	for _, item := range items {
 		provider := commonutils.NormalizeModelProvider(item.Provider)
 		if provider == "" {
 			continue
 		}
-		modelSet := make(map[string]struct{}, len(item.Models))
-		for _, modelName := range item.Models {
-			name := strings.TrimSpace(modelName)
-			if name == "" {
-				continue
-			}
-			modelSet[name] = struct{}{}
-		}
-		models := make([]string, 0, len(modelSet))
-		for name := range modelSet {
-			models = append(models, name)
-		}
-		sort.Strings(models)
-		modelsRaw, err := json.Marshal(models)
-		if err != nil {
-			return err
-		}
+		details := MergeModelProviderDetails(provider, item.ModelDetails, item.Models, false, now)
 		updatedAt := item.UpdatedAt
 		if updatedAt == 0 {
 			updatedAt = now
@@ -379,68 +485,66 @@ func saveModelProviderCatalogToTable(db *gorm.DB, items []modelProviderCatalogMi
 		if source == "" {
 			source = "manual"
 		}
-		rows = append(rows, ModelProvider{
+		providerRows = append(providerRows, ModelProvider{
 			Provider:  provider,
 			Name:      strings.TrimSpace(item.Name),
-			Models:    string(modelsRaw),
 			BaseURL:   strings.TrimSpace(item.BaseURL),
 			APIKey:    strings.TrimSpace(item.APIKey),
+			SortOrder: item.SortOrder,
 			Source:    source,
 			UpdatedAt: updatedAt,
 		})
+		modelRows = append(modelRows, BuildModelProviderModelRows(provider, details, now)...)
 	}
 	return db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("1 = 1").Delete(&ModelProviderModel{}).Error; err != nil {
+			return err
+		}
 		if err := tx.Where("1 = 1").Delete(&ModelProvider{}).Error; err != nil {
 			return err
 		}
-		if len(rows) == 0 {
-			return nil
+		if len(providerRows) > 0 {
+			if err := tx.Create(&providerRows).Error; err != nil {
+				return err
+			}
 		}
-		return tx.Create(&rows).Error
+		if len(modelRows) > 0 {
+			if err := tx.Create(&modelRows).Error; err != nil {
+				return err
+			}
+		}
+		return nil
 	})
 }
 
-func buildMainstreamModelProviderCatalog(now int64) []modelProviderCatalogMigrationItem {
-	items := make([]modelProviderCatalogMigrationItem, 0, len(mainstreamProviderSeeds))
-	for _, seed := range mainstreamProviderSeeds {
-		modelSet := make(map[string]struct{}, len(seed.Models))
-		for _, modelName := range seed.Models {
-			name := strings.TrimSpace(modelName)
-			if name == "" {
-				continue
-			}
-			modelSet[name] = struct{}{}
-		}
-		models := make([]string, 0, len(modelSet))
-		for modelName := range modelSet {
-			models = append(models, modelName)
-		}
-		sort.Strings(models)
+func buildDefaultModelProviderCatalogMigration(now int64) []modelProviderCatalogMigrationItem {
+	seeds := BuildDefaultModelProviderCatalogSeeds(now)
+	items := make([]modelProviderCatalogMigrationItem, 0, len(seeds))
+	for _, seed := range seeds {
 		items = append(items, modelProviderCatalogMigrationItem{
-			Provider:  seed.Provider,
-			Name:      seed.Name,
-			Models:    models,
-			BaseURL:   seed.BaseURL,
-			Source:    "default",
-			UpdatedAt: now,
+			Provider:     seed.Provider,
+			Name:         seed.Name,
+			Models:       ModelProviderModelNames(seed.ModelDetails),
+			ModelDetails: seed.ModelDetails,
+			BaseURL:      seed.BaseURL,
+			SortOrder:    seed.SortOrder,
+			Source:       "default",
+			UpdatedAt:    now,
 		})
 	}
-	sort.Slice(items, func(i, j int) bool {
-		return items[i].Provider < items[j].Provider
-	})
 	return items
 }
 
 func buildDefaultModelProviderCatalogRaw() (string, error) {
-	items := buildMainstreamModelProviderCatalog(helper.GetTimestamp())
+	items := buildDefaultModelProviderCatalogMigration(helper.GetTimestamp())
 	raw, err := json.Marshal(items)
 	return string(raw), err
 }
 
-func normalizeModelProviderCatalogRaw(raw string, mergeWithMainstreamDefaults bool) (string, error) {
+func normalizeModelProviderCatalogRaw(raw string, mergeWithCodeDefaults bool) (string, error) {
 	trimmed := strings.TrimSpace(raw)
 	if trimmed == "" {
-		if mergeWithMainstreamDefaults {
+		if mergeWithCodeDefaults {
 			return buildDefaultModelProviderCatalogRaw()
 		}
 		emptyRaw, err := json.Marshal([]modelProviderCatalogMigrationItem{})
@@ -450,94 +554,10 @@ func normalizeModelProviderCatalogRaw(raw string, mergeWithMainstreamDefaults bo
 	if err := json.Unmarshal([]byte(trimmed), &items); err != nil {
 		return "", err
 	}
-
-	indexByProvider := make(map[string]int, len(items))
-	normalized := make([]modelProviderCatalogMigrationItem, 0, len(items))
-	for _, item := range items {
-		provider := commonutils.NormalizeModelProvider(item.Provider)
-		if provider == "" {
-			provider = commonutils.NormalizeModelProvider(item.Name)
-		}
-		if provider == "" {
-			continue
-		}
-		name := strings.TrimSpace(item.Name)
-		if name == "" {
-			name = provider
-		}
-		source := strings.TrimSpace(strings.ToLower(item.Source))
-		if source == "" {
-			source = "manual"
-		}
-		baseURL := strings.TrimSpace(item.BaseURL)
-		apiKey := strings.TrimSpace(item.APIKey)
-		modelSet := make(map[string]struct{}, len(item.Models))
-		for _, modelName := range item.Models {
-			name := strings.TrimSpace(modelName)
-			if name == "" {
-				continue
-			}
-			modelSet[name] = struct{}{}
-		}
-		models := make([]string, 0, len(modelSet))
-		for name := range modelSet {
-			models = append(models, name)
-		}
-		sort.Strings(models)
-
-		entry := modelProviderCatalogMigrationItem{
-			Provider:  provider,
-			Name:      name,
-			Models:    models,
-			BaseURL:   baseURL,
-			APIKey:    apiKey,
-			Source:    source,
-			UpdatedAt: item.UpdatedAt,
-		}
-		if idx, ok := indexByProvider[provider]; ok {
-			existing := normalized[idx]
-			modelUnion := make(map[string]struct{}, len(existing.Models)+len(entry.Models))
-			for _, m := range existing.Models {
-				modelUnion[m] = struct{}{}
-			}
-			for _, m := range entry.Models {
-				modelUnion[m] = struct{}{}
-			}
-			mergedModels := make([]string, 0, len(modelUnion))
-			for m := range modelUnion {
-				mergedModels = append(mergedModels, m)
-			}
-			sort.Strings(mergedModels)
-			existing.Models = mergedModels
-			if existing.Name == existing.Provider && entry.Name != entry.Provider {
-				existing.Name = entry.Name
-			}
-			if existing.BaseURL == "" && entry.BaseURL != "" {
-				existing.BaseURL = entry.BaseURL
-			}
-			if entry.BaseURL != "" && entry.Source != "default" {
-				existing.BaseURL = entry.BaseURL
-			}
-			if existing.APIKey == "" && entry.APIKey != "" {
-				existing.APIKey = entry.APIKey
-			}
-			if entry.APIKey != "" && entry.Source != "default" {
-				existing.APIKey = entry.APIKey
-			}
-			if entry.UpdatedAt > existing.UpdatedAt {
-				existing.UpdatedAt = entry.UpdatedAt
-			}
-			existing.Source = entry.Source
-			normalized[idx] = existing
-			continue
-		}
-		indexByProvider[provider] = len(normalized)
-		normalized = append(normalized, entry)
+	normalized, err := normalizeModelProviderCatalogItems(items, mergeWithCodeDefaults)
+	if err != nil {
+		return "", err
 	}
-	if mergeWithMainstreamDefaults {
-		normalized = reconcileWithMainstreamDefaults(normalized)
-	}
-
 	normalizedRaw, err := json.Marshal(normalized)
 	if err != nil {
 		return "", err
@@ -545,15 +565,15 @@ func normalizeModelProviderCatalogRaw(raw string, mergeWithMainstreamDefaults bo
 	return string(normalizedRaw), nil
 }
 
-func reconcileWithMainstreamDefaults(items []modelProviderCatalogMigrationItem) []modelProviderCatalogMigrationItem {
-	seeded := buildMainstreamModelProviderCatalog(helper.GetTimestamp())
-	seedByProvider := make(map[string]modelProviderCatalogMigrationItem, len(seeded))
-	for _, item := range seeded {
-		seedByProvider[item.Provider] = item
+func reconcileWithCodeDefaults(items []modelProviderCatalogMigrationItem, now int64) []modelProviderCatalogMigrationItem {
+	defaults := buildDefaultModelProviderCatalogMigration(now)
+	defaultByProvider := make(map[string]modelProviderCatalogMigrationItem, len(defaults))
+	for _, item := range defaults {
+		defaultByProvider[item.Provider] = item
 	}
 
-	result := make(map[string]modelProviderCatalogMigrationItem, len(items)+len(seeded))
-	for _, item := range seeded {
+	result := make(map[string]modelProviderCatalogMigrationItem, len(items)+len(defaults))
+	for _, item := range defaults {
 		result[item.Provider] = item
 	}
 
@@ -563,7 +583,10 @@ func reconcileWithMainstreamDefaults(items []modelProviderCatalogMigrationItem) 
 			continue
 		}
 		item.Provider = provider
-		if seededItem, ok := seedByProvider[provider]; ok {
+		item.ModelDetails = MergeModelProviderDetails(provider, item.ModelDetails, item.Models, false, now)
+		item.Models = ModelProviderModelNames(item.ModelDetails)
+
+		if seededItem, ok := defaultByProvider[provider]; ok {
 			merged := seededItem
 			if strings.TrimSpace(item.Name) != "" && item.Name != provider {
 				merged.Name = strings.TrimSpace(item.Name)
@@ -574,51 +597,45 @@ func reconcileWithMainstreamDefaults(items []modelProviderCatalogMigrationItem) 
 			if strings.TrimSpace(item.APIKey) != "" {
 				merged.APIKey = strings.TrimSpace(item.APIKey)
 			}
+			if item.SortOrder > 0 {
+				merged.SortOrder = item.SortOrder
+			}
 			if item.UpdatedAt > 0 {
 				merged.UpdatedAt = item.UpdatedAt
 			}
 			if item.Source != "default" {
-				if len(item.Models) > 0 {
-					merged.Models = item.Models
-				}
 				merged.Source = item.Source
 			}
+			merged.ModelDetails = MergeModelProviderDetails(
+				provider,
+				append(seededItem.ModelDetails, item.ModelDetails...),
+				append(seededItem.Models, item.Models...),
+				false,
+				now,
+			)
+			merged.Models = ModelProviderModelNames(merged.ModelDetails)
 			result[provider] = merged
 			continue
 		}
-
-		// Drop legacy default providers outside the curated mainstream set.
-		if item.Source == "default" {
-			continue
+		if item.Source == "" {
+			item.Source = "manual"
 		}
+		item.SortOrder = normalizeModelProviderSortOrderValue(item.SortOrder)
 		result[provider] = item
 	}
 
 	mergedItems := make([]modelProviderCatalogMigrationItem, 0, len(result))
 	for _, item := range result {
-		modelSet := make(map[string]struct{}, len(item.Models))
-		for _, modelName := range item.Models {
-			name := strings.TrimSpace(modelName)
-			if name == "" {
-				continue
-			}
-			modelSet[name] = struct{}{}
-		}
-		item.Models = make([]string, 0, len(modelSet))
-		for modelName := range modelSet {
-			item.Models = append(item.Models, modelName)
-		}
-		sort.Strings(item.Models)
+		item.ModelDetails = MergeModelProviderDetails(item.Provider, item.ModelDetails, item.Models, false, now)
+		item.Models = ModelProviderModelNames(item.ModelDetails)
 		if item.Name == "" {
 			item.Name = item.Provider
 		}
 		if item.Source == "" {
 			item.Source = "manual"
 		}
+		item.SortOrder = normalizeModelProviderSortOrderValue(item.SortOrder)
 		mergedItems = append(mergedItems, item)
 	}
-	sort.Slice(mergedItems, func(i, j int) bool {
-		return mergedItems[i].Provider < mergedItems[j].Provider
-	})
-	return mergedItems
+	return finalizeModelProviderCatalogSortOrders(mergedItems)
 }

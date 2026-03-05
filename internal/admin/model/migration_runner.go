@@ -41,6 +41,34 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return runMainBaselineMigrationWithDB(tx)
 			},
 		},
+		{
+			Version:     "202603050100_model_provider_catalog_v2",
+			Description: "upgrade model provider catalog with full code model set and model metadata",
+			Up: func(tx *gorm.DB) error {
+				return runModelProviderMigrationsWithDB(tx)
+			},
+		},
+		{
+			Version:     "202603050200_model_provider_sort_order",
+			Description: "add model provider sort order and initialize missing values",
+			Up: func(tx *gorm.DB) error {
+				return runModelProviderSortOrderMigrationWithDB(tx)
+			},
+		},
+		{
+			Version:     "202603050300_model_provider_models_table",
+			Description: "move model provider models to dedicated table",
+			Up: func(tx *gorm.DB) error {
+				return runModelProviderModelsTableMigrationWithDB(tx)
+			},
+		},
+		{
+			Version:     "202603050400_model_provider_models_rename_to_models",
+			Description: "rename provider model table to models",
+			Up: func(tx *gorm.DB) error {
+				return runModelProviderModelsTableRenameMigrationWithDB(tx)
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }
