@@ -56,6 +56,7 @@ func Search(keyword string) ([]*model.Channel, error) {
 }
 
 func GetByID(id string, selectAll bool) (*model.Channel, error) {
+	id = strings.TrimSpace(id)
 	channel := model.Channel{Id: id}
 	var err error
 	if selectAll {
@@ -141,6 +142,7 @@ func Delete(channel *model.Channel) error {
 }
 
 func DeleteByID(id string) error {
+	id = strings.TrimSpace(id)
 	channel := model.Channel{Id: id}
 	return Delete(&channel)
 }
@@ -151,6 +153,7 @@ func DeleteDisabled() (int64, error) {
 }
 
 func UpdateStatusByID(id string, status int) {
+	id = strings.TrimSpace(id)
 	err := model.UpdateAbilityStatus(id, status == model.ChannelStatusEnabled)
 	if err != nil {
 		logger.SysError("failed to update ability status: " + err.Error())
@@ -177,6 +180,8 @@ func UpdateUsedQuotaDirect(id string, quota int64) {
 }
 
 func UpdateTestModelByID(id string, testModel string) error {
+	id = strings.TrimSpace(id)
+	testModel = strings.TrimSpace(testModel)
 	return model.DB.Model(&model.Channel{}).Where("id = ?", id).Update("test_model", testModel).Error
 }
 

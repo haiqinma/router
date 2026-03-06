@@ -49,6 +49,36 @@ func buildTestRequest(model string) *relaymodel.GeneralOpenAIRequest {
 	return testRequest
 }
 
+func parseChannelModelIDs(models string) []string {
+	parsed := make([]string, 0)
+	seen := make(map[string]struct{})
+	for _, item := range strings.Split(models, ",") {
+		modelID := strings.TrimSpace(item)
+		if modelID == "" {
+			continue
+		}
+		if _, ok := seen[modelID]; ok {
+			continue
+		}
+		seen[modelID] = struct{}{}
+		parsed = append(parsed, modelID)
+	}
+	return parsed
+}
+
+func containsModelID(modelIDs []string, target string) bool {
+	normalized := strings.TrimSpace(target)
+	if normalized == "" {
+		return false
+	}
+	for _, modelID := range modelIDs {
+		if modelID == normalized {
+			return true
+		}
+	}
+	return false
+}
+
 func parseTestResponse(resp string) (*openai.TextResponse, string, error) {
 	var response openai.TextResponse
 	err := json.Unmarshal([]byte(resp), &response)
@@ -142,12 +172,12 @@ func testChannel(ctx context.Context, channel *model.Channel, request *relaymode
 		return "", fmt.Errorf("invalid api type: %d, adaptor is nil", apiType), nil
 	}
 	adaptor.Init(meta)
-	modelName := request.Model
+	modelName := strings.TrimSpace(request.Model)
+	channelModelIDs := parseChannelModelIDs(channel.Models)
 	modelMap := channel.GetModelMapping()
-	if modelName == "" || !strings.Contains(channel.Models, modelName) {
-		modelNames := strings.Split(channel.Models, ",")
-		if len(modelNames) > 0 {
-			modelName = modelNames[0]
+	if modelName == "" || !containsModelID(channelModelIDs, modelName) {
+		if len(channelModelIDs) > 0 {
+			modelName = channelModelIDs[0]
 		}
 	}
 	if modelMap != nil && modelMap[modelName] != "" {
@@ -231,7 +261,7 @@ func testChannel(ctx context.Context, channel *model.Channel, request *relaymode
 // @Router /api/v1/admin/channel/test/{id} [get]
 func TestChannel(c *gin.Context) {
 	ctx := c.Request.Context()
-	id := c.Param("id")
+	id := strings.TrimSpace(c.Param("id"))
 	if id == "" {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,

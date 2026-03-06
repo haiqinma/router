@@ -108,28 +108,27 @@ const ChannelsTable = () => {
   );
 
   const processChannelData = useCallback((channel) => {
-    if (channel.models === '') {
-      channel.models = [];
-      channel.test_model = '';
-      channel.model_options = [];
+    const next = { ...channel };
+    next.id = (next.id || '').toString().trim();
+    const models = (next.models || '')
+      .split(',')
+      .map((model) => model.trim())
+      .filter((model) => model !== '');
+    next.models = Array.from(new Set(models));
+    const currentTestModel = (next.test_model || '').toString().trim();
+    if (next.models.length > 0) {
+      next.test_model = next.models.includes(currentTestModel)
+        ? currentTestModel
+        : next.models[0];
     } else {
-      channel.models = channel.models.split(',');
-      if (channel.models.length > 0) {
-        channel.test_model = channel.models.includes(channel.test_model)
-          ? channel.test_model
-          : channel.models[0];
-      } else {
-        channel.test_model = '';
-      }
-      channel.model_options = channel.models.map((model) => {
-        return {
-          key: model,
-          text: model,
-          value: model,
-        };
-      });
+      next.test_model = '';
     }
-    return channel;
+    next.model_options = next.models.map((model) => ({
+      key: model,
+      text: model,
+      value: model,
+    }));
+    return next;
   }, []);
 
   const loadChannels = useCallback(async (startIdx) => {
@@ -203,11 +202,16 @@ const ChannelsTable = () => {
   }, [selectionMode, channels]);
 
   const manageChannel = async (id, action, idx, value) => {
-    let data = { id };
+    const normalizedID = (id || '').toString().trim();
+    if (normalizedID === '') {
+      showError('渠道 ID 无效');
+      return;
+    }
+    let data = { id: normalizedID };
     let res;
     switch (action) {
       case 'delete':
-        res = await API.delete(`/api/v1/admin/channel/${id}/`);
+        res = await API.delete(`/api/v1/admin/channel/${encodeURIComponent(normalizedID)}/`);
         break;
       case 'enable':
         data.status = 1;
@@ -335,8 +339,12 @@ const ChannelsTable = () => {
       return;
     }
     const previousModel = currentChannel.test_model;
-    const channelId = currentChannel.id;
-    const selectedModel = typeof model === 'string' ? model : '';
+    const channelId = (currentChannel.id || '').toString().trim();
+    const selectedModel = typeof model === 'string' ? model.trim() : '';
+    if (channelId === '') {
+      showError('渠道 ID 无效');
+      return;
+    }
 
     setChannels((prev) => {
       if (!prev[realIdx]) return prev;
@@ -397,8 +405,17 @@ const ChannelsTable = () => {
     let success = false;
     let responseTime = 0;
     try {
-      const modelName = channel.test_model || '';
-      const res = await API.get(`/api/v1/admin/channel/test/${channel.id}?model=${modelName}`);
+      const channelId = (channel.id || '').toString().trim();
+      if (channelId === '') {
+        if (!silent) {
+          showError('渠道 ID 无效');
+        }
+        return false;
+      }
+      const modelName = (channel.test_model || '').toString().trim();
+      const res = await API.get(
+        `/api/v1/admin/channel/test/${encodeURIComponent(channelId)}?model=${encodeURIComponent(modelName)}`
+      );
       const { success: ok, message, time, model } = res.data || {};
       success = !!ok;
       responseTime = Number(time || 0) * 1000;

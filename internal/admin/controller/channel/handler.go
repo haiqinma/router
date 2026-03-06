@@ -31,6 +31,9 @@ func sanitizeChannelForResponse(channel *model.Channel) {
 	if channel == nil {
 		return
 	}
+	channel.Id = strings.TrimSpace(channel.Id)
+	channel.TestModel = strings.TrimSpace(channel.TestModel)
+	channel.Models = strings.TrimSpace(channel.Models)
 	channel.KeySet = strings.TrimSpace(channel.Key) != ""
 	channel.Key = ""
 }
@@ -121,7 +124,7 @@ func SearchChannels(c *gin.Context) {
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/admin/channel/{id} [get]
 func GetChannel(c *gin.Context) {
-	id := c.Param("id")
+	id := strings.TrimSpace(c.Param("id"))
 	if id == "" {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
