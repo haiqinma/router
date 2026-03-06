@@ -1,7 +1,6 @@
 package model
 
 import (
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strconv"
@@ -41,36 +40,6 @@ type ModelProviderCatalogSeed struct {
 	BaseURL      string
 	SortOrder    int
 	ModelDetails []ModelProviderModelDetail
-}
-
-func ParseModelProviderModelsRaw(raw string) []ModelProviderModelDetail {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return make([]ModelProviderModelDetail, 0)
-	}
-
-	var details []ModelProviderModelDetail
-	if err := json.Unmarshal([]byte(trimmed), &details); err == nil {
-		return NormalizeModelProviderModelDetails(details)
-	}
-
-	legacy := make([]string, 0)
-	if err := json.Unmarshal([]byte(trimmed), &legacy); err == nil {
-		details = make([]ModelProviderModelDetail, 0, len(legacy))
-		for _, modelName := range legacy {
-			details = append(details, ModelProviderModelDetail{Model: strings.TrimSpace(modelName)})
-		}
-		return NormalizeModelProviderModelDetails(details)
-	}
-
-	parts := strings.FieldsFunc(trimmed, func(r rune) bool {
-		return r == ',' || r == '\n' || r == '\r'
-	})
-	details = make([]ModelProviderModelDetail, 0, len(parts))
-	for _, modelName := range parts {
-		details = append(details, ModelProviderModelDetail{Model: strings.TrimSpace(modelName)})
-	}
-	return NormalizeModelProviderModelDetails(details)
 }
 
 func ModelProviderModelNames(details []ModelProviderModelDetail) []string {

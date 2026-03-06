@@ -55,31 +55,6 @@ func TestBuildDefaultModelProviderCatalogSeeds_ModelDetailsMeta(t *testing.T) {
 	}
 }
 
-func TestParseModelProviderModelsRaw_BackwardCompatible(t *testing.T) {
-	detailRaw := `[{"model":"gpt-4o-mini","type":"text","input_price":0.00015,"output_price":0.0006,"price_unit":"per_1k_tokens","currency":"USD"}]`
-	details := ParseModelProviderModelsRaw(detailRaw)
-	if len(details) != 1 {
-		t.Fatalf("expected 1 detail from object array, got %d", len(details))
-	}
-	if details[0].Model != "gpt-4o-mini" {
-		t.Fatalf("unexpected model parsed from object array: %q", details[0].Model)
-	}
-	if details[0].Type != ModelProviderModelTypeText {
-		t.Fatalf("unexpected type parsed from object array: %q", details[0].Type)
-	}
-
-	legacyRaw := `["gpt-4o-mini","whisper-1"]`
-	legacyDetails := ParseModelProviderModelsRaw(legacyRaw)
-	if len(legacyDetails) != 2 {
-		t.Fatalf("expected 2 details from legacy array, got %d", len(legacyDetails))
-	}
-
-	names := ModelProviderModelNames(legacyDetails)
-	if len(names) != 2 {
-		t.Fatalf("expected 2 model names from legacy details, got %d", len(names))
-	}
-}
-
 func TestBuildDefaultModelProviderCatalogSeeds_AssignsSortOrder(t *testing.T) {
 	seeds := BuildDefaultModelProviderCatalogSeeds(1700000000)
 	if len(seeds) == 0 {
