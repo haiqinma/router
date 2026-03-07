@@ -10,9 +10,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/yeying-community/router/common/client"
+	"github.com/yeying-community/router/common/ctxkey"
 	"github.com/yeying-community/router/common/logger"
+	relaylogging "github.com/yeying-community/router/internal/relay/logging"
 	"github.com/yeying-community/router/internal/relay/meta"
-	"github.com/yeying-community/router/internal/relay/relaymode"
 )
 
 func SetupCommonRequestHeader(c *gin.Context, req *http.Request, meta *meta.Meta) {
@@ -31,6 +32,7 @@ func DoRequestHelper(a Adaptor, c *gin.Context, meta *meta.Meta, requestBody io.
 	if err != nil {
 		return nil, fmt.Errorf("get request url failed: %w", err)
 	}
+	c.Set(ctxkey.UpstreamURL, fullRequestURL)
 	req, err := http.NewRequest(c.Request.Method, fullRequestURL, requestBody)
 	if err != nil {
 		return nil, fmt.Errorf("new request failed: %w", err)
@@ -39,30 +41,64 @@ func DoRequestHelper(a Adaptor, c *gin.Context, meta *meta.Meta, requestBody io.
 	if err != nil {
 		return nil, fmt.Errorf("setup request header failed: %w", err)
 	}
-	if meta.Mode == relaymode.Responses {
-		headers := make(map[string]string, len(req.Header))
-		for key, values := range req.Header {
-			if len(values) > 0 {
-				headers[key] = values[0]
-			}
-		}
-		if _, ok := headers["Authorization"]; ok {
-			headers["Authorization"] = "Bearer ***"
-		}
-		if _, ok := headers["api-key"]; ok {
-			headers["api-key"] = "***"
-		}
-		if _, ok := headers["Api-Key"]; ok {
-			headers["Api-Key"] = "***"
-		}
-		b, _ := json.Marshal(headers)
-		logger.Infof(c.Request.Context(), "UPSTREAM url=%s headers=%s", fullRequestURL, string(b))
-	}
+	headers, _ := json.Marshal(maskHeaders(req.Header))
+	logger.RelayInfof(c.Request.Context(), relaylogging.NewFields("UPSTREAM_REQ").
+		String("method", req.Method).
+		String("url", fullRequestURL).
+		String("headers", string(headers)).
+		Build())
 	resp, err := DoRequest(c, req)
 	if err != nil {
+		logger.RelayErrorf(c.Request.Context(), relaylogging.NewFields("UPSTREAM_ERR").
+			String("method", req.Method).
+			String("url", fullRequestURL).
+			String("error", err.Error()).
+			Build())
 		return nil, fmt.Errorf("do request failed: %w", err)
 	}
+	c.Set(ctxkey.UpstreamStatus, resp.StatusCode)
+	respFields := relaylogging.NewFields("UPSTREAM_RESP").
+		String("method", req.Method).
+		String("url", fullRequestURL).
+		Int("status", resp.StatusCode).
+		Build()
+	switch {
+	case resp.StatusCode >= http.StatusInternalServerError:
+		logger.RelayErrorf(c.Request.Context(), respFields)
+	case resp.StatusCode >= http.StatusBadRequest:
+		logger.RelayWarnf(c.Request.Context(), respFields)
+	default:
+		logger.RelayInfof(c.Request.Context(), respFields)
+	}
 	return resp, nil
+}
+
+func maskHeaders(header http.Header) map[string]string {
+	masked := make(map[string]string, len(header))
+	for key, values := range header {
+		if len(values) == 0 {
+			continue
+		}
+		if isSensitiveHeader(key) {
+			if strings.EqualFold(key, "Authorization") && strings.HasPrefix(strings.ToLower(values[0]), "bearer ") {
+				masked[key] = "Bearer ***"
+			} else {
+				masked[key] = "***"
+			}
+			continue
+		}
+		masked[key] = values[0]
+	}
+	return masked
+}
+
+func isSensitiveHeader(key string) bool {
+	switch strings.ToLower(strings.TrimSpace(key)) {
+	case "authorization", "api-key", "x-api-key":
+		return true
+	default:
+		return false
+	}
 }
 
 func DoRequest(c *gin.Context, req *http.Request) (*http.Response, error) {

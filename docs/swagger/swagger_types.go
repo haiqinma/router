@@ -239,7 +239,7 @@ type UserLogItem struct {
 	PromptTokens      int    `json:"prompt_tokens" example:"12"`
 	CompletionTokens  int    `json:"completion_tokens" example:"34"`
 	ChannelId         int    `json:"channel" example:"1"`
-	RequestId         string `json:"request_id" example:"req_123"`
+	TraceID           string `json:"trace_id" example:"trace_123"`
 	ElapsedTime       int64  `json:"elapsed_time" example:"200"`
 	IsStream          bool   `json:"is_stream" example:"false"`
 	SystemPromptReset bool   `json:"system_prompt_reset" example:"false"`

@@ -23,14 +23,14 @@ import { ITEMS_PER_PAGE } from '../constants';
 import { renderColorLabel, renderQuota } from '../helpers/render';
 import { Link } from 'react-router-dom';
 
-function renderTimestamp(timestamp, request_id) {
+function renderTimestamp(timestamp, trace_id) {
   return (
     <code
       onClick={async () => {
-        if (await copy(request_id)) {
-          showSuccess(`已复制请求 ID：${request_id}`);
+        if (await copy(trace_id)) {
+          showSuccess(`已复制 Trace ID：${trace_id}`);
         } else {
-          showWarning(`请求 ID 复制失败：${request_id}`);
+          showWarning(`Trace ID 复制失败：${trace_id}`);
         }
       }}
       style={{ cursor: 'pointer' }}
@@ -501,7 +501,7 @@ const LogsTable = () => {
               return (
                 <Table.Row key={log.id}>
                   <Table.Cell>
-                    {renderTimestamp(log.created_at, log.request_id)}
+                    {renderTimestamp(log.created_at, log.trace_id)}
                   </Table.Cell>
                   {isAdminUser && (
                     <Table.Cell>

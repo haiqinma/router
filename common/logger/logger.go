@@ -29,10 +29,10 @@ const (
 )
 
 var setupLogOnce sync.Once
-var setupLoginLogOnce sync.Once
-var loginWriter io.Writer
 var setupApiLogOnce sync.Once
 var apiWriter io.Writer
+var setupRelayLogOnce sync.Once
+var relayWriter io.Writer
 var routerInfoWriter io.Writer
 var routerErrorWriter io.Writer
 var setupWorkDirOnce sync.Once
@@ -73,26 +73,13 @@ func SetupLogger() {
 		routerErrorWriter = io.MultiWriter(os.Stderr, routerWriter)
 
 		SetupApiLogger()
+		SetupRelayLogger()
 		if apiWriter != nil {
 			gin.DefaultWriter = io.MultiWriter(os.Stdout, apiWriter)
 		}
 		if routerErrorWriter != nil {
 			gin.DefaultErrorWriter = routerErrorWriter
 		}
-	})
-}
-
-// SetupLoginLogger initializes a dedicated writer for login-related logs (login.log).
-// It is safe to call multiple times; initialization happens once.
-func SetupLoginLogger() {
-	setupLoginLogOnce.Do(func() {
-		logDir := LogDir
-		if logDir == "" {
-			logDir = "./logs"
-		}
-		_ = os.MkdirAll(logDir, 0755)
-		logPath := filepath.Join(logDir, "login.log")
-		loginWriter = newRotatingWriter(logPath)
 	})
 }
 
@@ -106,6 +93,19 @@ func SetupApiLogger() {
 		_ = os.MkdirAll(logDir, 0755)
 		logPath := filepath.Join(logDir, "api.log")
 		apiWriter = newRotatingWriter(logPath)
+	})
+}
+
+// SetupRelayLogger initializes relay.log writer.
+func SetupRelayLogger() {
+	setupRelayLogOnce.Do(func() {
+		logDir := LogDir
+		if logDir == "" {
+			logDir = "./logs"
+		}
+		_ = os.MkdirAll(logDir, 0755)
+		logPath := filepath.Join(logDir, "relay.log")
+		relayWriter = newRotatingWriter(logPath)
 	})
 }
 
@@ -179,19 +179,30 @@ func FatalLogf(format string, a ...any) {
 	logHelper(nil, loggerFatal, fmt.Sprintf(format, a...))
 }
 
-// Loginf writes detailed login/auth related logs to login.log (and stdout if desired).
-// It supplements existing logs for troubleshooting authentication flows.
+// Loginf writes detailed login/auth related logs to router.log.
 func Loginf(ctx context.Context, format string, a ...any) {
-	loginLogHelper(ctx, loggerINFO, fmt.Sprintf(format, a...))
+	logHelper(ctx, loggerINFO, "[login] "+fmt.Sprintf(format, a...))
 }
 
 func LoginErrorf(ctx context.Context, format string, a ...any) {
-	loginLogHelper(ctx, loggerError, fmt.Sprintf(format, a...))
+	logHelper(ctx, loggerError, "[login] "+fmt.Sprintf(format, a...))
 }
 
 // ApiLogf writes per-request api logs to api.log
 func ApiLogf(ctx context.Context, level loggerLevel, format string, a ...any) {
 	apiLogHelper(ctx, level, fmt.Sprintf(format, a...))
+}
+
+func RelayInfof(ctx context.Context, format string, a ...any) {
+	relayLogHelper(ctx, loggerINFO, fmt.Sprintf(format, a...))
+}
+
+func RelayWarnf(ctx context.Context, format string, a ...any) {
+	relayLogHelper(ctx, loggerWarn, fmt.Sprintf(format, a...))
+}
+
+func RelayErrorf(ctx context.Context, format string, a ...any) {
+	relayLogHelper(ctx, loggerError, fmt.Sprintf(format, a...))
 }
 
 func logHelper(ctx context.Context, level loggerLevel, msg string) {
@@ -206,39 +217,19 @@ func logHelper(ctx context.Context, level loggerLevel, msg string) {
 			writer = gin.DefaultWriter
 		}
 	}
-	var requestId string
+	var traceID string
 	if ctx != nil {
-		rawRequestId := helper.GetRequestID(ctx)
-		if rawRequestId != "" {
-			requestId = fmt.Sprintf(" %s", rawRequestId)
+		rawTraceID := helper.GetTraceID(ctx)
+		if rawTraceID != "" {
+			traceID = fmt.Sprintf(" %s", rawTraceID)
 		}
 	}
 	lineInfo, funcName := getLineInfo()
 	now := time.Now()
-	_, _ = fmt.Fprintf(writer, "%v [%s]%s%s %s%s \n", now.Format("2006/01/02 - 15:04:05"), level, requestId, lineInfo, funcName, msg)
+	_, _ = fmt.Fprintf(writer, "%v [%s]%s%s %s%s \n", now.Format("2006/01/02 - 15:04:05"), level, traceID, lineInfo, funcName, msg)
 	if level == loggerFatal {
 		os.Exit(1)
 	}
-}
-
-// loginLogHelper mirrors logHelper but targets the dedicated login log file.
-func loginLogHelper(ctx context.Context, level loggerLevel, msg string) {
-	SetupLoginLogger()
-	writer := loginWriter
-	if writer == nil {
-		logHelper(ctx, level, "[login] "+msg)
-		return
-	}
-	var requestId string
-	if ctx != nil {
-		rawRequestId := helper.GetRequestID(ctx)
-		if rawRequestId != "" {
-			requestId = fmt.Sprintf(" %s", rawRequestId)
-		}
-	}
-	lineInfo, funcName := getLineInfo()
-	now := time.Now()
-	_, _ = fmt.Fprintf(writer, "%v [%s]%s%s %s[login] %s \n", now.Format("2006/01/02 - 15:04:05"), level, requestId, lineInfo, funcName, msg)
 }
 
 // apiLogHelper mirrors logHelper but targets api.log
@@ -249,16 +240,35 @@ func apiLogHelper(ctx context.Context, level loggerLevel, msg string) {
 		logHelper(ctx, level, "[api] "+msg)
 		return
 	}
-	var requestId string
+	var traceID string
 	if ctx != nil {
-		rawRequestId := helper.GetRequestID(ctx)
-		if rawRequestId != "" {
-			requestId = fmt.Sprintf(" %s", rawRequestId)
+		rawTraceID := helper.GetTraceID(ctx)
+		if rawTraceID != "" {
+			traceID = fmt.Sprintf(" %s", rawTraceID)
 		}
 	}
 	lineInfo, funcName := getLineInfo()
 	now := time.Now()
-	_, _ = fmt.Fprintf(writer, "%v [%s]%s%s %s[api] %s \n", now.Format("2006/01/02 - 15:04:05"), level, requestId, lineInfo, funcName, msg)
+	_, _ = fmt.Fprintf(writer, "%v [%s]%s%s %s[api] %s \n", now.Format("2006/01/02 - 15:04:05"), level, traceID, lineInfo, funcName, msg)
+}
+
+func relayLogHelper(ctx context.Context, level loggerLevel, msg string) {
+	SetupRelayLogger()
+	writer := relayWriter
+	if writer == nil {
+		logHelper(ctx, level, "[relay] "+msg)
+		return
+	}
+	var traceID string
+	if ctx != nil {
+		rawTraceID := helper.GetTraceID(ctx)
+		if rawTraceID != "" {
+			traceID = fmt.Sprintf(" %s", rawTraceID)
+		}
+	}
+	lineInfo, funcName := getLineInfo()
+	now := time.Now()
+	_, _ = fmt.Fprintf(writer, "%v [%s]%s%s %s[relay] %s \n", now.Format("2006/01/02 - 15:04:05"), level, traceID, lineInfo, funcName, msg)
 }
 
 func getWorkDir() string {

@@ -16,6 +16,7 @@ import (
 	dbmodel "github.com/yeying-community/router/internal/admin/model"
 	"github.com/yeying-community/router/internal/admin/monitor"
 	"github.com/yeying-community/router/internal/relay/controller"
+	relaylogging "github.com/yeying-community/router/internal/relay/logging"
 	"github.com/yeying-community/router/internal/relay/model"
 	"github.com/yeying-community/router/internal/relay/relaymode"
 	"github.com/yeying-community/router/internal/transport/http/middleware"
@@ -50,6 +51,8 @@ func relayHelper(c *gin.Context, relayMode int) *model.ErrorWithStatusCode {
 // @Produce json
 func Relay(c *gin.Context) {
 	ctx := c.Request.Context()
+	c.Set(ctxkey.RelayRetryCount, 0)
+	c.Set(ctxkey.RelayError, "")
 	relayMode := getEffectiveRelayMode(c)
 	if config.DebugEnabled {
 		requestBody, _ := common.GetRequestBody(c)
@@ -67,22 +70,47 @@ func Relay(c *gin.Context) {
 	group := c.GetString(ctxkey.Group)
 	originalModel := c.GetString(ctxkey.OriginalModel)
 	go processChannelRelayError(ctx, userId, channelId, channelName, *bizErr)
-	requestId := c.GetString(helper.RequestIdKey)
+	traceID := c.GetString(helper.TraceIDKey)
 	retryTimes := config.RetryTimes
+	retryCount := 0
 	if !shouldRetry(c, bizErr.StatusCode) {
-		logger.Errorf(ctx, "relay error happen, status code is %d, won't retry in this case", bizErr.StatusCode)
+		logger.RelayWarnf(ctx, relaylogging.NewFields("RETRY").
+			String("decision", "skip").
+			Int("status", bizErr.StatusCode).
+			String("channel_id", channelId).
+			String("channel_name", channelName).
+			String("group", group).
+			String("model", originalModel).
+			String("reason", "status_not_retryable").
+			Build())
 		retryTimes = 0
 	}
 	for i := retryTimes; i > 0; i-- {
 		channel, err := dbmodel.CacheGetRandomSatisfiedChannel(group, originalModel, i != retryTimes)
 		if err != nil {
-			logger.Errorf(ctx, "CacheGetRandomSatisfiedChannel failed: %+v", err)
+			logger.RelayErrorf(ctx, relaylogging.NewFields("RETRY").
+				String("decision", "select_failed").
+				String("group", group).
+				String("model", originalModel).
+				String("error", err.Error()).
+				Build())
 			break
 		}
-		logger.Infof(ctx, "using channel #%s to retry (remain times %d)", channel.Id, i)
 		if channel.Id == lastFailedChannelId {
 			continue
 		}
+		retryCount++
+		c.Set(ctxkey.RelayRetryCount, retryCount)
+		logger.RelayWarnf(ctx, relaylogging.NewFields("RETRY").
+			String("decision", "switch").
+			Int("attempt", retryCount).
+			String("group", group).
+			String("model", originalModel).
+			String("from_channel_id", lastFailedChannelId).
+			String("to_channel_id", channel.Id).
+			String("to_channel_name", channel.Name).
+			Int("remaining", i-1).
+			Build())
 		middleware.SetupContextForSelectedChannel(c, channel, originalModel)
 		requestBody, err := common.GetRequestBody(c)
 		c.Request.Body = io.NopCloser(bytes.NewBuffer(requestBody))
@@ -100,9 +128,19 @@ func Relay(c *gin.Context) {
 		if bizErr.StatusCode == http.StatusTooManyRequests {
 			bizErr.Error.Message = "当前分组上游负载已饱和，请稍后再试"
 		}
+		c.Set(ctxkey.RelayError, bizErr.Error.Message)
+		logger.RelayErrorf(ctx, relaylogging.NewFields("FAIL").
+			Int("status", bizErr.StatusCode).
+			String("channel_id", lastFailedChannelId).
+			String("channel_name", channelName).
+			String("group", group).
+			String("model", originalModel).
+			Int("retry_count", retryCount).
+			String("error", bizErr.Error.Message).
+			Build())
 
 		// BUG: bizErr is in race condition
-		bizErr.Error.Message = helper.MessageWithRequestId(bizErr.Error.Message, requestId)
+		bizErr.Error.Message = helper.MessageWithTraceID(bizErr.Error.Message, traceID)
 		c.JSON(bizErr.StatusCode, gin.H{
 			"error": bizErr.Error,
 		})
@@ -133,7 +171,18 @@ func shouldRetry(c *gin.Context, statusCode int) bool {
 }
 
 func processChannelRelayError(ctx context.Context, userId string, channelId string, channelName string, err model.ErrorWithStatusCode) {
-	logger.Errorf(ctx, "relay error (channel id %s, user id: %s): %s", channelId, userId, err.Message)
+	msg := relaylogging.NewFields("UPSTREAM_ERR").
+		String("channel_id", channelId).
+		String("channel_name", channelName).
+		String("user_id", userId).
+		Int("status", err.StatusCode).
+		String("error", err.Message).
+		Build()
+	if err.StatusCode >= http.StatusInternalServerError {
+		logger.RelayErrorf(ctx, msg)
+	} else {
+		logger.RelayWarnf(ctx, msg)
+	}
 	// https://platform.openai.com/docs/guides/error-codes/api-errors
 	if monitor.ShouldDisableChannel(&err.Error, err.StatusCode) {
 		monitor.DisableChannel(channelId, channelName, err.Message)

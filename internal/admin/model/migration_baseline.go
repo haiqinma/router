@@ -21,13 +21,18 @@ func runMainBaselineMigrationWithDB(tx *gorm.DB) error {
 		&Token{},
 		&Redemption{},
 		&Ability{},
-		&Log{},
 		&Option{},
 		&ModelProvider{},
 		&ModelProviderModel{},
 		&ChannelProtocolCatalog{},
 		&GroupCatalog{},
 	); err != nil {
+		return err
+	}
+	if err := ensureLogTraceIDColumnWithDB(tx); err != nil {
+		return err
+	}
+	if err := tx.AutoMigrate(&Log{}); err != nil {
 		return err
 	}
 
@@ -227,7 +232,33 @@ func runLogBaselineMigrationWithDB(tx *gorm.DB) error {
 	if tx == nil {
 		return fmt.Errorf("database handle is nil")
 	}
+	if err := ensureLogTraceIDColumnWithDB(tx); err != nil {
+		return err
+	}
 	return tx.AutoMigrate(&Log{})
+}
+
+type legacyLogRequestIDColumn struct {
+	RequestID string `gorm:"column:request_id"`
+}
+
+func (legacyLogRequestIDColumn) TableName() string {
+	return "logs"
+}
+
+func ensureLogTraceIDColumnWithDB(tx *gorm.DB) error {
+	if tx == nil || !tx.Migrator().HasTable(&Log{}) {
+		return nil
+	}
+
+	hasRequestID := tx.Migrator().HasColumn(&legacyLogRequestIDColumn{}, "RequestID")
+	hasTraceID := tx.Migrator().HasColumn(&Log{}, "TraceID")
+	if hasRequestID && !hasTraceID {
+		if err := tx.Exec(`ALTER TABLE logs RENAME COLUMN request_id TO trace_id`).Error; err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func syncChannelProtocolsWithDB(tx *gorm.DB) error {

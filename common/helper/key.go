@@ -1,5 +1,7 @@
 package helper
 
 const (
-	RequestIdKey = "X-Oneapi-Request-Id"
+	TraceIDKey        = "X-Trace-Id"
+	TraceParentHeader = "traceparent"
+	XRequestIDHeader  = "X-Request-Id"
 )

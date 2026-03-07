@@ -112,7 +112,7 @@ func SetApiRouter(engine *gin.Engine) {
 	}
 
 	publicRelayRouter := engine.Group("/api/v1/public")
-	publicRelayRouter.Use(middleware.TokenAuth(), middleware.Distribute())
+	publicRelayRouter.Use(middleware.RelayLogger(), middleware.TokenAuth(), middleware.Distribute())
 	{
 		publicRelayRouter.POST("/completions", admin.Relay)
 		publicRelayRouter.POST("/chat/completions", admin.Relay)

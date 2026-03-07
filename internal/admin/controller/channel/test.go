@@ -149,6 +149,7 @@ func TestChannel(c *gin.Context) {
 	ctx := c.Request.Context()
 	id := strings.TrimSpace(c.Param("id"))
 	if id == "" {
+		logChannelAdminWarn(c, "test", stringField("reason", "id 为空"))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "id 为空",
@@ -158,6 +159,7 @@ func TestChannel(c *gin.Context) {
 	var err error
 	channel, err := channelsvc.GetByID(id, true)
 	if err != nil {
+		logChannelAdminWarn(c, "test", stringField("channel_id", id), stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
@@ -167,6 +169,7 @@ func TestChannel(c *gin.Context) {
 	testModel := strings.TrimSpace(c.Query("model"))
 	results, success, responseMessage, milliseconds, modelName, _, _, err := executeChannelCapabilityTest(ctx, channel, testModel)
 	if err != nil {
+		logChannelAdminWarn(c, "test", stringField("channel_id", channel.Id), stringField("name", channel.Name), stringField("model", modelName), stringField("reason", responseMessage))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": responseMessage,
@@ -176,6 +179,7 @@ func TestChannel(c *gin.Context) {
 	go channel.UpdateResponseTime(milliseconds)
 	consumedTime := float64(milliseconds) / 1000.0
 	if !success {
+		logChannelAdminWarn(c, "test", stringField("channel_id", channel.Id), stringField("name", channel.Name), stringField("model", modelName), int64Field("latency_ms", milliseconds), stringField("result", responseMessage))
 		c.JSON(http.StatusOK, gin.H{
 			"success":   false,
 			"message":   responseMessage,
@@ -187,6 +191,7 @@ func TestChannel(c *gin.Context) {
 		})
 		return
 	}
+	logChannelAdminInfo(c, "test", stringField("channel_id", channel.Id), stringField("name", channel.Name), stringField("model", modelName), int64Field("latency_ms", milliseconds), intField("capability_count", len(results)))
 	c.JSON(http.StatusOK, gin.H{
 		"success":   true,
 		"message":   responseMessage,
@@ -274,12 +279,14 @@ func TestChannels(c *gin.Context) {
 	}
 	err := testChannels(ctx, true, scope)
 	if err != nil {
+		logChannelAdminWarn(c, "test_all", stringField("scope", scope), stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
 		})
 		return
 	}
+	logChannelAdminInfo(c, "test_all", stringField("scope", scope))
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",

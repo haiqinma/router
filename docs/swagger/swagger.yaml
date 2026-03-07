@@ -1446,8 +1446,8 @@ definitions:
       quota:
         example: 123
         type: integer
-      request_id:
-        example: req_123
+      trace_id:
+        example: trace_123
         type: string
       system_prompt_reset:
         example: false

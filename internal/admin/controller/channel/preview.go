@@ -15,7 +15,6 @@ import (
 
 	"github.com/yeying-community/router/common/client"
 	"github.com/yeying-community/router/common/config"
-	"github.com/yeying-community/router/common/logger"
 	commonutils "github.com/yeying-community/router/common/utils"
 	"github.com/yeying-community/router/internal/admin/model"
 	channelsvc "github.com/yeying-community/router/internal/admin/service/channel"
@@ -607,6 +606,7 @@ func buildPreviewCapabilityResult(capability string, label string, endpoint stri
 func PreviewChannelModels(c *gin.Context) {
 	var req previewModelsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		logChannelAdminWarn(c, "preview_models", stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
@@ -615,6 +615,7 @@ func PreviewChannelModels(c *gin.Context) {
 	}
 	previewChannel, keySource, err := loadPreviewChannel(req.Protocol, req.Key, req.BaseURL, req.DraftID, req.Config, nil, "")
 	if err != nil {
+		logChannelAdminWarn(c, "preview_models", stringField("draft_id", strings.TrimSpace(req.DraftID)), stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
@@ -624,7 +625,7 @@ func PreviewChannelModels(c *gin.Context) {
 	baseURL := resolvePreviewBaseURL(previewChannel.GetProtocol(), previewChannel.GetBaseURL())
 	modelIDs, modelsURL, err := fetchModelsByConfiguredChannelDetailed(previewChannel.Key, baseURL, "")
 	if err != nil {
-		logger.SysWarnf("channel preview models failed: source=%s draft_id=%s models_url=%s err=%v", keySource, strings.TrimSpace(req.DraftID), modelsURL, err)
+		logChannelAdminWarn(c, "preview_models", stringField("source", keySource), stringField("draft_id", strings.TrimSpace(req.DraftID)), stringField("models_url", modelsURL), stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
@@ -632,10 +633,10 @@ func PreviewChannelModels(c *gin.Context) {
 		return
 	}
 	draftID := strings.TrimSpace(req.DraftID)
-	logger.SysLogf("channel preview models fetched: source=%s draft_id=%s models_url=%s count=%d", keySource, draftID, modelsURL, len(modelIDs))
+	logChannelAdminInfo(c, "preview_models", stringField("source", keySource), stringField("draft_id", draftID), stringField("models_url", modelsURL), intField("count", len(modelIDs)))
 	if draftID != "" {
 		if err := model.SyncFetchedChannelModelsWithDB(model.DB, draftID, modelIDs); err != nil {
-			logger.SysWarnf("channel preview models save failed: draft_id=%s err=%v", draftID, err)
+			logChannelAdminWarn(c, "preview_models_save", stringField("draft_id", draftID), stringField("reason", err.Error()))
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "保存渠道模型失败",
@@ -643,7 +644,7 @@ func PreviewChannelModels(c *gin.Context) {
 			return
 		}
 		if err := model.EnsureChannelTestModelWithDB(model.DB, draftID); err != nil {
-			logger.SysWarnf("channel preview test model sync failed: draft_id=%s err=%v", draftID, err)
+			logChannelAdminWarn(c, "preview_test_model_sync", stringField("draft_id", draftID), stringField("reason", err.Error()))
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "保存测试模型失败",
@@ -651,7 +652,7 @@ func PreviewChannelModels(c *gin.Context) {
 			return
 		}
 		if err := model.DeleteChannelCapabilityResultsByChannelIDWithDB(model.DB, draftID); err != nil {
-			logger.SysWarnf("channel preview capability results reset failed: draft_id=%s err=%v", draftID, err)
+			logChannelAdminWarn(c, "preview_capabilities_reset", stringField("draft_id", draftID), stringField("reason", err.Error()))
 		}
 	}
 
@@ -681,6 +682,7 @@ func PreviewChannelModels(c *gin.Context) {
 func PreviewChannelCapabilities(c *gin.Context) {
 	var req previewCapabilitiesRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
+		logChannelAdminWarn(c, "preview_capabilities", stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
@@ -689,6 +691,7 @@ func PreviewChannelCapabilities(c *gin.Context) {
 	}
 	previewChannel, keySource, err := loadPreviewChannel(req.Protocol, req.Key, req.BaseURL, req.DraftID, req.Config, req.Models, req.TestModel)
 	if err != nil {
+		logChannelAdminWarn(c, "preview_capabilities", stringField("draft_id", strings.TrimSpace(req.DraftID)), stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
@@ -696,6 +699,7 @@ func PreviewChannelCapabilities(c *gin.Context) {
 		return
 	}
 	if strings.TrimSpace(previewChannel.Key) == "" {
+		logChannelAdminWarn(c, "preview_capabilities", stringField("draft_id", strings.TrimSpace(req.DraftID)), stringField("reason", "请先填写 Key"))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "请先填写 Key",
@@ -703,6 +707,7 @@ func PreviewChannelCapabilities(c *gin.Context) {
 		return
 	}
 	if strings.TrimSpace(previewChannel.GetBaseURL()) == "" {
+		logChannelAdminWarn(c, "preview_capabilities", stringField("draft_id", strings.TrimSpace(req.DraftID)), stringField("reason", "请先填写 Base URL"))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "请先填写 Base URL",
@@ -712,6 +717,7 @@ func PreviewChannelCapabilities(c *gin.Context) {
 
 	results, err := runChannelCapabilityTests(previewChannel)
 	if err != nil {
+		logChannelAdminWarn(c, "preview_capabilities", stringField("source", keySource), stringField("draft_id", strings.TrimSpace(req.DraftID)), stringField("base_url", previewChannel.GetBaseURL()), stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
@@ -720,7 +726,7 @@ func PreviewChannelCapabilities(c *gin.Context) {
 	}
 	if draftID := strings.TrimSpace(req.DraftID); draftID != "" {
 		if err := persistPreviewCapabilityResults(draftID, results); err != nil {
-			logger.SysWarnf("channel preview capability results save failed: draft_id=%s err=%v", draftID, err)
+			logChannelAdminWarn(c, "preview_capabilities_save", stringField("draft_id", draftID), stringField("reason", err.Error()))
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
 				"message": "保存能力测试结果失败",
@@ -729,7 +735,7 @@ func PreviewChannelCapabilities(c *gin.Context) {
 		}
 	}
 
-	logger.SysLogf("channel preview capabilities fetched: source=%s draft_id=%s base_url=%s results=%d", keySource, strings.TrimSpace(req.DraftID), previewChannel.GetBaseURL(), len(results))
+	logChannelAdminInfo(c, "preview_capabilities", stringField("source", keySource), stringField("draft_id", strings.TrimSpace(req.DraftID)), stringField("base_url", previewChannel.GetBaseURL()), intField("results", len(results)))
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",

@@ -33,8 +33,8 @@ func recordLogHelper(ctx context.Context, log *model.Log) {
 	if strings.TrimSpace(log.Id) == "" {
 		log.Id = random.GetUUID()
 	}
-	requestId := helper.GetRequestID(ctx)
-	log.RequestId = requestId
+	traceID := helper.GetTraceID(ctx)
+	log.TraceID = traceID
 	err := model.LOG_DB.Create(log).Error
 	if err != nil {
 		logger.Error(ctx, "failed to record log: "+err.Error())

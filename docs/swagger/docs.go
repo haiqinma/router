@@ -6908,9 +6908,9 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 123
                 },
-                "request_id": {
+                "trace_id": {
                     "type": "string",
-                    "example": "req_123"
+                    "example": "trace_123"
                 },
                 "system_prompt_reset": {
                     "type": "boolean",

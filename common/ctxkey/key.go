@@ -23,4 +23,8 @@ const (
 	SystemPrompt      = "system_prompt"
 	ModelRatio        = "model_ratio"
 	CompletionRatio   = "completion_ratio"
+	UpstreamURL       = "upstream_url"
+	UpstreamStatus    = "upstream_status"
+	RelayRetryCount   = "relay_retry_count"
+	RelayError        = "relay_error"
 )

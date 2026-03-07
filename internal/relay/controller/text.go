@@ -108,7 +108,7 @@ func getRequestBody(c *gin.Context, meta *meta.Meta, textRequest *model.GeneralO
 		}
 		rawBody, _ := common.GetRequestBody(c)
 		if rawBody != nil {
-			rid := helper.GetRequestID(c.Request.Context())
+			rid := helper.GetTraceID(c.Request.Context())
 			if rid != "" {
 				dumpPath := filepath.Join("/tmp", "resp_body_"+rid+".json")
 				_ = os.WriteFile(dumpPath, rawBody, 0644)

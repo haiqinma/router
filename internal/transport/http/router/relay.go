@@ -18,7 +18,7 @@ func SetRelayRouter(engine *gin.Engine) {
 	}
 
 	relayV1Router := engine.Group("/v1")
-	relayV1Router.Use(middleware.TokenAuth(), middleware.Distribute())
+	relayV1Router.Use(middleware.RelayLogger(), middleware.TokenAuth(), middleware.Distribute())
 	{
 		relayV1Router.POST("/completions", controller.Relay)
 		relayV1Router.POST("/chat/completions", controller.Relay)

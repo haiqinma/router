@@ -105,24 +105,24 @@ func IntMax(a int, b int) int {
 	}
 }
 
-func GenRequestID() string {
+func GenTraceID() string {
 	return GetTimeString() + random.GetRandomNumberString(8)
 }
 
-func SetRequestID(ctx context.Context, id string) context.Context {
-	return context.WithValue(ctx, RequestIdKey, id)
+func SetTraceID(ctx context.Context, id string) context.Context {
+	return context.WithValue(ctx, TraceIDKey, id)
 }
 
-func GetRequestID(ctx context.Context) string {
-	rawRequestId := ctx.Value(RequestIdKey)
-	if rawRequestId == nil {
+func GetTraceID(ctx context.Context) string {
+	rawTraceID := ctx.Value(TraceIDKey)
+	if rawTraceID == nil {
 		return ""
 	}
-	return rawRequestId.(string)
+	return rawTraceID.(string)
 }
 
 func GetResponseID(c *gin.Context) string {
-	logID := c.GetString(RequestIdKey)
+	logID := c.GetString(TraceIDKey)
 	return fmt.Sprintf("chatcmpl-%s", logID)
 }
 
@@ -141,8 +141,8 @@ func AssignOrDefault(value string, defaultValue string) string {
 	return defaultValue
 }
 
-func MessageWithRequestId(message string, id string) string {
-	return fmt.Sprintf("%s (request id: %s)", message, id)
+func MessageWithTraceID(message string, id string) string {
+	return fmt.Sprintf("%s (trace id: %s)", message, id)
 }
 
 func String2Int(str string) int {
