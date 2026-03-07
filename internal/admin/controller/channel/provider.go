@@ -248,6 +248,9 @@ func saveModelProviderCatalog(items []modelProviderCatalogItem) ([]modelProvider
 	if err := tx.Commit().Error; err != nil {
 		return nil, err
 	}
+	if err := model.SyncModelPricingCatalogWithDB(model.DB); err != nil {
+		return nil, err
+	}
 	return normalized, nil
 }
 

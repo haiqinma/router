@@ -15,12 +15,12 @@ import (
 	"github.com/yeying-community/router/common/config"
 	"github.com/yeying-community/router/common/helper"
 	"github.com/yeying-community/router/common/logger"
+	adminmodel "github.com/yeying-community/router/internal/admin/model"
 	"github.com/yeying-community/router/internal/relay"
 	"github.com/yeying-community/router/internal/relay/adaptor"
 	"github.com/yeying-community/router/internal/relay/adaptor/openai"
 	"github.com/yeying-community/router/internal/relay/apitype"
 	"github.com/yeying-community/router/internal/relay/billing"
-	billingratio "github.com/yeying-community/router/internal/relay/billing/ratio"
 	relaychannel "github.com/yeying-community/router/internal/relay/channel"
 	"github.com/yeying-community/router/internal/relay/meta"
 	"github.com/yeying-community/router/internal/relay/model"
@@ -44,14 +44,26 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	meta.ActualModelName = textRequest.Model
 	// set system prompt if not empty
 	systemPromptReset := setSystemPrompt(ctx, textRequest, meta.ForcedSystemPrompt)
-	// get model ratio & group ratio
-	modelRatio := billingratio.GetChannelModelRatio(textRequest.Model, meta.ChannelProtocol, meta.ChannelModelRatio)
-	groupRatio := billingratio.GetGroupRatio(meta.Group)
-	ratio := modelRatio * groupRatio
+	groupRatio := adminmodel.GetGroupBillingRatio(meta.Group)
+	pricing, err := adminmodel.ResolveChannelModelPricing(meta.ChannelProtocol, meta.ChannelModelConfigs, textRequest.Model)
+	if err != nil {
+		if groupRatio == 0 {
+			pricing = adminmodel.ResolvedModelPricing{
+				Model:     textRequest.Model,
+				Type:      adminmodel.InferModelType(textRequest.Model),
+				PriceUnit: adminmodel.ModelProviderPriceUnitPer1KTokens,
+				Currency:  adminmodel.ModelProviderPriceCurrencyUSD,
+				Source:    "group_free",
+			}
+		} else {
+			logger.Errorf(ctx, "ResolveChannelModelPricing failed: %s", err.Error())
+			return openai.ErrorWrapper(err, "model_pricing_not_configured", http.StatusServiceUnavailable)
+		}
+	}
 	// pre-consume quota
 	promptTokens := getPromptTokens(textRequest, meta.Mode)
 	meta.PromptTokens = promptTokens
-	preConsumedQuota, bizErr := preConsumeQuota(ctx, textRequest, promptTokens, ratio, meta)
+	preConsumedQuota, bizErr := preConsumeQuota(ctx, textRequest, promptTokens, pricing, groupRatio, meta)
 	if bizErr != nil {
 		logger.Warnf(ctx, "preConsumeQuota failed: %+v", *bizErr)
 		return bizErr
@@ -88,7 +100,7 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 		return respErr
 	}
 	// post-consume quota
-	go postConsumeQuota(ctx, usage, meta, textRequest, ratio, preConsumedQuota, modelRatio, groupRatio, systemPromptReset)
+	go postConsumeQuota(ctx, usage, meta, textRequest, pricing, preConsumedQuota, groupRatio, systemPromptReset)
 	return nil
 }
 

@@ -2,7 +2,6 @@ package billing
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/yeying-community/router/common/logger"
@@ -31,7 +30,7 @@ func ReturnPreConsumedQuota(ctx context.Context, preConsumedQuota int64, tokenId
 	}(ctx)
 }
 
-func PostConsumeQuota(ctx context.Context, tokenId string, quotaDelta int64, totalQuota int64, userId string, channelId string, modelRatio float64, groupRatio float64, modelName string, tokenName string) {
+func PostConsumeQuota(ctx context.Context, tokenId string, quotaDelta int64, totalQuota int64, userId string, channelId string, pricing model.ResolvedModelPricing, groupRatio float64, modelName string, tokenName string) {
 	// quotaDelta is remaining quota to be consumed
 	var err error
 	if strings.TrimSpace(tokenId) != "" {
@@ -55,7 +54,6 @@ func PostConsumeQuota(ctx context.Context, tokenId string, quotaDelta int64, tot
 	}
 	// totalQuota is total quota consumed
 	if totalQuota != 0 {
-		logContent := fmt.Sprintf("倍率：%.2f × %.2f", modelRatio, groupRatio)
 		model.RecordConsumeLog(ctx, &model.Log{
 			UserId:           userId,
 			ChannelId:        channelId,
@@ -64,12 +62,9 @@ func PostConsumeQuota(ctx context.Context, tokenId string, quotaDelta int64, tot
 			ModelName:        modelName,
 			TokenName:        tokenName,
 			Quota:            int(totalQuota),
-			Content:          logContent,
+			Content:          FormatPricingLog(pricing, groupRatio),
 		})
 		model.UpdateUserUsedQuotaAndRequestCount(userId, totalQuota)
 		model.UpdateChannelUsedQuota(channelId, totalQuota)
-	}
-	if totalQuota <= 0 {
-		logger.Error(ctx, fmt.Sprintf("totalQuota consumed is %d, something is wrong", totalQuota))
 	}
 }

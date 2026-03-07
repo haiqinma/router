@@ -380,7 +380,7 @@ func updateChannelBalance(channel *model.Channel) (float64, error) {
 // @Tags admin
 // @Security BearerAuth
 // @Produce json
-// @Param id path int true "Channel ID"
+// @Param id path string true "Channel ID"
 // @Success 200 {object} docs.StandardResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/admin/channel/update_balance/{id} [get]

@@ -13,6 +13,7 @@ const createEmptyForm = () => ({
   name: '',
   display_name: '',
   description: '',
+  billing_ratio: 1,
   sort_order: 0,
 });
 
@@ -79,6 +80,7 @@ const GroupsManager = forwardRef((_, ref) => {
       name: row.name || '',
       display_name: row.display_name || '',
       description: row.description || '',
+      billing_ratio: Number(row.billing_ratio ?? 1),
       sort_order: row.sort_order || 0,
     });
     setEditOpen(true);
@@ -148,12 +150,18 @@ const GroupsManager = forwardRef((_, ref) => {
       showInfo(t('group_manage.messages.name_required'));
       return;
     }
+    const billingRatio = Number(createForm.billing_ratio ?? 1);
+    if (!Number.isFinite(billingRatio) || billingRatio < 0) {
+      showInfo(t('group_manage.messages.billing_ratio_invalid'));
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await API.post('/api/v1/admin/group/', {
         name,
         display_name: (createForm.display_name || '').trim(),
         description: (createForm.description || '').trim(),
+        billing_ratio: billingRatio,
       });
       const { success, message, data } = res.data || {};
       if (!success) {
@@ -184,12 +192,18 @@ const GroupsManager = forwardRef((_, ref) => {
       showInfo(t('group_manage.messages.name_required'));
       return;
     }
+    const billingRatio = Number(editForm.billing_ratio ?? 1);
+    if (!Number.isFinite(billingRatio) || billingRatio < 0) {
+      showInfo(t('group_manage.messages.billing_ratio_invalid'));
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await API.put('/api/v1/admin/group/', {
         name,
         display_name: (editForm.display_name || '').trim(),
         description: (editForm.description || '').trim(),
+        billing_ratio: billingRatio,
         sort_order: Number(editForm.sort_order || 0),
       });
       const { success, message, data } = res.data || {};
@@ -298,6 +312,7 @@ const GroupsManager = forwardRef((_, ref) => {
             <Table.HeaderCell>{t('group_manage.table.name')}</Table.HeaderCell>
             <Table.HeaderCell>{t('group_manage.table.display_name')}</Table.HeaderCell>
             <Table.HeaderCell>{t('group_manage.table.description')}</Table.HeaderCell>
+            <Table.HeaderCell>{t('group_manage.table.billing_ratio')}</Table.HeaderCell>
             <Table.HeaderCell>{t('group_manage.table.status')}</Table.HeaderCell>
             <Table.HeaderCell>{t('group_manage.table.sort_order')}</Table.HeaderCell>
             <Table.HeaderCell>{t('group_manage.table.updated_at')}</Table.HeaderCell>
@@ -312,6 +327,7 @@ const GroupsManager = forwardRef((_, ref) => {
               <Table.Cell>{row.name}</Table.Cell>
               <Table.Cell>{row.display_name || '-'}</Table.Cell>
               <Table.Cell>{row.description || '-'}</Table.Cell>
+              <Table.Cell>{Number(row.billing_ratio ?? 1).toFixed(2)}</Table.Cell>
               <Table.Cell>
                 {row.enabled ? (
                   <Label basic color='green'>
@@ -374,7 +390,7 @@ const GroupsManager = forwardRef((_, ref) => {
           ))}
           {rows.length === 0 && (
             <Table.Row>
-              <Table.Cell colSpan={7} textAlign='center'>
+              <Table.Cell colSpan={8} textAlign='center'>
                 {loading
                   ? t('group_manage.messages.loading')
                   : t('group_manage.messages.empty')}
@@ -419,6 +435,20 @@ const GroupsManager = forwardRef((_, ref) => {
                 }))
               }
             />
+            <Form.Input
+              type='number'
+              min='0'
+              step='0.01'
+              label={t('group_manage.form.billing_ratio')}
+              placeholder={t('group_manage.form.billing_ratio_placeholder')}
+              value={createForm.billing_ratio}
+              onChange={(e) =>
+                setCreateForm((prev) => ({
+                  ...prev,
+                  billing_ratio: e.target.value,
+                }))
+              }
+            />
           </Form>
         </Modal.Content>
         <Modal.Actions>
@@ -459,6 +489,20 @@ const GroupsManager = forwardRef((_, ref) => {
                 setEditForm((prev) => ({
                   ...prev,
                   description: e.target.value,
+                }))
+              }
+            />
+            <Form.Input
+              type='number'
+              min='0'
+              step='0.01'
+              label={t('group_manage.form.billing_ratio')}
+              placeholder={t('group_manage.form.billing_ratio_placeholder')}
+              value={editForm.billing_ratio}
+              onChange={(e) =>
+                setEditForm((prev) => ({
+                  ...prev,
+                  billing_ratio: e.target.value,
                 }))
               }
             />

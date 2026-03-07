@@ -224,8 +224,9 @@
           "selected": "启用",
           "name": "名称",
           "alias": "别名",
-          "model_ratio": "模型倍率",
-          "completion_ratio": "补全倍率"
+          "price_unit": "计价单位",
+          "input_price": "输入价覆盖",
+          "output_price": "输出价覆盖"
         },
         "realtime_enabled": "已启用实时模型同步：修改 Base URL 或密钥后会自动刷新并默认全选。",
         "realtime_hint": "填写 Base URL 和密钥后会自动获取该渠道支持的模型。",
@@ -274,7 +275,7 @@
         "update_draft_failed": "保存草稿渠道失败",
         "fetch_models_failed": "获取模型失败",
         "models_empty": "未返回可用模型",
-        "model_config_invalid": "模型配置无效，请检查模型别名是否为空或重复，倍率是否大于 0。",
+        "model_config_invalid": "模型配置无效，请检查模型别名是否为空或重复，价格覆盖是否为非负数。",
         "update_success": "渠道更新成功！",
         "create_success": "渠道创建成功！"
       },
@@ -319,6 +320,7 @@
       "name": "分组标识",
       "display_name": "展示名称",
       "description": "描述",
+      "billing_ratio": "业务倍率",
       "source": "来源",
       "status": "状态",
       "sort_order": "排序",
@@ -336,6 +338,8 @@
       "display_name_placeholder": "例如：企业版",
       "description": "描述",
       "description_placeholder": "可选，用于说明该分组用途",
+      "billing_ratio": "业务倍率",
+      "billing_ratio_placeholder": "默认为 1，可填 0 或更大值",
       "sort_order": "排序值",
       "channels": "绑定渠道",
       "channels_placeholder": "选择该分组可用的渠道"
@@ -361,6 +365,7 @@
       "loading": "加载中...",
       "empty": "暂无分组",
       "name_required": "分组名称不能为空",
+      "billing_ratio_invalid": "业务倍率必须大于或等于 0",
       "load_failed": "加载分组失败",
       "bind_load_failed": "加载分组渠道失败",
       "create_success": "分组创建成功",
@@ -905,24 +910,6 @@
         "invitee_reward_placeholder": "例如：1000",
         "buttons": {
           "save": "保存额度设置"
-        }
-      },
-      "ratio": {
-        "title": "倍率设置",
-        "model": {
-          "title": "模型倍率",
-          "placeholder": "为一个 JSON 文本，键为模型名称，值为倍率"
-        },
-        "completion": {
-          "title": "补全倍率",
-          "placeholder": "为一个 JSON 文本，键为模型名称，值为倍率，此处的倍率设置是模型补全倍率相较于提示倍率的比例，使用该设置可强制覆盖 Router 的内部比例"
-        },
-        "group": {
-          "title": "分组倍率",
-          "placeholder": "为一个 JSON 文本，键为分组名称，值为倍率"
-        },
-        "buttons": {
-          "save": "保存倍率设置"
         }
       },
       "log": {

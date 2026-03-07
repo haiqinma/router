@@ -13,6 +13,9 @@ func GetOptions() []*model.Option {
 	options := make([]*model.Option, 0)
 	config.OptionMapRWMutex.Lock()
 	for k, v := range config.OptionMap {
+		if model.IsLegacyPricingOptionKey(k) {
+			continue
+		}
 		if strings.HasSuffix(k, "Token") || strings.HasSuffix(k, "Secret") {
 			continue
 		}

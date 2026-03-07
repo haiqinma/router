@@ -305,39 +305,46 @@ type TokenUpdateRequest struct {
 	Subnet         string `json:"subnet,omitempty" example:"192.168.0.0/16"`
 }
 
+type ChannelModelConfigRequest struct {
+	Model         string   `json:"model" example:"gpt-4o-mini"`
+	UpstreamModel string   `json:"upstream_model,omitempty" example:"gpt-4o-mini"`
+	Selected      bool     `json:"selected,omitempty" example:"true"`
+	InputPrice    *float64 `json:"input_price,omitempty" example:"0.000001"`
+	OutputPrice   *float64 `json:"output_price,omitempty" example:"0.000002"`
+	PriceUnit     string   `json:"price_unit,omitempty" example:"usd_per_token"`
+	Currency      string   `json:"currency,omitempty" example:"USD"`
+	SortOrder     int      `json:"sort_order,omitempty" example:"1"`
+}
+
 type ChannelCreateRequest struct {
-	Type            int    `json:"type" example:"50"`
-	Key             string `json:"key" example:"sk-***"`
-	Status          int    `json:"status,omitempty" example:"1"`
-	Name            string `json:"name,omitempty" example:"OpenAI"`
-	Weight          int    `json:"weight,omitempty" example:"0"`
-	BaseURL         string `json:"base_url,omitempty" example:"https://api.openai.com"`
-	Models          string `json:"models,omitempty" example:"gpt-4o-mini,gpt-4o"`
-	Group           string `json:"group,omitempty" example:"default"`
-	ModelMapping    string `json:"model_mapping,omitempty" example:"{}"`
-	Priority        int64  `json:"priority,omitempty" example:"0"`
-	Config          string `json:"config,omitempty" example:"{}"`
-	SystemPrompt    string `json:"system_prompt,omitempty" example:""`
-	ModelRatio      string `json:"model_ratio,omitempty" example:"{}"`
-	CompletionRatio string `json:"completion_ratio,omitempty" example:"{}"`
+	Protocol     string                      `json:"protocol" example:"openai"`
+	Key          string                      `json:"key" example:"sk-***"`
+	Status       int                         `json:"status,omitempty" example:"1"`
+	Name         string                      `json:"name,omitempty" example:"OpenAI"`
+	Weight       int                         `json:"weight,omitempty" example:"0"`
+	BaseURL      string                      `json:"base_url,omitempty" example:"https://api.openai.com/v1"`
+	Models       string                      `json:"models,omitempty" example:"gpt-4o-mini,gpt-4o"`
+	ModelConfigs []ChannelModelConfigRequest `json:"model_configs,omitempty"`
+	Priority     int64                       `json:"priority,omitempty" example:"0"`
+	Config       string                      `json:"config,omitempty" example:"{}"`
+	SystemPrompt string                      `json:"system_prompt,omitempty" example:""`
+	TestModel    string                      `json:"test_model,omitempty" example:"gpt-4o-mini"`
 }
 
 type ChannelUpdateRequest struct {
-	ID              int    `json:"id" example:"1"`
-	Type            int    `json:"type,omitempty" example:"50"`
-	Key             string `json:"key,omitempty" example:"sk-***"`
-	Status          int    `json:"status,omitempty" example:"1"`
-	Name            string `json:"name,omitempty" example:"OpenAI"`
-	Weight          int    `json:"weight,omitempty" example:"0"`
-	BaseURL         string `json:"base_url,omitempty" example:"https://api.openai.com"`
-	Models          string `json:"models,omitempty" example:"gpt-4o-mini,gpt-4o"`
-	Group           string `json:"group,omitempty" example:"default"`
-	ModelMapping    string `json:"model_mapping,omitempty" example:"{}"`
-	Priority        int64  `json:"priority,omitempty" example:"0"`
-	Config          string `json:"config,omitempty" example:"{}"`
-	SystemPrompt    string `json:"system_prompt,omitempty" example:""`
-	ModelRatio      string `json:"model_ratio,omitempty" example:"{}"`
-	CompletionRatio string `json:"completion_ratio,omitempty" example:"{}"`
+	ID           string                      `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+	Protocol     string                      `json:"protocol,omitempty" example:"openai"`
+	Key          string                      `json:"key,omitempty" example:"sk-***"`
+	Status       int                         `json:"status,omitempty" example:"1"`
+	Name         string                      `json:"name,omitempty" example:"OpenAI"`
+	Weight       int                         `json:"weight,omitempty" example:"0"`
+	BaseURL      string                      `json:"base_url,omitempty" example:"https://api.openai.com/v1"`
+	Models       string                      `json:"models,omitempty" example:"gpt-4o-mini,gpt-4o"`
+	ModelConfigs []ChannelModelConfigRequest `json:"model_configs,omitempty"`
+	Priority     int64                       `json:"priority,omitempty" example:"0"`
+	Config       string                      `json:"config,omitempty" example:"{}"`
+	SystemPrompt string                      `json:"system_prompt,omitempty" example:""`
+	TestModel    string                      `json:"test_model,omitempty" example:"gpt-4o-mini"`
 }
 
 type ChannelPreviewModelsRequest struct {

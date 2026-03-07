@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"net/http"
 	"strings"
 
@@ -18,7 +17,7 @@ import (
 	"github.com/yeying-community/router/common/logger"
 	"github.com/yeying-community/router/internal/admin/model"
 	"github.com/yeying-community/router/internal/relay/adaptor/openai"
-	billingratio "github.com/yeying-community/router/internal/relay/billing/ratio"
+	"github.com/yeying-community/router/internal/relay/billing"
 	relaychannel "github.com/yeying-community/router/internal/relay/channel"
 	"github.com/yeying-community/router/internal/relay/controller/validator"
 	"github.com/yeying-community/router/internal/relay/meta"
@@ -65,8 +64,8 @@ func getPreConsumedQuota(textRequest *relaymodel.GeneralOpenAIRequest, promptTok
 	return int64(float64(preConsumedTokens) * ratio)
 }
 
-func preConsumeQuota(ctx context.Context, textRequest *relaymodel.GeneralOpenAIRequest, promptTokens int, ratio float64, meta *meta.Meta) (int64, *relaymodel.ErrorWithStatusCode) {
-	preConsumedQuota := getPreConsumedQuota(textRequest, promptTokens, ratio)
+func preConsumeQuota(ctx context.Context, textRequest *relaymodel.GeneralOpenAIRequest, promptTokens int, pricing model.ResolvedModelPricing, groupRatio float64, meta *meta.Meta) (int64, *relaymodel.ErrorWithStatusCode) {
+	preConsumedQuota := billing.ComputeTextPreConsumedQuota(promptTokens, textRequest.MaxTokens, pricing, groupRatio)
 
 	userQuota, err := model.CacheGetUserQuota(ctx, meta.UserId)
 	if err != nil {
@@ -101,19 +100,14 @@ func preConsumeQuota(ctx context.Context, textRequest *relaymodel.GeneralOpenAIR
 	return preConsumedQuota, nil
 }
 
-func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.Meta, textRequest *relaymodel.GeneralOpenAIRequest, ratio float64, preConsumedQuota int64, modelRatio float64, groupRatio float64, systemPromptReset bool) {
+func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.Meta, textRequest *relaymodel.GeneralOpenAIRequest, pricing model.ResolvedModelPricing, preConsumedQuota int64, groupRatio float64, systemPromptReset bool) {
 	if usage == nil {
 		logger.Error(ctx, "usage is nil, which is unexpected")
 		return
 	}
-	var quota int64
-	completionRatio := billingratio.GetChannelCompletionRatio(textRequest.Model, meta.ChannelProtocol, meta.ChannelCompletionRatio)
 	promptTokens := usage.PromptTokens
 	completionTokens := usage.CompletionTokens
-	quota = int64(math.Ceil((float64(promptTokens) + float64(completionTokens)*completionRatio) * ratio))
-	if ratio != 0 && quota <= 0 {
-		quota = 1
-	}
+	quota := billing.ComputeTextQuota(promptTokens, completionTokens, pricing, groupRatio)
 	totalTokens := promptTokens + completionTokens
 	if totalTokens == 0 {
 		// in this case, must be some error happened
@@ -141,7 +135,6 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 	if err != nil {
 		logger.Error(ctx, "error update user quota cache: "+err.Error())
 	}
-	logContent := fmt.Sprintf("倍率：%.2f × %.2f × %.2f", modelRatio, groupRatio, completionRatio)
 	model.RecordConsumeLog(ctx, &model.Log{
 		UserId:            meta.UserId,
 		ChannelId:         meta.ChannelId,
@@ -150,7 +143,7 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 		ModelName:         textRequest.Model,
 		TokenName:         meta.TokenName,
 		Quota:             int(quota),
-		Content:           logContent,
+		Content:           billing.FormatPricingLog(pricing, groupRatio),
 		IsStream:          meta.IsStream,
 		ElapsedTime:       helper.CalcElapsedTime(meta.StartTime),
 		SystemPromptReset: systemPromptReset,

@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/yeying-community/router/common/helper"
-	billingratio "github.com/yeying-community/router/internal/relay/billing/ratio"
 	"gorm.io/gorm"
 )
 
@@ -14,14 +13,16 @@ const (
 )
 
 type ChannelModel struct {
-	ChannelId       string  `json:"channel_id" gorm:"primaryKey;type:char(36);index"`
-	Model           string  `json:"model" gorm:"primaryKey;type:varchar(255)"`
-	UpstreamModel   string  `json:"upstream_model" gorm:"type:varchar(255);default:'';index"`
-	Selected        bool    `json:"selected" gorm:"default:true;index"`
-	ModelRatio      float64 `json:"model_ratio" gorm:"type:numeric(12,6);default:1"`
-	CompletionRatio float64 `json:"completion_ratio" gorm:"type:numeric(12,6);default:1"`
-	SortOrder       int     `json:"sort_order" gorm:"default:0"`
-	UpdatedAt       int64   `json:"updated_at" gorm:"bigint"`
+	ChannelId     string   `json:"channel_id" gorm:"primaryKey;type:char(36);index"`
+	Model         string   `json:"model" gorm:"primaryKey;type:varchar(255)"`
+	UpstreamModel string   `json:"upstream_model" gorm:"type:varchar(255);default:'';index"`
+	Selected      bool     `json:"selected" gorm:"default:true;index"`
+	InputPrice    *float64 `json:"input_price,omitempty" gorm:"type:double precision"`
+	OutputPrice   *float64 `json:"output_price,omitempty" gorm:"type:double precision"`
+	PriceUnit     string   `json:"price_unit,omitempty" gorm:"type:varchar(64);default:''"`
+	Currency      string   `json:"currency,omitempty" gorm:"type:varchar(16);default:''"`
+	SortOrder     int      `json:"sort_order" gorm:"default:0"`
+	UpdatedAt     int64    `json:"updated_at" gorm:"bigint"`
 }
 
 func (ChannelModel) TableName() string {
@@ -354,6 +355,10 @@ func normalizeChannelModelRow(row *ChannelModel) {
 	row.ChannelId = strings.TrimSpace(row.ChannelId)
 	row.Model = strings.TrimSpace(row.Model)
 	row.UpstreamModel = strings.TrimSpace(row.UpstreamModel)
+	row.PriceUnit = normalizeChannelModelPriceUnit(row.PriceUnit, row.UpstreamModel, row.Model)
+	row.Currency = normalizeChannelModelCurrency(row.Currency)
+	row.InputPrice = cloneNormalizedChannelModelPrice(row.InputPrice)
+	row.OutputPrice = cloneNormalizedChannelModelPrice(row.OutputPrice)
 	if row.Model == "" && row.UpstreamModel != "" {
 		row.Model = row.UpstreamModel
 	}
@@ -476,35 +481,45 @@ func loadChannelProtocolByChannelIDWithDB(db *gorm.DB, channelID string) (int, e
 	return channel.GetChannelProtocol(), nil
 }
 
-func defaultChannelModelRatioValue(modelName string, channelProtocol int) float64 {
-	ratio := billingratio.GetModelRatio(strings.TrimSpace(modelName), channelProtocol)
-	if ratio <= 0 {
-		return 1
-	}
-	return ratio
-}
-
-func defaultChannelCompletionRatioValue(modelName string, channelProtocol int) float64 {
-	ratio := billingratio.GetCompletionRatio(strings.TrimSpace(modelName), channelProtocol)
-	if ratio <= 0 {
-		return 1
-	}
-	return ratio
-}
-
 func completeChannelModelRowDefaults(row *ChannelModel, channelProtocol int) {
 	if row == nil {
 		return
 	}
 	normalizeChannelModelRow(row)
-	referenceModel := strings.TrimSpace(row.UpstreamModel)
+	_ = channelProtocol
+	row.PriceUnit = normalizeChannelModelPriceUnit(row.PriceUnit, row.UpstreamModel, row.Model)
+	row.Currency = normalizeChannelModelCurrency(row.Currency)
+	row.InputPrice = cloneNormalizedChannelModelPrice(row.InputPrice)
+	row.OutputPrice = cloneNormalizedChannelModelPrice(row.OutputPrice)
+}
+
+func normalizeChannelModelPriceUnit(raw string, upstreamModel string, model string) string {
+	priceUnit := strings.TrimSpace(strings.ToLower(raw))
+	if priceUnit != "" {
+		return priceUnit
+	}
+	referenceModel := strings.TrimSpace(upstreamModel)
 	if referenceModel == "" {
-		referenceModel = strings.TrimSpace(row.Model)
+		referenceModel = strings.TrimSpace(model)
 	}
-	if row.ModelRatio <= 0 {
-		row.ModelRatio = defaultChannelModelRatioValue(referenceModel, channelProtocol)
+	return defaultPriceUnitByType("", referenceModel)
+}
+
+func normalizeChannelModelCurrency(raw string) string {
+	currency := strings.TrimSpace(strings.ToUpper(raw))
+	if currency != "" {
+		return currency
 	}
-	if row.CompletionRatio <= 0 {
-		row.CompletionRatio = defaultChannelCompletionRatioValue(referenceModel, channelProtocol)
+	return ModelProviderPriceCurrencyUSD
+}
+
+func cloneNormalizedChannelModelPrice(value *float64) *float64 {
+	if value == nil {
+		return nil
 	}
+	normalized := *value
+	if normalized < 0 {
+		normalized = 0
+	}
+	return &normalized
 }

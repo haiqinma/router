@@ -113,6 +113,9 @@ func InitDB() {
 	setDBConns(DB)
 
 	if !config.IsMasterNode {
+		if err = SyncModelPricingCatalogWithDB(DB); err != nil {
+			logger.SysError("failed to sync model pricing catalog: " + err.Error())
+		}
 		return
 	}
 
@@ -122,6 +125,9 @@ func InitDB() {
 		return
 	}
 	logger.SysLog("database migrated")
+	if err = SyncModelPricingCatalogWithDB(DB); err != nil {
+		logger.SysError("failed to sync model pricing catalog: " + err.Error())
+	}
 }
 
 func migrateDB() error {

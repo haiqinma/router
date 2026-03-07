@@ -67,26 +67,18 @@ definitions:
   docs.ChannelCreateRequest:
     properties:
       base_url:
-        example: https://api.openai.com
-        type: string
-      completion_ratio:
-        example: '{}'
+        example: https://api.openai.com/v1
         type: string
       config:
         example: '{}'
         type: string
-      group:
-        example: default
-        type: string
       key:
         example: sk-***
         type: string
-      model_mapping:
-        example: '{}'
-        type: string
-      model_ratio:
-        example: '{}'
-        type: string
+      model_configs:
+        items:
+          $ref: '#/definitions/docs.ChannelModelConfigRequest'
+        type: array
       models:
         example: gpt-4o-mini,gpt-4o
         type: string
@@ -96,18 +88,48 @@ definitions:
       priority:
         example: 0
         type: integer
+      protocol:
+        example: openai
+        type: string
       status:
         example: 1
         type: integer
       system_prompt:
         example: ""
         type: string
-      type:
-        example: 50
-        type: integer
+      test_model:
+        example: gpt-4o-mini
+        type: string
       weight:
         example: 0
         type: integer
+    type: object
+  docs.ChannelModelConfigRequest:
+    properties:
+      currency:
+        example: USD
+        type: string
+      input_price:
+        example: 1e-06
+        type: number
+      model:
+        example: gpt-4o-mini
+        type: string
+      output_price:
+        example: 2e-06
+        type: number
+      price_unit:
+        example: usd_per_token
+        type: string
+      selected:
+        example: true
+        type: boolean
+      sort_order:
+        example: 1
+        type: integer
+      upstream_model:
+        example: gpt-4o-mini
+        type: string
     type: object
   docs.ChannelModelsMeta:
     properties:
@@ -185,29 +207,21 @@ definitions:
   docs.ChannelUpdateRequest:
     properties:
       base_url:
-        example: https://api.openai.com
-        type: string
-      completion_ratio:
-        example: '{}'
+        example: https://api.openai.com/v1
         type: string
       config:
         example: '{}'
         type: string
-      group:
-        example: default
-        type: string
       id:
-        example: 1
-        type: integer
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
       key:
         example: sk-***
         type: string
-      model_mapping:
-        example: '{}'
-        type: string
-      model_ratio:
-        example: '{}'
-        type: string
+      model_configs:
+        items:
+          $ref: '#/definitions/docs.ChannelModelConfigRequest'
+        type: array
       models:
         example: gpt-4o-mini,gpt-4o
         type: string
@@ -217,15 +231,18 @@ definitions:
       priority:
         example: 0
         type: integer
+      protocol:
+        example: openai
+        type: string
       status:
         example: 1
         type: integer
       system_prompt:
         example: ""
         type: string
-      type:
-        example: 50
-        type: integer
+      test_model:
+        example: gpt-4o-mini
+        type: string
       weight:
         example: 0
         type: integer
@@ -1446,14 +1463,14 @@ definitions:
       quota:
         example: 123
         type: integer
-      trace_id:
-        example: trace_123
-        type: string
       system_prompt_reset:
         example: false
         type: boolean
       token_name:
         example: default
+        type: string
+      trace_id:
+        example: trace_123
         type: string
       type:
         example: 2
@@ -1778,7 +1795,7 @@ paths:
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
@@ -1801,7 +1818,7 @@ paths:
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:
@@ -1981,7 +1998,7 @@ paths:
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       - description: Model name
         in: query
         name: model
@@ -2054,7 +2071,7 @@ paths:
         in: path
         name: id
         required: true
-        type: integer
+        type: string
       produces:
       - application/json
       responses:

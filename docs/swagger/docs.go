@@ -410,7 +410,7 @@ const docTemplate = `{
                 "summary": "Test channel (admin)",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Channel ID",
                         "name": "id",
                         "in": "path",
@@ -529,7 +529,7 @@ const docTemplate = `{
                 "summary": "Update channel balance (admin)",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Channel ID",
                         "name": "id",
                         "in": "path",
@@ -568,7 +568,7 @@ const docTemplate = `{
                 "summary": "Get channel by ID (admin)",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Channel ID",
                         "name": "id",
                         "in": "path",
@@ -605,7 +605,7 @@ const docTemplate = `{
                 "summary": "Delete channel (admin)",
                 "parameters": [
                     {
-                        "type": "integer",
+                        "type": "string",
                         "description": "Channel ID",
                         "name": "id",
                         "in": "path",
@@ -4956,31 +4956,21 @@ const docTemplate = `{
             "properties": {
                 "base_url": {
                     "type": "string",
-                    "example": "https://api.openai.com"
-                },
-                "completion_ratio": {
-                    "type": "string",
-                    "example": "{}"
+                    "example": "https://api.openai.com/v1"
                 },
                 "config": {
                     "type": "string",
                     "example": "{}"
                 },
-                "group": {
-                    "type": "string",
-                    "example": "default"
-                },
                 "key": {
                     "type": "string",
                     "example": "sk-***"
                 },
-                "model_mapping": {
-                    "type": "string",
-                    "example": "{}"
-                },
-                "model_ratio": {
-                    "type": "string",
-                    "example": "{}"
+                "model_configs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/docs.ChannelModelConfigRequest"
+                    }
                 },
                 "models": {
                     "type": "string",
@@ -4994,6 +4984,10 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 0
                 },
+                "protocol": {
+                    "type": "string",
+                    "example": "openai"
+                },
                 "status": {
                     "type": "integer",
                     "example": 1
@@ -5002,13 +4996,50 @@ const docTemplate = `{
                     "type": "string",
                     "example": ""
                 },
-                "type": {
-                    "type": "integer",
-                    "example": 50
+                "test_model": {
+                    "type": "string",
+                    "example": "gpt-4o-mini"
                 },
                 "weight": {
                     "type": "integer",
                     "example": 0
+                }
+            }
+        },
+        "docs.ChannelModelConfigRequest": {
+            "type": "object",
+            "properties": {
+                "currency": {
+                    "type": "string",
+                    "example": "USD"
+                },
+                "input_price": {
+                    "type": "number",
+                    "example": 0.000001
+                },
+                "model": {
+                    "type": "string",
+                    "example": "gpt-4o-mini"
+                },
+                "output_price": {
+                    "type": "number",
+                    "example": 0.000002
+                },
+                "price_unit": {
+                    "type": "string",
+                    "example": "usd_per_token"
+                },
+                "selected": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "sort_order": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "upstream_model": {
+                    "type": "string",
+                    "example": "gpt-4o-mini"
                 }
             }
         },
@@ -5121,35 +5152,25 @@ const docTemplate = `{
             "properties": {
                 "base_url": {
                     "type": "string",
-                    "example": "https://api.openai.com"
-                },
-                "completion_ratio": {
-                    "type": "string",
-                    "example": "{}"
+                    "example": "https://api.openai.com/v1"
                 },
                 "config": {
                     "type": "string",
                     "example": "{}"
                 },
-                "group": {
-                    "type": "string",
-                    "example": "default"
-                },
                 "id": {
-                    "type": "integer",
-                    "example": 1
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
                 "key": {
                     "type": "string",
                     "example": "sk-***"
                 },
-                "model_mapping": {
-                    "type": "string",
-                    "example": "{}"
-                },
-                "model_ratio": {
-                    "type": "string",
-                    "example": "{}"
+                "model_configs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/docs.ChannelModelConfigRequest"
+                    }
                 },
                 "models": {
                     "type": "string",
@@ -5163,6 +5184,10 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 0
                 },
+                "protocol": {
+                    "type": "string",
+                    "example": "openai"
+                },
                 "status": {
                     "type": "integer",
                     "example": 1
@@ -5171,9 +5196,9 @@ const docTemplate = `{
                     "type": "string",
                     "example": ""
                 },
-                "type": {
-                    "type": "integer",
-                    "example": 50
+                "test_model": {
+                    "type": "string",
+                    "example": "gpt-4o-mini"
                 },
                 "weight": {
                     "type": "integer",
@@ -6908,10 +6933,6 @@ const docTemplate = `{
                     "type": "integer",
                     "example": 123
                 },
-                "trace_id": {
-                    "type": "string",
-                    "example": "trace_123"
-                },
                 "system_prompt_reset": {
                     "type": "boolean",
                     "example": false
@@ -6919,6 +6940,10 @@ const docTemplate = `{
                 "token_name": {
                     "type": "string",
                     "example": "default"
+                },
+                "trace_id": {
+                    "type": "string",
+                    "example": "trace_123"
                 },
                 "type": {
                     "type": "integer",

@@ -83,12 +83,25 @@ const parseJSONObject = (value) => {
   }
 };
 
-const normalizeRatioValue = (value) => {
-  const ratio = Number(value);
-  if (!Number.isFinite(ratio) || ratio <= 0) {
-    return 1;
+const normalizePriceOverrideValue = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return null;
   }
-  return ratio;
+  const price = Number(value);
+  if (!Number.isFinite(price) || price < 0) {
+    return null;
+  }
+  return price;
+};
+
+const normalizePriceUnitValue = (value) => {
+  const normalized = (value || '').toString().trim().toLowerCase();
+  return normalized || 'per_1k_tokens';
+};
+
+const normalizeCurrencyValue = (value) => {
+  const normalized = (value || '').toString().trim().toUpperCase();
+  return normalized || 'USD';
 };
 
 const normalizeChannelModelConfigRow = (row) => {
@@ -115,8 +128,10 @@ const normalizeChannelModelConfigRow = (row) => {
     model,
     upstream_model: upstreamModel || model,
     selected: row.selected !== false,
-    model_ratio: normalizeRatioValue(row.model_ratio),
-    completion_ratio: normalizeRatioValue(row.completion_ratio),
+    input_price: normalizePriceOverrideValue(row.input_price),
+    output_price: normalizePriceOverrideValue(row.output_price),
+    price_unit: normalizePriceUnitValue(row.price_unit),
+    currency: normalizeCurrencyValue(row.currency),
   };
 };
 
@@ -145,8 +160,10 @@ const buildModelConfigsFromLegacyFields = ({
   availableModels,
   selectedModels,
   modelMapping,
-  modelRatio,
-  completionRatio,
+  inputPrice,
+  outputPrice,
+  priceUnit,
+  currency,
 }) => {
   const normalizedConfigs = normalizeChannelModelConfigs(modelConfigs);
   if (normalizedConfigs.length > 0) {
@@ -169,16 +186,20 @@ const buildModelConfigsFromLegacyFields = ({
     normalizeModelIDs(Array.isArray(selectedModels) ? selectedModels : []),
   );
   const modelMappingMap = parseJSONObject(modelMapping);
-  const modelRatioMap = parseJSONObject(modelRatio);
-  const completionRatioMap = parseJSONObject(completionRatio);
+  const inputPriceMap = parseJSONObject(inputPrice);
+  const outputPriceMap = parseJSONObject(outputPrice);
+  const priceUnitMap = parseJSONObject(priceUnit);
+  const currencyMap = parseJSONObject(currency);
 
   return orderedModels.map((modelId) => ({
     model: modelId,
     upstream_model:
       (modelMappingMap[modelId] || '').toString().trim() || modelId,
     selected: selectedSet.has(modelId),
-    model_ratio: normalizeRatioValue(modelRatioMap[modelId]),
-    completion_ratio: normalizeRatioValue(completionRatioMap[modelId]),
+    input_price: normalizePriceOverrideValue(inputPriceMap[modelId]),
+    output_price: normalizePriceOverrideValue(outputPriceMap[modelId]),
+    price_unit: normalizePriceUnitValue(priceUnitMap[modelId]),
+    currency: normalizeCurrencyValue(currencyMap[modelId]),
   }));
 };
 
@@ -228,8 +249,10 @@ const buildFetchedModelConfigs = (
       model: modelId,
       upstream_model: modelId,
       selected: selectAll,
-      model_ratio: 1,
-      completion_ratio: 1,
+      input_price: null,
+      output_price: null,
+      price_unit: 'per_1k_tokens',
+      currency: 'USD',
     };
   });
 };
@@ -262,10 +285,10 @@ const validateModelConfigs = (modelConfigs, t) => {
       return t('channel.edit.messages.model_config_invalid');
     }
     seen.add(alias);
-    if (normalizeRatioValue(row?.model_ratio) <= 0) {
+    if (row?.input_price !== null && normalizePriceOverrideValue(row?.input_price) === null) {
       return t('channel.edit.messages.model_config_invalid');
     }
-    if (normalizeRatioValue(row?.completion_ratio) <= 0) {
+    if (row?.output_price !== null && normalizePriceOverrideValue(row?.output_price) === null) {
       return t('channel.edit.messages.model_config_invalid');
     }
   }
@@ -915,8 +938,10 @@ const EditChannel = () => {
               availableModels.length > 0 ? availableModels : selectedModels,
             selectedModels,
             modelMapping: data.model_mapping || '',
-            modelRatio: data.model_ratio || '',
-            completionRatio: data.completion_ratio || '',
+            inputPrice: data.input_price || '',
+            outputPrice: data.output_price || '',
+            priceUnit: data.price_unit || '',
+            currency: data.currency || '',
           }),
         );
         const loadedCapabilitySignature = buildChannelCapabilitySignature({
@@ -1192,10 +1217,10 @@ const EditChannel = () => {
                 model: targetAlias,
               };
             }
-            if (field === 'model_ratio' || field === 'completion_ratio') {
+            if (field === 'input_price' || field === 'output_price') {
               return {
                 ...row,
-                [field]: normalizeRatioValue(value),
+                [field]: normalizePriceOverrideValue(value),
               };
             }
             return {
@@ -1855,19 +1880,20 @@ const EditChannel = () => {
                         {t('channel.edit.model_selector.table.alias')}
                       </Table.HeaderCell>
                       <Table.HeaderCell width={3}>
-                        {t('channel.edit.model_selector.table.model_ratio')}
+                        {t('channel.edit.model_selector.table.price_unit')}
                       </Table.HeaderCell>
                       <Table.HeaderCell width={3}>
-                        {t(
-                          'channel.edit.model_selector.table.completion_ratio',
-                        )}
+                        {t('channel.edit.model_selector.table.input_price')}
+                      </Table.HeaderCell>
+                      <Table.HeaderCell width={3}>
+                        {t('channel.edit.model_selector.table.output_price')}
                       </Table.HeaderCell>
                     </Table.Row>
                   </Table.Header>
                   <Table.Body>
                     {visibleModelConfigs.length === 0 ? (
                       <Table.Row>
-                        <Table.Cell colSpan='5'>
+                        <Table.Cell colSpan='6'>
                           {t('channel.edit.model_selector.empty')}
                         </Table.Cell>
                       </Table.Row>
@@ -1907,18 +1933,30 @@ const EditChannel = () => {
                           </Table.Cell>
                           <Table.Cell>
                             {isDetailMode ? (
-                              row.model_ratio
+                              row.price_unit
+                            ) : (
+                              <Form.Input
+                                transparent
+                                readOnly
+                                value={row.price_unit}
+                              />
+                            )}
+                          </Table.Cell>
+                          <Table.Cell>
+                            {isDetailMode ? (
+                              row.input_price ?? '-'
                             ) : (
                               <Form.Input
                                 type='number'
-                                min='0.000001'
+                                min='0'
                                 step='0.01'
                                 transparent
-                                value={row.model_ratio}
+                                placeholder='-'
+                                value={row.input_price ?? ''}
                                 onChange={(e, { value }) =>
                                   updateModelConfigField(
                                     row.upstream_model,
-                                    'model_ratio',
+                                    'input_price',
                                     value,
                                   )
                                 }
@@ -1927,18 +1965,19 @@ const EditChannel = () => {
                           </Table.Cell>
                           <Table.Cell>
                             {isDetailMode ? (
-                              row.completion_ratio
+                              row.output_price ?? '-'
                             ) : (
                               <Form.Input
                                 type='number'
-                                min='0.000001'
+                                min='0'
                                 step='0.01'
                                 transparent
-                                value={row.completion_ratio}
+                                placeholder='-'
+                                value={row.output_price ?? ''}
                                 onChange={(e, { value }) =>
                                   updateModelConfigField(
                                     row.upstream_model,
-                                    'completion_ratio',
+                                    'output_price',
                                     value,
                                   )
                                 }

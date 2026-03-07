@@ -55,6 +55,27 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return finalizeChannelModelConfigsWithDB(tx)
 			},
 		},
+		{
+			Version:     "202603071530_group_billing_ratio_v1",
+			Description: "add billing_ratio to groups and backfill from legacy GroupRatio option",
+			Up: func(tx *gorm.DB) error {
+				return migrateGroupBillingRatioWithDB(tx)
+			},
+		},
+		{
+			Version:     "202603071700_channel_model_price_overrides_v1",
+			Description: "convert channel model ratios to explicit price override fields",
+			Up: func(tx *gorm.DB) error {
+				return migrateChannelModelPriceOverridesWithDB(tx)
+			},
+		},
+		{
+			Version:     "202603071830_drop_legacy_pricing_options_v1",
+			Description: "drop deprecated ModelRatio, CompletionRatio and GroupRatio options",
+			Up: func(tx *gorm.DB) error {
+				return dropLegacyPricingOptionsWithDB(tx)
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }

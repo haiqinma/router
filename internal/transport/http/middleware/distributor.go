@@ -95,8 +95,7 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	if channel.SystemPrompt != nil && *channel.SystemPrompt != "" {
 		c.Set(ctxkey.SystemPrompt, *channel.SystemPrompt)
 	}
-	c.Set(ctxkey.ModelRatio, channel.GetChannelModelRatioJSON())
-	c.Set(ctxkey.CompletionRatio, channel.GetChannelCompletionRatioJSON())
+	c.Set(ctxkey.ChannelModelConfigs, channel.GetSelectedModelConfigs())
 	c.Set(ctxkey.ModelMapping, channel.GetModelMapping())
 	c.Set(ctxkey.OriginalModel, modelName) // for retry
 	c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.Key))

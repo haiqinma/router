@@ -1,0 +1,5480 @@
+[
+  {
+    "Provider": "01-ai",
+    "Name": "01-ai",
+    "BaseURL": "",
+    "SortOrder": 10,
+    "ModelDetails": [
+      {
+        "model": "01-ai/yi-large",
+        "type": "text",
+        "input_price": 0.003,
+        "output_price": 0.003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "aetherwiing",
+    "Name": "Aetherwiing",
+    "BaseURL": "",
+    "SortOrder": 20,
+    "ModelDetails": [
+      {
+        "model": "aetherwiing/mn-starcannon-12b",
+        "type": "text",
+        "input_price": 0.0012,
+        "output_price": 0.0012,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "ai21",
+    "Name": "Ai21",
+    "BaseURL": "",
+    "SortOrder": 30,
+    "ModelDetails": [
+      {
+        "model": "ai21/jamba-1-5-large",
+        "type": "text",
+        "input_price": 0.008,
+        "output_price": 0.008,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "ai21/jamba-1-5-mini",
+        "type": "text",
+        "input_price": 0.0004,
+        "output_price": 0.0004,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "ai21/jamba-instruct",
+        "type": "text",
+        "input_price": 0.0007,
+        "output_price": 0.0007,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "aion-labs",
+    "Name": "Aion-labs",
+    "BaseURL": "",
+    "SortOrder": 40,
+    "ModelDetails": [
+      {
+        "model": "aion-labs/aion-1.0",
+        "type": "text",
+        "input_price": 0.012,
+        "output_price": 0.012,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "aion-labs/aion-1.0-mini",
+        "type": "text",
+        "input_price": 0.0024,
+        "output_price": 0.0024,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "aion-labs/aion-rp-llama-3.1-8b",
+        "type": "text",
+        "input_price": 0.0002,
+        "output_price": 0.0002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "allenai",
+    "Name": "Allenai",
+    "BaseURL": "",
+    "SortOrder": 50,
+    "ModelDetails": [
+      {
+        "model": "allenai/llama-3.1-tulu-3-405b",
+        "type": "text",
+        "input_price": 0.01,
+        "output_price": 0.01,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "alpindale",
+    "Name": "Alpindale",
+    "BaseURL": "",
+    "SortOrder": 60,
+    "ModelDetails": [
+      {
+        "model": "alpindale/goliath-120b",
+        "type": "text",
+        "input_price": 0.009375,
+        "output_price": 0.009375,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "alpindale/magnum-72b",
+        "type": "text",
+        "input_price": 0.00225,
+        "output_price": 0.00225,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "amazon",
+    "Name": "Amazon",
+    "BaseURL": "",
+    "SortOrder": 70,
+    "ModelDetails": [
+      {
+        "model": "amazon/nova-lite-v1",
+        "type": "text",
+        "input_price": 0.00023999999999999998,
+        "output_price": 0.00023999999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "amazon/nova-micro-v1",
+        "type": "text",
+        "input_price": 0.00014000000000000001,
+        "output_price": 0.00014000000000000001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "amazon/nova-pro-v1",
+        "type": "text",
+        "input_price": 0.0032,
+        "output_price": 0.0032,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "anthracite-org",
+    "Name": "Anthracite-org",
+    "BaseURL": "",
+    "SortOrder": 80,
+    "ModelDetails": [
+      {
+        "model": "anthracite-org/magnum-v2-72b",
+        "type": "text",
+        "input_price": 0.003,
+        "output_price": 0.003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthracite-org/magnum-v4-72b",
+        "type": "text",
+        "input_price": 0.00225,
+        "output_price": 0.00225,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "anthropic",
+    "Name": "Anthropic",
+    "BaseURL": "https://api.anthropic.com",
+    "SortOrder": 90,
+    "ModelDetails": [
+      {
+        "model": "anthropic/claude-2",
+        "type": "text",
+        "input_price": 0.024,
+        "output_price": 0.024,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthropic/claude-2.0",
+        "type": "text",
+        "input_price": 0.024,
+        "output_price": 0.024,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthropic/claude-2.0:beta",
+        "type": "text",
+        "input_price": 0.024,
+        "output_price": 0.024,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthropic/claude-2.1",
+        "type": "text",
+        "input_price": 0.024,
+        "output_price": 0.024,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthropic/claude-2.1:beta",
+        "type": "text",
+        "input_price": 0.024,
+        "output_price": 0.024,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthropic/claude-2:beta",
+        "type": "text",
+        "input_price": 0.024,
+        "output_price": 0.024,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthropic/claude-3-haiku",
+        "type": "text",
+        "input_price": 0.00125,
+        "output_price": 0.00125,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthropic/claude-3-haiku:beta",
+        "type": "text",
+        "input_price": 0.00125,
+        "output_price": 0.00125,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthropic/claude-3-opus",
+        "type": "text",
+        "input_price": 0.075,
+        "output_price": 0.075,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthropic/claude-3-opus:beta",
+        "type": "text",
+        "input_price": 0.075,
+        "output_price": 0.075,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthropic/claude-3-sonnet",
+        "type": "text",
+        "input_price": 0.015,
+        "output_price": 0.015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthropic/claude-3-sonnet:beta",
+        "type": "text",
+        "input_price": 0.015,
+        "output_price": 0.015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthropic/claude-3.5-haiku",
+        "type": "text",
+        "input_price": 0.004,
+        "output_price": 0.004,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthropic/claude-3.5-haiku-20241022",
+        "type": "text",
+        "input_price": 0.004,
+        "output_price": 0.004,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthropic/claude-3.5-haiku-20241022:beta",
+        "type": "text",
+        "input_price": 0.004,
+        "output_price": 0.004,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthropic/claude-3.5-haiku:beta",
+        "type": "text",
+        "input_price": 0.004,
+        "output_price": 0.004,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthropic/claude-3.5-sonnet",
+        "type": "text",
+        "input_price": 0.015,
+        "output_price": 0.015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthropic/claude-3.5-sonnet-20240620",
+        "type": "text",
+        "input_price": 0.015,
+        "output_price": 0.015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthropic/claude-3.5-sonnet-20240620:beta",
+        "type": "text",
+        "input_price": 0.015,
+        "output_price": 0.015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "anthropic/claude-3.5-sonnet:beta",
+        "type": "text",
+        "input_price": 0.015,
+        "output_price": 0.015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "claude-2.0",
+        "type": "text",
+        "input_price": 0.008,
+        "output_price": 0.024,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "claude-2.1",
+        "type": "text",
+        "input_price": 0.008,
+        "output_price": 0.024,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "claude-3-5-haiku-20241022",
+        "type": "text",
+        "input_price": 0.001,
+        "output_price": 0.005,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "claude-3-5-haiku-latest",
+        "type": "text",
+        "input_price": 0.001,
+        "output_price": 0.005,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "claude-3-5-sonnet-20240620",
+        "type": "text",
+        "input_price": 0.003,
+        "output_price": 0.015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "claude-3-5-sonnet-20241022",
+        "type": "text",
+        "input_price": 0.003,
+        "output_price": 0.015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "claude-3-5-sonnet-latest",
+        "type": "text",
+        "input_price": 0.003,
+        "output_price": 0.015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "claude-3-haiku-20240307",
+        "type": "text",
+        "input_price": 0.00025,
+        "output_price": 0.00125,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "claude-3-opus-20240229",
+        "type": "text",
+        "input_price": 0.015,
+        "output_price": 0.075,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "claude-3-sonnet-20240229",
+        "type": "text",
+        "input_price": 0.003,
+        "output_price": 0.015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "claude-instant-1.2",
+        "type": "text",
+        "input_price": 0.0008,
+        "output_price": 0.0024000000000000002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "awsclaude",
+    "Name": "Awsclaude",
+    "BaseURL": "",
+    "SortOrder": 100,
+    "ModelDetails": [
+      {
+        "model": "llama3-70b-8192",
+        "type": "text",
+        "input_price": 0.00265,
+        "output_price": 0.0034999999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "llama3-8b-8192",
+        "type": "text",
+        "input_price": 0.0003,
+        "output_price": 0.0006,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "baidu",
+    "Name": "Baidu",
+    "BaseURL": "https://aip.baidubce.com",
+    "SortOrder": 110,
+    "ModelDetails": [
+      {
+        "model": "ERNIE-3.5-4K-0205",
+        "type": "text",
+        "input_price": 0.001704,
+        "output_price": 0.001704,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "ERNIE-3.5-8K",
+        "type": "text",
+        "input_price": 0.001704,
+        "output_price": 0.001704,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "ERNIE-3.5-8K-0205",
+        "type": "text",
+        "input_price": 0.003408,
+        "output_price": 0.003408,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "ERNIE-3.5-8K-1222",
+        "type": "text",
+        "input_price": 0.001704,
+        "output_price": 0.001704,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "ERNIE-4.0-8K",
+        "type": "text",
+        "input_price": 0.01704,
+        "output_price": 0.01704,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "ERNIE-Bot-8K",
+        "type": "text",
+        "input_price": 0.003408,
+        "output_price": 0.003408,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "ERNIE-Lite-8K-0308",
+        "type": "text",
+        "input_price": 0.000426,
+        "output_price": 0.000426,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "ERNIE-Lite-8K-0922",
+        "type": "text",
+        "input_price": 0.0011359999999999999,
+        "output_price": 0.0011359999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "ERNIE-Speed-128K",
+        "type": "text",
+        "input_price": 0.0005679999999999999,
+        "output_price": 0.0005679999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "ERNIE-Speed-8K",
+        "type": "text",
+        "input_price": 0.0005679999999999999,
+        "output_price": 0.0005679999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "ERNIE-Tiny-8K",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "black-forest-labs",
+    "Name": "Black-forest-labs",
+    "BaseURL": "",
+    "SortOrder": 120,
+    "ModelDetails": [
+      {
+        "model": "black-forest-labs/flux-1.1-pro",
+        "type": "image",
+        "input_price": 0.04,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "black-forest-labs/flux-1.1-pro-ultra",
+        "type": "image",
+        "input_price": 0.06,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "black-forest-labs/flux-canny-dev",
+        "type": "image",
+        "input_price": 0.025,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "black-forest-labs/flux-canny-pro",
+        "type": "image",
+        "input_price": 0.05,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "black-forest-labs/flux-depth-dev",
+        "type": "image",
+        "input_price": 0.025,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "black-forest-labs/flux-depth-pro",
+        "type": "image",
+        "input_price": 0.05,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "black-forest-labs/flux-dev",
+        "type": "image",
+        "input_price": 0.025,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "black-forest-labs/flux-dev-lora",
+        "type": "image",
+        "input_price": 0.032,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "black-forest-labs/flux-fill-dev",
+        "type": "image",
+        "input_price": 0.04,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "black-forest-labs/flux-fill-pro",
+        "type": "image",
+        "input_price": 0.05,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "black-forest-labs/flux-pro",
+        "type": "image",
+        "input_price": 0.055,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "black-forest-labs/flux-redux-dev",
+        "type": "image",
+        "input_price": 0.025,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "black-forest-labs/flux-redux-schnell",
+        "type": "image",
+        "input_price": 0.003,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "black-forest-labs/flux-schnell",
+        "type": "image",
+        "input_price": 0.003,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "black-forest-labs/flux-schnell-lora",
+        "type": "image",
+        "input_price": 0.02,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "cognitivecomputations",
+    "Name": "Cognitivecomputations",
+    "BaseURL": "",
+    "SortOrder": 130,
+    "ModelDetails": [
+      {
+        "model": "cognitivecomputations/dolphin-mixtral-8x22b",
+        "type": "text",
+        "input_price": 0.0009,
+        "output_price": 0.0009,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "cognitivecomputations/dolphin-mixtral-8x7b",
+        "type": "text",
+        "input_price": 0.0005,
+        "output_price": 0.0005,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "cohere",
+    "Name": "Cohere",
+    "BaseURL": "https://api.cohere.com/compatibility/v1",
+    "SortOrder": 140,
+    "ModelDetails": [
+      {
+        "model": "cohere/command",
+        "type": "text",
+        "input_price": 0.0019,
+        "output_price": 0.0019,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "cohere/command-r",
+        "type": "text",
+        "input_price": 0.001425,
+        "output_price": 0.001425,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "cohere/command-r-03-2024",
+        "type": "text",
+        "input_price": 0.001425,
+        "output_price": 0.001425,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "cohere/command-r-08-2024",
+        "type": "text",
+        "input_price": 0.00057,
+        "output_price": 0.00057,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "cohere/command-r-plus",
+        "type": "text",
+        "input_price": 0.01425,
+        "output_price": 0.01425,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "cohere/command-r-plus-04-2024",
+        "type": "text",
+        "input_price": 0.01425,
+        "output_price": 0.01425,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "cohere/command-r-plus-08-2024",
+        "type": "text",
+        "input_price": 0.0095,
+        "output_price": 0.0095,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "cohere/command-r7b-12-2024",
+        "type": "text",
+        "input_price": 0.00015,
+        "output_price": 0.00015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "command-r",
+        "type": "text",
+        "input_price": 0.0005,
+        "output_price": 0.0015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "command-r-plus",
+        "type": "text",
+        "input_price": 0.003,
+        "output_price": 0.015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "databricks",
+    "Name": "Databricks",
+    "BaseURL": "",
+    "SortOrder": 150,
+    "ModelDetails": [
+      {
+        "model": "databricks/dbrx-instruct",
+        "type": "text",
+        "input_price": 0.0012,
+        "output_price": 0.0012,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "deepseek",
+    "Name": "DeepSeek",
+    "BaseURL": "https://api.deepseek.com",
+    "SortOrder": 160,
+    "ModelDetails": [
+      {
+        "model": "deepseek-chat",
+        "type": "text",
+        "input_price": 0.00014000000000000001,
+        "output_price": 0.00028000000000000003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek-r1",
+        "type": "text",
+        "input_price": 0.00028399999999999996,
+        "output_price": 0.0005679999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek-r1-distill-llama-70b",
+        "type": "text",
+        "input_price": 0.0005679999999999999,
+        "output_price": 0.0011359999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek-r1-distill-llama-8b",
+        "type": "text",
+        "input_price": 0.00007099999999999999,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek-r1-distill-qwen-1.5b",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek-r1-distill-qwen-14b",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek-r1-distill-qwen-32b",
+        "type": "text",
+        "input_price": 0.00028399999999999996,
+        "output_price": 0.0005679999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek-r1-distill-qwen-7b",
+        "type": "text",
+        "input_price": 0.00007099999999999999,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek-reasoner",
+        "type": "text",
+        "input_price": 0.00055,
+        "output_price": 0.00219,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek-v3",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek/deepseek-chat",
+        "type": "text",
+        "input_price": 0.0008900000000000001,
+        "output_price": 0.0008900000000000001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek/deepseek-chat-v2.5",
+        "type": "text",
+        "input_price": 0.002,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek/deepseek-chat:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek/deepseek-r1",
+        "type": "text",
+        "input_price": 0.0024,
+        "output_price": 0.0024,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek/deepseek-r1-distill-llama-70b",
+        "type": "text",
+        "input_price": 0.00069,
+        "output_price": 0.00069,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek/deepseek-r1-distill-llama-70b:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek/deepseek-r1-distill-llama-8b",
+        "type": "text",
+        "input_price": 0.00004,
+        "output_price": 0.00004,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek/deepseek-r1-distill-qwen-1.5b",
+        "type": "text",
+        "input_price": 0.00017999999999999998,
+        "output_price": 0.00017999999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek/deepseek-r1-distill-qwen-14b",
+        "type": "text",
+        "input_price": 0.00015,
+        "output_price": 0.00015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek/deepseek-r1-distill-qwen-32b",
+        "type": "text",
+        "input_price": 0.00017999999999999998,
+        "output_price": 0.00017999999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepseek/deepseek-r1:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "eva-unit-01",
+    "Name": "Eva-unit-01",
+    "BaseURL": "",
+    "SortOrder": 170,
+    "ModelDetails": [
+      {
+        "model": "eva-unit-01/eva-llama-3.33-70b",
+        "type": "text",
+        "input_price": 0.006,
+        "output_price": 0.006,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "eva-unit-01/eva-qwen-2.5-32b",
+        "type": "text",
+        "input_price": 0.0034,
+        "output_price": 0.0034,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "eva-unit-01/eva-qwen-2.5-72b",
+        "type": "text",
+        "input_price": 0.006,
+        "output_price": 0.006,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "google",
+    "Name": "Google Gemini",
+    "BaseURL": "https://generativelanguage.googleapis.com/v1beta/openai",
+    "SortOrder": 180,
+    "ModelDetails": [
+      {
+        "model": "gemini-1.0-pro",
+        "type": "text",
+        "input_price": 0.000125,
+        "output_price": 0.000375,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gemini-1.5-flash",
+        "type": "text",
+        "input_price": 0.000075,
+        "output_price": 0.000225,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gemini-1.5-flash-001",
+        "type": "text",
+        "input_price": 0.000075,
+        "output_price": 0.000225,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gemini-1.5-flash-8b",
+        "type": "text",
+        "input_price": 0.0000375,
+        "output_price": 0.0001125,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gemini-1.5-pro",
+        "type": "text",
+        "input_price": 0.00125,
+        "output_price": 0.00375,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gemini-1.5-pro-001",
+        "type": "text",
+        "input_price": 0.00125,
+        "output_price": 0.00375,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gemini-1.5-pro-experimental",
+        "type": "text",
+        "input_price": 0.00125,
+        "output_price": 0.00375,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gemini-2.0-flash",
+        "type": "text",
+        "input_price": 0.00015,
+        "output_price": 0.00045,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gemini-2.0-flash-001",
+        "type": "text",
+        "input_price": 0.00015,
+        "output_price": 0.00045,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gemini-2.0-flash-exp",
+        "type": "text",
+        "input_price": 0.000075,
+        "output_price": 0.000225,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gemini-2.0-flash-lite-preview-02-05",
+        "type": "text",
+        "input_price": 0.000075,
+        "output_price": 0.000225,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gemini-2.0-flash-thinking-exp-01-21",
+        "type": "text",
+        "input_price": 0.000075,
+        "output_price": 0.000225,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gemini-2.0-pro-exp-02-05",
+        "type": "text",
+        "input_price": 0.00125,
+        "output_price": 0.00375,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gemini-pro",
+        "type": "text",
+        "input_price": 0.00025,
+        "output_price": 0.00075,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/gemini-2.0-flash-001",
+        "type": "text",
+        "input_price": 0.0004,
+        "output_price": 0.0004,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/gemini-2.0-flash-exp:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/gemini-2.0-flash-lite-preview-02-05:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/gemini-2.0-flash-thinking-exp-1219:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/gemini-2.0-flash-thinking-exp:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/gemini-2.0-pro-exp-02-05:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/gemini-exp-1206:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/gemini-flash-1.5",
+        "type": "text",
+        "input_price": 0.0003,
+        "output_price": 0.0003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/gemini-flash-1.5-8b",
+        "type": "text",
+        "input_price": 0.00015,
+        "output_price": 0.00015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/gemini-flash-1.5-8b-exp",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/gemini-pro",
+        "type": "text",
+        "input_price": 0.0015,
+        "output_price": 0.0015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/gemini-pro-1.5",
+        "type": "text",
+        "input_price": 0.005,
+        "output_price": 0.005,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/gemini-pro-vision",
+        "type": "text",
+        "input_price": 0.0015,
+        "output_price": 0.0015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/gemma-2-27b-it",
+        "type": "text",
+        "input_price": 0.00027,
+        "output_price": 0.00027,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/gemma-2-9b-it",
+        "type": "text",
+        "input_price": 0.000059999999999999995,
+        "output_price": 0.000059999999999999995,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/gemma-2-9b-it:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/gemma-7b-it",
+        "type": "text",
+        "input_price": 0.00015,
+        "output_price": 0.00015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/learnlm-1.5-pro-experimental:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/palm-2-chat-bison",
+        "type": "text",
+        "input_price": 0.002,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/palm-2-chat-bison-32k",
+        "type": "text",
+        "input_price": 0.002,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/palm-2-codechat-bison",
+        "type": "text",
+        "input_price": 0.002,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "google/palm-2-codechat-bison-32k",
+        "type": "text",
+        "input_price": 0.002,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "gryphe",
+    "Name": "Gryphe",
+    "BaseURL": "",
+    "SortOrder": 190,
+    "ModelDetails": [
+      {
+        "model": "gryphe/mythomax-l2-13b",
+        "type": "text",
+        "input_price": 0.00006500000000000001,
+        "output_price": 0.00006500000000000001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gryphe/mythomax-l2-13b:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "huggingfaceh4",
+    "Name": "Huggingfaceh4",
+    "BaseURL": "",
+    "SortOrder": 200,
+    "ModelDetails": [
+      {
+        "model": "huggingfaceh4/zephyr-7b-beta:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "hunyuan",
+    "Name": "Tencent Hunyuan",
+    "BaseURL": "https://api.hunyuan.cloud.tencent.com/v1",
+    "SortOrder": 210,
+    "ModelDetails": [
+      {
+        "model": "hunyuan-code",
+        "type": "text",
+        "input_price": 0.0005679999999999999,
+        "output_price": 0.0005679999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "hunyuan-embedding",
+        "type": "text",
+        "input_price": 0.0000994,
+        "output_price": 0.0000994,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "hunyuan-functioncall",
+        "type": "text",
+        "input_price": 0.0005679999999999999,
+        "output_price": 0.0005679999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "hunyuan-large",
+        "type": "text",
+        "input_price": 0.0005679999999999999,
+        "output_price": 0.0005679999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "hunyuan-large-longcontext",
+        "type": "text",
+        "input_price": 0.000852,
+        "output_price": 0.000852,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "hunyuan-role",
+        "type": "text",
+        "input_price": 0.0005679999999999999,
+        "output_price": 0.0005679999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "hunyuan-standard",
+        "type": "text",
+        "input_price": 0.00011360000000000001,
+        "output_price": 0.00011360000000000001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "hunyuan-standard-256K",
+        "type": "text",
+        "input_price": 0.00007099999999999999,
+        "output_price": 0.00007099999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "hunyuan-translation-lite",
+        "type": "text",
+        "input_price": 0.0007099999999999999,
+        "output_price": 0.0007099999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "hunyuan-turbo",
+        "type": "text",
+        "input_price": 0.00213,
+        "output_price": 0.00213,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "hunyuan-turbo-vision",
+        "type": "text",
+        "input_price": 0.011359999999999999,
+        "output_price": 0.011359999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "hunyuan-vision",
+        "type": "text",
+        "input_price": 0.002556,
+        "output_price": 0.002556,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "ibm-granite",
+    "Name": "Ibm-granite",
+    "BaseURL": "",
+    "SortOrder": 220,
+    "ModelDetails": [
+      {
+        "model": "ibm-granite/granite-20b-code-instruct-8k",
+        "type": "text",
+        "input_price": 0.1,
+        "output_price": 0.5,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "ibm-granite/granite-3.0-2b-instruct",
+        "type": "text",
+        "input_price": 0.03,
+        "output_price": 0.25,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "ibm-granite/granite-3.0-8b-instruct",
+        "type": "text",
+        "input_price": 0.05,
+        "output_price": 0.25,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "ibm-granite/granite-8b-code-instruct-128k",
+        "type": "text",
+        "input_price": 0.05,
+        "output_price": 0.25,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "ideogram-ai",
+    "Name": "Ideogram-ai",
+    "BaseURL": "",
+    "SortOrder": 230,
+    "ModelDetails": [
+      {
+        "model": "ideogram-ai/ideogram-v2",
+        "type": "text",
+        "input_price": 0.08,
+        "output_price": 0.08,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "ideogram-ai/ideogram-v2-turbo",
+        "type": "text",
+        "input_price": 0.05,
+        "output_price": 0.05,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "infermatic",
+    "Name": "Infermatic",
+    "BaseURL": "",
+    "SortOrder": 240,
+    "ModelDetails": [
+      {
+        "model": "infermatic/mn-inferor-12b",
+        "type": "text",
+        "input_price": 0.0012,
+        "output_price": 0.0012,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "inflection",
+    "Name": "Inflection",
+    "BaseURL": "",
+    "SortOrder": 250,
+    "ModelDetails": [
+      {
+        "model": "inflection/inflection-3-pi",
+        "type": "text",
+        "input_price": 0.01,
+        "output_price": 0.01,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "inflection/inflection-3-productivity",
+        "type": "text",
+        "input_price": 0.01,
+        "output_price": 0.01,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "jondurbin",
+    "Name": "Jondurbin",
+    "BaseURL": "",
+    "SortOrder": 260,
+    "ModelDetails": [
+      {
+        "model": "jondurbin/airoboros-l2-70b",
+        "type": "text",
+        "input_price": 0.0005,
+        "output_price": 0.0005,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "lingyiwanwu",
+    "Name": "Lingyiwanwu",
+    "BaseURL": "https://api.lingyiwanwu.com",
+    "SortOrder": 270,
+    "ModelDetails": [
+      {
+        "model": "yi-34b-chat-0205",
+        "type": "text",
+        "input_price": 0.00035499999999999996,
+        "output_price": 0.00035499999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "yi-34b-chat-200k",
+        "type": "text",
+        "input_price": 0.001704,
+        "output_price": 0.001704,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "yi-vl-plus",
+        "type": "text",
+        "input_price": 0.000852,
+        "output_price": 0.000852,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "liquid",
+    "Name": "Liquid",
+    "BaseURL": "",
+    "SortOrder": 280,
+    "ModelDetails": [
+      {
+        "model": "liquid/lfm-3b",
+        "type": "text",
+        "input_price": 0.00002,
+        "output_price": 0.00002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "liquid/lfm-40b",
+        "type": "text",
+        "input_price": 0.00015,
+        "output_price": 0.00015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "liquid/lfm-7b",
+        "type": "text",
+        "input_price": 0.00001,
+        "output_price": 0.00001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "mancer",
+    "Name": "Mancer",
+    "BaseURL": "",
+    "SortOrder": 290,
+    "ModelDetails": [
+      {
+        "model": "mancer/weaver",
+        "type": "text",
+        "input_price": 0.00225,
+        "output_price": 0.00225,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "meta",
+    "Name": "Meta",
+    "BaseURL": "",
+    "SortOrder": 300,
+    "ModelDetails": [
+      {
+        "model": "meta/llama-2-13b",
+        "type": "text",
+        "input_price": 0.1,
+        "output_price": 0.5,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta/llama-2-13b-chat",
+        "type": "text",
+        "input_price": 0.1,
+        "output_price": 0.5,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta/llama-2-70b",
+        "type": "text",
+        "input_price": 0.65,
+        "output_price": 2.75,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta/llama-2-70b-chat",
+        "type": "text",
+        "input_price": 0.65,
+        "output_price": 2.75,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta/llama-2-7b",
+        "type": "text",
+        "input_price": 0.05,
+        "output_price": 0.25,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta/llama-2-7b-chat",
+        "type": "text",
+        "input_price": 0.05,
+        "output_price": 0.25,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta/meta-llama-3-70b",
+        "type": "text",
+        "input_price": 0.65,
+        "output_price": 2.75,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta/meta-llama-3-70b-instruct",
+        "type": "text",
+        "input_price": 0.65,
+        "output_price": 2.75,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta/meta-llama-3-8b",
+        "type": "text",
+        "input_price": 0.05,
+        "output_price": 0.25,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta/meta-llama-3-8b-instruct",
+        "type": "text",
+        "input_price": 0.05,
+        "output_price": 0.25,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta/meta-llama-3.1-405b-instruct",
+        "type": "text",
+        "input_price": 9.5,
+        "output_price": 9.5,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "meta-llama",
+    "Name": "Meta-llama",
+    "BaseURL": "",
+    "SortOrder": 310,
+    "ModelDetails": [
+      {
+        "model": "meta-llama/llama-2-13b-chat",
+        "type": "text",
+        "input_price": 0.00022,
+        "output_price": 0.00022,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta-llama/llama-2-70b-chat",
+        "type": "text",
+        "input_price": 0.0009,
+        "output_price": 0.0009,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta-llama/llama-3-70b-instruct",
+        "type": "text",
+        "input_price": 0.0004,
+        "output_price": 0.0004,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta-llama/llama-3-8b-instruct",
+        "type": "text",
+        "input_price": 0.000059999999999999995,
+        "output_price": 0.000059999999999999995,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta-llama/llama-3-8b-instruct:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta-llama/llama-3.1-405b",
+        "type": "text",
+        "input_price": 0.002,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta-llama/llama-3.1-405b-instruct",
+        "type": "text",
+        "input_price": 0.0008,
+        "output_price": 0.0008,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta-llama/llama-3.1-70b-instruct",
+        "type": "text",
+        "input_price": 0.0003,
+        "output_price": 0.0003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta-llama/llama-3.1-8b-instruct",
+        "type": "text",
+        "input_price": 0.00005,
+        "output_price": 0.00005,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta-llama/llama-3.2-11b-vision-instruct",
+        "type": "text",
+        "input_price": 0.000055,
+        "output_price": 0.000055,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta-llama/llama-3.2-11b-vision-instruct:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta-llama/llama-3.2-1b-instruct",
+        "type": "text",
+        "input_price": 0.00001,
+        "output_price": 0.00001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta-llama/llama-3.2-3b-instruct",
+        "type": "text",
+        "input_price": 0.000025,
+        "output_price": 0.000025,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta-llama/llama-3.2-90b-vision-instruct",
+        "type": "text",
+        "input_price": 0.0016,
+        "output_price": 0.0016,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta-llama/llama-3.3-70b-instruct",
+        "type": "text",
+        "input_price": 0.0003,
+        "output_price": 0.0003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta-llama/llama-3.3-70b-instruct:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "meta-llama/llama-guard-2-8b",
+        "type": "text",
+        "input_price": 0.0002,
+        "output_price": 0.0002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "microsoft",
+    "Name": "Microsoft",
+    "BaseURL": "",
+    "SortOrder": 320,
+    "ModelDetails": [
+      {
+        "model": "microsoft/phi-3-medium-128k-instruct",
+        "type": "text",
+        "input_price": 0.001,
+        "output_price": 0.001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "microsoft/phi-3-medium-128k-instruct:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "microsoft/phi-3-mini-128k-instruct",
+        "type": "text",
+        "input_price": 0.0001,
+        "output_price": 0.0001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "microsoft/phi-3-mini-128k-instruct:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "microsoft/phi-3.5-mini-128k-instruct",
+        "type": "text",
+        "input_price": 0.0001,
+        "output_price": 0.0001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "microsoft/phi-4",
+        "type": "text",
+        "input_price": 0.00014000000000000001,
+        "output_price": 0.00014000000000000001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "microsoft/wizardlm-2-7b",
+        "type": "text",
+        "input_price": 0.00007000000000000001,
+        "output_price": 0.00007000000000000001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "microsoft/wizardlm-2-8x22b",
+        "type": "text",
+        "input_price": 0.0005,
+        "output_price": 0.0005,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "minimax",
+    "Name": "MiniMax",
+    "BaseURL": "https://api.minimax.chat/v1",
+    "SortOrder": 330,
+    "ModelDetails": [
+      {
+        "model": "abab5.5-chat",
+        "type": "text",
+        "input_price": 0.00213,
+        "output_price": 0.00213,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "abab5.5s-chat",
+        "type": "text",
+        "input_price": 0.0007099999999999999,
+        "output_price": 0.0007099999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "abab6-chat",
+        "type": "text",
+        "input_price": 0.014199999999999999,
+        "output_price": 0.014199999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "abab6.5-chat",
+        "type": "text",
+        "input_price": 0.00426,
+        "output_price": 0.00426,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "abab6.5s-chat",
+        "type": "text",
+        "input_price": 0.0014199999999999998,
+        "output_price": 0.0014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "minimax/minimax-01",
+        "type": "text",
+        "input_price": 0.0011,
+        "output_price": 0.0011,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "mistral",
+    "Name": "Mistral",
+    "BaseURL": "https://api.mistral.ai",
+    "SortOrder": 340,
+    "ModelDetails": [
+      {
+        "model": "mistral-embed",
+        "type": "text",
+        "input_price": 0.0001,
+        "output_price": 0.00030000000000000003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistral-large-latest",
+        "type": "text",
+        "input_price": 0.008,
+        "output_price": 0.024,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistral-medium-latest",
+        "type": "text",
+        "input_price": 0.0027,
+        "output_price": 0.0081,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistral-small-latest",
+        "type": "text",
+        "input_price": 0.002,
+        "output_price": 0.006,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "mistralai",
+    "Name": "Mistralai",
+    "BaseURL": "",
+    "SortOrder": 350,
+    "ModelDetails": [
+      {
+        "model": "mistralai/codestral-2501",
+        "type": "text",
+        "input_price": 0.0009,
+        "output_price": 0.0009,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/codestral-mamba",
+        "type": "text",
+        "input_price": 0.00025,
+        "output_price": 0.00025,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/ministral-3b",
+        "type": "text",
+        "input_price": 0.00004,
+        "output_price": 0.00004,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/ministral-8b",
+        "type": "text",
+        "input_price": 0.0001,
+        "output_price": 0.0001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mistral-7b-instruct",
+        "type": "text",
+        "input_price": 0.000055,
+        "output_price": 0.000055,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mistral-7b-instruct-v0.1",
+        "type": "text",
+        "input_price": 0.0002,
+        "output_price": 0.0002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mistral-7b-instruct-v0.2",
+        "type": "text",
+        "input_price": 0.05,
+        "output_price": 0.25,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mistral-7b-instruct-v0.3",
+        "type": "text",
+        "input_price": 0.000055,
+        "output_price": 0.000055,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mistral-7b-instruct:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mistral-7b-v0.1",
+        "type": "text",
+        "input_price": 0.05,
+        "output_price": 0.25,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mistral-large",
+        "type": "text",
+        "input_price": 0.006,
+        "output_price": 0.006,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mistral-large-2407",
+        "type": "text",
+        "input_price": 0.006,
+        "output_price": 0.006,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mistral-large-2411",
+        "type": "text",
+        "input_price": 0.006,
+        "output_price": 0.006,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mistral-medium",
+        "type": "text",
+        "input_price": 0.0081,
+        "output_price": 0.0081,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mistral-nemo",
+        "type": "text",
+        "input_price": 0.00008,
+        "output_price": 0.00008,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mistral-nemo:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mistral-small",
+        "type": "text",
+        "input_price": 0.0006,
+        "output_price": 0.0006,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mistral-small-24b-instruct-2501",
+        "type": "text",
+        "input_price": 0.00014000000000000001,
+        "output_price": 0.00014000000000000001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mistral-small-24b-instruct-2501:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mistral-tiny",
+        "type": "text",
+        "input_price": 0.00025,
+        "output_price": 0.00025,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mixtral-8x22b-instruct",
+        "type": "text",
+        "input_price": 0.0009,
+        "output_price": 0.0009,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mixtral-8x7b",
+        "type": "text",
+        "input_price": 0.0006,
+        "output_price": 0.0006,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mixtral-8x7b-instruct",
+        "type": "text",
+        "input_price": 0.00023999999999999998,
+        "output_price": 0.00023999999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/mixtral-8x7b-instruct-v0.1",
+        "type": "text",
+        "input_price": 0.3,
+        "output_price": 1,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/pixtral-12b",
+        "type": "text",
+        "input_price": 0.0001,
+        "output_price": 0.0001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mistralai/pixtral-large-2411",
+        "type": "text",
+        "input_price": 0.006,
+        "output_price": 0.006,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "moonshot",
+    "Name": "Moonshot",
+    "BaseURL": "https://api.moonshot.cn",
+    "SortOrder": 360,
+    "ModelDetails": [
+      {
+        "model": "moonshot-v1-128k",
+        "type": "text",
+        "input_price": 0.00852,
+        "output_price": 0.00852,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "moonshot-v1-32k",
+        "type": "text",
+        "input_price": 0.003408,
+        "output_price": 0.003408,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "moonshot-v1-8k",
+        "type": "text",
+        "input_price": 0.001704,
+        "output_price": 0.001704,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "neversleep",
+    "Name": "Neversleep",
+    "BaseURL": "",
+    "SortOrder": 370,
+    "ModelDetails": [
+      {
+        "model": "neversleep/llama-3-lumimaid-70b",
+        "type": "text",
+        "input_price": 0.0045,
+        "output_price": 0.0045,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "neversleep/llama-3-lumimaid-8b",
+        "type": "text",
+        "input_price": 0.001125,
+        "output_price": 0.001125,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "neversleep/llama-3-lumimaid-8b:extended",
+        "type": "text",
+        "input_price": 0.001125,
+        "output_price": 0.001125,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "neversleep/llama-3.1-lumimaid-70b",
+        "type": "text",
+        "input_price": 0.0045,
+        "output_price": 0.0045,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "neversleep/llama-3.1-lumimaid-8b",
+        "type": "text",
+        "input_price": 0.001125,
+        "output_price": 0.001125,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "neversleep/noromaid-20b",
+        "type": "text",
+        "input_price": 0.00225,
+        "output_price": 0.00225,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "nothingiisreal",
+    "Name": "Nothingiisreal",
+    "BaseURL": "",
+    "SortOrder": 380,
+    "ModelDetails": [
+      {
+        "model": "nothingiisreal/mn-celeste-12b",
+        "type": "text",
+        "input_price": 0.0012,
+        "output_price": 0.0012,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "nousresearch",
+    "Name": "Nousresearch",
+    "BaseURL": "",
+    "SortOrder": 390,
+    "ModelDetails": [
+      {
+        "model": "nousresearch/hermes-2-pro-llama-3-8b",
+        "type": "text",
+        "input_price": 0.00004,
+        "output_price": 0.00004,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "nousresearch/hermes-3-llama-3.1-405b",
+        "type": "text",
+        "input_price": 0.0008,
+        "output_price": 0.0008,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "nousresearch/hermes-3-llama-3.1-70b",
+        "type": "text",
+        "input_price": 0.0003,
+        "output_price": 0.0003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "nousresearch/nous-hermes-2-mixtral-8x7b-dpo",
+        "type": "text",
+        "input_price": 0.0006,
+        "output_price": 0.0006,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "nousresearch/nous-hermes-llama2-13b",
+        "type": "text",
+        "input_price": 0.00017,
+        "output_price": 0.00017,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "nvidia",
+    "Name": "Nvidia",
+    "BaseURL": "",
+    "SortOrder": 400,
+    "ModelDetails": [
+      {
+        "model": "nvidia/llama-3.1-nemotron-70b-instruct",
+        "type": "text",
+        "input_price": 0.0003,
+        "output_price": 0.0003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "nvidia/llama-3.1-nemotron-70b-instruct:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "openai",
+    "Name": "OpenAI",
+    "BaseURL": "https://api.openai.com",
+    "SortOrder": 410,
+    "ModelDetails": [
+      {
+        "model": "chatgpt-4o-latest",
+        "type": "text",
+        "input_price": 0.005,
+        "output_price": 0.015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-3.5-turbo",
+        "type": "text",
+        "input_price": 0.0005,
+        "output_price": 0.0015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-3.5-turbo-0125",
+        "type": "text",
+        "input_price": 0.0005,
+        "output_price": 0.0015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-3.5-turbo-0301",
+        "type": "text",
+        "input_price": 0.0015,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-3.5-turbo-0613",
+        "type": "text",
+        "input_price": 0.0015,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-3.5-turbo-1106",
+        "type": "text",
+        "input_price": 0.001,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-3.5-turbo-16k",
+        "type": "text",
+        "input_price": 0.003,
+        "output_price": 0.004,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-3.5-turbo-16k-0613",
+        "type": "text",
+        "input_price": 0.003,
+        "output_price": 0.004,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-3.5-turbo-instruct",
+        "type": "text",
+        "input_price": 0.0015,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-4",
+        "type": "text",
+        "input_price": 0.03,
+        "output_price": 0.06,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-4-0125-preview",
+        "type": "text",
+        "input_price": 0.01,
+        "output_price": 0.03,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-4-0314",
+        "type": "text",
+        "input_price": 0.03,
+        "output_price": 0.06,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-4-0613",
+        "type": "text",
+        "input_price": 0.03,
+        "output_price": 0.06,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-4-1106-preview",
+        "type": "text",
+        "input_price": 0.01,
+        "output_price": 0.03,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-4-32k",
+        "type": "text",
+        "input_price": 0.06,
+        "output_price": 0.12,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-4-32k-0314",
+        "type": "text",
+        "input_price": 0.06,
+        "output_price": 0.12,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-4-32k-0613",
+        "type": "text",
+        "input_price": 0.06,
+        "output_price": 0.12,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-4-turbo",
+        "type": "text",
+        "input_price": 0.01,
+        "output_price": 0.03,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-4-turbo-2024-04-09",
+        "type": "text",
+        "input_price": 0.01,
+        "output_price": 0.03,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-4-turbo-preview",
+        "type": "text",
+        "input_price": 0.01,
+        "output_price": 0.03,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-4-vision-preview",
+        "type": "text",
+        "input_price": 0.01,
+        "output_price": 0.03,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-4o",
+        "type": "text",
+        "input_price": 0.005,
+        "output_price": 0.02,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-4o-2024-05-13",
+        "type": "text",
+        "input_price": 0.005,
+        "output_price": 0.015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-4o-2024-08-06",
+        "type": "text",
+        "input_price": 0.0025,
+        "output_price": 0.01,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-4o-2024-11-20",
+        "type": "text",
+        "input_price": 0.0025,
+        "output_price": 0.01,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-4o-mini",
+        "type": "text",
+        "input_price": 0.00015,
+        "output_price": 0.0006,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gpt-4o-mini-2024-07-18",
+        "type": "text",
+        "input_price": 0.00015,
+        "output_price": 0.0006,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "o1",
+        "type": "text",
+        "input_price": 0.015,
+        "output_price": 0.06,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "o1-2024-12-17",
+        "type": "text",
+        "input_price": 0.015,
+        "output_price": 0.06,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "o1-mini",
+        "type": "text",
+        "input_price": 0.003,
+        "output_price": 0.012,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "o1-mini-2024-09-12",
+        "type": "text",
+        "input_price": 0.003,
+        "output_price": 0.012,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "o1-preview",
+        "type": "text",
+        "input_price": 0.015,
+        "output_price": 0.06,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "o1-preview-2024-09-12",
+        "type": "text",
+        "input_price": 0.015,
+        "output_price": 0.06,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "o3-mini",
+        "type": "text",
+        "input_price": 0.003,
+        "output_price": 0.003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "o3-mini-2025-01-31",
+        "type": "text",
+        "input_price": 0.003,
+        "output_price": 0.003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/chatgpt-4o-latest",
+        "type": "text",
+        "input_price": 0.015,
+        "output_price": 0.015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-3.5-turbo",
+        "type": "text",
+        "input_price": 0.0015,
+        "output_price": 0.0015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-3.5-turbo-0125",
+        "type": "text",
+        "input_price": 0.0015,
+        "output_price": 0.0015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-3.5-turbo-0613",
+        "type": "text",
+        "input_price": 0.002,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-3.5-turbo-1106",
+        "type": "text",
+        "input_price": 0.002,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-3.5-turbo-16k",
+        "type": "text",
+        "input_price": 0.004,
+        "output_price": 0.004,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-3.5-turbo-instruct",
+        "type": "text",
+        "input_price": 0.002,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-4",
+        "type": "text",
+        "input_price": 0.06,
+        "output_price": 0.06,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-4-0314",
+        "type": "text",
+        "input_price": 0.06,
+        "output_price": 0.06,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-4-1106-preview",
+        "type": "text",
+        "input_price": 0.03,
+        "output_price": 0.03,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-4-32k",
+        "type": "text",
+        "input_price": 0.12,
+        "output_price": 0.12,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-4-32k-0314",
+        "type": "text",
+        "input_price": 0.12,
+        "output_price": 0.12,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-4-turbo",
+        "type": "text",
+        "input_price": 0.03,
+        "output_price": 0.03,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-4-turbo-preview",
+        "type": "text",
+        "input_price": 0.03,
+        "output_price": 0.03,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-4o",
+        "type": "text",
+        "input_price": 0.01,
+        "output_price": 0.01,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-4o-2024-05-13",
+        "type": "text",
+        "input_price": 0.015,
+        "output_price": 0.015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-4o-2024-08-06",
+        "type": "text",
+        "input_price": 0.01,
+        "output_price": 0.01,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-4o-2024-11-20",
+        "type": "text",
+        "input_price": 0.01,
+        "output_price": 0.01,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-4o-mini",
+        "type": "text",
+        "input_price": 0.0006,
+        "output_price": 0.0006,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-4o-mini-2024-07-18",
+        "type": "text",
+        "input_price": 0.0006,
+        "output_price": 0.0006,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/gpt-4o:extended",
+        "type": "text",
+        "input_price": 0.018,
+        "output_price": 0.018,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/o1",
+        "type": "text",
+        "input_price": 0.06,
+        "output_price": 0.06,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/o1-mini",
+        "type": "text",
+        "input_price": 0.0044,
+        "output_price": 0.0044,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/o1-mini-2024-09-12",
+        "type": "text",
+        "input_price": 0.0044,
+        "output_price": 0.0044,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/o1-preview",
+        "type": "text",
+        "input_price": 0.06,
+        "output_price": 0.06,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/o1-preview-2024-09-12",
+        "type": "text",
+        "input_price": 0.06,
+        "output_price": 0.06,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/o3-mini",
+        "type": "text",
+        "input_price": 0.0044,
+        "output_price": 0.0044,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openai/o3-mini-high",
+        "type": "text",
+        "input_price": 0.0044,
+        "output_price": 0.0044,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "openchat",
+    "Name": "Openchat",
+    "BaseURL": "",
+    "SortOrder": 420,
+    "ModelDetails": [
+      {
+        "model": "openchat/openchat-7b",
+        "type": "text",
+        "input_price": 0.000055,
+        "output_price": 0.000055,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "openchat/openchat-7b:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "openrouter",
+    "Name": "Openrouter",
+    "BaseURL": "https://openrouter.ai/api",
+    "SortOrder": 430,
+    "ModelDetails": [
+      {
+        "model": "openrouter/auto",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "other",
+    "Name": "Other",
+    "BaseURL": "",
+    "SortOrder": 440,
+    "ModelDetails": [
+      {
+        "model": "360GPT_S2_V9",
+        "type": "text",
+        "input_price": 0.0017143999999999998,
+        "output_price": 0.0017143999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "BLOOMZ-7B",
+        "type": "text",
+        "input_price": 0.0005679999999999999,
+        "output_price": 0.0005679999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "Baichuan2-53B",
+        "type": "text",
+        "input_price": 0.0028399999999999996,
+        "output_price": 0.0028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "Baichuan2-Turbo",
+        "type": "text",
+        "input_price": 0.0011359999999999999,
+        "output_price": 0.0011359999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "Baichuan2-Turbo-192k",
+        "type": "text",
+        "input_price": 0.0022719999999999997,
+        "output_price": 0.0022719999999999997,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "Embedding-V1",
+        "type": "text",
+        "input_price": 0.00028399999999999996,
+        "output_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "SparkDesk",
+        "type": "text",
+        "input_price": 0.0025716000000000003,
+        "output_price": 0.0025716000000000003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "SparkDesk-v1.1",
+        "type": "text",
+        "input_price": 0.0025716000000000003,
+        "output_price": 0.0025716000000000003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "SparkDesk-v2.1",
+        "type": "text",
+        "input_price": 0.0025716000000000003,
+        "output_price": 0.0025716000000000003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "SparkDesk-v3.1",
+        "type": "text",
+        "input_price": 0.0025716000000000003,
+        "output_price": 0.0025716000000000003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "SparkDesk-v3.1-128K",
+        "type": "text",
+        "input_price": 0.0025716000000000003,
+        "output_price": 0.0025716000000000003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "SparkDesk-v3.5",
+        "type": "text",
+        "input_price": 0.0025716000000000003,
+        "output_price": 0.0025716000000000003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "SparkDesk-v3.5-32K",
+        "type": "text",
+        "input_price": 0.0025716000000000003,
+        "output_price": 0.0025716000000000003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "SparkDesk-v4.0",
+        "type": "text",
+        "input_price": 0.0025716000000000003,
+        "output_price": 0.0025716000000000003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "ada",
+        "type": "text",
+        "input_price": 0.02,
+        "output_price": 0.02,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "ali-stable-diffusion-v1.5",
+        "type": "image",
+        "input_price": 0.016,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "ali-stable-diffusion-xl",
+        "type": "image",
+        "input_price": 0.016,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "aqa",
+        "type": "text",
+        "input_price": 0.002,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "babbage",
+        "type": "text",
+        "input_price": 0.02,
+        "output_price": 0.02,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "babbage-002",
+        "type": "text",
+        "input_price": 0.0004,
+        "output_price": 0.0004,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "bge-large-en",
+        "type": "text",
+        "input_price": 0.00028399999999999996,
+        "output_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "bge-large-zh",
+        "type": "text",
+        "input_price": 0.00028399999999999996,
+        "output_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "charglm-4",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "code-davinci-edit-001",
+        "type": "text",
+        "input_price": 0.02,
+        "output_price": 0.02,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "codegeex-4",
+        "type": "text",
+        "input_price": 0.000014200000000000001,
+        "output_price": 0.000014200000000000001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "cogviewx",
+        "type": "image",
+        "input_price": 0.071,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "cogviewx-flash",
+        "type": "image",
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "command",
+        "type": "text",
+        "input_price": 0.001,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "command-light",
+        "type": "text",
+        "input_price": 0.001,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "command-light-nightly",
+        "type": "text",
+        "input_price": 0.001,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "command-nightly",
+        "type": "text",
+        "input_price": 0.001,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "curie",
+        "type": "text",
+        "input_price": 0.02,
+        "output_price": 0.02,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "dall-e-2",
+        "type": "image",
+        "input_price": 0.02,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "dall-e-3",
+        "type": "image",
+        "input_price": 0.04,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "davinci",
+        "type": "text",
+        "input_price": 0.02,
+        "output_price": 0.02,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "davinci-002",
+        "type": "text",
+        "input_price": 0.002,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepl-en",
+        "type": "text",
+        "input_price": 0.025,
+        "output_price": 0.025,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepl-ja",
+        "type": "text",
+        "input_price": 0.025,
+        "output_price": 0.025,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "deepl-zh",
+        "type": "text",
+        "input_price": 0.025,
+        "output_price": 0.025,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "embedding-2",
+        "type": "text",
+        "input_price": 0.00007099999999999999,
+        "output_price": 0.00007099999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "embedding-3",
+        "type": "text",
+        "input_price": 0.00007099999999999999,
+        "output_price": 0.00007099999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "embedding-bert-512-v1",
+        "type": "text",
+        "input_price": 0.00014299999999999998,
+        "output_price": 0.00014299999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "embedding_s1_v1",
+        "type": "text",
+        "input_price": 0.00014299999999999998,
+        "output_price": 0.00014299999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "emohaa",
+        "type": "text",
+        "input_price": 0.00213,
+        "output_price": 0.00213,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gemma-7b-it",
+        "type": "text",
+        "input_price": 6.999999999999999e-8,
+        "output_price": 6.999999999999999e-8,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "gemma2-9b-it",
+        "type": "text",
+        "input_price": 2.0000000000000002e-7,
+        "output_price": 2.0000000000000002e-7,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "llama-3.1-70b-versatile",
+        "type": "text",
+        "input_price": 5.900000000000001e-7,
+        "output_price": 5.900000000000001e-7,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "llama-3.1-8b-instant",
+        "type": "text",
+        "input_price": 5.0000000000000004e-8,
+        "output_price": 5.0000000000000004e-8,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "llama-3.2-11b-text-preview",
+        "type": "text",
+        "input_price": 5.0000000000000004e-8,
+        "output_price": 5.0000000000000004e-8,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "llama-3.2-11b-vision-preview",
+        "type": "text",
+        "input_price": 5.0000000000000004e-8,
+        "output_price": 5.0000000000000004e-8,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "llama-3.2-1b-preview",
+        "type": "text",
+        "input_price": 5.0000000000000004e-8,
+        "output_price": 5.0000000000000004e-8,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "llama-3.2-3b-preview",
+        "type": "text",
+        "input_price": 5.0000000000000004e-8,
+        "output_price": 5.0000000000000004e-8,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "llama-3.2-90b-text-preview",
+        "type": "text",
+        "input_price": 5.900000000000001e-7,
+        "output_price": 5.900000000000001e-7,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "llama-guard-3-8b",
+        "type": "text",
+        "input_price": 5.0000000000000004e-8,
+        "output_price": 5.0000000000000004e-8,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "llama3-70b-8192",
+        "type": "text",
+        "input_price": 5.900000000000001e-7,
+        "output_price": 7.900000000000001e-7,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "llama3-8b-8192",
+        "type": "text",
+        "input_price": 5.0000000000000004e-8,
+        "output_price": 1.0000000000000001e-7,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "llama3-groq-70b-8192-tool-use-preview",
+        "type": "text",
+        "input_price": 8.9e-7,
+        "output_price": 8.9e-7,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "llama3-groq-8b-8192-tool-use-preview",
+        "type": "text",
+        "input_price": 1.9e-7,
+        "output_price": 1.9e-7,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "mixtral-8x7b-32768",
+        "type": "text",
+        "input_price": 2.4000000000000003e-7,
+        "output_price": 2.4000000000000003e-7,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "open-mistral-7b",
+        "type": "text",
+        "input_price": 0.00025,
+        "output_price": 0.00025,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "open-mixtral-8x7b",
+        "type": "text",
+        "input_price": 0.0007,
+        "output_price": 0.0007,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen1.5-0.5b-chat",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen1.5-1.8b-chat",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen1.5-110b-chat",
+        "type": "text",
+        "input_price": 0.000994,
+        "output_price": 0.000994,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen1.5-14b-chat",
+        "type": "text",
+        "input_price": 0.00028399999999999996,
+        "output_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen1.5-32b-chat",
+        "type": "text",
+        "input_price": 0.000497,
+        "output_price": 0.000497,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen1.5-72b-chat",
+        "type": "text",
+        "input_price": 0.0007099999999999999,
+        "output_price": 0.0007099999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen1.5-7b-chat",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2-0.5b-instruct",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2-1.5b-instruct",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2-57b-a14b-instruct",
+        "type": "text",
+        "input_price": 0.000497,
+        "output_price": 0.000497,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2-72b-instruct",
+        "type": "text",
+        "input_price": 0.0005679999999999999,
+        "output_price": 0.0005679999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2-7b-instruct",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2-audio-instruct",
+        "type": "audio",
+        "input_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2-math-1.5b-instruct",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2-math-72b-instruct",
+        "type": "text",
+        "input_price": 0.0005679999999999999,
+        "output_price": 0.0005679999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2-math-7b-instruct",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2-vl-2b-instruct",
+        "type": "text",
+        "input_price": 0.00028399999999999996,
+        "output_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2-vl-7b-instruct",
+        "type": "text",
+        "input_price": 0.0022719999999999997,
+        "output_price": 0.0022719999999999997,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2.5-0.5b-instruct",
+        "type": "text",
+        "input_price": 0.0000426,
+        "output_price": 0.0000426,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2.5-1.5b-instruct",
+        "type": "text",
+        "input_price": 0.0000426,
+        "output_price": 0.0000426,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2.5-14b-instruct",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2.5-32b-instruct",
+        "type": "text",
+        "input_price": 0.00426,
+        "output_price": 0.00426,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2.5-3b-instruct",
+        "type": "text",
+        "input_price": 0.000852,
+        "output_price": 0.000852,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2.5-72b-instruct",
+        "type": "text",
+        "input_price": 0.0005679999999999999,
+        "output_price": 0.0005679999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2.5-7b-instruct",
+        "type": "text",
+        "input_price": 0.00007099999999999999,
+        "output_price": 0.00007099999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2.5-coder-0.5b-instruct",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2.5-coder-1.5b-instruct",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2.5-coder-14b-instruct",
+        "type": "text",
+        "input_price": 0.00028399999999999996,
+        "output_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2.5-coder-32b-instruct",
+        "type": "text",
+        "input_price": 0.00028399999999999996,
+        "output_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2.5-coder-3b-instruct",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2.5-coder-7b-instruct",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2.5-math-1.5b-instruct",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2.5-math-72b-instruct",
+        "type": "text",
+        "input_price": 0.0005679999999999999,
+        "output_price": 0.0005679999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2.5-math-7b-instruct",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2.5-vl-3b-instruct",
+        "type": "text",
+        "input_price": 0.0001704,
+        "output_price": 0.0001704,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2.5-vl-72b-instruct",
+        "type": "text",
+        "input_price": 0.0022719999999999997,
+        "output_price": 0.0022719999999999997,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen2.5-vl-7b-instruct",
+        "type": "text",
+        "input_price": 0.00028399999999999996,
+        "output_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "semantic_similarity_s1_v1",
+        "type": "text",
+        "input_price": 0.00014299999999999998,
+        "output_price": 0.00014299999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "tao-8k",
+        "type": "text",
+        "input_price": 0.00028399999999999996,
+        "output_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "text-ada-001",
+        "type": "text",
+        "input_price": 0.0004,
+        "output_price": 0.0004,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "text-babbage-001",
+        "type": "text",
+        "input_price": 0.0005,
+        "output_price": 0.0005,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "text-curie-001",
+        "type": "text",
+        "input_price": 0.002,
+        "output_price": 0.002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "text-davinci-002",
+        "type": "text",
+        "input_price": 0.02,
+        "output_price": 0.02,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "text-davinci-003",
+        "type": "text",
+        "input_price": 0.02,
+        "output_price": 0.02,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "text-davinci-edit-001",
+        "type": "text",
+        "input_price": 0.02,
+        "output_price": 0.02,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "text-embedding-3-large",
+        "type": "text",
+        "input_price": 0.00013000000000000002,
+        "output_price": 0.00013000000000000002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "text-embedding-3-small",
+        "type": "text",
+        "input_price": 0.00002,
+        "output_price": 0.00002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "text-embedding-ada-002",
+        "type": "text",
+        "input_price": 0.0001,
+        "output_price": 0.0001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "text-embedding-async-v1",
+        "type": "text",
+        "input_price": 0.0000994,
+        "output_price": 0.0000994,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "text-embedding-async-v2",
+        "type": "text",
+        "input_price": 0.0000994,
+        "output_price": 0.0000994,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "text-embedding-v1",
+        "type": "text",
+        "input_price": 0.0000994,
+        "output_price": 0.0000994,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "text-embedding-v2",
+        "type": "text",
+        "input_price": 0.0000994,
+        "output_price": 0.0000994,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "text-embedding-v3",
+        "type": "text",
+        "input_price": 0.0000994,
+        "output_price": 0.0000994,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "text-moderation-latest",
+        "type": "text",
+        "input_price": 0.0002,
+        "output_price": 0.0002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "text-moderation-stable",
+        "type": "text",
+        "input_price": 0.0002,
+        "output_price": 0.0002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "text-search-ada-doc-001",
+        "type": "text",
+        "input_price": 0.02,
+        "output_price": 0.02,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "tts-1",
+        "type": "audio",
+        "input_price": 0.015,
+        "price_unit": "per_1k_chars",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "tts-1-1106",
+        "type": "audio",
+        "input_price": 0.015,
+        "price_unit": "per_1k_chars",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "tts-1-hd",
+        "type": "audio",
+        "input_price": 0.03,
+        "price_unit": "per_1k_chars",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "tts-1-hd-1106",
+        "type": "audio",
+        "input_price": 0.03,
+        "price_unit": "per_1k_chars",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "wanx-v1",
+        "type": "image",
+        "input_price": 0.016,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "whisper-1",
+        "type": "audio",
+        "input_price": 0.03,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "perplexity",
+    "Name": "Perplexity",
+    "BaseURL": "",
+    "SortOrder": 450,
+    "ModelDetails": [
+      {
+        "model": "perplexity/llama-3.1-sonar-huge-128k-online",
+        "type": "text",
+        "input_price": 0.005,
+        "output_price": 0.005,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "perplexity/llama-3.1-sonar-large-128k-chat",
+        "type": "text",
+        "input_price": 0.001,
+        "output_price": 0.001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "perplexity/llama-3.1-sonar-large-128k-online",
+        "type": "text",
+        "input_price": 0.001,
+        "output_price": 0.001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "perplexity/llama-3.1-sonar-small-128k-chat",
+        "type": "text",
+        "input_price": 0.0002,
+        "output_price": 0.0002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "perplexity/llama-3.1-sonar-small-128k-online",
+        "type": "text",
+        "input_price": 0.0002,
+        "output_price": 0.0002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "perplexity/sonar",
+        "type": "text",
+        "input_price": 0.001,
+        "output_price": 0.001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "perplexity/sonar-reasoning",
+        "type": "text",
+        "input_price": 0.005,
+        "output_price": 0.005,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "pygmalionai",
+    "Name": "Pygmalionai",
+    "BaseURL": "",
+    "SortOrder": 460,
+    "ModelDetails": [
+      {
+        "model": "pygmalionai/mythalion-13b",
+        "type": "text",
+        "input_price": 0.0012,
+        "output_price": 0.0012,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "qwen",
+    "Name": "Qwen",
+    "BaseURL": "https://dashscope.aliyuncs.com/compatible-mode",
+    "SortOrder": 470,
+    "ModelDetails": [
+      {
+        "model": "qvq-72b-preview",
+        "type": "text",
+        "input_price": 0.001704,
+        "output_price": 0.001704,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-1.8b-chat",
+        "type": "text",
+        "input_price": 0.000852,
+        "output_price": 0.000852,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-1.8b-longcontext-chat",
+        "type": "text",
+        "input_price": 0.000852,
+        "output_price": 0.000852,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-14b-chat",
+        "type": "text",
+        "input_price": 0.0011359999999999999,
+        "output_price": 0.0011359999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-72b-chat",
+        "type": "text",
+        "input_price": 0.0028399999999999996,
+        "output_price": 0.0028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-7b-chat",
+        "type": "text",
+        "input_price": 0.000852,
+        "output_price": 0.000852,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-audio-chat",
+        "type": "audio",
+        "input_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-audio-turbo",
+        "type": "audio",
+        "input_price": 0.0028572000000000003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-coder-plus",
+        "type": "text",
+        "input_price": 0.000497,
+        "output_price": 0.000497,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-coder-plus-latest",
+        "type": "text",
+        "input_price": 0.000497,
+        "output_price": 0.000497,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-coder-turbo",
+        "type": "text",
+        "input_price": 0.00028399999999999996,
+        "output_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-coder-turbo-latest",
+        "type": "text",
+        "input_price": 0.00028399999999999996,
+        "output_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-math-plus",
+        "type": "text",
+        "input_price": 0.0005679999999999999,
+        "output_price": 0.0005679999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-math-plus-latest",
+        "type": "text",
+        "input_price": 0.0005679999999999999,
+        "output_price": 0.0005679999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-math-turbo",
+        "type": "text",
+        "input_price": 0.00028399999999999996,
+        "output_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-math-turbo-latest",
+        "type": "text",
+        "input_price": 0.00028399999999999996,
+        "output_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-max",
+        "type": "text",
+        "input_price": 0.0003408,
+        "output_price": 0.0003408,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-max-latest",
+        "type": "text",
+        "input_price": 0.0003408,
+        "output_price": 0.0003408,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-max-longcontext",
+        "type": "text",
+        "input_price": 0.00007099999999999999,
+        "output_price": 0.00007099999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-mt-plus",
+        "type": "text",
+        "input_price": 0.00213,
+        "output_price": 0.00213,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-mt-turbo",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-plus",
+        "type": "text",
+        "input_price": 0.00011360000000000001,
+        "output_price": 0.00011360000000000001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-plus-latest",
+        "type": "text",
+        "input_price": 0.00011360000000000001,
+        "output_price": 0.00011360000000000001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-turbo",
+        "type": "text",
+        "input_price": 0.0000426,
+        "output_price": 0.0000426,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-turbo-latest",
+        "type": "text",
+        "input_price": 0.0000426,
+        "output_price": 0.0000426,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-vl-chat-v1",
+        "type": "text",
+        "input_price": 0.00028399999999999996,
+        "output_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-vl-max",
+        "type": "text",
+        "input_price": 0.000426,
+        "output_price": 0.000426,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-vl-max-latest",
+        "type": "text",
+        "input_price": 0.000426,
+        "output_price": 0.000426,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-vl-ocr",
+        "type": "text",
+        "input_price": 0.0007099999999999999,
+        "output_price": 0.0007099999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-vl-ocr-latest",
+        "type": "text",
+        "input_price": 0.0007099999999999999,
+        "output_price": 0.0007099999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-vl-plus",
+        "type": "text",
+        "input_price": 0.000213,
+        "output_price": 0.000213,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-vl-plus-latest",
+        "type": "text",
+        "input_price": 0.000213,
+        "output_price": 0.000213,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen-vl-v1",
+        "type": "text",
+        "input_price": 0.00028399999999999996,
+        "output_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen/qvq-72b-preview",
+        "type": "text",
+        "input_price": 0.0005,
+        "output_price": 0.0005,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen/qwen-2-72b-instruct",
+        "type": "text",
+        "input_price": 0.0009,
+        "output_price": 0.0009,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen/qwen-2-7b-instruct",
+        "type": "text",
+        "input_price": 0.000054,
+        "output_price": 0.000054,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen/qwen-2-7b-instruct:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen/qwen-2-vl-72b-instruct",
+        "type": "text",
+        "input_price": 0.0004,
+        "output_price": 0.0004,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen/qwen-2-vl-7b-instruct",
+        "type": "text",
+        "input_price": 0.0001,
+        "output_price": 0.0001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen/qwen-2.5-72b-instruct",
+        "type": "text",
+        "input_price": 0.0004,
+        "output_price": 0.0004,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen/qwen-2.5-7b-instruct",
+        "type": "text",
+        "input_price": 0.00005,
+        "output_price": 0.00005,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen/qwen-2.5-coder-32b-instruct",
+        "type": "text",
+        "input_price": 0.00016,
+        "output_price": 0.00016,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen/qwen-max",
+        "type": "text",
+        "input_price": 0.0064,
+        "output_price": 0.0064,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen/qwen-plus",
+        "type": "text",
+        "input_price": 0.0012,
+        "output_price": 0.0012,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen/qwen-turbo",
+        "type": "text",
+        "input_price": 0.0002,
+        "output_price": 0.0002,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen/qwen-vl-plus:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen/qwen2.5-vl-72b-instruct:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwen/qwq-32b-preview",
+        "type": "text",
+        "input_price": 0.00017999999999999998,
+        "output_price": 0.00017999999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "qwq-32b-preview",
+        "type": "text",
+        "input_price": 0.00028399999999999996,
+        "output_price": 0.00028399999999999996,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "raifle",
+    "Name": "Raifle",
+    "BaseURL": "",
+    "SortOrder": 480,
+    "ModelDetails": [
+      {
+        "model": "raifle/sorcererlm-8x22b",
+        "type": "text",
+        "input_price": 0.0045,
+        "output_price": 0.0045,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "recraft-ai",
+    "Name": "Recraft-ai",
+    "BaseURL": "",
+    "SortOrder": 490,
+    "ModelDetails": [
+      {
+        "model": "recraft-ai/recraft-v3",
+        "type": "text",
+        "input_price": 0.04,
+        "output_price": 0.04,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "recraft-ai/recraft-v3-svg",
+        "type": "text",
+        "input_price": 0.08,
+        "output_price": 0.08,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "sao10k",
+    "Name": "Sao10k",
+    "BaseURL": "",
+    "SortOrder": 500,
+    "ModelDetails": [
+      {
+        "model": "sao10k/fimbulvetr-11b-v2",
+        "type": "text",
+        "input_price": 0.0012,
+        "output_price": 0.0012,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "sao10k/l3-euryale-70b",
+        "type": "text",
+        "input_price": 0.0008,
+        "output_price": 0.0008,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "sao10k/l3-lunaris-8b",
+        "type": "text",
+        "input_price": 0.000059999999999999995,
+        "output_price": 0.000059999999999999995,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "sao10k/l3.1-70b-hanami-x1",
+        "type": "text",
+        "input_price": 0.003,
+        "output_price": 0.003,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "sao10k/l3.1-euryale-70b",
+        "type": "text",
+        "input_price": 0.0008,
+        "output_price": 0.0008,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "sao10k/l3.3-euryale-70b",
+        "type": "text",
+        "input_price": 0.0008,
+        "output_price": 0.0008,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "sophosympatheia",
+    "Name": "Sophosympatheia",
+    "BaseURL": "",
+    "SortOrder": 510,
+    "ModelDetails": [
+      {
+        "model": "sophosympatheia/midnight-rose-70b",
+        "type": "text",
+        "input_price": 0.0008,
+        "output_price": 0.0008,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "sophosympatheia/rogue-rose-103b-v0.2:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "stability-ai",
+    "Name": "Stability-ai",
+    "BaseURL": "",
+    "SortOrder": 520,
+    "ModelDetails": [
+      {
+        "model": "stability-ai/stable-diffusion-3",
+        "type": "image",
+        "input_price": 0.035,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "stability-ai/stable-diffusion-3.5-large",
+        "type": "image",
+        "input_price": 0.065,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "stability-ai/stable-diffusion-3.5-large-turbo",
+        "type": "image",
+        "input_price": 0.04,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "stability-ai/stable-diffusion-3.5-medium",
+        "type": "image",
+        "input_price": 0.035,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "stepfun",
+    "Name": "StepFun",
+    "BaseURL": "https://api.stepfun.com",
+    "SortOrder": 530,
+    "ModelDetails": [
+      {
+        "model": "step-1-128k",
+        "type": "text",
+        "input_price": 0.00000568,
+        "output_price": 0.00000568,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "step-1-256k",
+        "type": "text",
+        "input_price": 0.00001349,
+        "output_price": 0.00001349,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "step-1-32k",
+        "type": "text",
+        "input_price": 0.00000213,
+        "output_price": 0.00000213,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "step-1-8k",
+        "type": "text",
+        "input_price": 7.1e-7,
+        "output_price": 7.1e-7,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "step-1-flash",
+        "type": "text",
+        "input_price": 1.42e-7,
+        "output_price": 1.42e-7,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "step-1v-32k",
+        "type": "text",
+        "input_price": 0.00000213,
+        "output_price": 0.00000213,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "step-1v-8k",
+        "type": "text",
+        "input_price": 7.1e-7,
+        "output_price": 7.1e-7,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "step-1x-medium",
+        "type": "image",
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "step-2-16k",
+        "type": "text",
+        "input_price": 0.000005396,
+        "output_price": 0.000005396,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "teknium",
+    "Name": "Teknium",
+    "BaseURL": "",
+    "SortOrder": 540,
+    "ModelDetails": [
+      {
+        "model": "teknium/openhermes-2.5-mistral-7b",
+        "type": "text",
+        "input_price": 0.00017,
+        "output_price": 0.00017,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "thedrummer",
+    "Name": "Thedrummer",
+    "BaseURL": "",
+    "SortOrder": 550,
+    "ModelDetails": [
+      {
+        "model": "thedrummer/rocinante-12b",
+        "type": "text",
+        "input_price": 0.0005,
+        "output_price": 0.0005,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "thedrummer/unslopnemo-12b",
+        "type": "text",
+        "input_price": 0.0005,
+        "output_price": 0.0005,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "undi95",
+    "Name": "Undi95",
+    "BaseURL": "",
+    "SortOrder": 560,
+    "ModelDetails": [
+      {
+        "model": "undi95/remm-slerp-l2-13b",
+        "type": "text",
+        "input_price": 0.0012,
+        "output_price": 0.0012,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "undi95/toppy-m-7b",
+        "type": "text",
+        "input_price": 0.00007000000000000001,
+        "output_price": 0.00007000000000000001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "undi95/toppy-m-7b:free",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "x-ai",
+    "Name": "X-ai",
+    "BaseURL": "",
+    "SortOrder": 570,
+    "ModelDetails": [
+      {
+        "model": "x-ai/grok-2-1212",
+        "type": "text",
+        "input_price": 0.01,
+        "output_price": 0.01,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "x-ai/grok-2-vision-1212",
+        "type": "text",
+        "input_price": 0.01,
+        "output_price": 0.01,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "x-ai/grok-beta",
+        "type": "text",
+        "input_price": 0.015,
+        "output_price": 0.015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "x-ai/grok-vision-beta",
+        "type": "text",
+        "input_price": 0.015,
+        "output_price": 0.015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "xai",
+    "Name": "xAI",
+    "BaseURL": "https://api.x.ai",
+    "SortOrder": 580,
+    "ModelDetails": [
+      {
+        "model": "grok-beta",
+        "type": "text",
+        "input_price": 0.005,
+        "output_price": 0.015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "xwin-lm",
+    "Name": "Xwin-lm",
+    "BaseURL": "",
+    "SortOrder": 590,
+    "ModelDetails": [
+      {
+        "model": "xwin-lm/xwin-lm-70b",
+        "type": "text",
+        "input_price": 0.00375,
+        "output_price": 0.00375,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  },
+  {
+    "Provider": "zhipu",
+    "Name": "Zhipu",
+    "BaseURL": "https://open.bigmodel.cn/api/paas/v4",
+    "SortOrder": 600,
+    "ModelDetails": [
+      {
+        "model": "cogview-3",
+        "type": "image",
+        "input_price": 0.014199999999999999,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "cogview-3-flash",
+        "type": "image",
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "cogview-3-plus",
+        "type": "image",
+        "input_price": 0.00852,
+        "price_unit": "per_image",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "glm-3-turbo",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "glm-4",
+        "type": "text",
+        "input_price": 0.014199999999999999,
+        "output_price": 0.014199999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "glm-4-0520",
+        "type": "text",
+        "input_price": 0.014199999999999999,
+        "output_price": 0.014199999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "glm-4-air",
+        "type": "text",
+        "input_price": 0.00007099999999999999,
+        "output_price": 0.00007099999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "glm-4-airx",
+        "type": "text",
+        "input_price": 0.0014199999999999998,
+        "output_price": 0.0014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "glm-4-flash",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "glm-4-flashx",
+        "type": "text",
+        "input_price": 0.000014200000000000001,
+        "output_price": 0.000014200000000000001,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "glm-4-long",
+        "type": "text",
+        "input_price": 0.00014199999999999998,
+        "output_price": 0.00014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "glm-4-plus",
+        "type": "text",
+        "input_price": 0.0070999999999999995,
+        "output_price": 0.0070999999999999995,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "glm-4v",
+        "type": "text",
+        "input_price": 0.0070999999999999995,
+        "output_price": 0.0070999999999999995,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "glm-4v-flash",
+        "type": "text",
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "glm-4v-plus",
+        "type": "text",
+        "input_price": 0.0005679999999999999,
+        "output_price": 0.0005679999999999999,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      },
+      {
+        "model": "glm-zero-preview",
+        "type": "text",
+        "input_price": 0.0014199999999999998,
+        "output_price": 0.0014199999999999998,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "default"
+      }
+    ]
+  }
+]

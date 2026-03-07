@@ -106,8 +106,10 @@ func migrateLegacyChannelModelConfigColumnsWithDB(tx *gorm.DB) error {
 				upstreamModel = row.Model
 			}
 			row.UpstreamModel = upstreamModel
-			row.ModelRatio = resolveLegacyChannelRatioValue(modelRatio, row.Model, upstreamModel, channelProtocol, false)
-			row.CompletionRatio = resolveLegacyChannelRatioValue(completionRatio, row.Model, upstreamModel, channelProtocol, true)
+			row.InputPrice = resolveLegacyChannelInputPrice(modelRatio, row.Model, upstreamModel, channelProtocol)
+			row.OutputPrice = resolveLegacyChannelOutputPrice(completionRatio, row.InputPrice, row.Model, upstreamModel, channelProtocol)
+			row.PriceUnit = defaultPriceUnitByType("", upstreamModel)
+			row.Currency = ModelProviderPriceCurrencyUSD
 			if row.SortOrder <= 0 {
 				row.SortOrder = idx + 1
 			}
@@ -217,7 +219,27 @@ func resolveLegacyChannelRatioValue(values map[string]float64, modelID string, u
 		}
 	}
 	if completion {
-		return defaultChannelCompletionRatioValue(upstreamModel, channelProtocol)
+		return legacyGetCompletionRatio(upstreamModel, channelProtocol)
 	}
-	return defaultChannelModelRatioValue(upstreamModel, channelProtocol)
+	return legacyGetModelRatio(upstreamModel, channelProtocol)
+}
+
+func resolveLegacyChannelInputPrice(values map[string]float64, modelID string, upstreamModel string, channelProtocol int) *float64 {
+	ratio := resolveLegacyChannelRatioValue(values, modelID, upstreamModel, channelProtocol, false)
+	modelType := normalizeModelType("", upstreamModel)
+	priceUnit := defaultPriceUnitByType(modelType, upstreamModel)
+	price := legacyRatioToOriginalPrice(modelType, priceUnit, ratio)
+	return cloneNormalizedChannelModelPrice(&price)
+}
+
+func resolveLegacyChannelOutputPrice(values map[string]float64, inputPrice *float64, modelID string, upstreamModel string, channelProtocol int) *float64 {
+	if inputPrice == nil {
+		return nil
+	}
+	if normalizeModelType("", upstreamModel) != ModelProviderModelTypeText {
+		return nil
+	}
+	completionRatio := resolveLegacyChannelRatioValue(values, modelID, upstreamModel, channelProtocol, true)
+	price := *inputPrice * completionRatio
+	return cloneNormalizedChannelModelPrice(&price)
 }

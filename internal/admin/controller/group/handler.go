@@ -1,6 +1,7 @@
 package group
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
@@ -10,11 +11,12 @@ import (
 )
 
 type upsertGroupRequest struct {
-	Name        string `json:"name"`
-	DisplayName string `json:"display_name"`
-	Description string `json:"description"`
-	Enabled     *bool  `json:"enabled"`
-	SortOrder   int    `json:"sort_order"`
+	Name         string   `json:"name"`
+	DisplayName  string   `json:"display_name"`
+	Description  string   `json:"description"`
+	BillingRatio *float64 `json:"billing_ratio"`
+	Enabled      *bool    `json:"enabled"`
+	SortOrder    int      `json:"sort_order"`
 }
 
 type updateGroupChannelsRequest struct {
@@ -63,11 +65,20 @@ func CreateGroup(c *gin.Context) {
 		})
 		return
 	}
+	billingRatio, err := resolveCreateBillingRatio(req.BillingRatio)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
 	row, err := groupsvc.Create(model.GroupCatalog{
-		Name:        strings.TrimSpace(req.Name),
-		DisplayName: strings.TrimSpace(req.DisplayName),
-		Description: strings.TrimSpace(req.Description),
-		Source:      "manual",
+		Name:         strings.TrimSpace(req.Name),
+		DisplayName:  strings.TrimSpace(req.DisplayName),
+		Description:  strings.TrimSpace(req.Description),
+		Source:       "manual",
+		BillingRatio: billingRatio,
 	})
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -101,26 +112,35 @@ func UpdateGroup(c *gin.Context) {
 		})
 		return
 	}
+	current, findErr := groupsvc.Get(strings.TrimSpace(req.Name))
+	if findErr != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": findErr.Error(),
+		})
+		return
+	}
 	enabled := true
 	if req.Enabled != nil {
 		enabled = *req.Enabled
 	} else {
-		current, findErr := groupsvc.Get(strings.TrimSpace(req.Name))
-		if findErr != nil {
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": findErr.Error(),
-			})
-			return
-		}
 		enabled = current.Enabled
 	}
+	billingRatio, err := resolveUpdateBillingRatio(req.BillingRatio, current.BillingRatio)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
 	row, err := groupsvc.Update(model.GroupCatalog{
-		Name:        strings.TrimSpace(req.Name),
-		DisplayName: strings.TrimSpace(req.DisplayName),
-		Description: strings.TrimSpace(req.Description),
-		Enabled:     enabled,
-		SortOrder:   req.SortOrder,
+		Name:         strings.TrimSpace(req.Name),
+		DisplayName:  strings.TrimSpace(req.DisplayName),
+		Description:  strings.TrimSpace(req.Description),
+		BillingRatio: billingRatio,
+		Enabled:      enabled,
+		SortOrder:    req.SortOrder,
 	})
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -165,6 +185,26 @@ func DeleteGroup(c *gin.Context) {
 		"success": true,
 		"message": "",
 	})
+}
+
+func resolveCreateBillingRatio(value *float64) (float64, error) {
+	if value == nil {
+		return 1, nil
+	}
+	if *value < 0 {
+		return 0, errors.New("分组倍率不能小于 0")
+	}
+	return *value, nil
+}
+
+func resolveUpdateBillingRatio(value *float64, fallback float64) (float64, error) {
+	if value == nil {
+		return fallback, nil
+	}
+	if *value < 0 {
+		return 0, errors.New("分组倍率不能小于 0")
+	}
+	return *value, nil
 }
 
 // GetGroupChannels godoc

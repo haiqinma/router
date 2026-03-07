@@ -1,18 +1,31 @@
 package model
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/yeying-community/router/common/config"
 	"github.com/yeying-community/router/common/logger"
-	billingratio "github.com/yeying-community/router/internal/relay/billing/ratio"
 )
 
 type Option struct {
 	Key   string `json:"key" gorm:"primaryKey"`
 	Value string `json:"value"`
+}
+
+func IsLegacyPricingOptionKey(key string) bool {
+	switch strings.TrimSpace(key) {
+	case "ModelRatio", "CompletionRatio", "GroupRatio":
+		return true
+	default:
+		return false
+	}
+}
+
+func legacyPricingOptionError(key string) error {
+	return fmt.Errorf("%s 已废弃，请在模型、渠道、分组页面维护定价", strings.TrimSpace(key))
 }
 
 func AllOption() ([]*Option, error) {
@@ -49,22 +62,22 @@ func InitOptionMap() {
 	config.OptionMap["QuotaForInvitee"] = strconv.FormatInt(config.QuotaForInvitee, 10)
 	config.OptionMap["QuotaRemindThreshold"] = strconv.FormatInt(config.QuotaRemindThreshold, 10)
 	config.OptionMap["PreConsumedQuota"] = strconv.FormatInt(config.PreConsumedQuota, 10)
-	config.OptionMap["ModelRatio"] = billingratio.ModelRatio2JSONString()
-	config.OptionMap["GroupRatio"] = billingratio.GroupRatio2JSONString()
-	config.OptionMap["CompletionRatio"] = billingratio.CompletionRatio2JSONString()
 	config.OptionMap["TopUpLink"] = config.TopUpLink
 	config.OptionMap["ChatLink"] = config.ChatLink
 	config.OptionMap["QuotaPerUnit"] = strconv.FormatFloat(config.QuotaPerUnit, 'f', -1, 64)
 	config.OptionMap["RetryTimes"] = strconv.Itoa(config.RetryTimes)
 	config.OptionMapRWMutex.Unlock()
 	loadOptionsFromDatabase()
+	if err := syncGroupBillingRatiosRuntimeWithDB(DB); err != nil {
+		logger.SysError("failed to sync group billing ratios from groups table: " + err.Error())
+	}
 }
 
 func loadOptionsFromDatabase() {
 	options, _ := AllOption()
 	for _, option := range options {
-		if option.Key == "ModelRatio" {
-			option.Value = billingratio.AddNewMissingRatio(option.Value)
+		if IsLegacyPricingOptionKey(option.Key) {
+			continue
 		}
 		err := UpdateOptionMap(option.Key, option.Value)
 		if err != nil {
@@ -78,6 +91,9 @@ func SyncOptions(frequency int) {
 		time.Sleep(time.Duration(frequency) * time.Second)
 		logger.SysLog("syncing options from database")
 		loadOptionsFromDatabase()
+		if err := syncGroupBillingRatiosRuntimeWithDB(DB); err != nil {
+			logger.SysError("failed to sync group billing ratios from groups table: " + err.Error())
+		}
 	}
 }
 
@@ -86,6 +102,9 @@ func UpdateOption(key string, value string) error {
 }
 
 func UpdateOptionMap(key string, value string) (err error) {
+	if IsLegacyPricingOptionKey(key) {
+		return legacyPricingOptionError(key)
+	}
 	config.OptionMapRWMutex.Lock()
 	defer config.OptionMapRWMutex.Unlock()
 	switch key {
@@ -149,12 +168,6 @@ func UpdateOptionMap(key string, value string) (err error) {
 		config.PreConsumedQuota, _ = strconv.ParseInt(value, 10, 64)
 	case "RetryTimes":
 		config.RetryTimes, _ = strconv.Atoi(value)
-	case "ModelRatio":
-		err = billingratio.UpdateModelRatioByJSONString(value)
-	case "GroupRatio":
-		err = billingratio.UpdateGroupRatioByJSONString(value)
-	case "CompletionRatio":
-		err = billingratio.UpdateCompletionRatioByJSONString(value)
 	case "TopUpLink":
 		config.TopUpLink = value
 	case "ChatLink":

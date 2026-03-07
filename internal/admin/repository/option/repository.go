@@ -16,6 +16,9 @@ func All() ([]*model.Option, error) {
 }
 
 func Update(key string, value string) error {
+	if model.IsLegacyPricingOptionKey(key) {
+		return model.UpdateOptionMap(key, value)
+	}
 	option := model.Option{Key: key}
 	model.DB.FirstOrCreate(&option, model.Option{Key: key})
 	option.Value = value

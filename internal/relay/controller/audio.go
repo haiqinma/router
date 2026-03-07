@@ -18,9 +18,9 @@ import (
 	"github.com/yeying-community/router/common/ctxkey"
 	"github.com/yeying-community/router/common/logger"
 	"github.com/yeying-community/router/internal/admin/model"
+	adminmodel "github.com/yeying-community/router/internal/admin/model"
 	"github.com/yeying-community/router/internal/relay/adaptor/openai"
 	"github.com/yeying-community/router/internal/relay/billing"
-	billingratio "github.com/yeying-community/router/internal/relay/billing/ratio"
 	relaychannel "github.com/yeying-community/router/internal/relay/channel"
 	"github.com/yeying-community/router/internal/relay/meta"
 	relaymodel "github.com/yeying-community/router/internal/relay/model"
@@ -53,18 +53,37 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 			return openai.ErrorWrapper(errors.New("input is too long (over 4096 characters)"), "text_too_long", http.StatusBadRequest)
 		}
 	}
+	var err error
 
-	modelRatio := billingratio.GetChannelModelRatio(audioModel, channelProtocol, meta.ChannelModelRatio)
-	groupRatio := billingratio.GetGroupRatio(group)
-	ratio := modelRatio * groupRatio
+	groupRatio := adminmodel.GetGroupBillingRatio(group)
+	pricing, pricingErr := adminmodel.ResolveChannelModelPricing(channelProtocol, meta.ChannelModelConfigs, audioModel)
+	if pricingErr != nil {
+		if groupRatio == 0 {
+			pricing = adminmodel.ResolvedModelPricing{
+				Model:     audioModel,
+				Type:      adminmodel.InferModelType(audioModel),
+				PriceUnit: adminmodel.ModelProviderPriceUnitPer1KTokens,
+				Currency:  adminmodel.ModelProviderPriceCurrencyUSD,
+				Source:    "group_free",
+			}
+		} else {
+			return openai.ErrorWrapper(pricingErr, "model_pricing_not_configured", http.StatusServiceUnavailable)
+		}
+	}
 	var quota int64
 	var preConsumedQuota int64
 	switch relayMode {
 	case relaymode.AudioSpeech:
-		preConsumedQuota = int64(float64(len(ttsRequest.Input)) * ratio)
+		preConsumedQuota, err = billing.ComputeAudioSpeechQuota(len(ttsRequest.Input), pricing, groupRatio)
+		if err != nil {
+			return openai.ErrorWrapper(err, "calculate_audio_quota_failed", http.StatusInternalServerError)
+		}
 		quota = preConsumedQuota
 	default:
-		preConsumedQuota = int64(float64(config.PreConsumedQuota) * ratio)
+		preConsumedQuota, err = billing.ComputeAudioTextQuota(int(config.PreConsumedQuota), pricing, groupRatio)
+		if err != nil {
+			return openai.ErrorWrapper(err, "calculate_audio_quota_failed", http.StatusInternalServerError)
+		}
 	}
 	userQuota, err := model.CacheGetUserQuota(ctx, userId)
 	if err != nil {
@@ -218,7 +237,10 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 		if err != nil {
 			return openai.ErrorWrapper(err, "get_text_from_body_err", http.StatusInternalServerError)
 		}
-		quota = int64(openai.CountTokenText(text, audioModel))
+		quota, err = billing.ComputeAudioTextQuota(openai.CountTokenText(text, audioModel), pricing, groupRatio)
+		if err != nil {
+			return openai.ErrorWrapper(err, "calculate_audio_quota_failed", http.StatusInternalServerError)
+		}
 		resp.Body = io.NopCloser(bytes.NewBuffer(responseBody))
 	}
 	if resp.StatusCode != http.StatusOK {
@@ -227,7 +249,7 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	succeed = true
 	quotaDelta := quota - preConsumedQuota
 	defer func(ctx context.Context) {
-		go billing.PostConsumeQuota(ctx, tokenId, quotaDelta, quota, userId, channelId, modelRatio, groupRatio, audioModel, tokenName)
+		go billing.PostConsumeQuota(ctx, tokenId, quotaDelta, quota, userId, channelId, pricing, groupRatio, audioModel, tokenName)
 	}(c.Request.Context())
 
 	for k, v := range resp.Header {

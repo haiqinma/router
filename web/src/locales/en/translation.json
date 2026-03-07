@@ -224,8 +224,9 @@
           "selected": "Enabled",
           "name": "Name",
           "alias": "Alias",
-          "model_ratio": "Model Ratio",
-          "completion_ratio": "Completion Ratio"
+          "price_unit": "Price Unit",
+          "input_price": "Input Override",
+          "output_price": "Output Override"
         },
         "realtime_enabled": "Realtime model sync is enabled: changing Base URL or key refreshes models and selects all by default.",
         "realtime_hint": "After Base URL and key are filled, supported models will be fetched automatically.",
@@ -274,7 +275,7 @@
         "update_draft_failed": "Failed to save channel draft",
         "fetch_models_failed": "Failed to fetch models",
         "models_empty": "No available models were returned",
-        "model_config_invalid": "Invalid model configuration. Check alias emptiness or duplicates, and ensure ratios are greater than 0.",
+        "model_config_invalid": "Invalid model configuration. Check alias emptiness or duplicates, and ensure price overrides are non-negative.",
         "update_success": "Channel updated successfully!",
         "create_success": "Channel created successfully!"
       },
@@ -319,6 +320,7 @@
       "name": "Group Name",
       "display_name": "Display Name",
       "description": "Description",
+      "billing_ratio": "Billing Ratio",
       "source": "Source",
       "status": "Status",
       "sort_order": "Sort Order",
@@ -336,6 +338,8 @@
       "display_name_placeholder": "e.g. Enterprise",
       "description": "Description",
       "description_placeholder": "Optional description for this group",
+      "billing_ratio": "Billing Ratio",
+      "billing_ratio_placeholder": "Defaults to 1, use 0 or greater",
       "sort_order": "Sort Value",
       "channels": "Bound Channels",
       "channels_placeholder": "Select channels available for this group"
@@ -361,6 +365,7 @@
       "loading": "Loading...",
       "empty": "No groups",
       "name_required": "Group name is required",
+      "billing_ratio_invalid": "Billing ratio must be greater than or equal to 0",
       "load_failed": "Failed to load groups",
       "bind_load_failed": "Failed to load group channels",
       "create_success": "Group created successfully",
@@ -907,24 +912,6 @@
         "invitee_reward_placeholder": "e.g.: 1000",
         "buttons": {
           "save": "Save Quota Settings"
-        }
-      },
-      "ratio": {
-        "title": "Ratio Settings",
-        "model": {
-          "title": "Model Ratio",
-          "placeholder": "A JSON text where keys are model names and values are ratios"
-        },
-        "completion": {
-          "title": "Completion Ratio",
-          "placeholder": "A JSON text where keys are model names and values are ratios. These ratios are the proportion of completion to prompt ratio, which can override Router's internal ratios"
-        },
-        "group": {
-          "title": "Group Ratio",
-          "placeholder": "A JSON text where keys are group names and values are ratios"
-        },
-        "buttons": {
-          "save": "Save Ratio Settings"
         }
       },
       "log": {

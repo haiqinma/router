@@ -11,13 +11,14 @@ import (
 )
 
 type GroupCatalog struct {
-	Name        string `json:"name" gorm:"primaryKey;type:varchar(32)"`
-	DisplayName string `json:"display_name" gorm:"type:varchar(64);default:''"`
-	Description string `json:"description" gorm:"type:varchar(255);default:''"`
-	Source      string `json:"source" gorm:"type:varchar(32);default:'system'"`
-	Enabled     bool   `json:"enabled" gorm:"default:true;index"`
-	SortOrder   int    `json:"sort_order" gorm:"default:0;index"`
-	UpdatedAt   int64  `json:"updated_at" gorm:"bigint;index"`
+	Name         string  `json:"name" gorm:"primaryKey;type:varchar(32)"`
+	DisplayName  string  `json:"display_name" gorm:"type:varchar(64);default:''"`
+	Description  string  `json:"description" gorm:"type:varchar(255);default:''"`
+	Source       string  `json:"source" gorm:"type:varchar(32);default:'system'"`
+	BillingRatio float64 `json:"billing_ratio" gorm:"type:numeric(12,6);not null;default:1"`
+	Enabled      bool    `json:"enabled" gorm:"default:true;index"`
+	SortOrder    int     `json:"sort_order" gorm:"default:0;index"`
+	UpdatedAt    int64   `json:"updated_at" gorm:"bigint;index"`
 }
 
 func (GroupCatalog) TableName() string {
@@ -33,15 +34,32 @@ func GetGroupCatalogByName(name string) (GroupCatalog, error) {
 }
 
 func CreateGroupCatalog(item GroupCatalog) (GroupCatalog, error) {
-	return createGroupCatalogWithDB(DB, item)
+	row, err := createGroupCatalogWithDB(DB, item)
+	if err != nil {
+		return GroupCatalog{}, err
+	}
+	if err := syncGroupBillingRatiosRuntimeWithDB(DB); err != nil {
+		return GroupCatalog{}, err
+	}
+	return row, nil
 }
 
 func UpdateGroupCatalog(item GroupCatalog) (GroupCatalog, error) {
-	return updateGroupCatalogWithDB(DB, item)
+	row, err := updateGroupCatalogWithDB(DB, item)
+	if err != nil {
+		return GroupCatalog{}, err
+	}
+	if err := syncGroupBillingRatiosRuntimeWithDB(DB); err != nil {
+		return GroupCatalog{}, err
+	}
+	return row, nil
 }
 
 func DeleteGroupCatalog(name string) error {
-	return deleteGroupCatalogWithDB(DB, name)
+	if err := deleteGroupCatalogWithDB(DB, name); err != nil {
+		return err
+	}
+	return syncGroupBillingRatiosRuntimeWithDB(DB)
 }
 
 func listGroupCatalogWithDB(db *gorm.DB) ([]GroupCatalog, error) {
@@ -81,13 +99,14 @@ func createGroupCatalogWithDB(db *gorm.DB, item GroupCatalog) (GroupCatalog, err
 	}
 	now := helper.GetTimestamp()
 	row := GroupCatalog{
-		Name:        name,
-		DisplayName: strings.TrimSpace(item.DisplayName),
-		Description: strings.TrimSpace(item.Description),
-		Source:      strings.TrimSpace(item.Source),
-		Enabled:     true,
-		SortOrder:   maxSortOrder + 1,
-		UpdatedAt:   now,
+		Name:         name,
+		DisplayName:  strings.TrimSpace(item.DisplayName),
+		Description:  strings.TrimSpace(item.Description),
+		Source:       strings.TrimSpace(item.Source),
+		BillingRatio: normalizeGroupBillingRatio(item.BillingRatio),
+		Enabled:      true,
+		SortOrder:    maxSortOrder + 1,
+		UpdatedAt:    now,
 	}
 	if row.Source == "" {
 		row.Source = "manual"
@@ -109,6 +128,7 @@ func updateGroupCatalogWithDB(db *gorm.DB, item GroupCatalog) (GroupCatalog, err
 	}
 	row.DisplayName = strings.TrimSpace(item.DisplayName)
 	row.Description = strings.TrimSpace(item.Description)
+	row.BillingRatio = normalizeGroupBillingRatio(item.BillingRatio)
 	row.Enabled = item.Enabled
 	if item.SortOrder > 0 {
 		row.SortOrder = item.SortOrder

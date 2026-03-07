@@ -11,7 +11,6 @@ import (
 	"github.com/yeying-community/router/common/config"
 	"github.com/yeying-community/router/common/image"
 	"github.com/yeying-community/router/common/logger"
-	billingratio "github.com/yeying-community/router/internal/relay/billing/ratio"
 	"github.com/yeying-community/router/internal/relay/model"
 )
 
@@ -35,17 +34,9 @@ func InitTokenEncoders() {
 	if err != nil {
 		logger.FatalLog(fmt.Sprintf("failed to get gpt-4 token encoder: %s", err.Error()))
 	}
-	for model := range billingratio.ModelRatio {
-		if strings.HasPrefix(model, "gpt-3.5") {
-			tokenEncoderMap[model] = gpt35TokenEncoder
-		} else if strings.HasPrefix(model, "gpt-4o") {
-			tokenEncoderMap[model] = gpt4oTokenEncoder
-		} else if strings.HasPrefix(model, "gpt-4") {
-			tokenEncoderMap[model] = gpt4TokenEncoder
-		} else {
-			tokenEncoderMap[model] = nil
-		}
-	}
+	tokenEncoderMap["gpt-3.5-turbo"] = gpt35TokenEncoder
+	tokenEncoderMap["gpt-4o"] = gpt4oTokenEncoder
+	tokenEncoderMap["gpt-4"] = gpt4TokenEncoder
 	logger.SysLog("token encoders initialized")
 }
 
@@ -63,7 +54,25 @@ func getTokenEncoder(model string) *tiktoken.Tiktoken {
 		tokenEncoderMap[model] = tokenEncoder
 		return tokenEncoder
 	}
-	return defaultTokenEncoder
+	switch {
+	case strings.HasPrefix(model, "gpt-3.5"):
+		tokenEncoderMap[model] = tokenEncoderMap["gpt-3.5-turbo"]
+		return tokenEncoderMap["gpt-3.5-turbo"]
+	case strings.HasPrefix(model, "gpt-4o"):
+		tokenEncoderMap[model] = tokenEncoderMap["gpt-4o"]
+		return tokenEncoderMap["gpt-4o"]
+	case strings.HasPrefix(model, "gpt-4"):
+		tokenEncoderMap[model] = tokenEncoderMap["gpt-4"]
+		return tokenEncoderMap["gpt-4"]
+	default:
+		tokenEncoder, err := tiktoken.EncodingForModel(model)
+		if err != nil {
+			logger.SysError(fmt.Sprintf("failed to get token encoder for model %s: %s, using encoder for gpt-3.5-turbo", model, err.Error()))
+			tokenEncoder = defaultTokenEncoder
+		}
+		tokenEncoderMap[model] = tokenEncoder
+		return tokenEncoder
+	}
 }
 
 func getTokenNum(tokenEncoder *tiktoken.Tiktoken, text string) int {

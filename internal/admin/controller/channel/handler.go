@@ -123,7 +123,7 @@ func SearchChannels(c *gin.Context) {
 // @Tags admin
 // @Security BearerAuth
 // @Produce json
-// @Param id path int true "Channel ID"
+// @Param id path string true "Channel ID"
 // @Success 200 {object} docs.StandardResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/admin/channel/{id} [get]
@@ -272,7 +272,7 @@ func CreateChannelDraft(c *gin.Context) {
 // @Tags admin
 // @Security BearerAuth
 // @Produce json
-// @Param id path int true "Channel ID"
+// @Param id path string true "Channel ID"
 // @Success 200 {object} docs.StandardResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/admin/channel/{id} [delete]

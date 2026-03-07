@@ -1,13 +1,10 @@
 package model
 
 import (
-	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
 	commonutils "github.com/yeying-community/router/common/utils"
-	billingratio "github.com/yeying-community/router/internal/relay/billing/ratio"
 	relaychannel "github.com/yeying-community/router/internal/relay/channel"
 )
 
@@ -204,223 +201,6 @@ func MergeModelProviderDetails(provider string, current []ModelProviderModelDeta
 	return NormalizeModelProviderModelDetails(result)
 }
 
-func BuildDefaultModelProviderCatalogSeeds(now int64) []ModelProviderCatalogSeed {
-	detailIndex := buildDefaultProviderModelDetailIndex(now)
-	baseURLs := GetModelProviderDefaultBaseURLs()
-	providers := make([]string, 0, len(detailIndex))
-	for provider := range detailIndex {
-		providers = append(providers, provider)
-	}
-	sort.Strings(providers)
-
-	seeds := make([]ModelProviderCatalogSeed, 0, len(providers))
-	for idx, provider := range providers {
-		details := make([]ModelProviderModelDetail, 0, len(detailIndex[provider]))
-		for _, detail := range detailIndex[provider] {
-			details = append(details, detail)
-		}
-		details = NormalizeModelProviderModelDetails(details)
-		seeds = append(seeds, ModelProviderCatalogSeed{
-			Provider:     provider,
-			Name:         providerDisplayName(provider),
-			BaseURL:      strings.TrimSpace(baseURLs[provider]),
-			SortOrder:    (idx + 1) * 10,
-			ModelDetails: details,
-		})
-	}
-	return seeds
-}
-
-func GetModelProviderDefaultBaseURLs() map[string]string {
-	result := map[string]string{
-		"openai":      "https://api.openai.com",
-		"google":      "https://generativelanguage.googleapis.com/v1beta/openai",
-		"anthropic":   "https://api.anthropic.com",
-		"xai":         "https://api.x.ai",
-		"mistral":     "https://api.mistral.ai",
-		"cohere":      "https://api.cohere.com/compatibility/v1",
-		"deepseek":    "https://api.deepseek.com",
-		"qwen":        "https://dashscope.aliyuncs.com/compatible-mode",
-		"zhipu":       "https://open.bigmodel.cn/api/paas/v4",
-		"hunyuan":     "https://api.hunyuan.cloud.tencent.com/v1",
-		"volcengine":  "https://ark.cn-beijing.volces.com/api/v3",
-		"minimax":     "https://api.minimax.chat/v1",
-		"baidu":       "https://aip.baidubce.com",
-		"baidu-v2":    "https://qianfan.baidubce.com",
-		"groq":        "https://api.groq.com/openai",
-		"moonshot":    "https://api.moonshot.cn",
-		"baichuan":    "https://api.baichuan-ai.com",
-		"ollama":      "http://localhost:11434",
-		"lingyiwanwu": "https://api.lingyiwanwu.com",
-		"stepfun":     "https://api.stepfun.com",
-		"coze":        "https://api.coze.com",
-		"cloudflare":  "https://api.cloudflare.com",
-		"deepl":       "https://api-free.deepl.com",
-		"togetherai":  "https://api.together.xyz",
-		"novita":      "https://api.novita.ai/v3/openai",
-		"siliconflow": "https://api.siliconflow.cn",
-		"replicate":   "https://api.replicate.com/v1/models/",
-		"xunfei":      "https://spark-api-open.xf-yun.com",
-	}
-
-	for idx, rawProvider := range relaychannel.ChannelProtocolNames {
-		if idx <= 0 || idx >= len(relaychannel.ChannelBaseURLs) {
-			continue
-		}
-		provider := commonutils.NormalizeModelProvider(rawProvider)
-		if provider == "" || provider == "unknown" {
-			provider = strings.TrimSpace(strings.ToLower(rawProvider))
-		}
-		if provider == "" || provider == "unknown" {
-			continue
-		}
-		baseURL := strings.TrimSpace(relaychannel.ChannelBaseURLs[idx])
-		if baseURL == "" {
-			continue
-		}
-		if _, exists := result[provider]; !exists {
-			result[provider] = baseURL
-		}
-	}
-	return result
-}
-
-func buildDefaultProviderModelDetailIndex(now int64) map[string]map[string]ModelProviderModelDetail {
-	providerModels := make(map[string]map[string]ModelProviderModelDetail)
-	addModel := func(provider string, detail ModelProviderModelDetail) {
-		normalizedProvider := commonutils.NormalizeModelProvider(provider)
-		if normalizedProvider == "" || normalizedProvider == "unknown" {
-			normalizedProvider = strings.TrimSpace(strings.ToLower(provider))
-		}
-		if normalizedProvider == "" || normalizedProvider == "unknown" {
-			normalizedProvider = "other"
-		}
-		if providerModels[normalizedProvider] == nil {
-			providerModels[normalizedProvider] = make(map[string]ModelProviderModelDetail)
-		}
-		detail.Model = strings.TrimSpace(detail.Model)
-		if detail.Model == "" {
-			return
-		}
-		detail.Type = normalizeModelType(detail.Type, detail.Model)
-		if detail.PriceUnit == "" {
-			detail.PriceUnit = defaultPriceUnitByType(detail.Type, detail.Model)
-		}
-		if detail.Currency == "" {
-			detail.Currency = ModelProviderPriceCurrencyUSD
-		}
-		if detail.Source == "" {
-			detail.Source = "default"
-		}
-		if detail.UpdatedAt == 0 {
-			detail.UpdatedAt = now
-		}
-
-		existing, ok := providerModels[normalizedProvider][detail.Model]
-		if !ok {
-			providerModels[normalizedProvider][detail.Model] = detail
-			return
-		}
-		if existing.InputPrice <= 0 && detail.InputPrice > 0 {
-			existing.InputPrice = detail.InputPrice
-		}
-		if existing.OutputPrice <= 0 && detail.OutputPrice > 0 {
-			existing.OutputPrice = detail.OutputPrice
-		}
-		if existing.Type == "" {
-			existing.Type = detail.Type
-		}
-		if existing.PriceUnit == "" {
-			existing.PriceUnit = detail.PriceUnit
-		}
-		if existing.Currency == "" {
-			existing.Currency = detail.Currency
-		}
-		if detail.UpdatedAt > existing.UpdatedAt {
-			existing.UpdatedAt = detail.UpdatedAt
-		}
-		providerModels[normalizedProvider][detail.Model] = existing
-	}
-
-	for modelKey, ratio := range billingratio.ModelRatio {
-		modelName, channelProtocol, hasChannelProtocol := splitModelAndChannelProtocol(modelKey)
-		provider := inferProviderByModel(modelName, channelProtocol, hasChannelProtocol)
-		modelType := normalizeModelType("", modelName)
-		priceUnit := defaultPriceUnitByType(modelType, modelName)
-		inputPrice := ratioToOriginalPrice(modelType, priceUnit, ratio)
-		outputPrice := 0.0
-		if modelType == ModelProviderModelTypeText {
-			multiplier := completionRatioByModel(modelName, channelProtocol, hasChannelProtocol)
-			if multiplier > 0 {
-				outputPrice = inputPrice * multiplier
-			}
-		}
-		addModel(provider, ModelProviderModelDetail{
-			Model:       modelName,
-			Type:        modelType,
-			InputPrice:  inputPrice,
-			OutputPrice: outputPrice,
-			PriceUnit:   priceUnit,
-			Currency:    ModelProviderPriceCurrencyUSD,
-			Source:      "default",
-			UpdatedAt:   now,
-		})
-	}
-
-	for modelKey := range billingratio.CompletionRatio {
-		modelName, channelProtocol, hasChannelProtocol := splitModelAndChannelProtocol(modelKey)
-		provider := inferProviderByModel(modelName, channelProtocol, hasChannelProtocol)
-		addModel(provider, ModelProviderModelDetail{
-			Model:       modelName,
-			Type:        normalizeModelType("", modelName),
-			InputPrice:  0,
-			OutputPrice: 0,
-			PriceUnit:   defaultPriceUnitByType("", modelName),
-			Currency:    ModelProviderPriceCurrencyUSD,
-			Source:      "default",
-			UpdatedAt:   now,
-		})
-	}
-
-	for modelName := range billingratio.ImageSizeRatios {
-		provider := inferProviderByModel(modelName, 0, false)
-		addModel(provider, ModelProviderModelDetail{
-			Model:       modelName,
-			Type:        ModelProviderModelTypeImage,
-			InputPrice:  0,
-			OutputPrice: 0,
-			PriceUnit:   ModelProviderPriceUnitPerImage,
-			Currency:    ModelProviderPriceCurrencyUSD,
-			Source:      "default",
-			UpdatedAt:   now,
-		})
-	}
-
-	return providerModels
-}
-
-func splitModelAndChannelProtocol(raw string) (string, int, bool) {
-	trimmed := strings.TrimSpace(raw)
-	if trimmed == "" {
-		return "", 0, false
-	}
-	left := strings.LastIndex(trimmed, "(")
-	right := strings.LastIndex(trimmed, ")")
-	if left <= 0 || right != len(trimmed)-1 || left >= right {
-		return trimmed, 0, false
-	}
-	idRaw := strings.TrimSpace(trimmed[left+1 : right])
-	channelProtocol, err := strconv.Atoi(idRaw)
-	if err != nil {
-		return trimmed, 0, false
-	}
-	modelName := strings.TrimSpace(trimmed[:left])
-	if modelName == "" {
-		return trimmed, 0, false
-	}
-	return modelName, channelProtocol, true
-}
-
 func inferProviderByModel(modelName string, channelProtocol int, hasChannelProtocol bool) string {
 	provider := commonutils.NormalizeModelProvider(commonutils.ResolveModelProvider(modelName))
 	if provider != "" && provider != "unknown" {
@@ -472,40 +252,6 @@ func inferProviderByModel(modelName string, channelProtocol int, hasChannelProto
 	return "other"
 }
 
-func completionRatioByModel(modelName string, channelProtocol int, hasChannelProtocol bool) float64 {
-	if hasChannelProtocol {
-		key := fmt.Sprintf("%s(%d)", modelName, channelProtocol)
-		if ratio, ok := billingratio.CompletionRatio[key]; ok {
-			return ratio
-		}
-		if ratio, ok := billingratio.DefaultCompletionRatio[key]; ok {
-			return ratio
-		}
-	}
-	if ratio, ok := billingratio.CompletionRatio[modelName]; ok {
-		return ratio
-	}
-	if ratio, ok := billingratio.DefaultCompletionRatio[modelName]; ok {
-		return ratio
-	}
-	return billingratio.GetCompletionRatio(modelName, channelProtocol)
-}
-
-func ratioToOriginalPrice(modelType string, priceUnit string, ratio float64) float64 {
-	if ratio <= 0 {
-		return 0
-	}
-	switch modelType {
-	case ModelProviderModelTypeImage:
-		if priceUnit == ModelProviderPriceUnitPerImage {
-			return ratio / float64(billingratio.USD)
-		}
-		return ratio / float64(billingratio.USD)
-	default:
-		return ratio / float64(billingratio.USD)
-	}
-}
-
 func normalizeModelType(raw string, modelName string) string {
 	trimmed := strings.TrimSpace(strings.ToLower(raw))
 	switch trimmed {
@@ -516,7 +262,7 @@ func normalizeModelType(raw string, modelName string) string {
 	if lower == "" {
 		return ModelProviderModelTypeText
 	}
-	if _, ok := billingratio.ImageSizeRatios[modelName]; ok {
+	if isKnownImageModel(modelName) {
 		return ModelProviderModelTypeImage
 	}
 	switch {
@@ -536,6 +282,21 @@ func normalizeModelType(raw string, modelName string) string {
 	}
 }
 
+func isKnownImageModel(modelName string) bool {
+	switch strings.TrimSpace(strings.ToLower(modelName)) {
+	case "dall-e-2",
+		"dall-e-3",
+		"ali-stable-diffusion-xl",
+		"ali-stable-diffusion-v1.5",
+		"wanx-v1",
+		"cogview-3",
+		"step-1x-medium":
+		return true
+	default:
+		return false
+	}
+}
+
 func InferModelType(modelName string) string {
 	return normalizeModelType("", modelName)
 }
@@ -552,59 +313,5 @@ func defaultPriceUnitByType(modelType string, modelName string) string {
 		return ModelProviderPriceUnitPer1KTokens
 	default:
 		return ModelProviderPriceUnitPer1KTokens
-	}
-}
-
-func providerDisplayName(provider string) string {
-	switch provider {
-	case "openai":
-		return "OpenAI"
-	case "google":
-		return "Google Gemini"
-	case "anthropic":
-		return "Anthropic"
-	case "xai":
-		return "xAI"
-	case "mistral":
-		return "Mistral"
-	case "cohere":
-		return "Cohere"
-	case "deepseek":
-		return "DeepSeek"
-	case "qwen":
-		return "Qwen"
-	case "zhipu":
-		return "Zhipu"
-	case "hunyuan":
-		return "Tencent Hunyuan"
-	case "volcengine":
-		return "Volcengine"
-	case "minimax":
-		return "MiniMax"
-	case "baidu":
-		return "Baidu"
-	case "baidu-v2":
-		return "Baidu Qianfan V2"
-	case "moonshot":
-		return "Moonshot"
-	case "baichuan":
-		return "Baichuan"
-	case "lingyiwanwu":
-		return "Lingyiwanwu"
-	case "stepfun":
-		return "StepFun"
-	case "groq":
-		return "Groq"
-	case "ollama":
-		return "Ollama"
-	case "xunfei":
-		return "iFlytek Spark"
-	case "other":
-		return "Other"
-	default:
-		if provider == "" {
-			return "Other"
-		}
-		return strings.ToUpper(provider[:1]) + provider[1:]
 	}
 }

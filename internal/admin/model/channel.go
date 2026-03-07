@@ -319,50 +319,6 @@ func UpdateChannelTestModel(id string, testModel string) error {
 	return mustChannelRepo().UpdateChannelTestModelByID(id, testModel)
 }
 
-func (channel *Channel) GetChannelModelRatioJSON() string {
-	selected := channel.selectedModelConfigs()
-	if len(selected) == 0 {
-		return ""
-	}
-	ratios := make(map[string]float64, len(selected))
-	for _, row := range selected {
-		key := strings.TrimSpace(row.UpstreamModel)
-		if key == "" {
-			key = strings.TrimSpace(row.Model)
-		}
-		if key == "" {
-			continue
-		}
-		if _, ok := ratios[key]; ok {
-			continue
-		}
-		ratios[key] = row.ModelRatio
-	}
-	return marshalChannelFloatMapJSON(ratios)
-}
-
-func (channel *Channel) GetChannelCompletionRatioJSON() string {
-	selected := channel.selectedModelConfigs()
-	if len(selected) == 0 {
-		return ""
-	}
-	ratios := make(map[string]float64, len(selected))
-	for _, row := range selected {
-		key := strings.TrimSpace(row.UpstreamModel)
-		if key == "" {
-			key = strings.TrimSpace(row.Model)
-		}
-		if key == "" {
-			continue
-		}
-		if _, ok := ratios[key]; ok {
-			continue
-		}
-		ratios[key] = row.CompletionRatio
-	}
-	return marshalChannelFloatMapJSON(ratios)
-}
-
 func (channel *Channel) selectedModelConfigs() []ChannelModel {
 	configs := channel.GetModelConfigs()
 	if len(configs) == 0 {
@@ -381,13 +337,9 @@ func (channel *Channel) selectedModelConfigs() []ChannelModel {
 	return selected
 }
 
-func marshalChannelFloatMapJSON(values map[string]float64) string {
-	if len(values) == 0 {
-		return ""
+func (channel *Channel) GetSelectedModelConfigs() []ChannelModel {
+	if channel == nil {
+		return nil
 	}
-	data, err := json.Marshal(values)
-	if err != nil {
-		return ""
-	}
-	return string(data)
+	return channel.selectedModelConfigs()
 }
