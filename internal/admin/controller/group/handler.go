@@ -159,14 +159,20 @@ func UpdateGroup(c *gin.Context) {
 		})
 		return
 	}
-	row, err := groupsvc.Update(model.GroupCatalog{
+	item := model.GroupCatalog{
 		Id:           strings.TrimSpace(req.Id),
 		Name:         strings.TrimSpace(req.Name),
 		Description:  strings.TrimSpace(req.Description),
 		BillingRatio: billingRatio,
 		Enabled:      enabled,
 		SortOrder:    req.SortOrder,
-	})
+	}
+	row := model.GroupCatalog{}
+	if req.ChannelIDs != nil {
+		row, err = groupsvc.UpdateWithChannelBindings(item, req.ChannelIDs)
+	} else {
+		row, err = groupsvc.Update(item)
+	}
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,

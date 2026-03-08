@@ -22,6 +22,10 @@ func Update(item model.GroupCatalog) (model.GroupCatalog, error) {
 	return model.UpdateGroupCatalog(item)
 }
 
+func UpdateWithChannelBindings(item model.GroupCatalog, channelIDs []string) (model.GroupCatalog, error) {
+	return model.UpdateGroupCatalogWithChannelBindings(item, channelIDs)
+}
+
 func Delete(id string) error {
 	return model.DeleteGroupCatalog(id)
 }

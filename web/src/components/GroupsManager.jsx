@@ -17,6 +17,48 @@ const createEmptyForm = () => ({
   sort_order: 0,
 });
 
+const sortCatalogRows = (items) =>
+  [...items].sort((a, b) => {
+    const aOrder = Number(a.sort_order || 0);
+    const bOrder = Number(b.sort_order || 0);
+    if (aOrder !== bOrder) {
+      return aOrder - bOrder;
+    }
+    return (a.id || '').localeCompare(b.id || '');
+  });
+
+const toChannelOptions = (items) =>
+  (Array.isArray(items) ? items : []).map((item) => ({
+    key: item.id,
+    text: `${item.name || item.id} (${item.id})`,
+    value: item.id,
+  }));
+
+const toBoundChannelIDs = (items) =>
+  (Array.isArray(items) ? items : [])
+    .filter((item) => !!item.bound)
+    .map((item) => item.id);
+
+const panelStyle = {
+  marginBottom: '16px',
+  padding: '16px',
+  border: '1px solid rgba(34, 36, 38, 0.08)',
+  borderRadius: '10px',
+  background: '#fff',
+};
+
+const panelHeaderStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: '12px',
+  marginBottom: '12px',
+};
+
+const panelTitleStyle = { fontSize: '16px', fontWeight: 600 };
+
+const panelActionsStyle = { display: 'flex', alignItems: 'center', gap: '8px' };
+
 const GroupsManager = forwardRef((_, ref) => {
   const { t } = useTranslation();
   const [rows, setRows] = useState([]);
@@ -29,16 +71,14 @@ const GroupsManager = forwardRef((_, ref) => {
   const [createChannelIDs, setCreateChannelIDs] = useState([]);
   const [createChannelOptionsLoading, setCreateChannelOptionsLoading] = useState(false);
 
-  const [editOpen, setEditOpen] = useState(false);
+  const [editVisible, setEditVisible] = useState(false);
   const [editForm, setEditForm] = useState(createEmptyForm());
+  const [editChannelOptions, setEditChannelOptions] = useState([]);
+  const [editChannelIDs, setEditChannelIDs] = useState([]);
+  const [editChannelOptionsLoading, setEditChannelOptionsLoading] = useState(false);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [bindingOpen, setBindingOpen] = useState(false);
-  const [bindingTarget, setBindingTarget] = useState(null);
-  const [bindingOptions, setBindingOptions] = useState([]);
-  const [bindingChannelIDs, setBindingChannelIDs] = useState([]);
-  const [bindingLoading, setBindingLoading] = useState(false);
 
   const loadCatalog = useCallback(async () => {
     setLoading(true);
@@ -49,27 +89,13 @@ const GroupsManager = forwardRef((_, ref) => {
         showError(message || t('group_manage.messages.load_failed'));
         return;
       }
-      setRows(Array.isArray(data) ? data : []);
+      setRows(sortCatalogRows(Array.isArray(data) ? data : []));
     } catch (error) {
       showError(error);
     } finally {
       setLoading(false);
     }
   }, [t]);
-
-  useEffect(() => {
-    loadCatalog().then();
-  }, [loadCatalog]);
-
-  const sortCatalogRows = (items) =>
-    [...items].sort((a, b) => {
-      const aOrder = Number(a.sort_order || 0);
-      const bOrder = Number(b.sort_order || 0);
-      if (aOrder !== bOrder) {
-        return aOrder - bOrder;
-      }
-      return (a.id || '').localeCompare(b.id || '');
-    });
 
   const loadCreateChannelOptions = useCallback(async () => {
     setCreateChannelOptionsLoading(true);
@@ -80,12 +106,7 @@ const GroupsManager = forwardRef((_, ref) => {
         showError(message || t('group_manage.messages.bind_load_failed'));
         return false;
       }
-      const options = (Array.isArray(data) ? data : []).map((item) => ({
-        key: item.id,
-        text: `${item.name || item.id} (${item.id})`,
-        value: item.id,
-      }));
-      setCreateChannelOptions(options);
+      setCreateChannelOptions(toChannelOptions(data));
       return true;
     } catch (error) {
       showError(error);
@@ -95,48 +116,85 @@ const GroupsManager = forwardRef((_, ref) => {
     }
   }, [t]);
 
+  const loadEditChannelBindings = useCallback(async (groupID) => {
+    setEditChannelOptionsLoading(true);
+    try {
+      const encodedID = encodeURIComponent(groupID || '');
+      const res = await API.get(`/api/v1/admin/group/${encodedID}/channels`);
+      const { success, message, data } = res.data || {};
+      if (!success) {
+        showError(message || t('group_manage.messages.bind_load_failed'));
+        return false;
+      }
+      setEditChannelOptions(toChannelOptions(data));
+      setEditChannelIDs(toBoundChannelIDs(data));
+      return true;
+    } catch (error) {
+      showError(error);
+      return false;
+    } finally {
+      setEditChannelOptionsLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    loadCatalog().then();
+  }, [loadCatalog]);
+
+  const resetCreatePanel = () => {
+    setCreateVisible(false);
+    setCreateForm(createEmptyForm());
+    setCreateChannelOptions([]);
+    setCreateChannelIDs([]);
+    setCreateChannelOptionsLoading(false);
+  };
+
+  const resetEditPanel = () => {
+    setEditVisible(false);
+    setEditForm(createEmptyForm());
+    setEditChannelOptions([]);
+    setEditChannelIDs([]);
+    setEditChannelOptionsLoading(false);
+  };
+
   const openCreatePanel = () => {
     if (submitting) return;
+    resetEditPanel();
     setCreateForm(createEmptyForm());
-    setCreateChannelIDs([]);
     setCreateChannelOptions([]);
+    setCreateChannelIDs([]);
     setCreateVisible(true);
     loadCreateChannelOptions().then();
+  };
+
+  const openEditPanel = async (row) => {
+    if (!row || submitting) return;
+    resetCreatePanel();
+    setEditForm({
+      id: row.id || '',
+      name: row.name || '',
+      description: row.description || '',
+      billing_ratio: Number(row.billing_ratio ?? 1),
+      sort_order: Number(row.sort_order || 0),
+    });
+    setEditChannelOptions([]);
+    setEditChannelIDs([]);
+    setEditVisible(true);
+    await loadEditChannelBindings(row.id || '');
   };
 
   useImperativeHandle(ref, () => ({
     openCreatePanel,
   }));
 
-  const resetCreatePanel = () => {
-    setCreateVisible(false);
-    setCreateForm(createEmptyForm());
-    setCreateChannelIDs([]);
-    setCreateChannelOptions([]);
-    setCreateChannelOptionsLoading(false);
-  };
-
   const closeCreatePanel = () => {
     if (submitting) return;
     resetCreatePanel();
   };
 
-  const openEditModal = (row) => {
-    if (!row || submitting) return;
-    setEditForm({
-      id: row.id || '',
-      name: row.name || '',
-      description: row.description || '',
-      billing_ratio: Number(row.billing_ratio ?? 1),
-      sort_order: row.sort_order || 0,
-    });
-    setEditOpen(true);
-  };
-
-  const closeEditModal = () => {
+  const closeEditPanel = () => {
     if (submitting) return;
-    setEditOpen(false);
-    setEditForm(createEmptyForm());
+    resetEditPanel();
   };
 
   const openDeleteModal = (row) => {
@@ -149,46 +207,6 @@ const GroupsManager = forwardRef((_, ref) => {
     if (submitting) return;
     setDeleteOpen(false);
     setDeleteTarget(null);
-  };
-
-  const openBindingModal = async (row) => {
-    if (!row || submitting) return;
-    setBindingTarget(row);
-    setBindingOpen(true);
-    setBindingLoading(true);
-    try {
-      const encodedID = encodeURIComponent(row.id || '');
-      const res = await API.get(`/api/v1/admin/group/${encodedID}/channels`);
-      const { success, message, data } = res.data || {};
-      if (!success) {
-        showError(message || t('group_manage.messages.bind_load_failed'));
-        return;
-      }
-      const rows = Array.isArray(data) ? data : [];
-      setBindingOptions(
-        rows.map((item) => ({
-          key: item.id,
-          text: `${item.name || item.id} (${item.id})`,
-          value: item.id,
-        }))
-      );
-      setBindingChannelIDs(
-        rows.filter((item) => !!item.bound).map((item) => item.id)
-      );
-    } catch (error) {
-      showError(error);
-    } finally {
-      setBindingLoading(false);
-    }
-  };
-
-  const closeBindingModal = () => {
-    if (submitting) return;
-    setBindingOpen(false);
-    setBindingTarget(null);
-    setBindingOptions([]);
-    setBindingChannelIDs([]);
-    setBindingLoading(false);
   };
 
   const submitCreate = async () => {
@@ -245,6 +263,7 @@ const GroupsManager = forwardRef((_, ref) => {
         description: (editForm.description || '').trim(),
         billing_ratio: billingRatio,
         sort_order: Number(editForm.sort_order || 0),
+        channel_ids: editChannelIDs,
       });
       const { success, message, data } = res.data || {};
       if (!success) {
@@ -255,8 +274,7 @@ const GroupsManager = forwardRef((_, ref) => {
         sortCatalogRows(prev.map((row) => (row.id === data.id ? data : row)))
       );
       showSuccess(t('group_manage.messages.update_success'));
-      setEditOpen(false);
-      setEditForm(createEmptyForm());
+      resetEditPanel();
     } catch (error) {
       showError(error);
     } finally {
@@ -272,6 +290,7 @@ const GroupsManager = forwardRef((_, ref) => {
         id: row.id,
         name: row.name || '',
         description: row.description || '',
+        billing_ratio: Number(row.billing_ratio ?? 1),
         sort_order: Number(row.sort_order || 0),
         enabled: !row.enabled,
       });
@@ -281,7 +300,7 @@ const GroupsManager = forwardRef((_, ref) => {
         return;
       }
       setRows((prev) =>
-        prev.map((item) => (item.id === data.id ? data : item))
+        sortCatalogRows(prev.map((item) => (item.id === data.id ? data : item)))
       );
       showSuccess(t('group_manage.messages.update_success'));
     } catch (error) {
@@ -306,28 +325,9 @@ const GroupsManager = forwardRef((_, ref) => {
       showSuccess(t('group_manage.messages.delete_success'));
       setDeleteOpen(false);
       setDeleteTarget(null);
-    } catch (error) {
-      showError(error);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const submitBinding = async () => {
-    if (!bindingTarget || submitting) return;
-    setSubmitting(true);
-    try {
-      const encodedID = encodeURIComponent(bindingTarget.id || '');
-      const res = await API.put(`/api/v1/admin/group/${encodedID}/channels`, {
-        channel_ids: bindingChannelIDs,
-      });
-      const { success, message } = res.data || {};
-      if (!success) {
-        showError(message || t('group_manage.messages.bind_update_failed'));
-        return;
+      if (editForm.id === deleteTarget.id) {
+        resetEditPanel();
       }
-      showSuccess(t('group_manage.messages.bind_update_success'));
-      closeBindingModal();
     } catch (error) {
       showError(error);
     } finally {
@@ -338,28 +338,10 @@ const GroupsManager = forwardRef((_, ref) => {
   return (
     <>
       {createVisible && (
-        <div
-          style={{
-            marginBottom: '16px',
-            padding: '16px',
-            border: '1px solid rgba(34, 36, 38, 0.08)',
-            borderRadius: '10px',
-            background: '#fff',
-          }}
-        >
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '12px',
-              marginBottom: '12px',
-            }}
-          >
-            <div style={{ fontSize: '16px', fontWeight: 600 }}>
-              {t('group_manage.modal.create_title')}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={panelStyle}>
+          <div style={panelHeaderStyle}>
+            <div style={panelTitleStyle}>{t('group_manage.modal.create_title')}</div>
+            <div style={panelActionsStyle}>
               <Button onClick={closeCreatePanel} disabled={submitting}>
                 {t('group_manage.buttons.cancel')}
               </Button>
@@ -434,6 +416,95 @@ const GroupsManager = forwardRef((_, ref) => {
         </div>
       )}
 
+      {editVisible && (
+        <div style={panelStyle}>
+          <div style={panelHeaderStyle}>
+            <div style={panelTitleStyle}>{t('group_manage.modal.edit_title')}</div>
+            <div style={panelActionsStyle}>
+              <Button onClick={closeEditPanel} disabled={submitting}>
+                {t('group_manage.buttons.cancel')}
+              </Button>
+              <Button primary onClick={submitEdit} loading={submitting}>
+                {t('group_manage.buttons.confirm')}
+              </Button>
+            </div>
+          </div>
+          <Form>
+            <Form.Group widths='equal'>
+              <Form.Input
+                disabled
+                label={t('group_manage.form.id')}
+                value={editForm.id}
+              />
+              <Form.Input
+                label={t('group_manage.form.name')}
+                placeholder={t('group_manage.form.name_placeholder')}
+                value={editForm.name}
+                onChange={(e) =>
+                  setEditForm((prev) => ({
+                    ...prev,
+                    name: e.target.value,
+                  }))
+                }
+              />
+            </Form.Group>
+            <Form.TextArea
+              label={t('group_manage.form.description')}
+              placeholder={t('group_manage.form.description_placeholder')}
+              value={editForm.description}
+              onChange={(e) =>
+                setEditForm((prev) => ({
+                  ...prev,
+                  description: e.target.value,
+                }))
+              }
+            />
+            <Form.Group widths='equal'>
+              <Form.Input
+                type='number'
+                min='0'
+                step='0.01'
+                label={t('group_manage.form.billing_ratio')}
+                placeholder={t('group_manage.form.billing_ratio_placeholder')}
+                value={editForm.billing_ratio}
+                onChange={(e) =>
+                  setEditForm((prev) => ({
+                    ...prev,
+                    billing_ratio: e.target.value,
+                  }))
+                }
+              />
+              <Form.Input
+                type='number'
+                label={t('group_manage.form.sort_order')}
+                value={editForm.sort_order}
+                onChange={(e) =>
+                  setEditForm((prev) => ({
+                    ...prev,
+                    sort_order: Number(e.target.value || 0),
+                  }))
+                }
+              />
+            </Form.Group>
+            <Form.Dropdown
+              fluid
+              multiple
+              search
+              selection
+              loading={editChannelOptionsLoading}
+              disabled={editChannelOptionsLoading || submitting}
+              label={t('group_manage.form.channels')}
+              placeholder={t('group_manage.form.channels_placeholder')}
+              options={editChannelOptions}
+              value={editChannelIDs}
+              onChange={(e, { value }) =>
+                setEditChannelIDs(Array.isArray(value) ? value : [])
+              }
+            />
+          </Form>
+        </div>
+      )}
+
       <Table basic='very' compact size='small'>
         <Table.Header>
           <Table.Row>
@@ -444,7 +515,7 @@ const GroupsManager = forwardRef((_, ref) => {
             <Table.HeaderCell>{t('group_manage.table.status')}</Table.HeaderCell>
             <Table.HeaderCell>{t('group_manage.table.sort_order')}</Table.HeaderCell>
             <Table.HeaderCell>{t('group_manage.table.updated_at')}</Table.HeaderCell>
-            <Table.HeaderCell style={{ width: '320px' }}>
+            <Table.HeaderCell style={{ width: '260px' }}>
               {t('group_manage.table.actions')}
             </Table.HeaderCell>
           </Table.Row>
@@ -481,18 +552,11 @@ const GroupsManager = forwardRef((_, ref) => {
                   <Button
                     size='tiny'
                     disabled={submitting || loading}
-                    onClick={() => openEditModal(row)}
-                  >
-                    {t('group_manage.buttons.edit')}
-                  </Button>
-                  <Button
-                    size='tiny'
-                    disabled={submitting || loading}
                     onClick={() => {
-                      openBindingModal(row).then();
+                      openEditPanel(row).then();
                     }}
                   >
-                    {t('group_manage.buttons.bind_channels')}
+                    {t('group_manage.buttons.edit')}
                   </Button>
                   <Button
                     size='tiny'
@@ -528,74 +592,6 @@ const GroupsManager = forwardRef((_, ref) => {
         </Table.Body>
       </Table>
 
-      <Modal open={editOpen} onClose={closeEditModal} size='small'>
-        <Modal.Header>{t('group_manage.modal.edit_title')}</Modal.Header>
-        <Modal.Content>
-          <Form>
-            <Form.Input
-              disabled
-              label={t('group_manage.form.id')}
-              value={editForm.id}
-            />
-            <Form.Input
-              label={t('group_manage.form.name')}
-              placeholder={t('group_manage.form.name_placeholder')}
-              value={editForm.name}
-              onChange={(e) =>
-                setEditForm((prev) => ({
-                  ...prev,
-                  name: e.target.value,
-                }))
-              }
-            />
-            <Form.TextArea
-              label={t('group_manage.form.description')}
-              placeholder={t('group_manage.form.description_placeholder')}
-              value={editForm.description}
-              onChange={(e) =>
-                setEditForm((prev) => ({
-                  ...prev,
-                  description: e.target.value,
-                }))
-              }
-            />
-            <Form.Input
-              type='number'
-              min='0'
-              step='0.01'
-              label={t('group_manage.form.billing_ratio')}
-              placeholder={t('group_manage.form.billing_ratio_placeholder')}
-              value={editForm.billing_ratio}
-              onChange={(e) =>
-                setEditForm((prev) => ({
-                  ...prev,
-                  billing_ratio: e.target.value,
-                }))
-              }
-            />
-            <Form.Input
-              type='number'
-              label={t('group_manage.form.sort_order')}
-              value={editForm.sort_order}
-              onChange={(e) =>
-                setEditForm((prev) => ({
-                  ...prev,
-                  sort_order: Number(e.target.value || 0),
-                }))
-              }
-            />
-          </Form>
-        </Modal.Content>
-        <Modal.Actions>
-          <Button onClick={closeEditModal} disabled={submitting}>
-            {t('group_manage.buttons.cancel')}
-          </Button>
-          <Button primary onClick={submitEdit} loading={submitting}>
-            {t('group_manage.buttons.confirm')}
-          </Button>
-        </Modal.Actions>
-      </Modal>
-
       <Modal open={deleteOpen} onClose={closeDeleteModal} size='tiny'>
         <Modal.Header>{t('group_manage.modal.delete_title')}</Modal.Header>
         <Modal.Content>
@@ -608,41 +604,6 @@ const GroupsManager = forwardRef((_, ref) => {
             {t('group_manage.buttons.cancel')}
           </Button>
           <Button negative onClick={submitDelete} loading={submitting}>
-            {t('group_manage.buttons.confirm')}
-          </Button>
-        </Modal.Actions>
-      </Modal>
-
-      <Modal open={bindingOpen} onClose={closeBindingModal} size='small'>
-        <Modal.Header>
-          {t('group_manage.modal.bind_channels_title', {
-            id: bindingTarget?.id || '',
-          })}
-        </Modal.Header>
-        <Modal.Content>
-          <Form>
-            <Form.Dropdown
-              fluid
-              multiple
-              search
-              selection
-              loading={bindingLoading}
-              disabled={bindingLoading || submitting}
-              label={t('group_manage.form.channels')}
-              placeholder={t('group_manage.form.channels_placeholder')}
-              options={bindingOptions}
-              value={bindingChannelIDs}
-              onChange={(e, { value }) =>
-                setBindingChannelIDs(Array.isArray(value) ? value : [])
-              }
-            />
-          </Form>
-        </Modal.Content>
-        <Modal.Actions>
-          <Button onClick={closeBindingModal} disabled={submitting || bindingLoading}>
-            {t('group_manage.buttons.cancel')}
-          </Button>
-          <Button primary onClick={submitBinding} loading={submitting}>
             {t('group_manage.buttons.confirm')}
           </Button>
         </Modal.Actions>

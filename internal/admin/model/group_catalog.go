@@ -76,6 +76,27 @@ func UpdateGroupCatalog(item GroupCatalog) (GroupCatalog, error) {
 	return row, nil
 }
 
+func UpdateGroupCatalogWithChannelBindings(item GroupCatalog, channelIDs []string) (GroupCatalog, error) {
+	row := GroupCatalog{}
+	if err := DB.Transaction(func(tx *gorm.DB) error {
+		updated, err := updateGroupCatalogWithDB(tx, item)
+		if err != nil {
+			return err
+		}
+		if err := replaceGroupChannelBindingsWithDB(tx, updated.Id, channelIDs); err != nil {
+			return err
+		}
+		row = updated
+		return nil
+	}); err != nil {
+		return GroupCatalog{}, err
+	}
+	if err := syncGroupBillingRatiosRuntimeWithDB(DB); err != nil {
+		return GroupCatalog{}, err
+	}
+	return row, nil
+}
+
 func DeleteGroupCatalog(id string) error {
 	if err := deleteGroupCatalogWithDB(DB, id); err != nil {
 		return err
