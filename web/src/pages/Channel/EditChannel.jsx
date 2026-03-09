@@ -2430,13 +2430,13 @@ const EditChannel = () => {
               </Button>
             </div>
           )}
-          <Card.Header className='header router-page-title'>
-            {isDetailMode
-              ? t('channel.edit.title_detail')
-              : isEditMode
+          {!isDetailMode && (
+            <Card.Header className='header router-page-title'>
+              {isEditMode
                 ? t('channel.edit.title_edit')
                 : t('channel.edit.title_create')}
-          </Card.Header>
+            </Card.Header>
+          )}
           <Form loading={loading} autoComplete='new-password'>
             {isCreateMode && (
               <div className='router-block-gap-sm'>
