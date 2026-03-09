@@ -534,16 +534,16 @@ func completeChannelModelRowDefaults(row *ChannelModel, channelProtocol int) {
 
 func normalizeExplicitChannelModelType(raw string) string {
 	switch strings.TrimSpace(strings.ToLower(raw)) {
-	case ModelProviderModelTypeImage:
-		return ModelProviderModelTypeImage
-	case ModelProviderModelTypeAudio:
-		return ModelProviderModelTypeAudio
+	case ProviderModelTypeImage:
+		return ProviderModelTypeImage
+	case ProviderModelTypeAudio:
+		return ProviderModelTypeAudio
 	default:
 		return ""
 	}
 }
 
-func resolveChannelModelProviderDetail(channelProtocol int, upstreamModel string, model string) (ResolvedModelPricing, bool) {
+func resolveChannelProviderDetail(channelProtocol int, upstreamModel string, model string) (ResolvedModelPricing, bool) {
 	candidates := normalizeTrimmedValuesPreserveOrder([]string{upstreamModel, model})
 	for _, candidate := range candidates {
 		if detail, ok := lookupProviderDefaultModelPricing(candidate, channelProtocol); ok {
@@ -558,7 +558,7 @@ func resolveChannelModelType(raw string, channelProtocol int, upstreamModel stri
 	if explicit != "" {
 		return explicit
 	}
-	if detail, ok := resolveChannelModelProviderDetail(channelProtocol, upstreamModel, model); ok {
+	if detail, ok := resolveChannelProviderDetail(channelProtocol, upstreamModel, model); ok {
 		resolved := normalizeModelType(detail.Type, detail.Model)
 		if resolved != "" {
 			return resolved
@@ -573,12 +573,12 @@ func resolveChannelModelType(raw string, channelProtocol int, upstreamModel stri
 
 func normalizeChannelModelPriceUnit(raw string, modelType string, channelProtocol int, upstreamModel string, model string) string {
 	priceUnit := strings.TrimSpace(strings.ToLower(raw))
-	if detail, ok := resolveChannelModelProviderDetail(channelProtocol, upstreamModel, model); ok {
+	if detail, ok := resolveChannelProviderDetail(channelProtocol, upstreamModel, model); ok {
 		providerPriceUnit := strings.TrimSpace(strings.ToLower(detail.PriceUnit))
 		if providerPriceUnit == "" {
 			providerPriceUnit = defaultPriceUnitByType(detail.Type, detail.Model)
 		}
-		if providerPriceUnit != "" && (priceUnit == "" || priceUnit == ModelProviderPriceUnitPer1KTokens) {
+		if providerPriceUnit != "" && (priceUnit == "" || priceUnit == ProviderPriceUnitPer1KTokens) {
 			return providerPriceUnit
 		}
 	}
@@ -597,7 +597,7 @@ func normalizeChannelModelCurrency(raw string) string {
 	if currency != "" {
 		return currency
 	}
-	return ModelProviderPriceCurrencyUSD
+	return ProviderPriceCurrencyUSD
 }
 
 func cloneNormalizedChannelModelPrice(value *float64) *float64 {

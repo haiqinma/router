@@ -232,7 +232,7 @@ const collectProviderCapabilities = (row) => {
   return PROVIDER_CAPABILITY_ORDER.filter((type) => capabilitySet.has(type));
 };
 
-const ModelProvidersManager = () => {
+const ProvidersManager = () => {
   const { t } = useTranslation();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -1155,4 +1155,4 @@ const ModelProvidersManager = () => {
   );
 };
 
-export default ModelProvidersManager;
+export default ProvidersManager;

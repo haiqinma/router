@@ -32,7 +32,7 @@ var providersUseFlatModelIDs = map[string]struct{}{
 }
 
 func canonicalizeModelNameForProvider(provider string, modelName string) string {
-	normalizedProvider := commonutils.NormalizeModelProvider(provider)
+	normalizedProvider := commonutils.NormalizeProvider(provider)
 	if normalizedProvider == "" {
 		normalizedProvider = strings.TrimSpace(strings.ToLower(provider))
 	}
@@ -54,12 +54,12 @@ func canonicalizeModelNameForProvider(provider string, modelName string) string 
 	return name
 }
 
-func LoadModelProviderModelDetailsMap(db *gorm.DB) (map[string][]ModelProviderModelDetail, error) {
-	return LoadModelProviderModelDetailsMapForProviders(db, nil)
+func LoadProviderModelDetailsMap(db *gorm.DB) (map[string][]ProviderModelDetail, error) {
+	return LoadProviderModelDetailsMapForProviders(db, nil)
 }
 
-func LoadModelProviderModelDetailsMapForProviders(db *gorm.DB, providers []string) (map[string][]ModelProviderModelDetail, error) {
-	rows := make([]ModelProviderModel, 0)
+func LoadProviderModelDetailsMapForProviders(db *gorm.DB, providers []string) (map[string][]ProviderModelDetail, error) {
+	rows := make([]ProviderModel, 0)
 	query := db.Order("provider asc, model asc")
 	if len(providers) > 0 {
 		query = query.Where("provider IN ?", providers)
@@ -67,9 +67,9 @@ func LoadModelProviderModelDetailsMapForProviders(db *gorm.DB, providers []strin
 	if err := query.Find(&rows).Error; err != nil {
 		return nil, err
 	}
-	result := make(map[string][]ModelProviderModelDetail, 0)
+	result := make(map[string][]ProviderModelDetail, 0)
 	for _, row := range rows {
-		provider := commonutils.NormalizeModelProvider(row.Provider)
+		provider := commonutils.NormalizeProvider(row.Provider)
 		if provider == "" {
 			provider = strings.TrimSpace(strings.ToLower(row.Provider))
 		}
@@ -80,7 +80,7 @@ func LoadModelProviderModelDetailsMapForProviders(db *gorm.DB, providers []strin
 		if modelName == "" {
 			continue
 		}
-		result[provider] = append(result[provider], ModelProviderModelDetail{
+		result[provider] = append(result[provider], ProviderModelDetail{
 			Model:       modelName,
 			Type:        strings.TrimSpace(strings.ToLower(row.Type)),
 			InputPrice:  row.InputPrice,
@@ -92,20 +92,20 @@ func LoadModelProviderModelDetailsMapForProviders(db *gorm.DB, providers []strin
 		})
 	}
 	for provider, details := range result {
-		result[provider] = NormalizeModelProviderModelDetails(details)
+		result[provider] = NormalizeProviderModelDetails(details)
 	}
 	return result, nil
 }
 
-func BuildModelProviderModelRows(provider string, details []ModelProviderModelDetail, now int64) []ModelProviderModel {
-	normalizedProvider := commonutils.NormalizeModelProvider(provider)
+func BuildProviderModelRows(provider string, details []ProviderModelDetail, now int64) []ProviderModel {
+	normalizedProvider := commonutils.NormalizeProvider(provider)
 	if normalizedProvider == "" {
 		normalizedProvider = strings.TrimSpace(strings.ToLower(provider))
 	}
 	if normalizedProvider == "" {
 		return nil
 	}
-	detailInput := make([]ModelProviderModelDetail, 0, len(details))
+	detailInput := make([]ProviderModelDetail, 0, len(details))
 	for _, detail := range details {
 		detail.Model = canonicalizeModelNameForProvider(normalizedProvider, detail.Model)
 		if strings.TrimSpace(detail.Model) == "" {
@@ -113,14 +113,14 @@ func BuildModelProviderModelRows(provider string, details []ModelProviderModelDe
 		}
 		detailInput = append(detailInput, detail)
 	}
-	normalizedDetails := NormalizeModelProviderModelDetails(detailInput)
-	rows := make([]ModelProviderModel, 0, len(normalizedDetails))
+	normalizedDetails := NormalizeProviderModelDetails(detailInput)
+	rows := make([]ProviderModel, 0, len(normalizedDetails))
 	for _, detail := range normalizedDetails {
 		updatedAt := detail.UpdatedAt
 		if updatedAt == 0 {
 			updatedAt = now
 		}
-		rows = append(rows, ModelProviderModel{
+		rows = append(rows, ProviderModel{
 			Provider:    normalizedProvider,
 			Model:       detail.Model,
 			Type:        detail.Type,

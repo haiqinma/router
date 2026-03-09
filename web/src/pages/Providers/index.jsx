@@ -1,17 +1,17 @@
 import React from 'react';
 import { Card } from 'semantic-ui-react';
-import ModelProvidersManager from '../../components/ModelProvidersManager';
+import ProvidersManager from '../../components/ProvidersManager';
 
-const ModelProviders = () => {
+const Providers = () => {
   return (
     <div className='dashboard-container'>
       <Card fluid className='chart-card'>
         <Card.Content>
-          <ModelProvidersManager />
+          <ProvidersManager />
         </Card.Content>
       </Card>
     </div>
   );
 };
 
-export default ModelProviders;
+export default Providers;

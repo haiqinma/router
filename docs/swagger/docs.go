@@ -2570,7 +2570,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "When provider is specified, the response shape becomes docs.ChannelModelsProviderResponse (data is string[] and meta is an object). model_provider filters by model naming rules.",
+                "description": "When channel is specified, the response shape becomes docs.ChannelModelsProviderResponse (data is string[] and meta is an object). provider filters by model naming rules.",
                 "produces": [
                     "application/json"
                 ],
@@ -2581,14 +2581,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Provider name",
-                        "name": "provider",
+                        "description": "Channel name",
+                        "name": "channel",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Model provider filter (gpt/gemini/claude/deepseek/qwen)",
-                        "name": "model_provider",
+                        "description": "Provider filter (gpt/gemini/claude/deepseek/qwen)",
+                        "name": "provider",
                         "in": "query"
                     }
                 ],

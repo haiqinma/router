@@ -19,13 +19,13 @@ func TestResolveChannelModelPricingUsesProviderDefaultAndChannelOverride(t *test
 		byProviderAndModel: map[string]providerModelPricingEntry{
 			"openai:gpt-4o": {
 				Provider: "openai",
-				Detail: ModelProviderModelDetail{
+				Detail: ProviderModelDetail{
 					Model:       "gpt-4o",
-					Type:        ModelProviderModelTypeText,
+					Type:        ProviderModelTypeText,
 					InputPrice:  0.005,
 					OutputPrice: 0.015,
-					PriceUnit:   ModelProviderPriceUnitPer1KTokens,
-					Currency:    ModelProviderPriceCurrencyUSD,
+					PriceUnit:   ProviderPriceUnitPer1KTokens,
+					Currency:    ProviderPriceCurrencyUSD,
 				},
 			},
 		},
@@ -33,13 +33,13 @@ func TestResolveChannelModelPricingUsesProviderDefaultAndChannelOverride(t *test
 			"gpt-4o": {
 				{
 					Provider: "openai",
-					Detail: ModelProviderModelDetail{
+					Detail: ProviderModelDetail{
 						Model:       "gpt-4o",
-						Type:        ModelProviderModelTypeText,
+						Type:        ProviderModelTypeText,
 						InputPrice:  0.005,
 						OutputPrice: 0.015,
-						PriceUnit:   ModelProviderPriceUnitPer1KTokens,
-						Currency:    ModelProviderPriceCurrencyUSD,
+						PriceUnit:   ProviderPriceUnitPer1KTokens,
+						Currency:    ProviderPriceCurrencyUSD,
 					},
 				},
 			},
@@ -54,8 +54,8 @@ func TestResolveChannelModelPricingUsesProviderDefaultAndChannelOverride(t *test
 			UpstreamModel: "gpt-4o",
 			Selected:      true,
 			InputPrice:    &overrideInputPrice,
-			PriceUnit:     ModelProviderPriceUnitPer1KTokens,
-			Currency:      ModelProviderPriceCurrencyUSD,
+			PriceUnit:     ProviderPriceUnitPer1KTokens,
+			Currency:      ProviderPriceCurrencyUSD,
 		},
 	}, "gpt-4o")
 	if err != nil {
@@ -90,8 +90,8 @@ func TestResolveChannelModelPricingRequiresPositivePrice(t *testing.T) {
 			Selected:      true,
 			InputPrice:    &zero,
 			OutputPrice:   &zero,
-			PriceUnit:     ModelProviderPriceUnitPer1KTokens,
-			Currency:      ModelProviderPriceCurrencyUSD,
+			PriceUnit:     ProviderPriceUnitPer1KTokens,
+			Currency:      ProviderPriceCurrencyUSD,
 		},
 	}, "missing-model")
 	if err == nil {

@@ -32,7 +32,7 @@ import TopUp from './pages/TopUp';
 import Log from './pages/Log';
 import Chat from './pages/Chat';
 import Dashboard from './pages/Dashboard';
-import ModelProviders from './pages/ModelProviders';
+import Providers from './pages/Providers';
 import Group from './pages/Group';
 import AdminLayout from './layouts/AdminLayout';
 import UserLayout from './layouts/UserLayout';
@@ -324,7 +324,7 @@ function App() {
         />
         <Route
           path='/admin/provider'
-          element={<ModelProviders />}
+          element={<Providers />}
         />
         <Route
           path='/admin/group'

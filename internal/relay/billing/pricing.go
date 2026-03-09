@@ -85,9 +85,9 @@ func quotaFromPrice(price float64, priceUnit string, currency string, quantity f
 	}
 	normalizedUnit := strings.TrimSpace(strings.ToLower(priceUnit))
 	switch normalizedUnit {
-	case "", model.ModelProviderPriceUnitPer1KTokens, model.ModelProviderPriceUnitPer1KChars:
+	case "", model.ProviderPriceUnitPer1KTokens, model.ProviderPriceUnitPer1KChars:
 		return quantity * price * quotaPerCurrencyUnit(currency) / 1000 * groupRatio
-	case model.ModelProviderPriceUnitPerImage:
+	case model.ProviderPriceUnitPerImage:
 		return quantity * price * quotaPerCurrencyUnit(currency) * groupRatio
 	default:
 		return quantity * price * quotaPerCurrencyUnit(currency) / 1000 * groupRatio
@@ -96,7 +96,7 @@ func quotaFromPrice(price float64, priceUnit string, currency string, quantity f
 
 func quotaPerCurrencyUnit(currency string) float64 {
 	switch strings.TrimSpace(strings.ToUpper(currency)) {
-	case "", model.ModelProviderPriceCurrencyUSD:
+	case "", model.ProviderPriceCurrencyUSD:
 		return config.QuotaPerUnit
 	case "CNY", "RMB":
 		return config.QuotaPerUnit / float64(usd2rmb)

@@ -1,7 +1,7 @@
 package model
 
-// ModelProvider stores model provider catalog in a dedicated table.
-type ModelProvider struct {
+// Provider stores model provider catalog in a dedicated table.
+type Provider struct {
 	Id        string `json:"id" gorm:"column:id;primaryKey;type:varchar(64)"`
 	Name      string `json:"name" gorm:"type:varchar(128);default:''"`
 	BaseURL   string `json:"base_url" gorm:"column:base_url;type:text"`
@@ -10,6 +10,6 @@ type ModelProvider struct {
 	UpdatedAt int64  `json:"updated_at" gorm:"bigint"`
 }
 
-func (ModelProvider) TableName() string {
+func (Provider) TableName() string {
 	return "providers"
 }

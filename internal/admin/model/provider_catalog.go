@@ -9,18 +9,18 @@ import (
 )
 
 const (
-	ModelProviderModelTypeText  = "text"
-	ModelProviderModelTypeImage = "image"
-	ModelProviderModelTypeAudio = "audio"
+	ProviderModelTypeText  = "text"
+	ProviderModelTypeImage = "image"
+	ProviderModelTypeAudio = "audio"
 
-	ModelProviderPriceUnitPer1KTokens = "per_1k_tokens"
-	ModelProviderPriceUnitPer1KChars  = "per_1k_chars"
-	ModelProviderPriceUnitPerImage    = "per_image"
+	ProviderPriceUnitPer1KTokens = "per_1k_tokens"
+	ProviderPriceUnitPer1KChars  = "per_1k_chars"
+	ProviderPriceUnitPerImage    = "per_image"
 
-	ModelProviderPriceCurrencyUSD = "USD"
+	ProviderPriceCurrencyUSD = "USD"
 )
 
-type ModelProviderModelDetail struct {
+type ProviderModelDetail struct {
 	Model       string  `json:"model"`
 	Type        string  `json:"type,omitempty"`
 	InputPrice  float64 `json:"input_price,omitempty"`
@@ -31,16 +31,16 @@ type ModelProviderModelDetail struct {
 	UpdatedAt   int64   `json:"updated_at,omitempty"`
 }
 
-type ModelProviderCatalogSeed struct {
+type ProviderCatalogSeed struct {
 	Provider     string
 	Name         string
 	BaseURL      string
 	SortOrder    int
-	ModelDetails []ModelProviderModelDetail
+	ModelDetails []ProviderModelDetail
 }
 
-func ModelProviderModelNames(details []ModelProviderModelDetail) []string {
-	normalized := NormalizeModelProviderModelDetails(details)
+func ProviderModelNames(details []ProviderModelDetail) []string {
+	normalized := NormalizeProviderModelDetails(details)
 	names := make([]string, 0, len(normalized))
 	for _, item := range normalized {
 		names = append(names, item.Model)
@@ -48,9 +48,9 @@ func ModelProviderModelNames(details []ModelProviderModelDetail) []string {
 	return names
 }
 
-func NormalizeModelProviderModelDetails(details []ModelProviderModelDetail) []ModelProviderModelDetail {
+func NormalizeProviderModelDetails(details []ProviderModelDetail) []ProviderModelDetail {
 	index := make(map[string]int, len(details))
-	normalized := make([]ModelProviderModelDetail, 0, len(details))
+	normalized := make([]ProviderModelDetail, 0, len(details))
 	for _, detail := range details {
 		modelName := strings.TrimSpace(detail.Model)
 		if modelName == "" {
@@ -63,7 +63,7 @@ func NormalizeModelProviderModelDetails(details []ModelProviderModelDetail) []Mo
 		}
 		currency := strings.TrimSpace(strings.ToUpper(detail.Currency))
 		if currency == "" {
-			currency = ModelProviderPriceCurrencyUSD
+			currency = ProviderPriceCurrencyUSD
 		}
 		source := strings.TrimSpace(strings.ToLower(detail.Source))
 		if source == "" {
@@ -77,7 +77,7 @@ func NormalizeModelProviderModelDetails(details []ModelProviderModelDetail) []Mo
 		if outputPrice < 0 {
 			outputPrice = 0
 		}
-		entry := ModelProviderModelDetail{
+		entry := ProviderModelDetail{
 			Model:       modelName,
 			Type:        t,
 			InputPrice:  inputPrice,
@@ -122,13 +122,13 @@ func NormalizeModelProviderModelDetails(details []ModelProviderModelDetail) []Mo
 	return normalized
 }
 
-func MergeModelProviderDetails(provider string, current []ModelProviderModelDetail, fallbackModels []string, includeDefaults bool, now int64) []ModelProviderModelDetail {
-	normalizedProvider := commonutils.NormalizeModelProvider(provider)
+func MergeProviderDetails(provider string, current []ProviderModelDetail, fallbackModels []string, includeDefaults bool, now int64) []ProviderModelDetail {
+	normalizedProvider := commonutils.NormalizeProvider(provider)
 	if normalizedProvider == "" {
 		normalizedProvider = strings.TrimSpace(strings.ToLower(provider))
 	}
 
-	merged := make(map[string]ModelProviderModelDetail)
+	merged := make(map[string]ProviderModelDetail)
 	if includeDefaults {
 		defaultIndex := buildDefaultProviderModelDetailIndex(now)
 		if providerDefaults, ok := defaultIndex[normalizedProvider]; ok {
@@ -138,7 +138,7 @@ func MergeModelProviderDetails(provider string, current []ModelProviderModelDeta
 		}
 	}
 
-	for _, detail := range NormalizeModelProviderModelDetails(current) {
+	for _, detail := range NormalizeProviderModelDetails(current) {
 		existing, ok := merged[detail.Model]
 		if !ok {
 			merged[detail.Model] = detail
@@ -176,11 +176,11 @@ func MergeModelProviderDetails(provider string, current []ModelProviderModelDeta
 		if _, ok := merged[name]; ok {
 			continue
 		}
-		merged[name] = ModelProviderModelDetail{
+		merged[name] = ProviderModelDetail{
 			Model:       name,
 			Type:        normalizeModelType("", name),
 			PriceUnit:   defaultPriceUnitByType("", name),
-			Currency:    ModelProviderPriceCurrencyUSD,
+			Currency:    ProviderPriceCurrencyUSD,
 			Source:      "manual",
 			UpdatedAt:   now,
 			InputPrice:  0,
@@ -188,7 +188,7 @@ func MergeModelProviderDetails(provider string, current []ModelProviderModelDeta
 		}
 	}
 
-	result := make([]ModelProviderModelDetail, 0, len(merged))
+	result := make([]ProviderModelDetail, 0, len(merged))
 	for _, detail := range merged {
 		if detail.Model == "" {
 			continue
@@ -198,18 +198,18 @@ func MergeModelProviderDetails(provider string, current []ModelProviderModelDeta
 		}
 		result = append(result, detail)
 	}
-	return NormalizeModelProviderModelDetails(result)
+	return NormalizeProviderModelDetails(result)
 }
 
 func inferProviderByModel(modelName string, channelProtocol int, hasChannelProtocol bool) string {
-	provider := commonutils.NormalizeModelProvider(commonutils.ResolveModelProvider(modelName))
+	provider := commonutils.NormalizeProvider(commonutils.ResolveProvider(modelName))
 	if provider != "" && provider != "unknown" {
 		return provider
 	}
 
 	if strings.Contains(modelName, "/") {
 		parts := strings.SplitN(modelName, "/", 2)
-		prefix := commonutils.NormalizeModelProvider(parts[0])
+		prefix := commonutils.NormalizeProvider(parts[0])
 		if prefix != "" && prefix != "unknown" {
 			return prefix
 		}
@@ -221,7 +221,7 @@ func inferProviderByModel(modelName string, channelProtocol int, hasChannelProto
 
 	if hasChannelProtocol && channelProtocol > 0 && channelProtocol < len(relaychannel.ChannelProtocolNames) {
 		rawProvider := strings.TrimSpace(relaychannel.ChannelProtocolNames[channelProtocol])
-		normalized := commonutils.NormalizeModelProvider(rawProvider)
+		normalized := commonutils.NormalizeProvider(rawProvider)
 		if normalized != "" && normalized != "unknown" {
 			return normalized
 		}
@@ -255,30 +255,30 @@ func inferProviderByModel(modelName string, channelProtocol int, hasChannelProto
 func normalizeModelType(raw string, modelName string) string {
 	trimmed := strings.TrimSpace(strings.ToLower(raw))
 	switch trimmed {
-	case ModelProviderModelTypeText, ModelProviderModelTypeImage, ModelProviderModelTypeAudio:
+	case ProviderModelTypeText, ProviderModelTypeImage, ProviderModelTypeAudio:
 		return trimmed
 	}
 	lower := strings.ToLower(strings.TrimSpace(modelName))
 	if lower == "" {
-		return ModelProviderModelTypeText
+		return ProviderModelTypeText
 	}
 	if isKnownImageModel(modelName) {
-		return ModelProviderModelTypeImage
+		return ProviderModelTypeImage
 	}
 	switch {
 	case strings.Contains(lower, "whisper"),
 		strings.HasPrefix(lower, "tts-"),
 		strings.Contains(lower, "audio"):
-		return ModelProviderModelTypeAudio
+		return ProviderModelTypeAudio
 	case strings.HasPrefix(lower, "dall-e"),
 		strings.HasPrefix(lower, "cogview"),
 		strings.Contains(lower, "stable-diffusion"),
 		strings.HasPrefix(lower, "wanx"),
 		strings.HasPrefix(lower, "step-1x"),
 		strings.Contains(lower, "flux"):
-		return ModelProviderModelTypeImage
+		return ProviderModelTypeImage
 	default:
-		return ModelProviderModelTypeText
+		return ProviderModelTypeText
 	}
 }
 
@@ -304,14 +304,14 @@ func InferModelType(modelName string) string {
 func defaultPriceUnitByType(modelType string, modelName string) string {
 	t := normalizeModelType(modelType, modelName)
 	switch t {
-	case ModelProviderModelTypeImage:
-		return ModelProviderPriceUnitPerImage
-	case ModelProviderModelTypeAudio:
+	case ProviderModelTypeImage:
+		return ProviderPriceUnitPerImage
+	case ProviderModelTypeAudio:
 		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(modelName)), "tts-") {
-			return ModelProviderPriceUnitPer1KChars
+			return ProviderPriceUnitPer1KChars
 		}
-		return ModelProviderPriceUnitPer1KTokens
+		return ProviderPriceUnitPer1KTokens
 	default:
-		return ModelProviderPriceUnitPer1KTokens
+		return ProviderPriceUnitPer1KTokens
 	}
 }

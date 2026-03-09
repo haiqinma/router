@@ -143,18 +143,18 @@ func normalizeUpstreamCapabilityModelType(raw string) string {
 	case strings.Contains(lower, "image"),
 		strings.Contains(lower, "vision"),
 		strings.Contains(lower, "diffusion"):
-		return model.ModelProviderModelTypeImage
+		return model.ProviderModelTypeImage
 	case strings.Contains(lower, "audio"),
 		strings.Contains(lower, "speech"),
 		strings.Contains(lower, "tts"),
 		strings.Contains(lower, "transcription"):
-		return model.ModelProviderModelTypeAudio
+		return model.ProviderModelTypeAudio
 	case strings.Contains(lower, "text"),
 		strings.Contains(lower, "chat"),
 		strings.Contains(lower, "completion"),
 		strings.Contains(lower, "response"),
 		strings.Contains(lower, "reason"):
-		return model.ModelProviderModelTypeText
+		return model.ProviderModelTypeText
 	default:
 		return ""
 	}
@@ -184,10 +184,10 @@ func inferUpstreamModelCardType(item openAIModelCard) string {
 	for _, values := range multiValueCandidates {
 		for _, value := range values {
 			if normalized := normalizeUpstreamCapabilityModelType(value); normalized != "" {
-				if normalized == model.ModelProviderModelTypeImage || normalized == model.ModelProviderModelTypeAudio {
+				if normalized == model.ProviderModelTypeImage || normalized == model.ProviderModelTypeAudio {
 					return normalized
 				}
-				if normalized == model.ModelProviderModelTypeText {
+				if normalized == model.ProviderModelTypeText {
 					return normalized
 				}
 			}
@@ -207,7 +207,7 @@ func inferUpstreamModelCardType(item openAIModelCard) string {
 	return ""
 }
 
-func fetchModelsByConfiguredChannelDetailed(key, baseURL, modelProvider string) ([]model.ChannelModel, string, error) {
+func fetchModelsByConfiguredChannelDetailed(key, baseURL, providerFilter string) ([]model.ChannelModel, string, error) {
 	trimmedKey := strings.TrimSpace(key)
 	if trimmedKey == "" {
 		return nil, "", fmt.Errorf("请先填写 Key")
@@ -247,7 +247,7 @@ func fetchModelsByConfiguredChannelDetailed(key, baseURL, modelProvider string) 
 		return nil, modelsURL, fmt.Errorf("%s", message)
 	}
 
-	provider := commonutils.NormalizeModelProvider(modelProvider)
+	provider := commonutils.NormalizeProvider(providerFilter)
 	seen := make(map[string]struct{}, len(parsed.Data))
 	modelRows := make([]model.ChannelModel, 0, len(parsed.Data))
 	for _, item := range parsed.Data {
@@ -255,7 +255,7 @@ func fetchModelsByConfiguredChannelDetailed(key, baseURL, modelProvider string) 
 		if id == "" {
 			continue
 		}
-		if provider != "" && !commonutils.MatchModelProvider(id, item.OwnedBy, provider) {
+		if provider != "" && !commonutils.MatchProvider(id, item.OwnedBy, provider) {
 			continue
 		}
 		if _, ok := seen[id]; ok {
@@ -271,7 +271,7 @@ func fetchModelsByConfiguredChannelDetailed(key, baseURL, modelProvider string) 
 	}
 	if len(modelRows) == 0 {
 		if provider != "" {
-			return nil, modelsURL, fmt.Errorf("未找到符合所选模型供应商的模型")
+			return nil, modelsURL, fmt.Errorf("未找到符合所选供应商的模型")
 		}
 		return nil, modelsURL, fmt.Errorf("未返回可用模型")
 	}
@@ -408,10 +408,10 @@ func pickCapabilityModels(channel *model.Channel, mode string, requestedModel st
 			break
 		}
 		switch targetType {
-		case model.ModelProviderModelTypeImage:
+		case model.ProviderModelTypeImage:
 			selection.ImageModel = targetModel
 			selection.RunImages = true
-		case model.ModelProviderModelTypeAudio:
+		case model.ProviderModelTypeAudio:
 			selection.AudioModel = targetModel
 			selection.RunAudio = true
 		default:
@@ -428,11 +428,11 @@ func pickCapabilityModels(channel *model.Channel, mode string, requestedModel st
 	selection.RunAudio = true
 	for _, row := range selectedRows {
 		switch row.Type {
-		case model.ModelProviderModelTypeImage:
+		case model.ProviderModelTypeImage:
 			if selection.ImageModel == "" {
 				selection.ImageModel = row.Model
 			}
-		case model.ModelProviderModelTypeAudio:
+		case model.ProviderModelTypeAudio:
 			if selection.AudioModel == "" {
 				selection.AudioModel = row.Model
 			}

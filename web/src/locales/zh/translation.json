@@ -2,7 +2,7 @@
   "header": {
     "home": "首页",
     "channel": "渠道",
-    "model_providers": "供应商",
+    "providers": "供应商",
     "group": "分组",
     "token": "令牌",
     "redemption": "兑换",
@@ -43,7 +43,7 @@
     "title": "管理渠道",
     "tabs": {
       "channels": "渠道管理",
-      "model_providers": "模型供应商"
+      "providers": "供应商"
     },
   "search": "搜索渠道标识或显示名称...",
   "table": {
@@ -112,7 +112,7 @@
       "audio": "音频"
     },
     "providers": {
-      "title": "模型供应商管理",
+      "title": "供应商管理",
       "search": "搜索供应商、名称、来源、模型...",
       "fetch": {
         "provider": "供应商",
@@ -139,7 +139,7 @@
         "source": "来源",
         "updated_at": "更新时间",
         "actions": "操作",
-        "empty": "暂无模型供应商配置",
+        "empty": "暂无供应商配置",
         "model_count": "共 {{count}} 个模型"
       },
       "model_detail_table": {
@@ -156,11 +156,11 @@
         "empty": "暂无模型明细"
       },
       "dialog": {
-        "title_create": "新增模型供应商",
-        "title_edit": "编辑模型供应商",
-        "title_detail": "模型供应商详情",
-        "delete_title": "确认删除模型供应商",
-        "delete_content": "确定要删除模型供应商 {{provider}} 吗？",
+        "title_create": "新增供应商",
+        "title_edit": "编辑供应商",
+        "title_detail": "供应商详情",
+        "delete_title": "确认删除供应商",
+        "delete_content": "确定要删除供应商 {{provider}} 吗？",
         "delete_confirm": "确认删除",
         "edit": "编辑",
         "provider": "供应商标识",
@@ -180,13 +180,13 @@
         "confirm": "确认"
       },
       "messages": {
-        "load_failed": "加载模型供应商配置失败",
+        "load_failed": "加载供应商配置失败",
         "load_defaults_failed": "加载默认模型列表失败",
         "defaults_loaded": "已载入系统默认模型列表",
         "provider_required": "供应商标识不能为空",
         "provider_exists": "该供应商已存在，请直接编辑",
-        "save_failed": "保存模型供应商配置失败",
-        "save_success": "模型供应商配置已保存",
+        "save_failed": "保存供应商配置失败",
+        "save_success": "供应商配置已保存",
         "model_details_invalid": "模型明细 JSON 格式不合法，请检查后重试",
         "fetch_provider_required": "请先选择供应商",
         "fetch_key_required": "请先填写 API Key，或在供应商配置中保存 Key",
@@ -745,7 +745,7 @@
       "span": "跨度",
       "start": "开始",
       "end": "结束",
-      "providers": "模型供应商",
+      "providers": "供应商",
       "no_providers": "暂无模型",
       "granularity_options": {
         "hour": "小时",

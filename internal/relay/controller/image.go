@@ -143,8 +143,8 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 			pricing = adminmodel.ResolvedModelPricing{
 				Model:     imageModel,
 				Type:      adminmodel.InferModelType(imageModel),
-				PriceUnit: adminmodel.ModelProviderPriceUnitPerImage,
-				Currency:  adminmodel.ModelProviderPriceCurrencyUSD,
+				PriceUnit: adminmodel.ProviderPriceUnitPerImage,
+				Currency:  adminmodel.ProviderPriceCurrencyUSD,
 				Source:    "group_free",
 			}
 		} else {

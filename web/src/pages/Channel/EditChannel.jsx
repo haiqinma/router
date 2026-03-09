@@ -220,7 +220,7 @@ const buildProviderCatalogIndex = (items) => {
   return { providerOptions, modelOwners };
 };
 
-const buildModelProviderLookupKeys = (row) => {
+const buildProviderLookupKeys = (row) => {
   const keys = new Set();
   [row?.upstream_model, row?.model].forEach((value) => {
     const normalized = (value || '').toString().trim();
@@ -242,7 +242,7 @@ const buildModelProviderLookupKeys = (row) => {
 };
 
 const inferAssignableProviderForRowWithOptions = (row, providerOptions) => {
-  const candidates = buildModelProviderLookupKeys(row);
+  const candidates = buildProviderLookupKeys(row);
   const providerValues = new Set(
     (Array.isArray(providerOptions) ? providerOptions : []).map((item) =>
       normalizeProviderIdentifier(item?.value || ''),
@@ -889,7 +889,7 @@ const EditChannel = () => {
   const getProviderOwnersForModel = useCallback(
     (row) => {
       const owners = new Set();
-      buildModelProviderLookupKeys(row).forEach((key) => {
+      buildProviderLookupKeys(row).forEach((key) => {
         (providerModelOwners[key] || []).forEach((providerId) => {
           owners.add(providerId);
         });

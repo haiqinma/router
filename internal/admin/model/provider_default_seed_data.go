@@ -15,15 +15,15 @@ var defaultProviderSeedsJSON []byte
 
 var defaultProviderSeedTemplates = mustLoadDefaultProviderSeedTemplates()
 
-func mustLoadDefaultProviderSeedTemplates() []ModelProviderCatalogSeed {
-	rows := make([]ModelProviderCatalogSeed, 0)
+func mustLoadDefaultProviderSeedTemplates() []ProviderCatalogSeed {
+	rows := make([]ProviderCatalogSeed, 0)
 	if err := json.Unmarshal(defaultProviderSeedsJSON, &rows); err != nil {
 		panic(fmt.Sprintf("invalid default provider seeds: %v", err))
 	}
 
-	normalized := make([]ModelProviderCatalogSeed, 0, len(rows))
+	normalized := make([]ProviderCatalogSeed, 0, len(rows))
 	for _, row := range rows {
-		provider := commonutils.NormalizeModelProvider(row.Provider)
+		provider := commonutils.NormalizeProvider(row.Provider)
 		if provider == "" || provider == "unknown" {
 			provider = strings.TrimSpace(strings.ToLower(row.Provider))
 		}
@@ -34,7 +34,7 @@ func mustLoadDefaultProviderSeedTemplates() []ModelProviderCatalogSeed {
 		if name == "" {
 			name = provider
 		}
-		normalized = append(normalized, ModelProviderCatalogSeed{
+		normalized = append(normalized, ProviderCatalogSeed{
 			Provider:     provider,
 			Name:         name,
 			BaseURL:      strings.TrimSpace(row.BaseURL),
@@ -69,11 +69,11 @@ func mustLoadDefaultProviderSeedTemplates() []ModelProviderCatalogSeed {
 	return normalized
 }
 
-func BuildDefaultModelProviderCatalogSeeds(now int64) []ModelProviderCatalogSeed {
-	seeds := make([]ModelProviderCatalogSeed, 0, len(defaultProviderSeedTemplates))
+func BuildDefaultProviderCatalogSeeds(now int64) []ProviderCatalogSeed {
+	seeds := make([]ProviderCatalogSeed, 0, len(defaultProviderSeedTemplates))
 	for _, template := range defaultProviderSeedTemplates {
 		details := normalizeDefaultProviderSeedModelDetails(template.Provider, template.ModelDetails, now)
-		seeds = append(seeds, ModelProviderCatalogSeed{
+		seeds = append(seeds, ProviderCatalogSeed{
 			Provider:     template.Provider,
 			Name:         template.Name,
 			BaseURL:      template.BaseURL,
@@ -84,12 +84,12 @@ func BuildDefaultModelProviderCatalogSeeds(now int64) []ModelProviderCatalogSeed
 	return seeds
 }
 
-func normalizeDefaultProviderSeedModelDetails(provider string, details []ModelProviderModelDetail, now int64) []ModelProviderModelDetail {
-	normalizedProvider := commonutils.NormalizeModelProvider(provider)
+func normalizeDefaultProviderSeedModelDetails(provider string, details []ProviderModelDetail, now int64) []ProviderModelDetail {
+	normalizedProvider := commonutils.NormalizeProvider(provider)
 	if normalizedProvider == "" || normalizedProvider == "unknown" {
 		normalizedProvider = strings.TrimSpace(strings.ToLower(provider))
 	}
-	cloned := make([]ModelProviderModelDetail, 0, len(details))
+	cloned := make([]ProviderModelDetail, 0, len(details))
 	for _, detail := range details {
 		next := detail
 		next.Model = canonicalizeModelNameForProvider(normalizedProvider, next.Model)
@@ -101,14 +101,14 @@ func normalizeDefaultProviderSeedModelDetails(provider string, details []ModelPr
 		}
 		cloned = append(cloned, next)
 	}
-	return NormalizeModelProviderModelDetails(cloned)
+	return NormalizeProviderModelDetails(cloned)
 }
 
-func buildDefaultProviderModelDetailIndex(now int64) map[string]map[string]ModelProviderModelDetail {
-	seeds := BuildDefaultModelProviderCatalogSeeds(now)
-	index := make(map[string]map[string]ModelProviderModelDetail, len(seeds))
+func buildDefaultProviderModelDetailIndex(now int64) map[string]map[string]ProviderModelDetail {
+	seeds := BuildDefaultProviderCatalogSeeds(now)
+	index := make(map[string]map[string]ProviderModelDetail, len(seeds))
 	for _, seed := range seeds {
-		provider := commonutils.NormalizeModelProvider(seed.Provider)
+		provider := commonutils.NormalizeProvider(seed.Provider)
 		if provider == "" || provider == "unknown" {
 			provider = strings.TrimSpace(strings.ToLower(seed.Provider))
 		}
@@ -116,7 +116,7 @@ func buildDefaultProviderModelDetailIndex(now int64) map[string]map[string]Model
 			continue
 		}
 		if index[provider] == nil {
-			index[provider] = make(map[string]ModelProviderModelDetail, len(seed.ModelDetails))
+			index[provider] = make(map[string]ProviderModelDetail, len(seed.ModelDetails))
 		}
 		for _, detail := range seed.ModelDetails {
 			if strings.TrimSpace(detail.Model) == "" {

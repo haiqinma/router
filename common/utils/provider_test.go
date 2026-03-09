@@ -2,7 +2,7 @@ package utils
 
 import "testing"
 
-func TestResolveModelProvider(t *testing.T) {
+func TestResolveProvider(t *testing.T) {
 	tests := []struct {
 		name  string
 		model string
@@ -32,8 +32,8 @@ func TestResolveModelProvider(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := ResolveModelProvider(tt.model); got != tt.want {
-				t.Fatalf("ResolveModelProvider(%q)=%q, want %q", tt.model, got, tt.want)
+			if got := ResolveProvider(tt.model); got != tt.want {
+				t.Fatalf("ResolveProvider(%q)=%q, want %q", tt.model, got, tt.want)
 			}
 		})
 	}

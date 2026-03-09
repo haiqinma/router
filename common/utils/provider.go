@@ -2,8 +2,8 @@ package utils
 
 import "strings"
 
-// NormalizeModelProvider canonicalizes provider aliases for filtering and persistence.
-func NormalizeModelProvider(provider string) string {
+// NormalizeProvider canonicalizes provider aliases for filtering and persistence.
+func NormalizeProvider(provider string) string {
 	trimmed := strings.TrimSpace(provider)
 	if trimmed == "" {
 		return ""
@@ -41,15 +41,15 @@ func NormalizeModelProvider(provider string) string {
 	}
 }
 
-// ResolveModelProvider infers provider from model naming rules to keep backend and frontend consistent.
-func ResolveModelProvider(modelName string) string {
+// ResolveProvider infers provider from model naming rules to keep backend and frontend consistent.
+func ResolveProvider(modelName string) string {
 	name := strings.TrimSpace(modelName)
 	if name == "" {
 		return "unknown"
 	}
 	if strings.Contains(name, "/") {
 		parts := strings.SplitN(name, "/", 2)
-		prefix := NormalizeModelProvider(parts[0])
+		prefix := NormalizeProvider(parts[0])
 		if prefix == "" {
 			return "unknown"
 		}
@@ -108,7 +108,7 @@ func ResolveOwnedByProvider(ownedBy string) string {
 	if value == "" {
 		return "unknown"
 	}
-	canonical := NormalizeModelProvider(value)
+	canonical := NormalizeProvider(value)
 	if canonical != value {
 		return canonical
 	}
@@ -159,13 +159,13 @@ func ResolveOwnedByProvider(ownedBy string) string {
 	}
 }
 
-// MatchModelProvider matches a model/provider metadata pair to the provider filter.
-func MatchModelProvider(modelName string, ownedBy string, provider string) bool {
-	filter := NormalizeModelProvider(provider)
+// MatchProvider matches a model/provider metadata pair to the provider filter.
+func MatchProvider(modelName string, ownedBy string, provider string) bool {
+	filter := NormalizeProvider(provider)
 	if filter == "" {
 		return true
 	}
-	if ResolveModelProvider(modelName) == filter {
+	if ResolveProvider(modelName) == filter {
 		return true
 	}
 	if ResolveOwnedByProvider(ownedBy) == filter {

@@ -49,7 +49,7 @@ func filterModelsByProvider(models []string, provider string) []string {
 	}
 	filtered := make([]string, 0, len(models))
 	for _, modelName := range models {
-		if commonutils.MatchModelProvider(modelName, "", provider) {
+		if commonutils.MatchProvider(modelName, "", provider) {
 			filtered = append(filtered, modelName)
 		}
 	}
@@ -160,19 +160,19 @@ func init() {
 
 // DashboardListModels godoc
 // @Summary List channel models for UI
-// @Description When provider is specified, the response shape becomes docs.ChannelModelsProviderResponse (data is string[] and meta is an object). model_provider filters by model naming rules.
+// @Description When channel is specified, the response shape becomes docs.ChannelModelsProviderResponse (data is string[] and meta is an object). provider filters by model naming rules.
 // @Tags public
 // @Security BearerAuth
 // @Produce json
-// @Param provider query string false "Provider name"
-// @Param model_provider query string false "Model provider filter (gpt/gemini/claude/deepseek/qwen)"
+// @Param channel query string false "Channel name"
+// @Param provider query string false "Provider filter (gpt/gemini/claude/deepseek/qwen)"
 // @Success 200 {object} docs.ChannelModelsResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/public/channel/models [get]
 func DashboardListModels(c *gin.Context) {
-	// optional filter: provider (channel) name, case-insensitive
-	provider := strings.ToLower(strings.TrimSpace(c.Query("provider")))
-	modelProvider := commonutils.NormalizeModelProvider(c.Query("model_provider"))
+	// optional filter: channel name, case-insensitive
+	channelFilter := strings.ToLower(strings.TrimSpace(c.Query("channel")))
+	providerFilter := commonutils.NormalizeProvider(c.Query("provider"))
 
 	// Keep the established map-shaped payload and include metadata for the admin UI.
 	metaList := make([]gin.H, 0, len(channelId2Models))
@@ -182,20 +182,20 @@ func DashboardListModels(c *gin.Context) {
 		if id >= 0 && id < len(relaychannel.ChannelProtocolNames) {
 			name = relaychannel.ChannelProtocolNames[id]
 		}
-		filteredModels := filterModelsByProvider(models, modelProvider)
+		filteredModels := filterModelsByProvider(models, providerFilter)
 		metaList = append(metaList, gin.H{
 			"id":     id,
 			"name":   name,
 			"models": filteredModels,
 		})
-		// if provider is specified and matches, short‑circuit with filtered payload
-		if provider != "" && strings.ToLower(name) == provider {
+		// if channel is specified and matches, short-circuit with filtered payload
+		if channelFilter != "" && strings.ToLower(name) == channelFilter {
 			c.JSON(http.StatusOK, gin.H{
-				"success":  true,
-				"message":  "",
-				"provider": name,
-				"id":       id,
-				"data":     filteredModels,
+				"success": true,
+				"message": "",
+				"channel": name,
+				"id":      id,
+				"data":    filteredModels,
 				"meta": gin.H{
 					"id":     id,
 					"name":   name,
@@ -207,11 +207,11 @@ func DashboardListModels(c *gin.Context) {
 		filteredMap[id] = filteredModels
 	}
 
-	if provider != "" {
-		// provider specified but not found
+	if channelFilter != "" {
+		// channel specified but not found
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": fmt.Sprintf("provider '%s' not found", provider),
+			"message": fmt.Sprintf("channel '%s' not found", channelFilter),
 		})
 		return
 	}

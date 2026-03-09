@@ -1,10 +1,10 @@
 package model
 
 const (
-	ModelProviderModelsTableName = "provider_models"
+	ProviderModelsTableName = "provider_models"
 )
 
-type ModelProviderModel struct {
+type ProviderModel struct {
 	Provider    string  `json:"provider" gorm:"primaryKey;type:varchar(64)"`
 	Model       string  `json:"model" gorm:"primaryKey;type:varchar(255)"`
 	Type        string  `json:"type" gorm:"type:varchar(32);default:'text'"`
@@ -16,6 +16,6 @@ type ModelProviderModel struct {
 	UpdatedAt   int64   `json:"updated_at" gorm:"bigint"`
 }
 
-func (ModelProviderModel) TableName() string {
-	return ModelProviderModelsTableName
+func (ProviderModel) TableName() string {
+	return ProviderModelsTableName
 }

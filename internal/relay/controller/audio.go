@@ -62,8 +62,8 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 			pricing = adminmodel.ResolvedModelPricing{
 				Model:     audioModel,
 				Type:      adminmodel.InferModelType(audioModel),
-				PriceUnit: adminmodel.ModelProviderPriceUnitPer1KTokens,
-				Currency:  adminmodel.ModelProviderPriceCurrencyUSD,
+				PriceUnit: adminmodel.ProviderPriceUnitPer1KTokens,
+				Currency:  adminmodel.ProviderPriceCurrencyUSD,
 				Source:    "group_free",
 			}
 		} else {

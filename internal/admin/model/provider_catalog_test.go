@@ -2,8 +2,8 @@ package model
 
 import "testing"
 
-func TestBuildDefaultModelProviderCatalogSeeds_ModelDetailsMeta(t *testing.T) {
-	seeds := BuildDefaultModelProviderCatalogSeeds(1700000000)
+func TestBuildDefaultProviderCatalogSeeds_ModelDetailsMeta(t *testing.T) {
+	seeds := BuildDefaultProviderCatalogSeeds(1700000000)
 	if len(seeds) == 0 {
 		t.Fatalf("expected non-empty provider seeds")
 	}
@@ -17,11 +17,11 @@ func TestBuildDefaultModelProviderCatalogSeeds_ModelDetailsMeta(t *testing.T) {
 		for _, detail := range seed.ModelDetails {
 			totalModels++
 			switch detail.Type {
-			case ModelProviderModelTypeAudio:
+			case ProviderModelTypeAudio:
 				hasAudio = true
-			case ModelProviderModelTypeImage:
+			case ProviderModelTypeImage:
 				hasImage = true
-			case ModelProviderModelTypeText:
+			case ProviderModelTypeText:
 				hasText = true
 			default:
 				t.Fatalf("unexpected model type %q for model %q", detail.Type, detail.Model)
@@ -55,8 +55,8 @@ func TestBuildDefaultModelProviderCatalogSeeds_ModelDetailsMeta(t *testing.T) {
 	}
 }
 
-func TestBuildDefaultModelProviderCatalogSeeds_AssignsSortOrder(t *testing.T) {
-	seeds := BuildDefaultModelProviderCatalogSeeds(1700000000)
+func TestBuildDefaultProviderCatalogSeeds_AssignsSortOrder(t *testing.T) {
+	seeds := BuildDefaultProviderCatalogSeeds(1700000000)
 	if len(seeds) == 0 {
 		t.Fatalf("expected non-empty provider seeds")
 	}

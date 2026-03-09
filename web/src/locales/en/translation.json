@@ -2,7 +2,7 @@
   "header": {
     "home": "Home",
     "channel": "Channel",
-    "model_providers": "Providers",
+    "providers": "Providers",
     "group": "Group",
     "token": "Token",
     "redemption": "Redemption",
@@ -43,7 +43,7 @@
     "title": "Channel Management",
     "tabs": {
       "channels": "Channels",
-      "model_providers": "Model Providers"
+      "providers": "Providers"
     },
   "search": "Search channels by identifier or display name...",
   "table": {
@@ -112,7 +112,7 @@
       "audio": "Audio"
     },
     "providers": {
-      "title": "Model Provider Catalog",
+      "title": "Provider Catalog",
       "search": "Search provider, name, source, model...",
       "fetch": {
         "provider": "Provider",
@@ -139,7 +139,7 @@
         "source": "Source",
         "updated_at": "Updated At",
         "actions": "Actions",
-        "empty": "No model provider catalog",
+        "empty": "No provider catalog",
         "model_count": "{{count}} models"
       },
       "model_detail_table": {
@@ -156,11 +156,11 @@
         "empty": "No model details"
       },
       "dialog": {
-        "title_create": "Add Model Provider",
-        "title_edit": "Edit Model Provider",
-        "title_detail": "Model Provider Details",
-        "delete_title": "Confirm Delete Model Provider",
-        "delete_content": "Are you sure you want to delete model provider {{provider}}?",
+        "title_create": "Add Provider",
+        "title_edit": "Edit Provider",
+        "title_detail": "Provider Details",
+        "delete_title": "Confirm Delete Provider",
+        "delete_content": "Are you sure you want to delete provider {{provider}}?",
         "delete_confirm": "Delete",
         "edit": "Edit",
         "provider": "Provider ID",
@@ -180,13 +180,13 @@
         "confirm": "Confirm"
       },
       "messages": {
-        "load_failed": "Failed to load model provider catalog",
+        "load_failed": "Failed to load provider catalog",
         "load_defaults_failed": "Failed to load default model list",
         "defaults_loaded": "Built-in default model list loaded",
         "provider_required": "Provider id is required",
         "provider_exists": "This provider already exists, please edit it directly",
-        "save_failed": "Failed to save model provider catalog",
-        "save_success": "Model provider catalog saved",
+        "save_failed": "Failed to save provider catalog",
+        "save_success": "Provider catalog saved",
         "model_details_invalid": "Invalid model_details JSON format",
         "fetch_provider_required": "Please choose a provider first",
         "fetch_key_required": "Please provide API key first, or save one in provider config",
@@ -745,7 +745,7 @@
       "span": "Span",
       "start": "Start",
       "end": "End",
-      "providers": "Model Providers",
+      "providers": "Providers",
       "no_providers": "No models available",
       "granularity_options": {
         "hour": "Hour",

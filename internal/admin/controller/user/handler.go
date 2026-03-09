@@ -399,7 +399,7 @@ func GetUserDashboard(c *gin.Context) {
 			if strings.TrimSpace(name) == "" {
 				continue
 			}
-			provider := utils.ResolveModelProvider(name)
+			provider := utils.ResolveProvider(name)
 			if providerSet[provider] == nil {
 				providerSet[provider] = make(map[string]struct{})
 			}

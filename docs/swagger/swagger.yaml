@@ -3212,17 +3212,17 @@ paths:
       - public
   /api/v1/public/channel/models:
     get:
-      description: When provider is specified, the response shape becomes docs.ChannelModelsProviderResponse
-        (data is string[] and meta is an object). model_provider filters by model
+      description: When channel is specified, the response shape becomes docs.ChannelModelsProviderResponse
+        (data is string[] and meta is an object). provider filters by model
         naming rules.
       parameters:
-      - description: Provider name
+      - description: Channel name
+        in: query
+        name: channel
+        type: string
+      - description: Provider filter (gpt/gemini/claude/deepseek/qwen)
         in: query
         name: provider
-        type: string
-      - description: Model provider filter (gpt/gemini/claude/deepseek/qwen)
-        in: query
-        name: model_provider
         type: string
       produces:
       - application/json

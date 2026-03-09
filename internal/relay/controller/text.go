@@ -51,8 +51,8 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 			pricing = adminmodel.ResolvedModelPricing{
 				Model:     textRequest.Model,
 				Type:      adminmodel.InferModelType(textRequest.Model),
-				PriceUnit: adminmodel.ModelProviderPriceUnitPer1KTokens,
-				Currency:  adminmodel.ModelProviderPriceCurrencyUSD,
+				PriceUnit: adminmodel.ProviderPriceUnitPer1KTokens,
+				Currency:  adminmodel.ProviderPriceCurrencyUSD,
 				Source:    "group_free",
 			}
 		} else {

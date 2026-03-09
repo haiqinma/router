@@ -28,7 +28,7 @@ func (pricing ResolvedModelPricing) IsConfigured() bool {
 
 type providerModelPricingEntry struct {
 	Provider string
-	Detail   ModelProviderModelDetail
+	Detail   ProviderModelDetail
 }
 
 type providerModelPricingIndex struct {
@@ -49,7 +49,7 @@ func SyncModelPricingCatalogWithDB(db *gorm.DB) error {
 		return nil
 	}
 
-	rows := make([]ModelProviderModel, 0)
+	rows := make([]ProviderModel, 0)
 	if err := db.Order("provider asc, model asc").Find(&rows).Error; err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func SyncModelPricingCatalogWithDB(db *gorm.DB) error {
 		byModel:            make(map[string][]providerModelPricingEntry),
 	}
 	for _, row := range rows {
-		provider := commonutils.NormalizeModelProvider(row.Provider)
+		provider := commonutils.NormalizeProvider(row.Provider)
 		if provider == "" {
 			provider = strings.TrimSpace(strings.ToLower(row.Provider))
 		}
@@ -72,7 +72,7 @@ func SyncModelPricingCatalogWithDB(db *gorm.DB) error {
 			continue
 		}
 
-		detail := ModelProviderModelDetail{
+		detail := ProviderModelDetail{
 			Model:       modelName,
 			Type:        normalizeModelType(row.Type, modelName),
 			InputPrice:  row.InputPrice,
@@ -82,7 +82,7 @@ func SyncModelPricingCatalogWithDB(db *gorm.DB) error {
 			Source:      strings.TrimSpace(strings.ToLower(row.Source)),
 			UpdatedAt:   row.UpdatedAt,
 		}
-		detail = NormalizeModelProviderModelDetails([]ModelProviderModelDetail{detail})[0]
+		detail = NormalizeProviderModelDetails([]ProviderModelDetail{detail})[0]
 		entry := providerModelPricingEntry{
 			Provider: provider,
 			Detail:   detail,
@@ -145,7 +145,7 @@ func ResolveChannelModelPricing(channelProtocol int, channelModels []ChannelMode
 		pricing.PriceUnit = defaultPriceUnitByType(pricing.Type, normalizedModel)
 	}
 	if pricing.Currency == "" {
-		pricing.Currency = ModelProviderPriceCurrencyUSD
+		pricing.Currency = ProviderPriceCurrencyUSD
 	}
 	pricing.Model = normalizedModel
 	if !pricing.IsConfigured() {

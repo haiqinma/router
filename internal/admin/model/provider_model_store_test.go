@@ -45,25 +45,25 @@ func TestCanonicalizeModelNameForProvider(t *testing.T) {
 	}
 }
 
-func TestBuildModelProviderModelRows_CanonicalizeAndMergeDuplicates(t *testing.T) {
-	rows := BuildModelProviderModelRows("openai", []ModelProviderModelDetail{
+func TestBuildProviderModelRows_CanonicalizeAndMergeDuplicates(t *testing.T) {
+	rows := BuildProviderModelRows("openai", []ProviderModelDetail{
 		{
 			Model:       "gpt-3.5-turbo-0613",
-			Type:        ModelProviderModelTypeText,
+			Type:        ProviderModelTypeText,
 			InputPrice:  0,
 			OutputPrice: 0.001,
-			PriceUnit:   ModelProviderPriceUnitPer1KTokens,
-			Currency:    ModelProviderPriceCurrencyUSD,
+			PriceUnit:   ProviderPriceUnitPer1KTokens,
+			Currency:    ProviderPriceCurrencyUSD,
 			Source:      "manual",
 			UpdatedAt:   100,
 		},
 		{
 			Model:       "openai/gpt-3.5-turbo-0613",
-			Type:        ModelProviderModelTypeText,
+			Type:        ProviderModelTypeText,
 			InputPrice:  0.002,
 			OutputPrice: 0,
-			PriceUnit:   ModelProviderPriceUnitPer1KTokens,
-			Currency:    ModelProviderPriceCurrencyUSD,
+			PriceUnit:   ProviderPriceUnitPer1KTokens,
+			Currency:    ProviderPriceCurrencyUSD,
 			Source:      "default",
 			UpdatedAt:   200,
 		},
