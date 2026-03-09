@@ -37,6 +37,16 @@ type modelProviderCatalogListData struct {
 	PageSize int                        `json:"page_size"`
 }
 
+type appendModelProviderModelRequest struct {
+	Model       string  `json:"model"`
+	Type        string  `json:"type,omitempty"`
+	InputPrice  float64 `json:"input_price,omitempty"`
+	OutputPrice float64 `json:"output_price,omitempty"`
+	PriceUnit   string  `json:"price_unit,omitempty"`
+	Currency    string  `json:"currency,omitempty"`
+	Source      string  `json:"source,omitempty"`
+}
+
 func normalizeModelProviderCatalogID(item modelProviderCatalogItem) string {
 	id := commonutils.NormalizeModelProvider(item.ID)
 	if id == "" {
@@ -375,6 +385,41 @@ func deleteModelProviderCatalogItem(id string) error {
 	return model.SyncModelPricingCatalogWithDB(model.DB)
 }
 
+func appendModelToProviderCatalogItem(id string, req appendModelProviderModelRequest) (modelProviderCatalogItem, error) {
+	existing, err := getModelProviderCatalogItemByID(id)
+	if err != nil {
+		return modelProviderCatalogItem{}, err
+	}
+
+	now := helper.GetTimestamp()
+	detail := model.ModelProviderModelDetail{
+		Model:       strings.TrimSpace(req.Model),
+		Type:        strings.TrimSpace(strings.ToLower(req.Type)),
+		InputPrice:  req.InputPrice,
+		OutputPrice: req.OutputPrice,
+		PriceUnit:   strings.TrimSpace(strings.ToLower(req.PriceUnit)),
+		Currency:    strings.TrimSpace(strings.ToUpper(req.Currency)),
+		Source:      strings.TrimSpace(strings.ToLower(req.Source)),
+		UpdatedAt:   now,
+	}
+	if detail.Model == "" {
+		return modelProviderCatalogItem{}, errors.New("模型名称不能为空")
+	}
+	if detail.Source == "" {
+		detail.Source = "manual"
+	}
+
+	existing.ModelDetails = model.MergeModelProviderDetails(
+		existing.ID,
+		append(existing.ModelDetails, detail),
+		nil,
+		false,
+		now,
+	)
+	existing.UpdatedAt = now
+	return saveModelProviderCatalogItem(existing, false)
+}
+
 // GetModelProviders godoc
 // @Summary Get paged model provider catalog (admin)
 // @Tags admin
@@ -494,6 +539,46 @@ func UpdateModelProvider(c *gin.Context) {
 		})
 		return
 	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    saved,
+	})
+}
+
+// AppendModelProviderModel godoc
+// @Summary Append one model detail into provider catalog (admin)
+// @Tags admin
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path string true "Provider ID"
+// @Success 200 {object} docs.StandardResponse
+// @Failure 401 {object} docs.ErrorResponse
+// @Router /api/v1/admin/provider/{id}/model [post]
+func AppendModelProviderModel(c *gin.Context) {
+	req := appendModelProviderModelRequest{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+
+	saved, err := appendModelToProviderCatalogItem(c.Param("id"), req)
+	if err != nil {
+		message := "录入供应商模型失败: " + err.Error()
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			message = "模型供应商不存在"
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": message,
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",

@@ -57,6 +57,25 @@ code {
     font-weight: inherit !important;
 }
 
+.ui.selection.dropdown.router-page-dropdown,
+.ui.selection.dropdown.router-page-dropdown > .text,
+.ui.selection.dropdown.router-page-dropdown > .default.text,
+.ui.selection.dropdown.router-page-dropdown .menu > .item {
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    line-height: 1.45 !important;
+}
+
+.ui.selection.dropdown.router-page-dropdown {
+    min-height: 38px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+}
+
+.ui.selection.dropdown.router-page-dropdown .menu {
+    border-radius: 10px !important;
+}
+
 @media only screen and (max-width: 600px) {
     .hide-on-mobile {
         display: none !important;

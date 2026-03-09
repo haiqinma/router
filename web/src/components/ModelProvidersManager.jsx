@@ -9,6 +9,8 @@ import { Button, Form, Icon, Label, Modal, Pagination, Table } from 'semantic-ui
 import { API, showError, showInfo, showSuccess, timestamp2string } from '../helpers';
 import { ITEMS_PER_PAGE } from '../constants';
 
+const PROVIDER_DETAIL_MODEL_PAGE_SIZE = 20;
+
 const normalizeProvider = (provider) => {
   if (typeof provider !== 'string') return '';
   const trimmed = provider.trim();
@@ -211,6 +213,25 @@ const MODEL_TYPE_OPTIONS = [
   { key: 'audio', value: 'audio', text: 'audio' },
 ];
 
+const PROVIDER_CAPABILITY_ORDER = ['text', 'audio', 'image'];
+
+const normalizeProviderCapabilityType = (value, model) => {
+  const normalized = (value || '').toString().trim().toLowerCase();
+  if (normalized === 'text' || normalized === 'audio' || normalized === 'image') {
+    return normalized;
+  }
+  return inferModelType(model);
+};
+
+const collectProviderCapabilities = (row) => {
+  const capabilitySet = new Set();
+  detailsFromCatalogItem(row).forEach((detail) => {
+    const type = normalizeProviderCapabilityType(detail?.type, detail?.model);
+    capabilitySet.add(type);
+  });
+  return PROVIDER_CAPABILITY_ORDER.filter((type) => capabilitySet.has(type));
+};
+
 const ModelProvidersManager = () => {
   const { t } = useTranslation();
   const [rows, setRows] = useState([]);
@@ -229,6 +250,7 @@ const ModelProvidersManager = () => {
   const [viewingProvider, setViewingProvider] = useState('');
   const [viewRow, setViewRow] = useState(null);
   const [viewModelSearchKeyword, setViewModelSearchKeyword] = useState('');
+  const [viewModelPage, setViewModelPage] = useState(1);
 
   const normalizedSearchKeyword = useMemo(
     () => (typeof searchKeyword === 'string' ? searchKeyword.trim() : ''),
@@ -322,12 +344,14 @@ const ModelProvidersManager = () => {
     const normalized = normalizeProvider(row?.id || '');
     if (!normalized) return;
     setViewModelSearchKeyword('');
+    setViewModelPage(1);
     setViewingProvider(normalized);
     setViewRow({ ...row });
   };
 
   const closeViewer = () => {
     setViewModelSearchKeyword('');
+    setViewModelPage(1);
     setViewingProvider('');
     setViewRow(null);
   };
@@ -704,6 +728,12 @@ const ModelProvidersManager = () => {
   const renderModelDetailsReadonly = (row, options = {}) => {
     const details = Array.isArray(row?.model_details) ? row.model_details : [];
     const searchable = options.searchable === true;
+    const pageSize =
+      Number(options.pageSize || 0) > 0
+        ? Number(options.pageSize)
+        : PROVIDER_DETAIL_MODEL_PAGE_SIZE;
+    const currentPage =
+      Number(options.currentPage || 0) > 0 ? Number(options.currentPage) : 1;
     const modelSearchKeyword =
       typeof options.searchKeyword === 'string' ? options.searchKeyword : '';
     const normalizedModelSearchKeyword = modelSearchKeyword.trim().toLowerCase();
@@ -722,6 +752,12 @@ const ModelProvidersManager = () => {
               .toLowerCase();
             return haystack.includes(normalizedModelSearchKeyword);
           });
+    const totalPages = Math.max(1, Math.ceil(visibleDetailRows.length / pageSize));
+    const safeCurrentPage = Math.min(currentPage, totalPages);
+    const pageRows = visibleDetailRows.slice(
+      (safeCurrentPage - 1) * pageSize,
+      safeCurrentPage * pageSize,
+    );
     return (
       <div style={{ marginTop: 12 }}>
         <div
@@ -771,7 +807,7 @@ const ModelProvidersManager = () => {
                 </Table.Cell>
               </Table.Row>
             ) : (
-              visibleDetailRows.map((detail, index) => (
+              pageRows.map((detail, index) => (
                 <Table.Row key={`${detail.model || 'model'}-${index}`}>
                   <Table.Cell style={{ minWidth: 260 }}>{detail.model || '-'}</Table.Cell>
                   <Table.Cell style={{ minWidth: 120 }}>{detail.type || 'text'}</Table.Cell>
@@ -785,6 +821,26 @@ const ModelProvidersManager = () => {
             )}
           </Table.Body>
         </Table>
+        {totalPages > 1 ? (
+          <div
+            style={{
+              marginTop: 12,
+              display: 'flex',
+              justifyContent: 'flex-end',
+            }}
+          >
+            <Pagination
+              size='mini'
+              activePage={safeCurrentPage}
+              totalPages={totalPages}
+              onPageChange={(e, { activePage: nextActivePage }) => {
+                if (typeof options.onPageChange === 'function') {
+                  options.onPageChange(Number(nextActivePage) || 1);
+                }
+              }}
+            />
+          </div>
+        ) : null}
       </div>
     );
   };
@@ -824,6 +880,7 @@ const ModelProvidersManager = () => {
           <Table.Row>
             <Table.HeaderCell width={3}>{t('channel.providers.table.provider')}</Table.HeaderCell>
             <Table.HeaderCell width={4}>{t('channel.providers.table.name')}</Table.HeaderCell>
+            <Table.HeaderCell width={3} textAlign='left'>{t('channel.providers.table.capabilities')}</Table.HeaderCell>
             <Table.HeaderCell width={2} textAlign='left'>{t('channel.providers.table.source')}</Table.HeaderCell>
             <Table.HeaderCell width={3} textAlign='left'>{t('channel.providers.table.updated_at')}</Table.HeaderCell>
             <Table.HeaderCell width={2} textAlign='left'>{t('channel.providers.table.actions')}</Table.HeaderCell>
@@ -832,59 +889,73 @@ const ModelProvidersManager = () => {
         <Table.Body>
           {rows.length === 0 ? (
             <Table.Row>
-              <Table.Cell colSpan={5} textAlign='center'>
+              <Table.Cell colSpan={6} textAlign='center'>
                 {loading ? t('common.loading') : t('channel.providers.table.empty')}
               </Table.Cell>
             </Table.Row>
           ) : (
-            rows.map((row, index) => (
-              <Table.Row
-                key={`${row.id}-${index}`}
-                onClick={() => {
-                  openViewer(row);
-                }}
-                style={{
-                  cursor: creating || editing || saving ? 'default' : 'pointer',
-                }}
-              >
-                <Table.Cell>{row.id || '-'}</Table.Cell>
-                <Table.Cell>{row.name || row.id || '-'}</Table.Cell>
-                <Table.Cell textAlign='left'>
-                  <Label>{row.source || '-'}</Label>
-                </Table.Cell>
-                <Table.Cell textAlign='left'>
-                  {row.updated_at ? timestamp2string(row.updated_at) : '-'}
-                </Table.Cell>
-                <Table.Cell textAlign='left' style={{ whiteSpace: 'nowrap' }}>
-                  <Button
-                    type='button'
-                    icon
-                    size='tiny'
-                    color='blue'
-                    disabled={creating || saving}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openEditor(row);
-                    }}
-                  >
-                    <Icon name='edit' />
-                  </Button>
-                  <Button
-                    type='button'
-                    icon
-                    size='tiny'
-                    color='red'
-                    disabled={creating || saving}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openDeleteModal(row);
-                    }}
-                  >
-                    <Icon name='trash' />
-                  </Button>
-                </Table.Cell>
-              </Table.Row>
-            ))
+            rows.map((row, index) => {
+              const capabilities = collectProviderCapabilities(row);
+              return (
+                <Table.Row
+                  key={`${row.id}-${index}`}
+                  onClick={() => {
+                    openViewer(row);
+                  }}
+                  style={{
+                    cursor: creating || editing || saving ? 'default' : 'pointer',
+                  }}
+                >
+                  <Table.Cell>{row.id || '-'}</Table.Cell>
+                  <Table.Cell>{row.name || row.id || '-'}</Table.Cell>
+                  <Table.Cell textAlign='left'>
+                    {capabilities.length > 0 ? (
+                      capabilities.map((type) => (
+                        <Label key={`${row.id}-${type}`} basic size='small'>
+                          {t(`channel.model_types.${type}`)}
+                        </Label>
+                      ))
+                    ) : (
+                      '-'
+                    )}
+                  </Table.Cell>
+                  <Table.Cell textAlign='left'>
+                    <Label>{row.source || '-'}</Label>
+                  </Table.Cell>
+                  <Table.Cell textAlign='left'>
+                    {row.updated_at ? timestamp2string(row.updated_at) : '-'}
+                  </Table.Cell>
+                  <Table.Cell textAlign='left' style={{ whiteSpace: 'nowrap' }}>
+                    <Button
+                      type='button'
+                      icon
+                      size='tiny'
+                      color='blue'
+                      disabled={creating || saving}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openEditor(row);
+                      }}
+                    >
+                      <Icon name='edit' />
+                    </Button>
+                    <Button
+                      type='button'
+                      icon
+                      size='tiny'
+                      color='red'
+                      disabled={creating || saving}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openDeleteModal(row);
+                      }}
+                    >
+                      <Icon name='trash' />
+                    </Button>
+                  </Table.Cell>
+                </Table.Row>
+              );
+            })
           )}
         </Table.Body>
       </Table>
@@ -1015,7 +1086,13 @@ const ModelProvidersManager = () => {
         {renderModelDetailsReadonly(viewRow, {
           searchable: true,
           searchKeyword: viewModelSearchKeyword,
-          onSearchChange: setViewModelSearchKeyword,
+          currentPage: viewModelPage,
+          pageSize: PROVIDER_DETAIL_MODEL_PAGE_SIZE,
+          onSearchChange: (value) => {
+            setViewModelSearchKeyword(value || '');
+            setViewModelPage(1);
+          },
+          onPageChange: setViewModelPage,
         })}
       </div>
     );

@@ -934,7 +934,7 @@ const Dashboard = () => {
                     </div>
                     <div className='dashboard-spend-period-row'>
                       <Dropdown
-                        className='dashboard-spend-period'
+                        className='dashboard-spend-period router-page-dropdown'
                         selection
                         fluid
                         options={overviewPeriodOptions}
@@ -1170,6 +1170,7 @@ const Dashboard = () => {
               <Card.Header>
                 {t('dashboard.spending.details.title')}
                 <Dropdown
+                  className='router-page-dropdown'
                   selection
                   options={detailSortOptions}
                   value={detailSort}
@@ -1209,6 +1210,7 @@ const Dashboard = () => {
               <Form.Field>
                 <label>{t('dashboard.filters.granularity')}</label>
                 <Dropdown
+                  className='router-page-dropdown'
                   selection
                   options={granularityOptions}
                   value={granularity}

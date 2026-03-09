@@ -131,6 +131,7 @@
       "table": {
         "provider": "Provider ID",
         "name": "Display Name",
+        "capabilities": "Capabilities",
         "key": "API Key",
         "key_set": "Configured",
         "key_not_set": "Not Set",
@@ -237,10 +238,29 @@
           "name": "Name",
           "alias": "Alias",
           "type": "Type",
+          "providers": "Provider Ownership",
           "price_unit": "Price Unit",
-          "input_price": "Input Override",
-          "output_price": "Output Override"
+          "input_price": "Input Price",
+          "output_price": "Output Price",
+          "actions": "Actions"
         },
+        "filters": {
+          "all": "All Models",
+          "unassigned": "Unassigned Only",
+          "manual": "Manual Assignment Only"
+        },
+        "assignment_summary": "Assigned {{assigned}}, unassigned {{unassigned}}, auto-assignable {{auto}}, manual {{manual}}",
+        "auto_assign": "Auto Assign",
+        "auto_assign_empty": "No models can be auto-assigned right now",
+        "auto_assign_success": "Auto-assigned {{success}} models, failed {{failed}}",
+        "provider_loading": "Loading providers...",
+        "provider_unassigned": "Unassigned",
+        "provider_add": "Add",
+        "provider_no_options": "Please create a provider first",
+        "provider_load_failed": "Failed to load provider list",
+        "provider_append_invalid": "Please select a provider and enter a model name",
+        "provider_append_success": "Model added to provider",
+        "provider_append_failed": "Failed to add model to provider",
         "realtime_enabled": "Realtime model sync is enabled: changing address or key refreshes models and selects all by default.",
         "realtime_hint": "After address and key are filled, supported models will be fetched automatically.",
         "flow_title": "Create Channel Flow",
@@ -249,12 +269,22 @@
         "protocol_support_yes": "This protocol supports connection verification.",
         "protocol_support_no": "This protocol does not support connection verification. Use system model list for selection.",
         "manual_mode_hint": "This protocol uses system model list and does not run online connection verification.",
+        "append_dialog": {
+          "title": "Add Model to Provider",
+          "provider": "Target Provider",
+          "provider_placeholder": "Select a provider",
+          "model": "Model",
+          "type": "Type",
+          "cancel": "Cancel",
+          "confirm": "Add"
+        },
         "verify_prerequisite": "Please provide address and key before verifying connection.",
         "verify_required": "Please verify connection and fetch models before submit.",
         "verify_in_progress": "Verifying connection and syncing models...",
         "verify_ready": "Connection verified. You can submit now.",
         "verify_stale": "Connection changed. Please verify and fetch models again.",
         "empty": "No models available yet. Click \"Fetch Models\" or check your configuration.",
+        "empty_filtered": "No models match the current filter",
         "last_synced": "Last synced at: {{time}}"
       },
       "capability_tester": {

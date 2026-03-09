@@ -131,6 +131,7 @@
       "table": {
         "provider": "供应商标识",
         "name": "展示名称",
+        "capabilities": "能力",
         "key": "API Key",
         "key_set": "已配置",
         "key_not_set": "未配置",
@@ -237,10 +238,29 @@
           "name": "名称",
           "alias": "别名",
           "type": "类型",
+          "providers": "供应商归属",
           "price_unit": "计价单位",
-          "input_price": "输入价覆盖",
-          "output_price": "输出价覆盖"
+          "input_price": "输入价",
+          "output_price": "输出价",
+          "actions": "操作"
         },
+        "filters": {
+          "all": "全部模型",
+          "unassigned": "仅看未归属",
+          "manual": "仅看待手动归属"
+        },
+        "assignment_summary": "已归属 {{assigned}}，未归属 {{unassigned}}，可自动归属 {{auto}}，待手动归属 {{manual}}",
+        "auto_assign": "一键归属",
+        "auto_assign_empty": "当前没有可自动归属的模型",
+        "auto_assign_success": "已自动归属 {{success}} 个模型，失败 {{failed}} 个",
+        "provider_loading": "加载供应商中...",
+        "provider_unassigned": "未归属",
+        "provider_add": "录入",
+        "provider_no_options": "请先新增供应商",
+        "provider_load_failed": "加载供应商列表失败",
+        "provider_append_invalid": "请选择供应商并填写模型名称",
+        "provider_append_success": "模型已录入供应商",
+        "provider_append_failed": "录入供应商失败",
         "realtime_enabled": "已启用实时模型同步：修改地址或密钥后会自动刷新并默认全选。",
         "realtime_hint": "填写地址和密钥后会自动获取该渠道支持的模型。",
         "flow_title": "新建渠道流程",
@@ -249,12 +269,22 @@
         "protocol_support_yes": "当前协议支持连接验证。",
         "protocol_support_no": "当前协议暂不支持连接验证，使用系统模型列表进行选择。",
         "manual_mode_hint": "当前协议使用系统模型列表，不执行在线连接验证。",
+        "append_dialog": {
+          "title": "录入供应商模型",
+          "provider": "目标供应商",
+          "provider_placeholder": "请选择供应商",
+          "model": "模型",
+          "type": "类型",
+          "cancel": "取消",
+          "confirm": "确认录入"
+        },
         "verify_prerequisite": "请先填写地址和密钥，再验证连接。",
         "verify_required": "请先验证连接并获取模型后再提交。",
         "verify_in_progress": "正在验证连接并同步模型...",
         "verify_ready": "连接已验证，可以提交。",
         "verify_stale": "连接参数已变更，请重新验证并获取模型。",
         "empty": "暂无可选模型，请先点击“获取模型”或检查配置。",
+        "empty_filtered": "当前筛选条件下暂无模型",
         "last_synced": "最近同步时间：{{time}}"
       },
       "capability_tester": {
