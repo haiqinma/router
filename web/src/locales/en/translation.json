@@ -53,6 +53,7 @@
       "type": "Protocol Type",
       "status": "Status",
       "response_time": "Response Time",
+      "capabilities": "Capabilities",
       "balance": "Balance",
       "priority": "Priority",
       "actions": "Actions",
