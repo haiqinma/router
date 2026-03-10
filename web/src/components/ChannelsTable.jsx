@@ -119,7 +119,7 @@ const selectionModeTest = 'test';
 const selectionModeDelete = 'delete';
 const selectionModeDisable = 'disable';
 const channelStatusCreating = 4;
-const CHANNEL_CREATE_DRAFT_KEY = 'router.channel.create.draft.v2';
+const CHANNEL_CREATE_CACHE_KEY = 'router.channel.create.v3';
 const CREATE_CHANNEL_STEP_MIN = 1;
 const CREATE_CHANNEL_STEP_MAX = 4;
 
@@ -137,7 +137,7 @@ function parseCreateStep(rawStep) {
   return step;
 }
 
-function readStoredDraftStep(channelId) {
+function readStoredCreatingStep(channelId) {
   if (typeof window === 'undefined') {
     return 0;
   }
@@ -146,18 +146,18 @@ function readStoredDraftStep(channelId) {
     return 0;
   }
   try {
-    const raw = localStorage.getItem(CHANNEL_CREATE_DRAFT_KEY);
+    const raw = localStorage.getItem(CHANNEL_CREATE_CACHE_KEY);
     if (!raw) {
       return 0;
     }
-    const draft = JSON.parse(raw);
-    if (!draft || typeof draft !== 'object') {
+    const cachedState = JSON.parse(raw);
+    if (!cachedState || typeof cachedState !== 'object') {
       return 0;
     }
-    if ((draft.draft_channel_id || '').toString().trim() !== targetChannelId) {
+    if ((cachedState.channel_id || '').toString().trim() !== targetChannelId) {
       return 0;
     }
-    return parseCreateStep(draft.step);
+    return parseCreateStep(cachedState.step);
   } catch {
     return 0;
   }
@@ -667,7 +667,7 @@ const ChannelsTable = () => {
     if (!channel) {
       return 1;
     }
-    const storedStep = readStoredDraftStep(channel.id);
+    const storedStep = readStoredCreatingStep(channel.id);
     if (storedStep > 0) {
       return storedStep;
     }
@@ -704,7 +704,7 @@ const ChannelsTable = () => {
     if (channel.status === channelStatusCreating) {
       const step = resolveCreatingStep(channel);
       navigate(
-        `/channel/add?draft_id=${encodeURIComponent(channel.id)}&step=${step}`
+        `/channel/add?channel_id=${encodeURIComponent(channel.id)}&step=${step}`
       );
       return;
     }

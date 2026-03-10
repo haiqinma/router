@@ -6,7 +6,7 @@ func float64Ptr(value float64) *float64 {
 	return &value
 }
 
-func TestBuildFetchedChannelModelConfigsPreservesExistingSelectionsAndRemovesMissingRows(t *testing.T) {
+func TestBuildFetchedChannelModelConfigsPreservesExistingSelectionsAndMarksMissingRowsInactive(t *testing.T) {
 	existingRows := []ChannelModel{
 		{
 			Model:         "alias-gpt-4.1",
@@ -42,8 +42,8 @@ func TestBuildFetchedChannelModelConfigsPreservesExistingSelectionsAndRemovesMis
 	}
 
 	rows := BuildFetchedChannelModelConfigs(existingRows, fetchedRows, 0, false)
-	if len(rows) != 2 {
-		t.Fatalf("BuildFetchedChannelModelConfigs returned %d rows, want 2", len(rows))
+	if len(rows) != 3 {
+		t.Fatalf("BuildFetchedChannelModelConfigs returned %d rows, want 3", len(rows))
 	}
 
 	if rows[0].Model != "alias-gpt-4.1" {
@@ -61,11 +61,27 @@ func TestBuildFetchedChannelModelConfigsPreservesExistingSelectionsAndRemovesMis
 	if rows[0].OutputPrice == nil || *rows[0].OutputPrice != 2.4 {
 		t.Fatalf("rows[0].OutputPrice = %#v, want 2.4", rows[0].OutputPrice)
 	}
+	if rows[0].Inactive {
+		t.Fatalf("rows[0].Inactive = true, want false")
+	}
 
 	if rows[1].Model != "gpt-image-1" {
 		t.Fatalf("rows[1].Model = %q, want gpt-image-1", rows[1].Model)
 	}
 	if rows[1].Selected {
 		t.Fatalf("rows[1].Selected = true, want false")
+	}
+	if rows[1].Inactive {
+		t.Fatalf("rows[1].Inactive = true, want false")
+	}
+
+	if rows[2].Model != "legacy-removed" {
+		t.Fatalf("rows[2].Model = %q, want legacy-removed", rows[2].Model)
+	}
+	if rows[2].Selected {
+		t.Fatalf("rows[2].Selected = true, want false")
+	}
+	if !rows[2].Inactive {
+		t.Fatalf("rows[2].Inactive = false, want true")
 	}
 }

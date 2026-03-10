@@ -203,11 +203,9 @@ const filterProviderOptionsByQuery = (options, query) => {
     return options;
   }
   return (Array.isArray(options) ? options : []).filter((option) => {
-    const candidates = [
-      option?.text,
-      option?.value,
-      option?.key,
-    ].map(normalizeSearchKeyword);
+    const candidates = [option?.text, option?.value, option?.key].map(
+      normalizeSearchKeyword
+    );
     return candidates.some((candidate) => candidate.includes(normalizedQuery));
   });
 };
@@ -277,8 +275,8 @@ const inferAssignableProviderForRowWithOptions = (row, providerOptions) => {
   const candidates = buildProviderLookupKeys(row);
   const providerValues = new Set(
     (Array.isArray(providerOptions) ? providerOptions : []).map((item) =>
-      normalizeProviderIdentifier(item?.value || ''),
-    ),
+      normalizeProviderIdentifier(item?.value || '')
+    )
   );
   for (const candidate of candidates) {
     const resolvedProvider = resolveProviderIdentifierFromModelName(candidate);
@@ -396,7 +394,8 @@ const resolveProviderIdentifierFromModelName = (modelName) => {
   ) {
     return 'mistral';
   }
-  if (lower.startsWith('command-r') || lower.startsWith('cohere-')) return 'cohere';
+  if (lower.startsWith('command-r') || lower.startsWith('cohere-'))
+    return 'cohere';
   if (lower.startsWith('deepseek-')) return 'deepseek';
   if (
     lower.startsWith('qwen') ||
@@ -407,11 +406,14 @@ const resolveProviderIdentifierFromModelName = (modelName) => {
   }
   if (lower.startsWith('glm-') || lower.startsWith('cogview-')) return 'zhipu';
   if (lower.startsWith('hunyuan-')) return 'hunyuan';
-  if (lower.startsWith('doubao-') || lower.startsWith('ark-')) return 'volcengine';
-  if (lower.startsWith('abab') || lower.startsWith('minimax-')) return 'minimax';
+  if (lower.startsWith('doubao-') || lower.startsWith('ark-'))
+    return 'volcengine';
+  if (lower.startsWith('abab') || lower.startsWith('minimax-'))
+    return 'minimax';
   if (lower.startsWith('ernie-')) return 'baidu';
   if (lower.startsWith('spark-')) return 'xunfei';
-  if (lower.startsWith('moonshot-') || lower.startsWith('kimi-')) return 'moonshot';
+  if (lower.startsWith('moonshot-') || lower.startsWith('kimi-'))
+    return 'moonshot';
   if (lower.startsWith('llama')) return 'meta';
   if (lower.startsWith('flux')) return 'black-forest-labs';
   if (lower.startsWith('baichuan-')) return 'baichuan';
@@ -446,6 +448,7 @@ const normalizeChannelModelConfigRow = (row) => {
     upstream_model: upstreamModel || model,
     type: normalizeChannelModelType(row.type),
     endpoint: normalizeChannelModelEndpoint(row.type, row.endpoint),
+    inactive: row.inactive === true,
     selected: row.selected === true,
     input_price: normalizePriceOverrideValue(row.input_price),
     output_price: normalizePriceOverrideValue(row.output_price),
@@ -502,7 +505,7 @@ const buildModelConfigsFromLegacyFields = ({
   (Array.isArray(selectedModels) ? selectedModels : []).forEach(appendModel);
 
   const selectedSet = new Set(
-    normalizeModelIDs(Array.isArray(selectedModels) ? selectedModels : []),
+    normalizeModelIDs(Array.isArray(selectedModels) ? selectedModels : [])
   );
   const modelMappingMap = parseJSONObject(modelMapping);
   const inputPriceMap = parseJSONObject(inputPrice);
@@ -526,7 +529,7 @@ const buildModelConfigsFromLegacyFields = ({
 const buildChannelModelState = (modelConfigs) => {
   const normalizedConfigs = normalizeChannelModelConfigs(modelConfigs);
   const selectedModels = normalizedConfigs
-    .filter((row) => row.selected)
+    .filter((row) => row.selected && row.inactive !== true)
     .map((row) => row.model);
   return {
     modelConfigs: normalizedConfigs,
@@ -550,6 +553,16 @@ const buildNextInputsWithModelConfigs = (previousInputs, modelConfigs) => {
   };
 };
 
+const extractChannelModelListItems = (payload) => {
+  if (Array.isArray(payload?.items)) {
+    return payload.items;
+  }
+  if (Array.isArray(payload?.model_configs)) {
+    return payload.model_configs;
+  }
+  return [];
+};
+
 const validateModelConfigs = (modelConfigs, t) => {
   const seen = new Set();
   for (const row of Array.isArray(modelConfigs) ? modelConfigs : []) {
@@ -562,10 +575,16 @@ const validateModelConfigs = (modelConfigs, t) => {
       return t('channel.edit.messages.model_config_invalid');
     }
     seen.add(alias);
-    if (row?.input_price !== null && normalizePriceOverrideValue(row?.input_price) === null) {
+    if (
+      row?.input_price !== null &&
+      normalizePriceOverrideValue(row?.input_price) === null
+    ) {
       return t('channel.edit.messages.model_config_invalid');
     }
-    if (row?.output_price !== null && normalizePriceOverrideValue(row?.output_price) === null) {
+    if (
+      row?.output_price !== null &&
+      normalizePriceOverrideValue(row?.output_price) === null
+    ) {
       return t('channel.edit.messages.model_config_invalid');
     }
   }
@@ -576,12 +595,12 @@ const buildChannelConnectionSignature = ({
   protocol,
   key,
   baseURL,
-  draftID,
+  channelID,
 }) => {
   const normalizedKey = (key || '').trim();
-  const normalizedDraftID = (draftID || '').trim();
+  const normalizedChannelID = (channelID || '').trim();
   const keyPart =
-    normalizedKey !== '' ? normalizedKey : `@draft:${normalizedDraftID}`;
+    normalizedKey !== '' ? normalizedKey : `@channel:${normalizedChannelID}`;
   return `${protocol}|${normalizeBaseURL(baseURL)}|${keyPart}`;
 };
 
@@ -589,7 +608,7 @@ const buildChannelModelTestSignature = ({
   protocol,
   key,
   baseURL,
-  draftID,
+  channelID,
   models,
   modelConfigs,
 }) =>
@@ -597,9 +616,9 @@ const buildChannelModelTestSignature = ({
     protocol,
     key,
     baseURL,
-    draftID,
+    channelID,
   })}|${normalizeModelIDs(models).join(',')}|${normalizeChannelModelConfigs(
-    modelConfigs,
+    modelConfigs
   )
     .filter((row) => row.selected)
     .map((row) => `${row.model}:${row.type}:${row.endpoint || ''}`)
@@ -611,7 +630,8 @@ const normalizeModelTestResults = (results) => {
   }
   return results
     .filter(
-      (item) => item && typeof item === 'object' && typeof item.model === 'string',
+      (item) =>
+        item && typeof item === 'object' && typeof item.model === 'string'
     )
     .map((item) => ({
       model: item.model || '',
@@ -626,7 +646,26 @@ const normalizeModelTestResults = (results) => {
     }));
 };
 
-const sanitizeDraftInputsForLocalStorage = (inputs) => {
+const mergeModelTestResults = (previousResults, nextResults) => {
+  const merged = new Map();
+  normalizeModelTestResults(previousResults).forEach((item) => {
+    if (!item.model) {
+      return;
+    }
+    merged.set(item.model, item);
+  });
+  normalizeModelTestResults(nextResults).forEach((item) => {
+    if (!item.model) {
+      return;
+    }
+    merged.set(item.model, item);
+  });
+  return Array.from(merged.values()).sort((a, b) =>
+    (a.model || '').localeCompare(b.model || '')
+  );
+};
+
+const sanitizeCreateInputsForLocalStorage = (inputs) => {
   if (!inputs || typeof inputs !== 'object') {
     return CHANNEL_ORIGIN_INPUTS;
   }
@@ -636,7 +675,7 @@ const sanitizeDraftInputsForLocalStorage = (inputs) => {
   };
 };
 
-const sanitizeDraftConfigForLocalStorage = (config) => {
+const sanitizeCreateConfigForLocalStorage = (config) => {
   if (!config || typeof config !== 'object') {
     return CHANNEL_DEFAULT_CONFIG;
   }
@@ -648,7 +687,7 @@ const sanitizeDraftConfigForLocalStorage = (config) => {
   };
 };
 
-const CHANNEL_CREATE_DRAFT_KEY = 'router.channel.create.draft.v2';
+const CHANNEL_CREATE_CACHE_KEY = 'router.channel.create.v3';
 const CREATE_CHANNEL_STEP_MIN = 1;
 const CREATE_CHANNEL_STEP_MAX = 4;
 
@@ -711,7 +750,7 @@ const resolveProtocolFromChannelPayload = (payload) => {
   return 'openai';
 };
 
-const inferDraftCreateStepFromChannelPayload = (payload) => {
+const inferCreatingChannelStepFromPayload = (payload) => {
   const protocol = resolveProtocolFromChannelPayload(payload);
   if (protocol === 'proxy') {
     return 1;
@@ -730,7 +769,9 @@ const inferDraftCreateStepFromChannelPayload = (payload) => {
     return 2;
   }
   const testedAt = Number(payload?.channel_tests_last_tested_at || 0);
-  const results = Array.isArray(payload?.channel_tests) ? payload.channel_tests : [];
+  const results = Array.isArray(payload?.channel_tests)
+    ? payload.channel_tests
+    : [];
   if (testedAt > 0 || results.length > 0) {
     return 4;
   }
@@ -753,19 +794,21 @@ const EditChannel = () => {
     const query = new URLSearchParams(location.search);
     return (query.get('copy_from') || '').trim();
   }, [hasChannelID, location.search]);
-  const draftIdFromQuery = useMemo(() => {
+  const creatingChannelIdFromQuery = useMemo(() => {
     if (hasChannelID) return '';
     const query = new URLSearchParams(location.search);
-    return (query.get('draft_id') || '').trim();
+    return (query.get('channel_id') || '').trim();
   }, [hasChannelID, location.search]);
   const [loading, setLoading] = useState(
-    hasChannelID || copyFromId !== '' || draftIdFromQuery !== '',
+    hasChannelID || copyFromId !== '' || creatingChannelIdFromQuery !== ''
   );
   const [createStep, setCreateStep] = useState(() => {
     const query = new URLSearchParams(location.search);
     return parseCreateStep(query.get('step'));
   });
-  const [draftChannelId, setDraftChannelId] = useState(draftIdFromQuery);
+  const [creatingChannelId, setCreatingChannelId] = useState(
+    creatingChannelIdFromQuery
+  );
   const [channelKeySet, setChannelKeySet] = useState(false);
   const handleCancel = () => {
     navigate('/admin/channel');
@@ -779,7 +822,7 @@ const EditChannel = () => {
 
   const [inputs, setInputs] = useState(CHANNEL_ORIGIN_INPUTS);
   const [channelProtocolOptions, setChannelProtocolOptions] = useState(() =>
-    getChannelProtocolOptions(),
+    getChannelProtocolOptions()
   );
   const [fetchModelsLoading, setFetchModelsLoading] = useState(false);
   const [modelsSyncError, setModelsSyncError] = useState('');
@@ -787,10 +830,11 @@ const EditChannel = () => {
   const [verifiedModelSignature, setVerifiedModelSignature] = useState('');
   const [modelTestResults, setModelTestResults] = useState([]);
   const [modelTesting, setModelTesting] = useState(false);
+  const [modelTestingScope, setModelTestingScope] = useState('');
+  const [modelTestingTargets, setModelTestingTargets] = useState([]);
   const [modelTestError, setModelTestError] = useState('');
   const [modelTestedAt, setModelTestedAt] = useState(0);
-  const [modelTestedSignature, setModelTestedSignature] =
-    useState('');
+  const [modelTestedSignature, setModelTestedSignature] = useState('');
   const [modelTestTargetModels, setModelTestTargetModels] = useState([]);
   const [config, setConfig] = useState(CHANNEL_DEFAULT_CONFIG);
   const [providerOptions, setProviderOptions] = useState([]);
@@ -809,19 +853,23 @@ const EditChannel = () => {
   const [detailModelFilter, setDetailModelFilter] = useState('all');
   const [detailModelPage, setDetailModelPage] = useState(1);
   const fetchingModelsRef = useRef(false);
-  const draftChannelIdRef = useRef(draftIdFromQuery);
-  const draftStepProvidedRef = useRef(false);
-  const skipNextDraftReloadRef = useRef('');
+  const creatingChannelIdRef = useRef(creatingChannelIdFromQuery);
+  const creatingStepProvidedRef = useRef(false);
+  const skipNextCreatingReloadRef = useRef('');
   const deferredModelSearchKeyword = useDeferredValue(modelSearchKeyword);
   const currentProtocolOption = useMemo(() => {
-    const normalizedProtocol = (inputs.protocol || '').toString().trim().toLowerCase();
+    const normalizedProtocol = (inputs.protocol || '')
+      .toString()
+      .trim()
+      .toLowerCase();
     if (normalizedProtocol === '') {
       return null;
     }
     return (
       channelProtocolOptions.find(
         (option) =>
-          (option?.value || '').toString().trim().toLowerCase() === normalizedProtocol,
+          (option?.value || '').toString().trim().toLowerCase() ===
+          normalizedProtocol
       ) || null
     );
   }, [channelProtocolOptions, inputs.protocol]);
@@ -851,11 +899,11 @@ const EditChannel = () => {
 
   const effectivePreviewKey = useMemo(
     () => buildEffectiveKey().trim(),
-    [buildEffectiveKey],
+    [buildEffectiveKey]
   );
   const previewChannelID = useMemo(
-    () => ((hasChannelID ? channelId : draftChannelId) || '').trim(),
-    [channelId, draftChannelId, hasChannelID],
+    () => ((hasChannelID ? channelId : creatingChannelId) || '').trim(),
+    [channelId, creatingChannelId, hasChannelID]
   );
   const hasModelPreviewCredentials =
     effectivePreviewKey !== '' || (previewChannelID !== '' && channelKeySet);
@@ -867,9 +915,9 @@ const EditChannel = () => {
         protocol: inputs.protocol,
         key: effectivePreviewKey,
         baseURL: inputs.base_url,
-        draftID: previewChannelID,
+        channelID: previewChannelID,
       }),
-    [effectivePreviewKey, inputs.base_url, inputs.protocol, previewChannelID],
+    [effectivePreviewKey, inputs.base_url, inputs.protocol, previewChannelID]
   );
   const currentModelTestSignature = useMemo(
     () =>
@@ -877,7 +925,7 @@ const EditChannel = () => {
         protocol: inputs.protocol,
         key: effectivePreviewKey,
         baseURL: inputs.base_url,
-        draftID: previewChannelID,
+        channelID: previewChannelID,
         models: inputs.models,
         modelConfigs: inputs.model_configs,
       }),
@@ -888,7 +936,7 @@ const EditChannel = () => {
       inputs.models,
       inputs.protocol,
       previewChannelID,
-    ],
+    ]
   );
   const requiresConnectionVerification =
     isCreateMode && inputs.protocol !== 'proxy';
@@ -908,7 +956,7 @@ const EditChannel = () => {
   const textAreaReadonlyProps = isDetailMode ? { readOnly: true } : {};
   const visibleModelConfigs = useMemo(
     () => normalizeChannelModelConfigs(inputs.model_configs),
-    [inputs.model_configs],
+    [inputs.model_configs]
   );
   const modelTestResultsByModel = useMemo(() => {
     const index = new Map();
@@ -922,6 +970,9 @@ const EditChannel = () => {
   }, [modelTestResults]);
   const modelTestRows = useMemo(() => {
     return visibleModelConfigs.filter((row) => {
+      if (row.inactive) {
+        return false;
+      }
       if (row.selected) {
         return true;
       }
@@ -932,11 +983,17 @@ const EditChannel = () => {
     if (modelTestRows.length === 0) {
       return false;
     }
-    return modelTestRows.every((row) => modelTestTargetModels.includes(row.model));
+    return modelTestRows.every((row) =>
+      modelTestTargetModels.includes(row.model)
+    );
   }, [modelTestRows, modelTestTargetModels]);
   const isModelTestSignatureFresh =
     modelTestedSignature !== '' &&
     modelTestedSignature === currentModelTestSignature;
+  const modelTestingTargetSet = useMemo(
+    () => new Set(modelTestingTargets),
+    [modelTestingTargets]
+  );
   const getProviderOwnersForModel = useCallback(
     (row) => {
       const owners = new Set();
@@ -947,15 +1004,20 @@ const EditChannel = () => {
       });
       return Array.from(owners).sort((a, b) => a.localeCompare(b));
     },
-    [providerModelOwners],
+    [providerModelOwners]
   );
   const inferAssignableProviderForRow = useCallback(
     (row) => inferAssignableProviderForRowWithOptions(row, providerOptions),
-    [providerOptions],
+    [providerOptions]
   );
   const canSelectChannelModel = useCallback(
-    (row) => getProviderOwnersForModel(row).length > 0,
-    [getProviderOwnersForModel],
+    (row) =>
+      row?.inactive !== true && getProviderOwnersForModel(row).length > 0,
+    [getProviderOwnersForModel]
+  );
+  const activeModelConfigs = useMemo(
+    () => visibleModelConfigs.filter((row) => row.inactive !== true),
+    [visibleModelConfigs]
   );
   const detailModelStats = useMemo(() => {
     return visibleModelConfigs.reduce(
@@ -979,9 +1041,13 @@ const EditChannel = () => {
         unassigned: 0,
         autoAssignable: 0,
         manualRequired: 0,
-      },
+      }
     );
-  }, [getProviderOwnersForModel, inferAssignableProviderForRow, visibleModelConfigs]);
+  }, [
+    getProviderOwnersForModel,
+    inferAssignableProviderForRow,
+    visibleModelConfigs,
+  ]);
   const detailFilteredModelConfigs = useMemo(() => {
     if (!isDetailMode) {
       return visibleModelConfigs;
@@ -1026,29 +1092,30 @@ const EditChannel = () => {
   const detailModelTotalPages = useMemo(() => {
     return Math.max(
       1,
-      Math.ceil(searchedModelConfigs.length / CHANNEL_MODEL_PAGE_SIZE),
+      Math.ceil(searchedModelConfigs.length / CHANNEL_MODEL_PAGE_SIZE)
     );
   }, [searchedModelConfigs.length]);
   const renderedModelConfigs = useMemo(() => {
     const offset = (detailModelPage - 1) * CHANNEL_MODEL_PAGE_SIZE;
-    return searchedModelConfigs.slice(
-      offset,
-      offset + CHANNEL_MODEL_PAGE_SIZE,
-    );
+    return searchedModelConfigs.slice(offset, offset + CHANNEL_MODEL_PAGE_SIZE);
   }, [searchedModelConfigs, detailModelPage]);
   const autoAssignableRows = useMemo(() => {
     return visibleModelConfigs.filter((row) => {
       const owners = getProviderOwnersForModel(row);
       return owners.length === 0 && inferAssignableProviderForRow(row) !== '';
     });
-  }, [getProviderOwnersForModel, inferAssignableProviderForRow, visibleModelConfigs]);
+  }, [
+    getProviderOwnersForModel,
+    inferAssignableProviderForRow,
+    visibleModelConfigs,
+  ]);
   const modelSelectionSummaryText = useMemo(
     () =>
       t('channel.edit.model_selector.summary', {
         selected: inputs.models.length,
-        total: visibleModelConfigs.length,
+        total: activeModelConfigs.length,
       }),
-    [inputs.models.length, t, visibleModelConfigs.length],
+    [activeModelConfigs.length, inputs.models.length, t]
   );
   const modelAssignmentSummaryText = useMemo(() => {
     if (!isDetailMode) {
@@ -1070,8 +1137,7 @@ const EditChannel = () => {
   }, [modelAssignmentSummaryText, modelSelectionSummaryText]);
 
   const handleInputChange = (e, { name, value }) => {
-    const nextValue =
-      name === 'id' ? normalizeChannelIdentifier(value) : value;
+    const nextValue = name === 'id' ? normalizeChannelIdentifier(value) : value;
     setInputs((inputs) => ({ ...inputs, [name]: nextValue }));
   };
 
@@ -1209,86 +1275,88 @@ const EditChannel = () => {
     t,
   ]);
 
-  const clearCreateDraft = useCallback(() => {
+  const clearCreateChannelCache = useCallback(() => {
     if (typeof window === 'undefined') {
       return;
     }
-    localStorage.removeItem(CHANNEL_CREATE_DRAFT_KEY);
+    localStorage.removeItem(CHANNEL_CREATE_CACHE_KEY);
   }, []);
 
-  const restoreCreateDraft = useCallback(() => {
+  const restoreCreateChannelCache = useCallback(() => {
     if (typeof window === 'undefined') {
       return false;
     }
-    const raw = localStorage.getItem(CHANNEL_CREATE_DRAFT_KEY);
+    const raw = localStorage.getItem(CHANNEL_CREATE_CACHE_KEY);
     if (!raw) {
       return false;
     }
     try {
-      const draft = JSON.parse(raw);
-      if (!draft || typeof draft !== 'object') {
+      const cachedState = JSON.parse(raw);
+      if (!cachedState || typeof cachedState !== 'object') {
         return false;
       }
-      if (!draft.inputs || typeof draft.inputs !== 'object') {
+      if (!cachedState.inputs || typeof cachedState.inputs !== 'object') {
         return false;
       }
 
       setInputs({
         ...CHANNEL_ORIGIN_INPUTS,
-        ...sanitizeDraftInputsForLocalStorage(draft.inputs),
+        ...sanitizeCreateInputsForLocalStorage(cachedState.inputs),
       });
-      if (draft.config && typeof draft.config === 'object') {
+      if (cachedState.config && typeof cachedState.config === 'object') {
         setConfig({
           ...CHANNEL_DEFAULT_CONFIG,
-          ...sanitizeDraftConfigForLocalStorage(draft.config),
+          ...sanitizeCreateConfigForLocalStorage(cachedState.config),
         });
       }
-      if (typeof draft.modelsSyncError === 'string') {
-        setModelsSyncError(draft.modelsSyncError);
+      if (typeof cachedState.modelsSyncError === 'string') {
+        setModelsSyncError(cachedState.modelsSyncError);
       }
-      if (Number.isFinite(draft.modelsLastSyncedAt)) {
-        setModelsLastSyncedAt(draft.modelsLastSyncedAt);
+      if (Number.isFinite(cachedState.modelsLastSyncedAt)) {
+        setModelsLastSyncedAt(cachedState.modelsLastSyncedAt);
       }
-      if (typeof draft.verifiedModelSignature === 'string') {
-        setVerifiedModelSignature(draft.verifiedModelSignature);
+      if (typeof cachedState.verifiedModelSignature === 'string') {
+        setVerifiedModelSignature(cachedState.verifiedModelSignature);
       }
-      const restoredModelTestResults = Array.isArray(draft.modelTestResults)
-        ? draft.modelTestResults
-        : Array.isArray(draft.capabilityResults)
-          ? draft.capabilityResults
-          : [];
-      const restoredModelTestTargetModels = Array.isArray(
-        draft.modelTestTargetModels,
+      const restoredModelTestResults = Array.isArray(
+        cachedState.modelTestResults
       )
-        ? draft.modelTestTargetModels
-        : Array.isArray(draft.capabilityTargetModels)
-          ? draft.capabilityTargetModels
-          : [];
+        ? cachedState.modelTestResults
+        : Array.isArray(cachedState.capabilityResults)
+        ? cachedState.capabilityResults
+        : [];
+      const restoredModelTestTargetModels = Array.isArray(
+        cachedState.modelTestTargetModels
+      )
+        ? cachedState.modelTestTargetModels
+        : Array.isArray(cachedState.capabilityTargetModels)
+        ? cachedState.capabilityTargetModels
+        : [];
       const restoredModelTestError =
-        typeof draft.modelTestError === 'string'
-          ? draft.modelTestError
-          : typeof draft.capabilityTestError === 'string'
-            ? draft.capabilityTestError
-            : '';
-      const restoredModelTestedAt = Number.isFinite(draft.modelTestedAt)
-        ? draft.modelTestedAt
-        : Number.isFinite(draft.capabilityTestedAt)
-          ? draft.capabilityTestedAt
-          : 0;
+        typeof cachedState.modelTestError === 'string'
+          ? cachedState.modelTestError
+          : typeof cachedState.capabilityTestError === 'string'
+          ? cachedState.capabilityTestError
+          : '';
+      const restoredModelTestedAt = Number.isFinite(cachedState.modelTestedAt)
+        ? cachedState.modelTestedAt
+        : Number.isFinite(cachedState.capabilityTestedAt)
+        ? cachedState.capabilityTestedAt
+        : 0;
       const restoredModelTestedSignature =
-        typeof draft.modelTestedSignature === 'string'
-          ? draft.modelTestedSignature
-          : typeof draft.capabilityTestedSignature === 'string'
-            ? draft.capabilityTestedSignature
-            : '';
+        typeof cachedState.modelTestedSignature === 'string'
+          ? cachedState.modelTestedSignature
+          : typeof cachedState.capabilityTestedSignature === 'string'
+          ? cachedState.capabilityTestedSignature
+          : '';
       if (restoredModelTestResults.length > 0) {
         setModelTestResults(
-          normalizeModelTestResults(restoredModelTestResults),
+          normalizeModelTestResults(restoredModelTestResults)
         );
       }
       if (restoredModelTestTargetModels.length > 0) {
         setModelTestTargetModels(
-          normalizeModelIDs(restoredModelTestTargetModels),
+          normalizeModelIDs(restoredModelTestTargetModels)
         );
       }
       if (restoredModelTestError !== '') {
@@ -1300,18 +1368,18 @@ const EditChannel = () => {
       if (restoredModelTestedSignature !== '') {
         setModelTestedSignature(restoredModelTestedSignature);
       }
-      if (typeof draft.draft_channel_id === 'string') {
-        const restoredDraftID = draft.draft_channel_id.trim();
-        setDraftChannelId(restoredDraftID);
-        draftChannelIdRef.current = restoredDraftID;
-        skipNextDraftReloadRef.current = restoredDraftID;
+      if (typeof cachedState.channel_id === 'string') {
+        const restoredChannelID = cachedState.channel_id.trim();
+        setCreatingChannelId(restoredChannelID);
+        creatingChannelIdRef.current = restoredChannelID;
+        skipNextCreatingReloadRef.current = restoredChannelID;
       }
-      if (typeof draft.channel_key_set === 'boolean') {
-        setChannelKeySet(draft.channel_key_set);
+      if (typeof cachedState.channel_key_set === 'boolean') {
+        setChannelKeySet(cachedState.channel_key_set);
       } else {
         setChannelKeySet(false);
       }
-      setCreateStep(parseCreateStep(draft.step));
+      setCreateStep(parseCreateStep(cachedState.step));
       return true;
     } catch {
       return false;
@@ -1325,7 +1393,7 @@ const EditChannel = () => {
       }
       setCreateStep(parseCreateStep(targetStep));
     },
-    [isCreateMode],
+    [isCreateMode]
   );
 
   const moveToPreviousCreateStep = useCallback(() => {
@@ -1344,7 +1412,7 @@ const EditChannel = () => {
     if (localInputs.base_url && localInputs.base_url.endsWith('/')) {
       localInputs.base_url = localInputs.base_url.slice(
         0,
-        localInputs.base_url.length - 1,
+        localInputs.base_url.length - 1
       );
     }
     if (localInputs.protocol === 'azure' && localInputs.other === '') {
@@ -1357,9 +1425,9 @@ const EditChannel = () => {
     return localInputs;
   }, [buildEffectiveKey, config, inputs]);
 
-  const createDraftChannel = useCallback(async () => {
+  const createChannelRecord = useCallback(async () => {
     const payload = buildChannelPayload();
-    const res = await API.post('/api/v1/admin/channel/draft', {
+    const res = await API.post('/api/v1/admin/channel/create', {
       name: payload.name,
       protocol: payload.protocol,
       key: payload.key,
@@ -1368,75 +1436,90 @@ const EditChannel = () => {
     });
     const { success, message, data } = res.data || {};
     if (!success) {
-      showError(message || t('channel.edit.messages.create_draft_failed'));
+      showError(message || t('channel.edit.messages.create_channel_failed'));
       return '';
     }
     const id = (data?.id || '').toString();
     if (id === '') {
-      showError(t('channel.edit.messages.create_draft_failed'));
+      showError(t('channel.edit.messages.create_channel_failed'));
       return '';
     }
-    setDraftChannelId(id);
-    draftChannelIdRef.current = id;
-    skipNextDraftReloadRef.current = id;
+    setCreatingChannelId(id);
+    creatingChannelIdRef.current = id;
+    skipNextCreatingReloadRef.current = id;
     if ((payload.key || '').trim() !== '') {
       setChannelKeySet(true);
     }
     return id;
   }, [buildChannelPayload, t]);
 
-  const saveDraftChannel = useCallback(async () => {
-    let targetDraftID = (
-      draftChannelIdRef.current ||
-      draftChannelId ||
-      ''
-    ).trim();
-    if (targetDraftID === '') {
-      if (!isCreateMode) {
-        return true;
+  const persistWorkingChannel = useCallback(
+    async ({ status } = {}) => {
+      let targetChannelID = (
+        (hasChannelID
+          ? channelId
+          : creatingChannelIdRef.current || creatingChannelId) || ''
+      ).trim();
+      if (targetChannelID === '') {
+        if (!isCreateMode) {
+          return '';
+        }
+        const createdID = await createChannelRecord();
+        if (createdID === '') {
+          return '';
+        }
+        targetChannelID = createdID;
       }
-      const createdID = await createDraftChannel();
-      if (createdID === '') {
-        return false;
+      const payload = buildChannelPayload();
+      const requestBody = {
+        ...payload,
+        id: targetChannelID,
+      };
+      if (typeof status === 'number') {
+        requestBody.status = status;
+      } else if (isCreateMode) {
+        requestBody.status = 4;
       }
-      targetDraftID = createdID;
-    }
-    const payload = buildChannelPayload();
-    const res = await API.put('/api/v1/admin/channel/', {
-      ...payload,
-      id: targetDraftID,
-      status: 4,
-    });
-    const { success, message } = res.data || {};
-    if (!success) {
-      showError(message || t('channel.edit.messages.update_draft_failed'));
-      return false;
-    }
-    if ((payload.key || '').trim() !== '') {
-      setChannelKeySet(true);
-    }
-    return true;
-  }, [
-    buildChannelPayload,
-    createDraftChannel,
-    draftChannelId,
-    isCreateMode,
-    t,
-  ]);
+      const res = await API.put('/api/v1/admin/channel/', requestBody);
+      const { success, message } = res.data || {};
+      if (!success) {
+        showError(message || t('channel.edit.messages.save_channel_failed'));
+        return '';
+      }
+      if ((payload.key || '').trim() !== '') {
+        setChannelKeySet(true);
+      }
+      return targetChannelID;
+    },
+    [
+      buildChannelPayload,
+      channelId,
+      createChannelRecord,
+      creatingChannelId,
+      hasChannelID,
+      isCreateMode,
+      t,
+    ]
+  );
 
-  const verifyDraftModelsPersisted = useCallback(
+  const saveCreatingChannel = useCallback(async () => {
+    const targetChannelID = await persistWorkingChannel({ status: 4 });
+    return targetChannelID !== '';
+  }, [persistWorkingChannel]);
+
+  const verifyChannelModelsPersisted = useCallback(
     async (expectedModels) => {
-      const targetDraftID = (
-        draftChannelIdRef.current ||
-        draftChannelId ||
+      const targetChannelID = (
+        creatingChannelIdRef.current ||
+        creatingChannelId ||
         ''
       ).trim();
-      if (targetDraftID === '') {
+      if (targetChannelID === '') {
         return false;
       }
       try {
         const checkRes = await API.get(
-          `/api/v1/admin/channel/${targetDraftID}?select_all=1`,
+          `/api/v1/admin/channel/${targetChannelID}?select_all=1`
         );
         const { success, data } = checkRes.data || {};
         if (!success || !data) {
@@ -1450,7 +1533,7 @@ const EditChannel = () => {
             : (data.models || '')
                 .split(',')
                 .map((item) => item.trim())
-                .filter((item) => item !== ''),
+                .filter((item) => item !== '')
         );
         const localModels = normalizeModelIDs(expectedModels);
         if (remoteModels.length !== localModels.length) {
@@ -1466,19 +1549,24 @@ const EditChannel = () => {
         return false;
       }
     },
-    [draftChannelId],
+    [creatingChannelId]
   );
 
-  const ensureDraftChannel = useCallback(async () => {
+  const ensureCreatingChannel = useCallback(async () => {
     if (!isCreateMode) {
       return true;
     }
-    if (draftChannelId) {
-      return saveDraftChannel();
+    if (creatingChannelId) {
+      return saveCreatingChannel();
     }
-    const createdID = await createDraftChannel();
+    const createdID = await createChannelRecord();
     return createdID !== '';
-  }, [createDraftChannel, draftChannelId, isCreateMode, saveDraftChannel]);
+  }, [
+    createChannelRecord,
+    creatingChannelId,
+    isCreateMode,
+    saveCreatingChannel,
+  ]);
 
   const moveToStepTwo = useCallback(async () => {
     const effectiveKey = buildEffectiveKey();
@@ -1492,7 +1580,7 @@ const EditChannel = () => {
       return;
     }
     if (isCreateMode) {
-      const ok = await ensureDraftChannel();
+      const ok = await ensureCreatingChannel();
       if (!ok) {
         return;
       }
@@ -1501,7 +1589,7 @@ const EditChannel = () => {
   }, [
     buildEffectiveKey,
     canReuseStoredKeyForCreate,
-    ensureDraftChannel,
+    ensureCreatingChannel,
     goToCreateStep,
     inputs.name,
     isCreateMode,
@@ -1529,20 +1617,20 @@ const EditChannel = () => {
       return false;
     }
     if (isCreateMode) {
-      const ok = await saveDraftChannel();
+      const ok = await saveCreatingChannel();
       if (!ok) {
         return false;
       }
       const expectedModels = [...inputs.models];
-      const persisted = await verifyDraftModelsPersisted(expectedModels);
+      const persisted = await verifyChannelModelsPersisted(expectedModels);
       if (!persisted) {
-        showError(t('channel.edit.messages.update_draft_failed'));
+        showError(t('channel.edit.messages.save_channel_failed'));
         return false;
       }
     }
     return true;
   }, [
-    draftChannelId,
+    creatingChannelId,
     hasModelPreviewCredentials,
     inputs.models.length,
     inputs.models,
@@ -1551,9 +1639,9 @@ const EditChannel = () => {
     isCurrentSignatureVerified,
     requireVerificationBeforeProceed,
     requiresConnectionVerification,
-    saveDraftChannel,
+    saveCreatingChannel,
     t,
-    verifyDraftModelsPersisted,
+    verifyChannelModelsPersisted,
     visibleModelConfigs,
   ]);
 
@@ -1572,7 +1660,11 @@ const EditChannel = () => {
         return;
       }
     }
-    if (inputs.protocol !== 'proxy' && inputs.models.length > 0 && !isModelTestSignatureFresh) {
+    if (
+      inputs.protocol !== 'proxy' &&
+      inputs.models.length > 0 &&
+      !isModelTestSignatureFresh
+    ) {
       showInfo(t('channel.edit.model_tester.verify_required'));
       return;
     }
@@ -1588,7 +1680,12 @@ const EditChannel = () => {
   ]);
 
   const loadChannelById = useCallback(
-    async (targetId, forCopy = false, selectAll = true, fromDraft = false) => {
+    async (
+      targetId,
+      forCopy = false,
+      selectAll = true,
+      fromCreating = false
+    ) => {
       const query = selectAll ? '?select_all=1' : '';
       let res = await API.get(`/api/v1/admin/channel/${targetId}${query}`);
       const { success, message, data } = res.data;
@@ -1605,7 +1702,7 @@ const EditChannel = () => {
           ? data.available_models
           : [];
         const storedModelTestResults = normalizeModelTestResults(
-          data.channel_tests,
+          data.channel_tests
         );
         const storedModelTestedAt =
           Number(data.channel_tests_last_tested_at || 0) > 0
@@ -1627,13 +1724,13 @@ const EditChannel = () => {
             outputPrice: data.output_price || '',
             priceUnit: data.price_unit || '',
             currency: data.currency || '',
-          }),
+          })
         );
         const loadedModelTestSignature = buildChannelModelTestSignature({
           protocol: normalizedProtocol,
           key: '',
           baseURL: data.base_url || '',
-          draftID: data.id || targetId,
+          channelID: data.id || targetId,
           models: modelState.selectedModels,
           modelConfigs: modelState.modelConfigs,
         });
@@ -1678,32 +1775,75 @@ const EditChannel = () => {
           setModelTestedSignature(
             storedModelTestResults.length > 0 && storedModelTestedAt > 0
               ? loadedModelTestSignature
-              : '',
+              : ''
           );
           setModelTestTargetModels(
             modelState.modelConfigs
               .filter((row) => row.selected)
-              .map((row) => row.model),
+              .map((row) => row.model)
           );
         }
         setConfig((prev) => ({
           ...prev,
           ...parsedConfig,
         }));
-        if (fromDraft || hasChannelID) {
+        if (fromCreating || hasChannelID) {
           setChannelKeySet(keySet);
         } else {
           setChannelKeySet(false);
         }
-        if (fromDraft && !draftStepProvidedRef.current) {
-          setCreateStep(inferDraftCreateStepFromChannelPayload(data));
+        if (fromCreating && !creatingStepProvidedRef.current) {
+          setCreateStep(inferCreatingChannelStepFromPayload(data));
         }
       } else {
         showError(message);
       }
       setLoading(false);
     },
-    [hasChannelID],
+    [hasChannelID]
+  );
+
+  const loadChannelModelConfigsFromServer = useCallback(
+    async (targetChannelId) => {
+      const normalizedChannelId = (targetChannelId || '').toString().trim();
+      if (normalizedChannelId === '') {
+        return [];
+      }
+      const items = [];
+      let page = 0;
+      while (page < 50) {
+        const res = await API.get(
+          `/api/v1/admin/channel/${normalizedChannelId}/models`,
+          {
+            params: {
+              p: page,
+              page_size: 100,
+            },
+          }
+        );
+        const { success, message, data } = res.data || {};
+        if (!success) {
+          throw new Error(
+            message || t('channel.edit.messages.fetch_models_failed')
+          );
+        }
+        const pageItems = normalizeChannelModelConfigs(
+          extractChannelModelListItems(data)
+        );
+        items.push(...pageItems);
+        const total = Number(data?.total || pageItems.length || 0);
+        if (
+          pageItems.length === 0 ||
+          items.length >= total ||
+          pageItems.length < 100
+        ) {
+          break;
+        }
+        page += 1;
+      }
+      return normalizeChannelModelConfigs(items);
+    },
+    [t]
   );
 
   const handleFetchModels = useCallback(
@@ -1714,20 +1854,21 @@ const EditChannel = () => {
       fetchingModelsRef.current = true;
       setFetchModelsLoading(true);
       try {
-        if (isCreateMode) {
-          const ok = await ensureDraftChannel();
-          if (!ok) {
-            return false;
-          }
+        const persistedChannelId = await persistWorkingChannel({
+          status: isCreateMode ? 4 : undefined,
+        });
+        if (persistedChannelId === '') {
+          return false;
         }
         const targetChannelId = (
+          persistedChannelId ||
           previewChannelID ||
-          draftChannelIdRef.current ||
-          draftChannelId ||
+          creatingChannelIdRef.current ||
+          creatingChannelId ||
           ''
         ).trim();
         if (targetChannelId === '') {
-          const errorMessage = t('channel.edit.messages.update_draft_failed');
+          const errorMessage = t('channel.edit.messages.save_channel_failed');
           setModelsSyncError(errorMessage);
           if (!silent) {
             showError(errorMessage);
@@ -1740,17 +1881,12 @@ const EditChannel = () => {
           protocol: inputs.protocol,
           key,
           baseURL: normalizedBaseURL,
-          draftID: targetChannelId,
+          channelID: targetChannelId,
         });
-        const res = await API.post(`/api/v1/admin/channel/preview/models`, {
-          protocol: inputs.protocol,
-          key,
-          base_url: normalizedBaseURL,
-          draft_id: targetChannelId,
-          config,
-          model_configs: visibleModelConfigs,
-        });
-        const { success, message, data } = res.data || {};
+        const res = await API.post(
+          `/api/v1/admin/channel/${targetChannelId}/models/refresh`
+        );
+        const { success, message } = res.data || {};
         if (!success) {
           const errorMessage =
             message || t('channel.edit.messages.fetch_models_failed');
@@ -1761,7 +1897,9 @@ const EditChannel = () => {
           }
           return false;
         }
-        const nextConfigs = normalizeChannelModelConfigs(data?.model_configs);
+        const nextConfigs = await loadChannelModelConfigsFromServer(
+          targetChannelId
+        );
         if (nextConfigs.length === 0) {
           const message = t('channel.edit.messages.models_empty');
           setModelsSyncError(message);
@@ -1797,17 +1935,16 @@ const EditChannel = () => {
     },
     [
       buildEffectiveKey,
-      config,
-      draftChannelId,
-      ensureDraftChannel,
+      creatingChannelId,
       inputs.base_url,
       inputs,
       inputs.protocol,
       isCreateMode,
+      loadChannelModelConfigsFromServer,
+      persistWorkingChannel,
       previewChannelID,
       t,
-      visibleModelConfigs,
-    ],
+    ]
   );
 
   const fetchChannelTypes = useCallback(async () => {
@@ -1844,7 +1981,7 @@ const EditChannel = () => {
           if (!success) {
             if (!silent) {
               showError(
-                message || t('channel.edit.model_selector.provider_load_failed'),
+                message || t('channel.edit.model_selector.provider_load_failed')
               );
             }
             return null;
@@ -1868,7 +2005,10 @@ const EditChannel = () => {
         return nextCatalog;
       } catch (error) {
         if (!silent) {
-          showError(error?.message || t('channel.edit.model_selector.provider_load_failed'));
+          showError(
+            error?.message ||
+              t('channel.edit.model_selector.provider_load_failed')
+          );
         }
         return null;
       } finally {
@@ -1881,7 +2021,7 @@ const EditChannel = () => {
       providerModelOwners,
       providerOptions,
       t,
-    ],
+    ]
   );
 
   const openAppendProviderModal = useCallback(
@@ -1900,14 +2040,14 @@ const EditChannel = () => {
       setAppendProviderForm({
         provider: inferAssignableProviderForRowWithOptions(
           row,
-          catalog.providerOptions,
+          catalog.providerOptions
         ),
         model: (row?.upstream_model || row?.model || '').toString().trim(),
         type: normalizeChannelModelType(row?.type),
       });
       setAppendProviderModalOpen(true);
     },
-    [loadProviderCatalogIndex, t],
+    [loadProviderCatalogIndex, t]
   );
 
   const closeAppendProviderModal = useCallback(() => {
@@ -1937,18 +2077,28 @@ const EditChannel = () => {
       });
       const { success, message } = res.data || {};
       if (!success) {
-        showError(message || t('channel.edit.model_selector.provider_append_failed'));
+        showError(
+          message || t('channel.edit.model_selector.provider_append_failed')
+        );
         return;
       }
       await loadProviderCatalogIndex({ silent: true, force: true });
       showSuccess(t('channel.edit.model_selector.provider_append_success'));
       closeAppendProviderModal();
     } catch (error) {
-      showError(error?.message || t('channel.edit.model_selector.provider_append_failed'));
+      showError(
+        error?.message ||
+          t('channel.edit.model_selector.provider_append_failed')
+      );
     } finally {
       setAppendingProviderModel(false);
     }
-  }, [appendProviderForm, closeAppendProviderModal, loadProviderCatalogIndex, t]);
+  }, [
+    appendProviderForm,
+    closeAppendProviderModal,
+    loadProviderCatalogIndex,
+    t,
+  ]);
 
   const handleAutoAssignModels = useCallback(async () => {
     const catalog = await loadProviderCatalogIndex({
@@ -1962,7 +2112,10 @@ const EditChannel = () => {
       const owners = getProviderOwnersForModel(row);
       return (
         owners.length === 0 &&
-        inferAssignableProviderForRowWithOptions(row, catalog.providerOptions) !== ''
+        inferAssignableProviderForRowWithOptions(
+          row,
+          catalog.providerOptions
+        ) !== ''
       );
     });
     if (assignableRows.length === 0) {
@@ -1976,18 +2129,23 @@ const EditChannel = () => {
       for (const row of assignableRows) {
         const providerId = inferAssignableProviderForRowWithOptions(
           row,
-          catalog.providerOptions,
+          catalog.providerOptions
         );
-        const modelName = (row?.upstream_model || row?.model || '').toString().trim();
+        const modelName = (row?.upstream_model || row?.model || '')
+          .toString()
+          .trim();
         if (providerId === '' || modelName === '') {
           failedCount += 1;
           continue;
         }
         try {
-          const res = await API.post(`/api/v1/admin/provider/${providerId}/model`, {
-            model: modelName,
-            type: normalizeChannelModelType(row?.type),
-          });
+          const res = await API.post(
+            `/api/v1/admin/provider/${providerId}/model`,
+            {
+              model: modelName,
+              type: normalizeChannelModelType(row?.type),
+            }
+          );
           if (res?.data?.success) {
             successCount += 1;
           } else {
@@ -2003,7 +2161,7 @@ const EditChannel = () => {
           t('channel.edit.model_selector.auto_assign_success', {
             success: successCount,
             failed: failedCount,
-          }),
+          })
         );
       } else {
         showInfo(t('channel.edit.model_selector.auto_assign_empty'));
@@ -2018,92 +2176,108 @@ const EditChannel = () => {
     visibleModelConfigs,
   ]);
 
-  const handleRunModelTests = useCallback(async (targetModels = []) => {
-    if (inputs.protocol === 'proxy') {
-      return;
-    }
-    const normalizedTargets = normalizeModelIDs(
-      Array.isArray(targetModels) && targetModels.length > 0
-        ? targetModels
-        : modelTestTargetModels,
-    );
-    if (normalizedTargets.length === 0) {
-      showInfo(t('channel.edit.messages.models_required'));
-      return;
-    }
-    const ok = isCreateMode ? await saveDraftChannel() : true;
-    if (!ok) {
-      return;
-    }
-    setModelTesting(true);
-    try {
-      const res = await API.post('/api/v1/admin/channel/preview/model-tests', {
-        protocol: inputs.protocol,
-        key: effectivePreviewKey,
-        base_url: normalizeBaseURL(inputs.base_url),
-        draft_id: previewChannelID,
-        config,
-        models: inputs.models,
-        model_configs: visibleModelConfigs,
-        test_model: inputs.test_model || '',
-        target_models: normalizedTargets,
+  const handleRunModelTests = useCallback(
+    async ({ targetModels = [], scope = 'batch' } = {}) => {
+      if (inputs.protocol === 'proxy') {
+        return;
+      }
+      const normalizedTargets = normalizeModelIDs(
+        Array.isArray(targetModels) && targetModels.length > 0
+          ? targetModels
+          : modelTestTargetModels
+      );
+      if (normalizedTargets.length === 0) {
+        showInfo(t('channel.edit.messages.models_required'));
+        return;
+      }
+      const persistedChannelId = await persistWorkingChannel({
+        status: isCreateMode ? 4 : undefined,
       });
-      const { success, message, data } = res.data || {};
-      if (!success) {
+      if (persistedChannelId === '') {
+        return;
+      }
+      const targetChannelId = (
+        persistedChannelId ||
+        previewChannelID ||
+        creatingChannelIdRef.current ||
+        creatingChannelId ||
+        ''
+      ).trim();
+      setModelTesting(true);
+      setModelTestingScope(scope === 'single' ? 'single' : 'batch');
+      setModelTestingTargets(normalizedTargets);
+      try {
+        const res = await API.post(
+          `/api/v1/admin/channel/${targetChannelId}/models/tests`,
+          {
+            test_model: inputs.test_model || '',
+            target_models: normalizedTargets,
+          }
+        );
+        const { success, message, data } = res.data || {};
+        if (!success) {
+          const errorMessage =
+            message || t('channel.edit.model_tester.test_failed');
+          setModelTestResults([]);
+          setModelTestError(errorMessage);
+          setModelTestedAt(0);
+          setModelTestedSignature('');
+          showError(errorMessage);
+          return;
+        }
+        const nextResults = normalizeModelTestResults(data?.results);
+        const nextModelConfigs = normalizeChannelModelConfigs(
+          data?.model_configs
+        );
+        const nextInputs = buildNextInputsWithModelConfigs(
+          inputs,
+          nextModelConfigs.length > 0 ? nextModelConfigs : visibleModelConfigs
+        );
+        const nextSignature = buildChannelModelTestSignature({
+          protocol: inputs.protocol,
+          key: effectivePreviewKey,
+          baseURL: inputs.base_url,
+          channelID: targetChannelId,
+          models: nextInputs.models,
+          modelConfigs: nextInputs.model_configs,
+        });
+        setInputs(nextInputs);
+        setModelTestResults((previousResults) =>
+          mergeModelTestResults(previousResults, nextResults)
+        );
+        setModelTestError('');
+        setModelTestedAt(Date.now());
+        setModelTestedSignature(nextSignature);
+        showSuccess(t('channel.edit.model_tester.test_success'));
+      } catch (error) {
         const errorMessage =
-          message || t('channel.edit.model_tester.test_failed');
+          error?.message || t('channel.edit.model_tester.test_failed');
         setModelTestResults([]);
         setModelTestError(errorMessage);
         setModelTestedAt(0);
         setModelTestedSignature('');
         showError(errorMessage);
-        return;
+      } finally {
+        setModelTesting(false);
+        setModelTestingScope('');
+        setModelTestingTargets([]);
       }
-      const nextResults = normalizeModelTestResults(data?.results);
-      const nextModelConfigs = normalizeChannelModelConfigs(data?.model_configs);
-      const nextInputs = buildNextInputsWithModelConfigs(
-        inputs,
-        nextModelConfigs.length > 0 ? nextModelConfigs : visibleModelConfigs,
-      );
-      const nextSignature = buildChannelModelTestSignature({
-        protocol: inputs.protocol,
-        key: effectivePreviewKey,
-        baseURL: inputs.base_url,
-        draftID: previewChannelID,
-        models: nextInputs.models,
-        modelConfigs: nextInputs.model_configs,
-      });
-      setInputs(nextInputs);
-      setModelTestResults(nextResults);
-      setModelTestError('');
-      setModelTestedAt(Date.now());
-      setModelTestedSignature(nextSignature);
-      showSuccess(t('channel.edit.model_tester.test_success'));
-    } catch (error) {
-      const errorMessage =
-        error?.message || t('channel.edit.model_tester.test_failed');
-      setModelTestResults([]);
-      setModelTestError(errorMessage);
-      setModelTestedAt(0);
-      setModelTestedSignature('');
-      showError(errorMessage);
-    } finally {
-      setModelTesting(false);
-    }
-  }, [
-    modelTestTargetModels,
-    config,
-    effectivePreviewKey,
-    inputs.base_url,
-    inputs,
-    inputs.models,
-    inputs.protocol,
-    inputs.test_model,
-    isCreateMode,
-    previewChannelID,
-    saveDraftChannel,
-    t,
-  ]);
+    },
+    [
+      modelTestTargetModels,
+      creatingChannelId,
+      inputs.base_url,
+      inputs,
+      inputs.models,
+      inputs.protocol,
+      inputs.test_model,
+      isCreateMode,
+      persistWorkingChannel,
+      previewChannelID,
+      t,
+      visibleModelConfigs,
+    ]
+  );
 
   const toggleModelTestTarget = useCallback((modelName, checked) => {
     setModelTestTargetModels((prev) => {
@@ -2118,30 +2292,36 @@ const EditChannel = () => {
     });
   }, []);
 
-  const toggleAllModelTestTargets = useCallback((checked) => {
-    if (!checked) {
-      setModelTestTargetModels([]);
-      return;
-    }
-    setModelTestTargetModels(modelTestRows.map((row) => row.model));
-  }, [modelTestRows]);
+  const toggleAllModelTestTargets = useCallback(
+    (checked) => {
+      if (!checked) {
+        setModelTestTargetModels([]);
+        return;
+      }
+      setModelTestTargetModels(modelTestRows.map((row) => row.model));
+    },
+    [modelTestRows]
+  );
 
-  const updateModelTestEndpoint = useCallback((modelName, endpoint) => {
-    setInputs((prev) =>
-      buildNextInputsWithModelConfigs(
-        prev,
-        visibleModelConfigs.map((row) => {
-          if (row.model !== modelName) {
-            return row;
-          }
-          return {
-            ...row,
-            endpoint: normalizeChannelModelEndpoint(row.type, endpoint),
-          };
-        }),
-      ),
-    );
-  }, [visibleModelConfigs]);
+  const updateModelTestEndpoint = useCallback(
+    (modelName, endpoint) => {
+      setInputs((prev) =>
+        buildNextInputsWithModelConfigs(
+          prev,
+          visibleModelConfigs.map((row) => {
+            if (row.model !== modelName) {
+              return row;
+            }
+            return {
+              ...row,
+              endpoint: normalizeChannelModelEndpoint(row.type, endpoint),
+            };
+          })
+        )
+      );
+    },
+    [visibleModelConfigs]
+  );
 
   const toggleModelSelection = useCallback(
     (upstreamModel, checked) => {
@@ -2151,12 +2331,12 @@ const EditChannel = () => {
           visibleModelConfigs.map((row) =>
             row.upstream_model === upstreamModel && canSelectChannelModel(row)
               ? { ...row, selected: !!checked }
-              : row,
-          ),
-        ),
+              : row
+          )
+        )
       );
     },
-    [canSelectChannelModel, visibleModelConfigs],
+    [canSelectChannelModel, visibleModelConfigs]
   );
 
   const updateModelConfigField = useCallback(
@@ -2174,7 +2354,7 @@ const EditChannel = () => {
               const duplicated = visibleModelConfigs.some(
                 (item) =>
                   item.upstream_model !== upstreamModel &&
-                  item.model === targetAlias,
+                  item.model === targetAlias
               );
               if (duplicated) {
                 return row;
@@ -2194,11 +2374,11 @@ const EditChannel = () => {
               ...row,
               [field]: value,
             };
-          }),
-        ),
+          })
+        )
       );
     },
-    [visibleModelConfigs],
+    [visibleModelConfigs]
   );
 
   const selectAllModels = useCallback(() => {
@@ -2208,8 +2388,8 @@ const EditChannel = () => {
         visibleModelConfigs.map((row) => ({
           ...row,
           selected: canSelectChannelModel(row),
-        })),
-      ),
+        }))
+      )
     );
   }, [canSelectChannelModel, visibleModelConfigs]);
 
@@ -2217,8 +2397,8 @@ const EditChannel = () => {
     setInputs((prev) =>
       buildNextInputsWithModelConfigs(
         prev,
-        visibleModelConfigs.map((row) => ({ ...row, selected: false })),
-      ),
+        visibleModelConfigs.map((row) => ({ ...row, selected: false }))
+      )
     );
   }, [visibleModelConfigs]);
 
@@ -2238,23 +2418,23 @@ const EditChannel = () => {
 
   useEffect(() => {
     if (hasChannelID) {
-      draftStepProvidedRef.current = false;
+      creatingStepProvidedRef.current = false;
       return;
     }
     const query = new URLSearchParams(location.search);
-    draftStepProvidedRef.current = query.get('step') !== null;
+    creatingStepProvidedRef.current = query.get('step') !== null;
   }, [hasChannelID, location.search]);
 
   useEffect(() => {
     if (hasChannelID) {
       return;
     }
-    if (draftIdFromQuery === draftChannelId) {
+    if (creatingChannelIdFromQuery === creatingChannelId) {
       return;
     }
-    setDraftChannelId(draftIdFromQuery);
-    draftChannelIdRef.current = draftIdFromQuery;
-  }, [draftIdFromQuery, draftChannelId, hasChannelID]);
+    setCreatingChannelId(creatingChannelIdFromQuery);
+    creatingChannelIdRef.current = creatingChannelIdFromQuery;
+  }, [creatingChannelIdFromQuery, creatingChannelId, hasChannelID]);
 
   useEffect(() => {
     if (hasChannelID) {
@@ -2267,26 +2447,26 @@ const EditChannel = () => {
       loadChannelById(copyFromId, true, true, false).then();
       return;
     }
-    if (draftIdFromQuery !== '') {
-      if (skipNextDraftReloadRef.current === draftIdFromQuery) {
-        skipNextDraftReloadRef.current = '';
+    if (creatingChannelIdFromQuery !== '') {
+      if (skipNextCreatingReloadRef.current === creatingChannelIdFromQuery) {
+        skipNextCreatingReloadRef.current = '';
         setLoading(false);
         return;
       }
       setLoading(true);
-      loadChannelById(draftIdFromQuery, false, true, true).then();
+      loadChannelById(creatingChannelIdFromQuery, false, true, true).then();
       return;
     }
     setChannelKeySet(false);
-    restoreCreateDraft();
+    restoreCreateChannelCache();
     setLoading(false);
   }, [
     channelId,
     copyFromId,
-    draftIdFromQuery,
+    creatingChannelIdFromQuery,
     hasChannelID,
     loadChannelById,
-    restoreCreateDraft,
+    restoreCreateChannelCache,
   ]);
 
   useEffect(() => {
@@ -2326,7 +2506,7 @@ const EditChannel = () => {
         pathname: location.pathname,
         search: nextSearch ? `?${nextSearch}` : '',
       },
-      { replace: true },
+      { replace: true }
     );
   }, [createStep, hasChannelID, location.pathname, location.search, navigate]);
 
@@ -2335,15 +2515,15 @@ const EditChannel = () => {
       return;
     }
     const query = new URLSearchParams(location.search);
-    const currentDraftID = (query.get('draft_id') || '').trim();
-    const nextDraftID = (draftChannelId || '').trim();
-    if (currentDraftID === nextDraftID) {
+    const currentChannelID = (query.get('channel_id') || '').trim();
+    const nextChannelID = (creatingChannelId || '').trim();
+    if (currentChannelID === nextChannelID) {
       return;
     }
-    if (nextDraftID === '') {
-      query.delete('draft_id');
+    if (nextChannelID === '') {
+      query.delete('channel_id');
     } else {
-      query.set('draft_id', nextDraftID);
+      query.set('channel_id', nextChannelID);
     }
     const nextSearch = query.toString();
     navigate(
@@ -2351,10 +2531,10 @@ const EditChannel = () => {
         pathname: location.pathname,
         search: nextSearch ? `?${nextSearch}` : '',
       },
-      { replace: true },
+      { replace: true }
     );
   }, [
-    draftChannelId,
+    creatingChannelId,
     hasChannelID,
     location.pathname,
     location.search,
@@ -2367,8 +2547,8 @@ const EditChannel = () => {
     }
     const payload = {
       step: createStep,
-      inputs: sanitizeDraftInputsForLocalStorage(inputs),
-      config: sanitizeDraftConfigForLocalStorage(config),
+      inputs: sanitizeCreateInputsForLocalStorage(inputs),
+      config: sanitizeCreateConfigForLocalStorage(config),
       modelsSyncError,
       modelsLastSyncedAt,
       verifiedModelSignature,
@@ -2377,16 +2557,16 @@ const EditChannel = () => {
       modelTestError,
       modelTestedAt,
       modelTestedSignature,
-      draft_channel_id: draftChannelId,
+      channel_id: creatingChannelId,
       channel_key_set: channelKeySet,
       savedAt: Date.now(),
     };
-    localStorage.setItem(CHANNEL_CREATE_DRAFT_KEY, JSON.stringify(payload));
+    localStorage.setItem(CHANNEL_CREATE_CACHE_KEY, JSON.stringify(payload));
   }, [
     channelKeySet,
     config,
     createStep,
-    draftChannelId,
+    creatingChannelId,
     inputs,
     hasChannelID,
     loading,
@@ -2509,7 +2689,11 @@ const EditChannel = () => {
       showInfo(t('channel.edit.messages.models_required'));
       return;
     }
-    if (inputs.protocol !== 'proxy' && inputs.models.length > 0 && !isModelTestSignatureFresh) {
+    if (
+      inputs.protocol !== 'proxy' &&
+      inputs.models.length > 0 &&
+      !isModelTestSignatureFresh
+    ) {
       showInfo(t('channel.edit.model_tester.verify_required'));
       return;
     }
@@ -2524,10 +2708,10 @@ const EditChannel = () => {
         ...localInputs,
         id: channelId,
       });
-    } else if (draftChannelId) {
+    } else if (creatingChannelId) {
       res = await API.put(`/api/v1/admin/channel/`, {
         ...localInputs,
-        id: draftChannelId,
+        id: creatingChannelId,
         status: 1,
       });
     } else {
@@ -2539,7 +2723,7 @@ const EditChannel = () => {
         showSuccess(t('channel.edit.messages.update_success'));
       } else {
         showSuccess(t('channel.edit.messages.create_success'));
-        clearCreateDraft();
+        clearCreateChannelCache();
       }
       navigate('/admin/channel', { replace: true });
       return;
@@ -2570,7 +2754,7 @@ const EditChannel = () => {
                 search={filterProviderOptionsByQuery}
                 className='router-modal-dropdown'
                 placeholder={t(
-                  'channel.edit.model_selector.append_dialog.provider_placeholder',
+                  'channel.edit.model_selector.append_dialog.provider_placeholder'
                 )}
                 options={providerOptions}
                 value={appendProviderForm.provider}
@@ -2609,7 +2793,11 @@ const EditChannel = () => {
           </Form>
         </Modal.Content>
         <Modal.Actions>
-          <Button type='button' className='router-modal-button' onClick={closeAppendProviderModal}>
+          <Button
+            type='button'
+            className='router-modal-button'
+            onClick={closeAppendProviderModal}
+          >
             {t('channel.edit.model_selector.append_dialog.cancel')}
           </Button>
           <Button
@@ -2628,11 +2816,20 @@ const EditChannel = () => {
         <Card.Content>
           {isDetailMode && (
             <div className='router-toolbar-start router-block-gap-sm'>
-              <Button type='button' className='router-page-button' onClick={handleCancel}>
+              <Button
+                type='button'
+                className='router-page-button'
+                onClick={handleCancel}
+              >
                 <Icon name='undo' />
                 {t('channel.edit.buttons.back')}
               </Button>
-              <Button type='button' className='router-page-button' color='blue' onClick={openEditPage}>
+              <Button
+                type='button'
+                className='router-page-button'
+                color='blue'
+                onClick={openEditPage}
+              >
                 <Icon name='edit' />
                 {t('channel.buttons.edit')}
               </Button>
@@ -2640,7 +2837,11 @@ const EditChannel = () => {
           )}
           {isEditMode && (
             <div className='router-toolbar-start router-block-gap-sm'>
-              <Button type='button' className='router-page-button' onClick={handleCancel}>
+              <Button
+                type='button'
+                className='router-page-button'
+                onClick={handleCancel}
+              >
                 {t('channel.edit.buttons.cancel')}
               </Button>
               <Button
@@ -2659,7 +2860,11 @@ const EditChannel = () => {
           )}
           {isCreateMode && (
             <div className='router-toolbar-start router-block-gap-sm'>
-              <Button type='button' className='router-page-button' onClick={handleCancel}>
+              <Button
+                type='button'
+                className='router-page-button'
+                onClick={handleCancel}
+              >
                 {t('channel.edit.buttons.cancel')}
               </Button>
               {createStep > CREATE_CHANNEL_STEP_MIN && (
@@ -2680,8 +2885,8 @@ const EditChannel = () => {
                     createStep === 1
                       ? moveToStepTwo
                       : createStep === 2
-                        ? moveToStepThree
-                        : moveToStepFour
+                      ? moveToStepThree
+                      : moveToStepFour
                   }
                 >
                   {t('channel.edit.buttons.next_step')}
@@ -2769,7 +2974,9 @@ const EditChannel = () => {
                       <Form.Input
                         className='router-section-input'
                         label={t('channel.edit.type')}
-                        value={currentProtocolOption?.text || inputs.protocol || '-'}
+                        value={
+                          currentProtocolOption?.text || inputs.protocol || '-'
+                        }
                         readOnly
                       />
                     ) : (
@@ -2871,7 +3078,9 @@ const EditChannel = () => {
                   </Form.Field>
                 )}
                 {inputs.protocol === 'coze' && (
-                  <Message className='router-section-message'>{t('channel.edit.coze_notice')}</Message>
+                  <Message className='router-section-message'>
+                    {t('channel.edit.coze_notice')}
+                  </Message>
                 )}
                 {inputs.protocol === 'doubao' && (
                   <Message className='router-section-message'>
@@ -2915,13 +3124,15 @@ const EditChannel = () => {
                             key: 'unassigned',
                             value: 'unassigned',
                             text: t(
-                              'channel.edit.model_selector.filters.unassigned',
+                              'channel.edit.model_selector.filters.unassigned'
                             ),
                           },
                           {
                             key: 'manual',
                             value: 'manual',
-                            text: t('channel.edit.model_selector.filters.manual'),
+                            text: t(
+                              'channel.edit.model_selector.filters.manual'
+                            ),
                           },
                         ]}
                         value={detailModelFilter}
@@ -2948,7 +3159,7 @@ const EditChannel = () => {
                         icon='search'
                         iconPosition='left'
                         placeholder={t(
-                          'channel.edit.model_selector.search_placeholder',
+                          'channel.edit.model_selector.search_placeholder'
                         )}
                         value={modelSearchKeyword}
                         onChange={(e, { value }) =>
@@ -2988,12 +3199,26 @@ const EditChannel = () => {
                       >
                         {t('channel.edit.buttons.clear')}
                       </Button>
+                      <Button
+                        type='button'
+                        className='router-page-button'
+                        color='blue'
+                        loading={autoAssigningProviders}
+                        disabled={
+                          autoAssigningProviders ||
+                          providerCatalogLoading ||
+                          autoAssignableRows.length === 0
+                        }
+                        onClick={handleAutoAssignModels}
+                      >
+                        {t('channel.edit.model_selector.auto_assign')}
+                      </Button>
                       <Form.Input
                         className='router-inline-input router-search-form-sm'
                         icon='search'
                         iconPosition='left'
                         placeholder={t(
-                          'channel.edit.model_selector.search_placeholder',
+                          'channel.edit.model_selector.search_placeholder'
                         )}
                         value={modelSearchKeyword}
                         onChange={(e, { value }) =>
@@ -3046,7 +3271,10 @@ const EditChannel = () => {
                   <Table.Body>
                     {searchedModelConfigs.length === 0 ? (
                       <Table.Row>
-                        <Table.Cell className='router-empty-cell' colSpan={isDetailMode ? 9 : 8}>
+                        <Table.Cell
+                          className='router-empty-cell'
+                          colSpan={isDetailMode ? 9 : 8}
+                        >
                           {modelSearchKeyword.trim() !== ''
                             ? t('channel.edit.model_selector.empty_search')
                             : isDetailMode && visibleModelConfigs.length > 0
@@ -3063,7 +3291,11 @@ const EditChannel = () => {
                           <Table.Row key={`${row.upstream_model}-${row.model}`}>
                             <Table.Cell
                               textAlign='center'
-                              className={isDetailMode ? 'router-cell-checkbox' : undefined}
+                              className={
+                                isDetailMode
+                                  ? 'router-cell-checkbox'
+                                  : undefined
+                              }
                             >
                               <Checkbox
                                 checked={!!row.selected}
@@ -3075,22 +3307,37 @@ const EditChannel = () => {
                                 onChange={(e, { checked }) =>
                                   toggleModelSelection(
                                     row.upstream_model,
-                                    checked,
+                                    checked
                                   )
                                 }
                               />
                             </Table.Cell>
                             <Table.Cell
                               title={row.upstream_model}
-                              className={isDetailMode ? 'router-cell-truncate' : undefined}
+                              className={
+                                isDetailMode
+                                  ? 'router-cell-truncate'
+                                  : undefined
+                              }
                             >
-                              {row.upstream_model}
+                              <span className='router-nowrap'>
+                                {row.upstream_model}
+                              </span>
+                              {row.inactive && (
+                                <Label
+                                  basic
+                                  color='grey'
+                                  className='router-tag'
+                                >
+                                  {t('channel.edit.model_selector.inactive')}
+                                </Label>
+                              )}
                             </Table.Cell>
                             <Table.Cell>
                               {t(
                                 `channel.model_types.${normalizeChannelModelType(
-                                  row.type,
-                                )}`,
+                                  row.type
+                                )}`
                               )}
                             </Table.Cell>
                             <Table.Cell>
@@ -3107,7 +3354,7 @@ const EditChannel = () => {
                               ) : providerCatalogLoading ? (
                                 <Label basic className='router-tag'>
                                   {t(
-                                    'channel.edit.model_selector.provider_loading',
+                                    'channel.edit.model_selector.provider_loading'
                                   )}
                                 </Label>
                               ) : !isDetailMode ? (
@@ -3117,17 +3364,29 @@ const EditChannel = () => {
                                   basic
                                   onClick={() => openAppendProviderModal(row)}
                                 >
-                                  {t('channel.edit.model_selector.provider_add')}
+                                  {t(
+                                    'channel.edit.model_selector.provider_add'
+                                  )}
                                 </Button>
                               ) : (
-                                <Label basic color='orange' className='router-tag'>
-                                  {t('channel.edit.model_selector.provider_unassigned')}
+                                <Label
+                                  basic
+                                  color='orange'
+                                  className='router-tag'
+                                >
+                                  {t(
+                                    'channel.edit.model_selector.provider_unassigned'
+                                  )}
                                 </Label>
                               )}
                             </Table.Cell>
                             <Table.Cell
                               title={isDetailMode ? row.model : undefined}
-                              className={isDetailMode ? 'router-cell-truncate' : undefined}
+                              className={
+                                isDetailMode
+                                  ? 'router-cell-truncate'
+                                  : undefined
+                              }
                             >
                               {isDetailMode ? (
                                 row.model
@@ -3140,7 +3399,7 @@ const EditChannel = () => {
                                     updateModelConfigField(
                                       row.upstream_model,
                                       'model',
-                                      value || row.upstream_model,
+                                      value || row.upstream_model
                                     )
                                   }
                                 />
@@ -3178,7 +3437,7 @@ const EditChannel = () => {
                                     updateModelConfigField(
                                       row.upstream_model,
                                       'input_price',
-                                      value,
+                                      value
                                     )
                                   }
                                 />
@@ -3202,7 +3461,7 @@ const EditChannel = () => {
                                     updateModelConfigField(
                                       row.upstream_model,
                                       'output_price',
-                                      value,
+                                      value
                                     )
                                   }
                                 />
@@ -3220,7 +3479,9 @@ const EditChannel = () => {
                                     basic
                                     onClick={() => openAppendProviderModal(row)}
                                   >
-                                    {t('channel.edit.model_selector.provider_add')}
+                                    {t(
+                                      'channel.edit.model_selector.provider_add'
+                                    )}
                                   </Button>
                                 ) : (
                                   '-'
@@ -3259,7 +3520,9 @@ const EditChannel = () => {
                   {t('channel.edit.model_tester.hint')}
                 </Message>
                 <div
-                  className={`${isDetailMode ? 'router-toolbar-end' : 'router-toolbar'} router-block-gap-sm`}
+                  className={`${
+                    isDetailMode ? 'router-toolbar-end' : 'router-toolbar'
+                  } router-block-gap-sm`}
                 >
                   {!isDetailMode && (
                     <>
@@ -3267,9 +3530,16 @@ const EditChannel = () => {
                         type='button'
                         className='router-section-button'
                         color='blue'
-                        loading={modelTesting}
-                        disabled={modelTesting || modelTestTargetModels.length === 0}
-                        onClick={() => handleRunModelTests()}
+                        loading={modelTesting && modelTestingScope === 'batch'}
+                        disabled={
+                          modelTesting || modelTestTargetModels.length === 0
+                        }
+                        onClick={() =>
+                          handleRunModelTests({
+                            targetModels: modelTestTargetModels,
+                            scope: 'batch',
+                          })
+                        }
                       >
                         {t('channel.edit.model_tester.button')}
                       </Button>
@@ -3349,14 +3619,16 @@ const EditChannel = () => {
                           item?.status === 'supported'
                             ? 'green'
                             : item?.status === 'skipped'
-                              ? 'grey'
-                              : 'red';
+                            ? 'grey'
+                            : 'red';
                         return (
                           <Table.Row key={row.model}>
                             {!isDetailMode && (
                               <Table.Cell textAlign='center'>
                                 <Checkbox
-                                  checked={modelTestTargetModels.includes(row.model)}
+                                  checked={modelTestTargetModels.includes(
+                                    row.model
+                                  )}
                                   onChange={(e, { checked }) =>
                                     toggleModelTestTarget(row.model, !!checked)
                                   }
@@ -3373,7 +3645,10 @@ const EditChannel = () => {
                                   selection
                                   className='router-mini-dropdown'
                                   options={TEXT_MODEL_ENDPOINT_OPTIONS}
-                                  value={row.endpoint || defaultChannelModelEndpoint(row.type)}
+                                  value={
+                                    row.endpoint ||
+                                    defaultChannelModelEndpoint(row.type)
+                                  }
                                   onChange={(e, { value }) =>
                                     updateModelTestEndpoint(row.model, value)
                                   }
@@ -3381,9 +3656,15 @@ const EditChannel = () => {
                               )}
                             </Table.Cell>
                             <Table.Cell>
-                              <Label basic color={labelColor} className='router-tag'>
+                              <Label
+                                basic
+                                color={labelColor}
+                                className='router-tag'
+                              >
                                 {t(
-                                  `channel.edit.model_tester.status.${item?.status || 'unsupported'}`,
+                                  `channel.edit.model_tester.status.${
+                                    item?.status || 'unsupported'
+                                  }`
                                 )}
                               </Label>
                             </Table.Cell>
@@ -3399,9 +3680,18 @@ const EditChannel = () => {
                                   type='button'
                                   className='router-inline-button'
                                   basic
-                                  loading={modelTesting}
+                                  loading={
+                                    modelTesting &&
+                                    modelTestingScope === 'single' &&
+                                    modelTestingTargetSet.has(row.model)
+                                  }
                                   disabled={modelTesting}
-                                  onClick={() => handleRunModelTests([row.model])}
+                                  onClick={() =>
+                                    handleRunModelTests({
+                                      targetModels: [row.model],
+                                      scope: 'single',
+                                    })
+                                  }
                                 >
                                   {t('channel.edit.model_tester.single')}
                                 </Button>

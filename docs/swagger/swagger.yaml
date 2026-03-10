@@ -64,6 +64,22 @@ definitions:
         example: 0x1111111111111111111111111111111111111111
         type: string
     type: object
+  docs.ChannelCreateRecordRequest:
+    properties:
+      base_url:
+        example: https://api.openai.com
+        type: string
+      config: {}
+      key:
+        example: sk-***
+        type: string
+      name:
+        example: openai-main
+        type: string
+      protocol:
+        example: openai
+        type: string
+    type: object
   docs.ChannelCreateRequest:
     properties:
       base_url:
@@ -134,6 +150,18 @@ definitions:
         example: gpt-4o-mini
         type: string
     type: object
+  docs.ChannelModelTestsRequest:
+    properties:
+      target_models:
+        example:
+        - gpt-4o-mini
+        items:
+          type: string
+        type: array
+      test_model:
+        example: gpt-4o-mini
+        type: string
+    type: object
   docs.ChannelModelsMeta:
     properties:
       id:
@@ -165,47 +193,6 @@ definitions:
       success:
         example: true
         type: boolean
-    type: object
-  docs.ChannelPreviewCapabilitiesRequest:
-    properties:
-      base_url:
-        example: https://api.openai.com
-        type: string
-      config: {}
-      draft_id:
-        example: cad8bd65524a4d0c8f345a8c86ea9685
-        type: string
-      key:
-        example: sk-***
-        type: string
-      models:
-        example:
-        - gpt-4o-mini
-        items:
-          type: string
-        type: array
-      protocol:
-        example: openai
-        type: string
-      test_model:
-        example: gpt-4o-mini
-        type: string
-    type: object
-  docs.ChannelPreviewModelsRequest:
-    properties:
-      base_url:
-        example: https://api.openai.com
-        type: string
-      config: {}
-      draft_id:
-        example: cad8bd65524a4d0c8f345a8c86ea9685
-        type: string
-      key:
-        example: sk-***
-        type: string
-      protocol:
-        example: openai
-        type: string
     type: object
   docs.ChannelUpdateRequest:
     properties:
@@ -1762,6 +1749,125 @@ paths:
       summary: Get channel by ID (admin)
       tags:
       - admin
+  /api/v1/admin/channel/{id}/models:
+    get:
+      parameters:
+      - description: Channel ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Page index
+        in: query
+        name: p
+        type: integer
+      - description: Page size
+        in: query
+        name: page_size
+        type: integer
+      - description: Keyword
+        in: query
+        name: keyword
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/docs.StandardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/docs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List channel models (admin)
+      tags:
+      - admin
+  /api/v1/admin/channel/{id}/models/refresh:
+    post:
+      parameters:
+      - description: Channel ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/docs.StandardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/docs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Refresh channel models from upstream (admin)
+      tags:
+      - admin
+  /api/v1/admin/channel/{id}/models/tests:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Channel ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Channel model test payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/docs.ChannelModelTestsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/docs.StandardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/docs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Test channel models (admin)
+      tags:
+      - admin
+  /api/v1/admin/channel/create:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Channel create payload
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/docs.ChannelCreateRecordRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/docs.StandardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/docs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Create channel record (admin)
+      tags:
+      - admin
   /api/v1/admin/channel/disabled:
     delete:
       produces:
@@ -1778,80 +1884,6 @@ paths:
       security:
       - BearerAuth: []
       summary: Delete disabled channels (admin)
-      tags:
-      - admin
-  /api/v1/admin/channel/draft:
-    post:
-      consumes:
-      - application/json
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/docs.StandardResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/docs.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Create channel draft (admin)
-      tags:
-      - admin
-  /api/v1/admin/channel/preview/model-tests:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Preview payload
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/docs.ChannelPreviewCapabilitiesRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/docs.StandardResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/docs.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Preview channel model tests (admin)
-      tags:
-      - admin
-  /api/v1/admin/channel/preview/models:
-    post:
-      consumes:
-      - application/json
-      parameters:
-      - description: Preview payload
-        in: body
-        name: body
-        required: true
-        schema:
-          $ref: '#/definitions/docs.ChannelPreviewModelsRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/docs.StandardResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/docs.ErrorResponse'
-      security:
-      - BearerAuth: []
-      summary: Preview models for channel protocol (admin)
       tags:
       - admin
   /api/v1/admin/channel/protocols:
@@ -1929,6 +1961,10 @@ paths:
       - description: Model name
         in: query
         name: model
+        type: string
+      - description: Test mode (batch|model)
+        in: query
+        name: mode
         type: string
       produces:
       - application/json
@@ -2439,7 +2475,7 @@ paths:
             $ref: '#/definitions/docs.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Get paged model provider catalog (admin)
+      summary: Get paged provider catalog (admin)
       tags:
       - admin
     post:
@@ -2458,7 +2494,7 @@ paths:
             $ref: '#/definitions/docs.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Create model provider (admin)
+      summary: Create provider (admin)
       tags:
       - admin
   /api/v1/admin/provider/{id}:
@@ -2482,7 +2518,7 @@ paths:
             $ref: '#/definitions/docs.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Delete model provider (admin)
+      summary: Delete provider (admin)
       tags:
       - admin
     get:
@@ -2505,7 +2541,7 @@ paths:
             $ref: '#/definitions/docs.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Get model provider detail (admin)
+      summary: Get provider detail (admin)
       tags:
       - admin
     put:
@@ -2530,7 +2566,33 @@ paths:
             $ref: '#/definitions/docs.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Update model provider (admin)
+      summary: Update provider (admin)
+      tags:
+      - admin
+  /api/v1/admin/provider/{id}/model:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Provider ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/docs.StandardResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/docs.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Append one model detail into provider catalog (admin)
       tags:
       - admin
   /api/v1/admin/redemption:
@@ -3213,8 +3275,8 @@ paths:
   /api/v1/public/channel/models:
     get:
       description: When channel is specified, the response shape becomes docs.ChannelModelsProviderResponse
-        (data is string[] and meta is an object). provider filters by model
-        naming rules.
+        (data is string[] and meta is an object). provider filters by model naming
+        rules.
       parameters:
       - description: Channel name
         in: query

@@ -19,7 +19,7 @@ type updateChannelTestModelRequest struct {
 	TestModel string `json:"test_model"`
 }
 
-type createChannelDraftRequest struct {
+type createChannelRequest struct {
 	Name     string `json:"name"`
 	Protocol string `json:"protocol"`
 	Key      string `json:"key"`
@@ -200,19 +200,20 @@ func AddChannel(c *gin.Context) {
 	return
 }
 
-// CreateChannelDraft godoc
-// @Summary Create channel draft (admin)
+// CreateChannel godoc
+// @Summary Create channel record (admin)
 // @Tags admin
 // @Security BearerAuth
 // @Accept json
 // @Produce json
+// @Param body body docs.ChannelCreateRecordRequest true "Channel create payload"
 // @Success 200 {object} docs.StandardResponse
 // @Failure 401 {object} docs.ErrorResponse
-// @Router /api/v1/admin/channel/draft [post]
-func CreateChannelDraft(c *gin.Context) {
-	req := createChannelDraftRequest{}
+// @Router /api/v1/admin/channel/create [post]
+func CreateChannel(c *gin.Context) {
+	req := createChannelRequest{}
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logChannelAdminWarn(c, "create_draft", stringField("reason", err.Error()))
+		logChannelAdminWarn(c, "create_record", stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
@@ -222,7 +223,7 @@ func CreateChannelDraft(c *gin.Context) {
 	name := model.NormalizeChannelIdentifier(req.Name)
 	key := strings.TrimSpace(req.Key)
 	if err := model.ValidateChannelIdentifier(name); err != nil {
-		logChannelAdminWarn(c, "create_draft", stringField("name", name), stringField("protocol", req.Protocol), stringField("reason", err.Error()))
+		logChannelAdminWarn(c, "create_record", stringField("name", name), stringField("protocol", req.Protocol), stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
@@ -230,7 +231,7 @@ func CreateChannelDraft(c *gin.Context) {
 		return
 	}
 	if key == "" {
-		logChannelAdminWarn(c, "create_draft", stringField("name", name), stringField("protocol", req.Protocol), stringField("reason", "渠道密钥不能为空"))
+		logChannelAdminWarn(c, "create_record", stringField("name", name), stringField("protocol", req.Protocol), stringField("reason", "渠道密钥不能为空"))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "渠道密钥不能为空",
@@ -249,14 +250,14 @@ func CreateChannelDraft(c *gin.Context) {
 		CreatedTime: helper.GetTimestamp(),
 	}
 	if err := channelsvc.Insert(&channel); err != nil {
-		logChannelAdminWarn(c, "create_draft", stringField("name", channel.DisplayName()), stringField("protocol", channel.GetProtocol()), stringField("reason", err.Error()))
+		logChannelAdminWarn(c, "create_record", stringField("name", channel.DisplayName()), stringField("protocol", channel.GetProtocol()), stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
 		})
 		return
 	}
-	logChannelAdminInfo(c, "create_draft", stringField("channel_id", channel.Id), stringField("name", channel.DisplayName()), stringField("protocol", channel.GetProtocol()))
+	logChannelAdminInfo(c, "create_record", stringField("channel_id", channel.Id), stringField("name", channel.DisplayName()), stringField("protocol", channel.GetProtocol()))
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",

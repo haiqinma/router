@@ -214,7 +214,7 @@ func (channel *Channel) SelectedModelIDs() []string {
 	if len(channel.ModelConfigs) > 0 {
 		modelIDs := make([]string, 0, len(channel.ModelConfigs))
 		for _, row := range channel.GetModelConfigs() {
-			if !row.Selected {
+			if row.Inactive || !row.Selected {
 				continue
 			}
 			modelIDs = append(modelIDs, row.Model)
@@ -243,8 +243,10 @@ func (channel *Channel) SetSelectedModelIDs(modelIDs []string) {
 			continue
 		}
 		row.Selected = false
-		if _, ok := selectedSet[row.Model]; ok {
-			row.Selected = true
+		if !row.Inactive {
+			if _, ok := selectedSet[row.Model]; ok {
+				row.Selected = true
+			}
 		}
 		completeChannelModelRowDefaults(&row, channel.GetChannelProtocol())
 		next = append(next, row)
@@ -283,8 +285,10 @@ func (channel *Channel) SetModelConfigs(configs []ChannelModel) {
 	available := make([]string, 0, len(normalized))
 	selected := make([]string, 0, len(normalized))
 	for _, row := range normalized {
-		available = append(available, row.Model)
-		if !row.Selected {
+		if !row.Inactive {
+			available = append(available, row.Model)
+		}
+		if row.Inactive || !row.Selected {
 			continue
 		}
 		selected = append(selected, row.Model)

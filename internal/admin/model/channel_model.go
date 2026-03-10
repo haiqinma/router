@@ -18,6 +18,7 @@ type ChannelModel struct {
 	UpstreamModel string   `json:"upstream_model" gorm:"type:varchar(255);default:'';index"`
 	Type          string   `json:"type" gorm:"type:varchar(32);default:'text'"`
 	Endpoint      string   `json:"endpoint" gorm:"type:varchar(255);default:''"`
+	Inactive      bool     `json:"inactive,omitempty" gorm:"not null;default:false;index"`
 	Selected      bool     `json:"selected" gorm:"default:false;index"`
 	TestStatus    string   `json:"test_status,omitempty" gorm:"type:varchar(32);default:'';index"`
 	TestRound     int64    `json:"test_round,omitempty" gorm:"bigint;default:0"`
@@ -141,7 +142,7 @@ func ListSelectedChannelModelIDsByChannelIDWithDB(db *gorm.DB, channelID string)
 	}
 	modelIDs := make([]string, 0, len(rows))
 	for _, row := range rows {
-		if !row.Selected {
+		if row.Inactive || !row.Selected {
 			continue
 		}
 		modelIDs = append(modelIDs, row.Model)
@@ -156,6 +157,9 @@ func ListAvailableChannelModelIDsByChannelIDWithDB(db *gorm.DB, channelID string
 	}
 	modelIDs := make([]string, 0, len(rows))
 	for _, row := range rows {
+		if row.Inactive {
+			continue
+		}
 		modelIDs = append(modelIDs, row.Model)
 	}
 	return NormalizeChannelModelIDsPreserveOrder(modelIDs), nil
@@ -236,8 +240,10 @@ func ReplaceChannelSelectedModelsWithDB(db *gorm.DB, channelID string, selected 
 		}
 		seen[row.Model] = struct{}{}
 		row.Selected = false
-		if _, ok := selectedSet[row.Model]; ok {
-			row.Selected = true
+		if !row.Inactive {
+			if _, ok := selectedSet[row.Model]; ok {
+				row.Selected = true
+			}
 		}
 		rows = append(rows, row)
 	}
@@ -390,6 +396,55 @@ func listChannelModelRowsByChannelIDWithDB(db *gorm.DB, channelID string) ([]Cha
 	return rows, nil
 }
 
+func ListChannelModelRowsPageWithDB(db *gorm.DB, channelID string, page int, pageSize int, keyword string) ([]ChannelModel, int64, error) {
+	if db == nil {
+		return nil, 0, fmt.Errorf("database handle is nil")
+	}
+	normalizedChannelID := strings.TrimSpace(channelID)
+	if normalizedChannelID == "" {
+		return []ChannelModel{}, 0, nil
+	}
+	if page < 0 {
+		page = 0
+	}
+	if pageSize <= 0 {
+		pageSize = 10
+	}
+	query := buildChannelModelListQueryWithDB(db, normalizedChannelID, keyword)
+	total := int64(0)
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	rows := make([]ChannelModel, 0, pageSize)
+	if err := query.
+		Order("inactive asc, sort_order asc, model asc").
+		Limit(pageSize).
+		Offset(page * pageSize).
+		Find(&rows).Error; err != nil {
+		return nil, 0, err
+	}
+	for i := range rows {
+		normalizeChannelModelRow(&rows[i])
+	}
+	return rows, total, nil
+}
+
+func buildChannelModelListQueryWithDB(db *gorm.DB, channelID string, keyword string) *gorm.DB {
+	query := db.Model(&ChannelModel{}).Where("channel_id = ?", strings.TrimSpace(channelID))
+	normalizedKeyword := strings.ToLower(strings.TrimSpace(keyword))
+	if normalizedKeyword == "" {
+		return query
+	}
+	likeKeyword := "%" + normalizedKeyword + "%"
+	return query.Where(
+		"LOWER(model) LIKE ? OR LOWER(COALESCE(upstream_model, '')) LIKE ? OR LOWER(COALESCE(type, '')) LIKE ? OR LOWER(COALESCE(endpoint, '')) LIKE ?",
+		likeKeyword,
+		likeKeyword,
+		likeKeyword,
+		likeKeyword,
+	)
+}
+
 func normalizeChannelModelRow(row *ChannelModel) {
 	if row == nil {
 		return
@@ -496,7 +551,9 @@ func ApplyChannelTestResultsToModelConfigs(rows []ChannelModel, results []Channe
 			row.TestRound = item.Round
 			row.TestedAt = item.TestedAt
 			row.LatencyMs = item.LatencyMs
-			row.Selected = item.Supported && item.Status == ChannelTestStatusSupported
+			if row.Selected {
+				row.Selected = item.Supported && item.Status == ChannelTestStatusSupported
+			}
 		}
 		next = append(next, row)
 	}
@@ -558,6 +615,7 @@ func BuildFetchedChannelModelConfigs(existingRows []ChannelModel, fetchedRows []
 		existingByUpstream[upstream] = row
 	}
 	rows := make([]ChannelModel, 0, len(normalizedFetchedRows))
+	seenUpstream := make(map[string]struct{}, len(normalizedFetchedRows))
 	for idx, fetchedRow := range normalizedFetchedRows {
 		upstreamModel := strings.TrimSpace(fetchedRow.UpstreamModel)
 		if upstreamModel == "" {
@@ -587,10 +645,29 @@ func BuildFetchedChannelModelConfigs(existingRows []ChannelModel, fetchedRows []
 			}
 		}
 		row.UpstreamModel = upstreamModel
+		row.Inactive = false
 		if selectAll {
 			row.Selected = true
 		}
 		row.SortOrder = idx + 1
+		completeChannelModelRowDefaults(&row, channelProtocol)
+		rows = append(rows, row)
+		seenUpstream[upstreamModel] = struct{}{}
+	}
+	for _, row := range normalizedExisting {
+		upstreamModel := strings.TrimSpace(row.UpstreamModel)
+		if upstreamModel == "" {
+			upstreamModel = strings.TrimSpace(row.Model)
+		}
+		if upstreamModel == "" {
+			continue
+		}
+		if _, ok := seenUpstream[upstreamModel]; ok {
+			continue
+		}
+		row.Selected = false
+		row.Inactive = true
+		row.SortOrder = len(rows) + 1
 		completeChannelModelRowDefaults(&row, channelProtocol)
 		rows = append(rows, row)
 	}

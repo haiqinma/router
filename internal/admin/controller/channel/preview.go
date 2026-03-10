@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,7 +33,7 @@ type previewModelsRequest struct {
 	Protocol     string               `json:"protocol"`
 	Key          string               `json:"key"`
 	BaseURL      string               `json:"base_url"`
-	DraftID      string               `json:"draft_id"`
+	ChannelID    string               `json:"channel_id"`
 	Config       json.RawMessage      `json:"config"`
 	ModelConfigs []model.ChannelModel `json:"model_configs"`
 }
@@ -41,7 +42,7 @@ type previewModelTestsRequest struct {
 	Protocol     string               `json:"protocol"`
 	Key          string               `json:"key"`
 	BaseURL      string               `json:"base_url"`
-	DraftID      string               `json:"draft_id"`
+	ChannelID    string               `json:"channel_id"`
 	Config       json.RawMessage      `json:"config"`
 	Models       []string             `json:"models"`
 	ModelConfigs []model.ChannelModel `json:"model_configs"`
@@ -80,6 +81,21 @@ type previewModelFetchTrace struct {
 	ResponsePayload string
 }
 
+type channelModelTestsRequest struct {
+	TargetModels []string `json:"target_models"`
+	TestModel    string   `json:"test_model,omitempty"`
+}
+
+type channelModelListData struct {
+	Items         []model.ChannelModel `json:"items"`
+	Total         int64                `json:"total"`
+	Page          int                  `json:"page"`
+	PageSize      int                  `json:"page_size"`
+	SelectedCount int                  `json:"selected_count"`
+	ActiveCount   int                  `json:"active_count"`
+	InactiveCount int                  `json:"inactive_count"`
+}
+
 type previewModelTestExecution struct {
 	LatencyMs     int64
 	Message       string
@@ -91,6 +107,9 @@ type previewModelTestExecution struct {
 const (
 	previewChannelTestModeBatch  = "batch"
 	previewChannelTestModeSingle = "model"
+
+	defaultChannelModelPageSize = 10
+	maxChannelModelPageSize     = 100
 )
 
 func resolveModelsURL(baseURL string) string {
@@ -290,11 +309,11 @@ func resolvePreviewBaseURL(protocol string, baseURL string) string {
 	return relaychannel.BaseURLByProtocol(normalized)
 }
 
-func loadPreviewChannel(protocol string, key string, baseURL string, draftID string, configRaw json.RawMessage, selectedModels []string, modelConfigs []model.ChannelModel, testModel string) (*model.Channel, string, error) {
+func loadPreviewChannel(protocol string, key string, baseURL string, channelID string, configRaw json.RawMessage, selectedModels []string, modelConfigs []model.ChannelModel, testModel string) (*model.Channel, string, error) {
 	normalizedProtocol := relaychannel.NormalizeProtocolName(protocol)
 	trimmedKey := strings.TrimSpace(key)
 	trimmedBaseURL := strings.TrimSpace(baseURL)
-	trimmedDraftID := strings.TrimSpace(draftID)
+	trimmedChannelID := strings.TrimSpace(channelID)
 	normalizedModels := model.NormalizeChannelModelIDsPreserveOrder(selectedModels)
 	normalizedModelConfigs := model.NormalizeChannelModelConfigsPreserveOrder(modelConfigs)
 	keySource := "request"
@@ -304,15 +323,15 @@ func loadPreviewChannel(protocol string, key string, baseURL string, draftID str
 		Key:      trimmedKey,
 	}
 
-	if trimmedDraftID != "" {
-		savedChannel, err := channelsvc.GetByID(trimmedDraftID, true)
+	if trimmedChannelID != "" {
+		savedChannel, err := channelsvc.GetByID(trimmedChannelID, true)
 		if err != nil {
 			return nil, keySource, fmt.Errorf("渠道不存在或已删除")
 		}
 		previewChannel = savedChannel
 		if trimmedKey == "" {
 			trimmedKey = strings.TrimSpace(savedChannel.Key)
-			keySource = "draft"
+			keySource = "channel"
 		}
 		if normalizedProtocol == "" {
 			normalizedProtocol = savedChannel.GetProtocol()
@@ -398,10 +417,14 @@ func resolveSelectionModelType(row model.ChannelModel) string {
 }
 
 func resolvePreviewTargetModels(channel *model.Channel, mode string, requestedModel string, requestedModels []string) []model.ChannelModel {
-	selectedRows := selectedChannelModelConfigs(channel)
-	if len(selectedRows) == 0 {
+	if channel == nil {
 		return nil
 	}
+	allRows := channel.GetModelConfigs()
+	if len(allRows) == 0 {
+		return nil
+	}
+	selectedRows := selectedChannelModelConfigs(channel)
 
 	targets := model.NormalizeChannelModelIDsPreserveOrder(requestedModels)
 	if len(targets) == 0 && normalizePreviewModelTestMode(mode) == previewChannelTestModeSingle {
@@ -414,6 +437,9 @@ func resolvePreviewTargetModels(channel *model.Channel, mode string, requestedMo
 		}
 	}
 	if len(targets) == 0 {
+		if len(selectedRows) == 0 {
+			return nil
+		}
 		return selectedRows
 	}
 
@@ -422,7 +448,7 @@ func resolvePreviewTargetModels(channel *model.Channel, mode string, requestedMo
 	for _, item := range targets {
 		targetSet[item] = struct{}{}
 	}
-	for _, row := range selectedRows {
+	for _, row := range allRows {
 		if _, ok := targetSet[strings.TrimSpace(row.Model)]; ok {
 			result = append(result, row)
 			continue
@@ -978,38 +1004,120 @@ func persistPreviewChannelTests(channelID string, rows []model.ChannelModel, res
 	})
 }
 
-// PreviewChannelModels godoc
-// @Summary Preview models for channel protocol (admin)
+func parseChannelModelPageParams(c *gin.Context) (page int, pageSize int, keyword string) {
+	page = 0
+	if raw := strings.TrimSpace(c.Query("p")); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil && parsed >= 0 {
+			page = parsed
+		}
+	}
+	pageSize = defaultChannelModelPageSize
+	if raw := strings.TrimSpace(c.Query("page_size")); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 {
+			pageSize = parsed
+		}
+	}
+	if pageSize > maxChannelModelPageSize {
+		pageSize = maxChannelModelPageSize
+	}
+	keyword = strings.TrimSpace(c.Query("keyword"))
+	return page, pageSize, keyword
+}
+
+func buildChannelModelListData(channelID string, page int, pageSize int, keyword string) (channelModelListData, error) {
+	rows, total, err := model.ListChannelModelRowsPageWithDB(model.DB, channelID, page, pageSize, keyword)
+	if err != nil {
+		return channelModelListData{}, err
+	}
+	channelRow, err := channelsvc.GetByID(channelID, true)
+	if err != nil {
+		return channelModelListData{}, err
+	}
+	allRows := channelRow.GetModelConfigs()
+	selectedCount := 0
+	activeCount := 0
+	inactiveCount := 0
+	for _, row := range allRows {
+		if row.Inactive {
+			inactiveCount++
+			continue
+		}
+		activeCount++
+		if row.Selected {
+			selectedCount++
+		}
+	}
+	return channelModelListData{
+		Items:         rows,
+		Total:         total,
+		Page:          page,
+		PageSize:      pageSize,
+		SelectedCount: selectedCount,
+		ActiveCount:   activeCount,
+		InactiveCount: inactiveCount,
+	}, nil
+}
+
+// GetChannelModels godoc
+// @Summary List channel models (admin)
 // @Tags admin
 // @Security BearerAuth
-// @Accept json
 // @Produce json
-// @Param body body docs.ChannelPreviewModelsRequest true "Preview payload"
+// @Param id path string true "Channel ID"
+// @Param p query int false "Page index"
+// @Param page_size query int false "Page size"
+// @Param keyword query string false "Keyword"
 // @Success 200 {object} docs.StandardResponse
 // @Failure 401 {object} docs.ErrorResponse
-// @Router /api/v1/admin/channel/preview/models [post]
-func PreviewChannelModels(c *gin.Context) {
-	var req previewModelsRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		logChannelAdminWarn(c, "preview_models", stringField("reason", err.Error()))
+// @Router /api/v1/admin/channel/{id}/models [get]
+func GetChannelModels(c *gin.Context) {
+	channelID := strings.TrimSpace(c.Param("id"))
+	if channelID == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "渠道 ID 无效",
+		})
+		return
+	}
+	page, pageSize, keyword := parseChannelModelPageParams(c)
+	data, err := buildChannelModelListData(channelID, page, pageSize, keyword)
+	if err != nil {
+		logChannelAdminWarn(c, "list_models", stringField("channel_id", channelID), stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
 		})
 		return
 	}
-	draftID := strings.TrimSpace(req.DraftID)
-	if draftID == "" {
-		logChannelAdminWarn(c, "preview_models", stringField("reason", "请先保存渠道后再刷新模型"))
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    data,
+	})
+}
+
+// RefreshChannelModels godoc
+// @Summary Refresh channel models from upstream (admin)
+// @Tags admin
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Channel ID"
+// @Success 200 {object} docs.StandardResponse
+// @Failure 401 {object} docs.ErrorResponse
+// @Router /api/v1/admin/channel/{id}/models/refresh [post]
+func RefreshChannelModels(c *gin.Context) {
+	channelID := strings.TrimSpace(c.Param("id"))
+	if channelID == "" {
+		logChannelAdminWarn(c, "refresh_models", stringField("reason", "渠道 ID 无效"))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
-			"message": "请先保存渠道后再刷新模型",
+			"message": "渠道 ID 无效",
 		})
 		return
 	}
-	previewChannel, keySource, err := loadPreviewChannel(req.Protocol, req.Key, req.BaseURL, draftID, req.Config, nil, req.ModelConfigs, "")
+	previewChannel, keySource, err := loadPreviewChannel("", "", "", channelID, nil, nil, nil, "")
 	if err != nil {
-		logChannelAdminWarn(c, "preview_models", stringField("draft_id", strings.TrimSpace(req.DraftID)), stringField("reason", err.Error()))
+		logChannelAdminWarn(c, "refresh_models", stringField("channel_id", channelID), stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
@@ -1021,9 +1129,9 @@ func PreviewChannelModels(c *gin.Context) {
 	if err != nil {
 		logChannelAdminWarn(
 			c,
-			"preview_models",
+			"refresh_models",
 			stringField("source", keySource),
-			stringField("draft_id", strings.TrimSpace(req.DraftID)),
+			stringField("channel_id", channelID),
 			stringField("models_url", fetchTrace.ModelsURL),
 			quotedField("request_payload", fetchTrace.RequestPayload),
 			quotedField("response_payload", fetchTrace.ResponsePayload),
@@ -1037,116 +1145,99 @@ func PreviewChannelModels(c *gin.Context) {
 	}
 	logChannelAdminInfo(
 		c,
-		"preview_models",
+		"refresh_models",
 		stringField("source", keySource),
-		stringField("draft_id", draftID),
+		stringField("channel_id", channelID),
 		stringField("models_url", fetchTrace.ModelsURL),
 		quotedField("request_payload", fetchTrace.RequestPayload),
 		quotedField("response_payload", fetchTrace.ResponsePayload),
 		intField("count", len(fetchedRows)),
 	)
-	if err := model.SyncFetchedChannelModelConfigsFromBaseWithDB(model.DB, draftID, previewChannel.GetModelConfigs(), fetchedRows); err != nil {
-		logChannelAdminWarn(c, "preview_models_save", stringField("draft_id", draftID), stringField("reason", err.Error()))
+	if err := model.SyncFetchedChannelModelConfigsFromBaseWithDB(model.DB, channelID, previewChannel.GetModelConfigs(), fetchedRows); err != nil {
+		logChannelAdminWarn(c, "refresh_models_save", stringField("channel_id", channelID), stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "保存渠道模型失败",
 		})
 		return
 	}
-	if err := model.EnsureChannelTestModelWithDB(model.DB, draftID); err != nil {
-		logChannelAdminWarn(c, "preview_test_model_sync", stringField("draft_id", draftID), stringField("reason", err.Error()))
+	if err := model.EnsureChannelTestModelWithDB(model.DB, channelID); err != nil {
+		logChannelAdminWarn(c, "refresh_models_test_model_sync", stringField("channel_id", channelID), stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "保存测试模型失败",
 		})
 		return
 	}
-	if err := model.DeleteChannelTestsByChannelIDWithDB(model.DB, draftID); err != nil {
-		logChannelAdminWarn(c, "preview_tests_reset", stringField("draft_id", draftID), stringField("reason", err.Error()))
-	}
-	if err := model.ResetChannelModelTestStateWithDB(model.DB, draftID, nil); err != nil {
-		logChannelAdminWarn(c, "preview_tests_state_reset", stringField("draft_id", draftID), stringField("reason", err.Error()))
-	}
-	savedChannel, getErr := channelsvc.GetByID(draftID, true)
-	if getErr != nil {
-		logChannelAdminWarn(c, "preview_models_reload", stringField("draft_id", draftID), stringField("reason", getErr.Error()))
+	data, err := buildChannelModelListData(channelID, 0, defaultChannelModelPageSize, "")
+	if err != nil {
+		logChannelAdminWarn(c, "refresh_models_reload", stringField("channel_id", channelID), stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "读取渠道模型失败",
 		})
 		return
 	}
-	modelConfigs := savedChannel.GetModelConfigs()
-
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data": gin.H{
-			"model_configs": modelConfigs,
-		},
+		"data":    data,
 		"meta": gin.H{
 			"source":     "channel",
 			"key_source": keySource,
-			"draft_id":   draftID,
+			"channel_id": channelID,
 			"models_url": fetchTrace.ModelsURL,
-			"count":      len(modelConfigs),
+			"count":      len(fetchedRows),
 		},
 	})
 }
 
-// PreviewChannelModelTests godoc
-// @Summary Preview channel model tests (admin)
+// TestChannelModels godoc
+// @Summary Test channel models (admin)
 // @Tags admin
 // @Security BearerAuth
 // @Accept json
 // @Produce json
-// @Param body body docs.ChannelPreviewCapabilitiesRequest true "Preview payload"
+// @Param id path string true "Channel ID"
+// @Param body body docs.ChannelModelTestsRequest true "Channel model test payload"
 // @Success 200 {object} docs.StandardResponse
 // @Failure 401 {object} docs.ErrorResponse
-// @Router /api/v1/admin/channel/preview/model-tests [post]
-func PreviewChannelModelTests(c *gin.Context) {
-	var req previewModelTestsRequest
+// @Router /api/v1/admin/channel/{id}/models/tests [post]
+func TestChannelModels(c *gin.Context) {
+	channelID := strings.TrimSpace(c.Param("id"))
+	if channelID == "" {
+		logChannelAdminWarn(c, "test_models", stringField("reason", "渠道 ID 无效"))
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "渠道 ID 无效",
+		})
+		return
+	}
+	var req channelModelTestsRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		logChannelAdminWarn(c, "preview_model_tests", stringField("reason", err.Error()))
+		logChannelAdminWarn(c, "test_models", stringField("channel_id", channelID), stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
 		})
 		return
 	}
-	previewChannel, keySource, err := loadPreviewChannel(req.Protocol, req.Key, req.BaseURL, req.DraftID, req.Config, req.Models, req.ModelConfigs, req.TestModel)
+	previewChannel, keySource, err := loadPreviewChannel("", "", "", channelID, nil, nil, nil, strings.TrimSpace(req.TestModel))
 	if err != nil {
-		logChannelAdminWarn(c, "preview_model_tests", stringField("draft_id", strings.TrimSpace(req.DraftID)), stringField("reason", err.Error()))
+		logChannelAdminWarn(c, "test_models", stringField("channel_id", channelID), stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
 		})
 		return
 	}
-	if strings.TrimSpace(previewChannel.Key) == "" {
-		logChannelAdminWarn(c, "preview_model_tests", stringField("draft_id", strings.TrimSpace(req.DraftID)), stringField("reason", "请先填写 Key"))
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "请先填写 Key",
-		})
-		return
-	}
-	if strings.TrimSpace(previewChannel.GetBaseURL()) == "" {
-		logChannelAdminWarn(c, "preview_model_tests", stringField("draft_id", strings.TrimSpace(req.DraftID)), stringField("reason", "请先填写 Base URL"))
-		c.JSON(http.StatusOK, gin.H{
-			"success": false,
-			"message": "请先填写 Base URL",
-		})
-		return
-	}
-
 	testMode := previewChannelTestModeBatch
 	if len(req.TargetModels) == 1 || strings.TrimSpace(req.TestModel) != "" {
 		testMode = previewChannelTestModeSingle
 	}
 	results, err := runChannelModelTests(previewChannel, testMode, req.TestModel, req.TargetModels)
 	if err != nil {
-		logChannelAdminWarn(c, "preview_model_tests", stringField("source", keySource), stringField("draft_id", strings.TrimSpace(req.DraftID)), stringField("base_url", previewChannel.GetBaseURL()), stringField("reason", err.Error()))
+		logChannelAdminWarn(c, "test_models", stringField("source", keySource), stringField("channel_id", channelID), stringField("base_url", previewChannel.GetBaseURL()), stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
@@ -1154,29 +1245,26 @@ func PreviewChannelModelTests(c *gin.Context) {
 		return
 	}
 	modelConfigs := previewChannel.GetModelConfigs()
-	if draftID := strings.TrimSpace(req.DraftID); draftID != "" {
-		if err := persistPreviewChannelTests(draftID, previewChannel.GetModelConfigs(), results); err != nil {
-			logChannelAdminWarn(c, "preview_model_tests_save", stringField("draft_id", draftID), stringField("reason", err.Error()))
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": "保存模型测试结果失败",
-			})
-			return
-		}
-		savedChannel, getErr := channelsvc.GetByID(draftID, true)
-		if getErr != nil {
-			logChannelAdminWarn(c, "preview_model_tests_reload", stringField("draft_id", draftID), stringField("reason", getErr.Error()))
-			c.JSON(http.StatusOK, gin.H{
-				"success": false,
-				"message": "读取渠道测试结果失败",
-			})
-			return
-		}
-		modelConfigs = savedChannel.GetModelConfigs()
-		results = savedChannel.Tests
+	if err := persistPreviewChannelTests(channelID, previewChannel.GetModelConfigs(), results); err != nil {
+		logChannelAdminWarn(c, "test_models_save", stringField("channel_id", channelID), stringField("reason", err.Error()))
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "保存模型测试结果失败",
+		})
+		return
 	}
-
-	logChannelAdminInfo(c, "preview_model_tests", stringField("source", keySource), stringField("draft_id", strings.TrimSpace(req.DraftID)), stringField("base_url", previewChannel.GetBaseURL()), intField("results", len(results)))
+	savedChannel, getErr := channelsvc.GetByID(channelID, true)
+	if getErr != nil {
+		logChannelAdminWarn(c, "test_models_reload", stringField("channel_id", channelID), stringField("reason", getErr.Error()))
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "读取渠道测试结果失败",
+		})
+		return
+	}
+	modelConfigs = savedChannel.GetModelConfigs()
+	results = savedChannel.Tests
+	logChannelAdminInfo(c, "test_models", stringField("source", keySource), stringField("channel_id", channelID), stringField("base_url", previewChannel.GetBaseURL()), intField("results", len(results)))
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -1187,7 +1275,7 @@ func PreviewChannelModelTests(c *gin.Context) {
 		"meta": gin.H{
 			"source":     "channel",
 			"key_source": keySource,
-			"draft_id":   strings.TrimSpace(req.DraftID),
+			"channel_id": channelID,
 		},
 	})
 }
