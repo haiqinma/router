@@ -446,7 +446,7 @@ const normalizeChannelModelConfigRow = (row) => {
     upstream_model: upstreamModel || model,
     type: normalizeChannelModelType(row.type),
     endpoint: normalizeChannelModelEndpoint(row.type, row.endpoint),
-    selected: row.selected !== false,
+    selected: row.selected === true,
     input_price: normalizePriceOverrideValue(row.input_price),
     output_price: normalizePriceOverrideValue(row.output_price),
     price_unit: normalizePriceUnitValue(row.price_unit),
@@ -718,7 +718,7 @@ const inferDraftCreateStepFromChannelPayload = (payload) => {
   }
   const selectedModels = Array.isArray(payload?.model_configs)
     ? payload.model_configs
-        .filter((row) => row && row.selected !== false)
+        .filter((row) => row && row.selected === true)
         .map((row) => (row.model || '').toString().trim())
         .filter((row) => row !== '')
     : (payload?.models || '')
@@ -1442,7 +1442,7 @@ const EditChannel = () => {
         const remoteModels = normalizeModelIDs(
           Array.isArray(data.model_configs) && data.model_configs.length > 0
             ? data.model_configs
-                .filter((row) => row && row.selected !== false)
+                .filter((row) => row && row.selected === true)
                 .map((row) => row.model)
             : (data.models || '')
                 .split(',')
@@ -2650,11 +2650,54 @@ const EditChannel = () => {
               </Button>
             </div>
           )}
-          {!isDetailMode && (
+          {isCreateMode && (
+            <div className='router-toolbar-start router-block-gap-sm'>
+              <Button type='button' className='router-page-button' onClick={handleCancel}>
+                {t('channel.edit.buttons.cancel')}
+              </Button>
+              {createStep > CREATE_CHANNEL_STEP_MIN && (
+                <Button
+                  type='button'
+                  className='router-page-button'
+                  onClick={moveToPreviousCreateStep}
+                >
+                  {t('channel.edit.buttons.previous_step')}
+                </Button>
+              )}
+              {createStep < CREATE_CHANNEL_STEP_MAX ? (
+                <Button
+                  type='button'
+                  className='router-page-button'
+                  positive
+                  onClick={
+                    createStep === 1
+                      ? moveToStepTwo
+                      : createStep === 2
+                        ? moveToStepThree
+                        : moveToStepFour
+                  }
+                >
+                  {t('channel.edit.buttons.next_step')}
+                </Button>
+              ) : (
+                <Button
+                  type='button'
+                  className='router-page-button'
+                  positive
+                  onClick={submit}
+                  disabled={
+                    requireVerificationBeforeProceed &&
+                    !isCurrentSignatureVerified
+                  }
+                >
+                  {t('channel.edit.buttons.submit')}
+                </Button>
+              )}
+            </div>
+          )}
+          {isEditMode && (
             <Card.Header className='header router-page-title'>
-              {isEditMode
-                ? t('channel.edit.title_edit')
-                : t('channel.edit.title_create')}
+              {t('channel.edit.title_edit')}
             </Card.Header>
           )}
           <Form loading={loading} autoComplete='new-password'>
@@ -2918,9 +2961,7 @@ const EditChannel = () => {
                           (requiresConnectionVerification &&
                             !hasModelPreviewCredentials)
                         }
-                        onClick={() =>
-                          handleFetchModels({ silent: false, selectAll: true })
-                        }
+                        onClick={() => handleFetchModels({ silent: false })}
                       >
                         {fetchModelsButtonText}
                       </Button>
@@ -3484,47 +3525,6 @@ const EditChannel = () => {
                   {...inputReadonlyProps}
                 />
               </Form.Field>
-            )}
-            {isDetailMode || isEditMode ? null : (
-              <>
-                <Button type='button' className='router-page-button' onClick={handleCancel}>
-                  {t('channel.edit.buttons.cancel')}
-                </Button>
-                {createStep > CREATE_CHANNEL_STEP_MIN && (
-                  <Button type='button' className='router-page-button' onClick={moveToPreviousCreateStep}>
-                    {t('channel.edit.buttons.previous_step')}
-                  </Button>
-                )}
-                {createStep < CREATE_CHANNEL_STEP_MAX ? (
-                  <Button
-                    type='button'
-                    className='router-page-button'
-                    positive
-                    onClick={
-                      createStep === 1
-                        ? moveToStepTwo
-                        : createStep === 2
-                          ? moveToStepThree
-                          : moveToStepFour
-                    }
-                  >
-                    {t('channel.edit.buttons.next_step')}
-                  </Button>
-                ) : (
-                  <Button
-                    type='button'
-                    className='router-page-button'
-                    positive
-                    onClick={submit}
-                    disabled={
-                      requireVerificationBeforeProceed &&
-                      !isCurrentSignatureVerified
-                    }
-                  >
-                    {t('channel.edit.buttons.submit')}
-                  </Button>
-                )}
-              </>
             )}
           </Form>
         </Card.Content>

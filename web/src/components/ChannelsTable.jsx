@@ -190,7 +190,7 @@ const ChannelsTable = () => {
     const modelConfigs = Array.isArray(next.model_configs) ? next.model_configs : [];
     const selectedModelConfigs =
       modelConfigs.length > 0
-        ? modelConfigs.filter((row) => row && row.selected !== false)
+        ? modelConfigs.filter((row) => row && row.selected === true)
         : [];
     const selectedModelsFromConfigs = selectedModelConfigs
       .map((row) => (row?.model || '').toString().trim())
