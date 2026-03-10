@@ -23,34 +23,35 @@ const (
 var channelIdentifierPattern = regexp.MustCompile(`^[a-z0-9-]+$`)
 
 type Channel struct {
-	Id                     string                    `json:"id" gorm:"type:char(36);primaryKey"`
-	Protocol               string                    `json:"protocol" gorm:"type:varchar(64);default:'openai';index"`
-	Key                    string                    `json:"key" gorm:"type:text"`
-	Status                 int                       `json:"status" gorm:"default:1"`
-	Name                   string                    `json:"name" gorm:"type:varchar(64);not null;uniqueIndex"`
-	Weight                 *uint                     `json:"weight" gorm:"default:0"`
-	CreatedTime            int64                     `json:"created_time" gorm:"bigint"`
-	TestTime               int64                     `json:"test_time" gorm:"bigint"`
-	ResponseTime           int                       `json:"response_time"`
-	BaseURL                *string                   `json:"base_url" gorm:"column:base_url;default:''"`
-	Other                  *string                   `json:"other"`
-	Balance                float64                   `json:"balance"`
-	BalanceUpdatedTime     int64                     `json:"balance_updated_time" gorm:"bigint"`
-	Models                 string                    `json:"models" gorm:"-"`
-	AvailableModels        []string                  `json:"available_models,omitempty" gorm:"-"`
-	ModelConfigs           []ChannelModel            `json:"model_configs,omitempty" gorm:"-"`
-	UsedQuota              int64                     `json:"used_quota" gorm:"bigint;default:0"`
-	Priority               *int64                    `json:"priority" gorm:"bigint;default:0"`
-	Config                 string                    `json:"config"`
-	SystemPrompt           *string                   `json:"system_prompt" gorm:"type:text"`
-	TestModel              string                    `json:"test_model" gorm:"type:varchar(255);default:''"`
-	CapabilityResults      []ChannelCapabilityResult `json:"capability_results,omitempty" gorm:"-"`
-	CapabilityLastTestedAt int64                     `json:"capability_last_tested_at,omitempty" gorm:"-"`
-	KeySet                 bool                      `json:"key_set" gorm:"-"`
-	ModelsProvided         bool                      `json:"-" gorm:"-"`
-	ModelConfigsProvided   bool                      `json:"-" gorm:"-"`
-	CapabilityResultsStale bool                      `json:"-" gorm:"-"`
-	NameProvided           bool                      `json:"-" gorm:"-"`
+	Id                   string           `json:"id" gorm:"type:char(36);primaryKey"`
+	Protocol             string           `json:"protocol" gorm:"type:varchar(64);default:'openai';index"`
+	Key                  string           `json:"key" gorm:"type:text"`
+	Status               int              `json:"status" gorm:"default:1"`
+	Name                 string           `json:"name" gorm:"type:varchar(64);not null;uniqueIndex"`
+	Weight               *uint            `json:"weight" gorm:"default:0"`
+	CreatedTime          int64            `json:"created_time" gorm:"bigint"`
+	TestTime             int64            `json:"test_time" gorm:"bigint"`
+	ResponseTime         int              `json:"response_time"`
+	BaseURL              *string          `json:"base_url" gorm:"column:base_url;default:''"`
+	Other                *string          `json:"other"`
+	Balance              float64          `json:"balance"`
+	BalanceUpdatedTime   int64            `json:"balance_updated_time" gorm:"bigint"`
+	Models               string           `json:"models" gorm:"-"`
+	AvailableModels      []string         `json:"available_models,omitempty" gorm:"-"`
+	ModelConfigs         []ChannelModel   `json:"model_configs,omitempty" gorm:"-"`
+	Abilities            []ChannelAbility `json:"channel_abilities,omitempty" gorm:"-"`
+	Tests                []ChannelTest    `json:"channel_tests,omitempty" gorm:"-"`
+	TestsLastTestedAt    int64            `json:"channel_tests_last_tested_at,omitempty" gorm:"-"`
+	UsedQuota            int64            `json:"used_quota" gorm:"bigint;default:0"`
+	Priority             *int64           `json:"priority" gorm:"bigint;default:0"`
+	Config               string           `json:"config"`
+	SystemPrompt         *string          `json:"system_prompt" gorm:"type:text"`
+	TestModel            string           `json:"test_model" gorm:"type:varchar(255);default:''"`
+	KeySet               bool             `json:"key_set" gorm:"-"`
+	ModelsProvided       bool             `json:"-" gorm:"-"`
+	ModelConfigsProvided bool             `json:"-" gorm:"-"`
+	TestsStale           bool             `json:"-" gorm:"-"`
+	NameProvided         bool             `json:"-" gorm:"-"`
 }
 
 type ChannelConfig struct {
@@ -292,6 +293,7 @@ func (channel *Channel) SetModelConfigs(configs []ChannelModel) {
 	}
 	channel.SetAvailableModelIDs(available)
 	channel.Models = JoinChannelModelCSV(selected)
+	channel.Abilities = BuildChannelAbilitiesFromModelConfigs(channel.Id, normalized)
 }
 
 func (channel *Channel) NormalizeModelConfigState() {
@@ -311,12 +313,19 @@ func (channel *Channel) NormalizeModelConfigState() {
 	}
 }
 
-func (channel *Channel) SetCapabilityResults(results []ChannelCapabilityResult) {
+func (channel *Channel) SetChannelAbilities(results []ChannelAbility) {
 	if channel == nil {
 		return
 	}
-	channel.CapabilityResults = NormalizeChannelCapabilityResultRows(results)
-	channel.CapabilityLastTestedAt = calcChannelCapabilityLastTestedAt(channel.CapabilityResults)
+	channel.Abilities = NormalizeChannelAbilityRows(results)
+}
+
+func (channel *Channel) SetChannelTests(results []ChannelTest) {
+	if channel == nil {
+		return
+	}
+	channel.Tests = NormalizeChannelTestRows(results)
+	channel.TestsLastTestedAt = CalcChannelTestsLastTestedAt(channel.Tests)
 }
 
 func (channel *Channel) Insert() error {

@@ -32,9 +32,17 @@ func (a *Adaptor) Init(meta *meta.Meta) {
 }
 
 func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
+	upstreamMode := meta.Mode
+	if meta.UpstreamMode != 0 {
+		upstreamMode = meta.UpstreamMode
+	}
+	requestURLPath := meta.RequestURLPath
+	if strings.TrimSpace(meta.UpstreamRequestPath) != "" {
+		requestURLPath = meta.UpstreamRequestPath
+	}
 	switch meta.ChannelProtocol {
 	case relaychannel.Azure:
-		if meta.Mode == relaymode.ImagesGenerations {
+		if upstreamMode == relaymode.ImagesGenerations {
 			// https://learn.microsoft.com/en-us/azure/ai-services/openai/dall-e-quickstart?tabs=dalle3%2Ccommand-line&pivots=rest-api
 			// https://{resource_name}.openai.azure.com/openai/deployments/dall-e-3/images/generations?api-version=2024-03-01-preview
 			fullRequestURL := fmt.Sprintf("%s/openai/deployments/%s/images/generations?api-version=%s", meta.BaseURL, meta.ActualModelName, meta.Config.APIVersion)
@@ -42,7 +50,7 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 		}
 
 		// https://learn.microsoft.com/en-us/azure/cognitive-services/openai/chatgpt-quickstart?pivots=rest-api&tabs=command-line#rest-api
-		requestURL := strings.Split(meta.RequestURLPath, "?")[0]
+		requestURL := strings.Split(requestURLPath, "?")[0]
 		requestURL = fmt.Sprintf("%s?api-version=%s", requestURL, meta.Config.APIVersion)
 		task := strings.TrimPrefix(requestURL, "/v1/")
 		model_ := meta.ActualModelName
@@ -64,7 +72,7 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	case relaychannel.GeminiOpenAICompatible:
 		return geminiv2.GetRequestURL(meta)
 	default:
-		return GetFullRequestURL(meta.BaseURL, meta.RequestURLPath, meta.ChannelProtocol), nil
+		return GetFullRequestURL(meta.BaseURL, requestURLPath, meta.ChannelProtocol), nil
 	}
 }
 
@@ -108,7 +116,25 @@ func (a *Adaptor) DoRequest(c *gin.Context, meta *meta.Meta, requestBody io.Read
 }
 
 func (a *Adaptor) DoResponse(c *gin.Context, resp *http.Response, meta *meta.Meta) (usage *model.Usage, err *model.ErrorWithStatusCode) {
-	if meta.Mode == relaymode.Responses {
+	upstreamMode := meta.Mode
+	if meta.UpstreamMode != 0 {
+		upstreamMode = meta.UpstreamMode
+	}
+	if meta.Mode == relaymode.ChatCompletions && upstreamMode == relaymode.Responses {
+		if meta.IsStream {
+			respErr, usage := StreamResponsesAsChatHandler(c, resp, meta.ActualModelName, meta.PromptTokens)
+			return usage, respErr
+		}
+		return relayResponsesAsChatResponse(c, resp, meta.ActualModelName, meta.PromptTokens)
+	}
+	if meta.Mode == relaymode.Responses && upstreamMode == relaymode.ChatCompletions {
+		if meta.IsStream {
+			respErr, usage := StreamChatAsResponsesHandler(c, resp, meta.ActualModelName, meta.PromptTokens)
+			return usage, respErr
+		}
+		return relayChatAsResponsesResponse(c, resp, meta.ActualModelName, meta.PromptTokens)
+	}
+	if upstreamMode == relaymode.Responses {
 		if resp == nil {
 			return nil, ErrorWrapper(errors.New("resp is nil"), "nil_response", http.StatusInternalServerError)
 		}

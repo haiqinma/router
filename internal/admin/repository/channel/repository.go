@@ -47,7 +47,10 @@ func GetAll(startIdx int, num int, status string) ([]*model.Channel, error) {
 	if err := model.HydrateChannelsWithModels(model.DB, channels); err != nil {
 		return nil, err
 	}
-	return channels, model.HydrateChannelsWithCapabilityResults(model.DB, channels)
+	if err := model.HydrateChannelsWithAbilities(model.DB, channels); err != nil {
+		return nil, err
+	}
+	return channels, model.HydrateChannelsWithTests(model.DB, channels)
 }
 
 func Search(keyword string) ([]*model.Channel, error) {
@@ -66,7 +69,10 @@ func Search(keyword string) ([]*model.Channel, error) {
 	if err := model.HydrateChannelsWithModels(model.DB, channels); err != nil {
 		return nil, err
 	}
-	return channels, model.HydrateChannelsWithCapabilityResults(model.DB, channels)
+	if err := model.HydrateChannelsWithAbilities(model.DB, channels); err != nil {
+		return nil, err
+	}
+	return channels, model.HydrateChannelsWithTests(model.DB, channels)
 }
 
 func GetByID(id string, selectAll bool) (*model.Channel, error) {
@@ -84,7 +90,10 @@ func GetByID(id string, selectAll bool) (*model.Channel, error) {
 	if err := model.HydrateChannelWithModels(model.DB, &channel); err != nil {
 		return nil, err
 	}
-	return &channel, model.HydrateChannelWithCapabilityResults(model.DB, &channel)
+	if err := model.HydrateChannelWithAbilities(model.DB, &channel); err != nil {
+		return nil, err
+	}
+	return &channel, model.HydrateChannelWithTests(model.DB, &channel)
 }
 
 func prepareChannelForCreate(channel *model.Channel) error {
@@ -147,7 +156,10 @@ func Insert(channel *model.Channel) error {
 	if err := model.HydrateChannelWithModels(model.DB, channel); err != nil {
 		return err
 	}
-	if err := model.HydrateChannelWithCapabilityResults(model.DB, channel); err != nil {
+	if err := model.HydrateChannelWithAbilities(model.DB, channel); err != nil {
+		return err
+	}
+	if err := model.HydrateChannelWithTests(model.DB, channel); err != nil {
 		return err
 	}
 	return channel.AddAbilities()
@@ -165,7 +177,7 @@ func sameStringPointerValue(left *string, right *string) bool {
 	return leftValue == rightValue
 }
 
-func buildSelectedModelCapabilitySignature(channel *model.Channel) string {
+func buildSelectedModelTestSignature(channel *model.Channel) string {
 	if channel == nil {
 		return ""
 	}
@@ -187,16 +199,17 @@ func buildSelectedModelCapabilitySignature(channel *model.Channel) string {
 		if upstreamModel == "" {
 			upstreamModel = modelID
 		}
-		parts = append(parts, modelID+"=>"+upstreamModel+"#"+modelType)
+		endpoint := strings.TrimSpace(row.Endpoint)
+		parts = append(parts, modelID+"=>"+upstreamModel+"#"+modelType+"@"+endpoint)
 	}
 	return strings.Join(parts, "|")
 }
 
-func shouldResetCapabilityResults(existing *model.Channel, incoming *model.Channel) bool {
+func shouldResetChannelTests(existing *model.Channel, incoming *model.Channel) bool {
 	if existing == nil || incoming == nil {
 		return false
 	}
-	if incoming.CapabilityResultsStale {
+	if incoming.TestsStale {
 		return true
 	}
 	if strings.TrimSpace(incoming.Protocol) != "" && existing.GetProtocol() != incoming.GetProtocol() {
@@ -215,7 +228,7 @@ func shouldResetCapabilityResults(existing *model.Channel, incoming *model.Chann
 		return true
 	}
 	if incoming.ModelConfigsProvided &&
-		buildSelectedModelCapabilitySignature(existing) != buildSelectedModelCapabilitySignature(incoming) {
+		buildSelectedModelTestSignature(existing) != buildSelectedModelTestSignature(incoming) {
 		return true
 	}
 	if incoming.ModelsProvided &&
@@ -252,7 +265,7 @@ func Update(channel *model.Channel) error {
 		if err := ensureChannelIdentifierUniqueWithDB(tx, channel); err != nil {
 			return err
 		}
-		resetCapabilityResults := shouldResetCapabilityResults(&existing, channel)
+		resetChannelTests := shouldResetChannelTests(&existing, channel)
 		if channel.NameProvided {
 			if err := tx.Model(&model.Channel{}).Where("id = ?", channel.Id).Update("name", model.NormalizeChannelIdentifier(channel.Name)).Error; err != nil {
 				return err
@@ -276,8 +289,11 @@ func Update(channel *model.Channel) error {
 				return err
 			}
 		}
-		if resetCapabilityResults {
-			if err := model.DeleteChannelCapabilityResultsByChannelIDWithDB(tx, channel.Id); err != nil {
+		if resetChannelTests {
+			if err := model.DeleteChannelTestsByChannelIDWithDB(tx, channel.Id); err != nil {
+				return err
+			}
+			if err := model.ResetChannelModelTestStateWithDB(tx, channel.Id, nil); err != nil {
 				return err
 			}
 		}
@@ -292,7 +308,10 @@ func Update(channel *model.Channel) error {
 	if err := model.HydrateChannelWithModels(model.DB, channel); err != nil {
 		return err
 	}
-	if err := model.HydrateChannelWithCapabilityResults(model.DB, channel); err != nil {
+	if err := model.HydrateChannelWithAbilities(model.DB, channel); err != nil {
+		return err
+	}
+	if err := model.HydrateChannelWithTests(model.DB, channel); err != nil {
 		return err
 	}
 	return channel.UpdateAbilities()
@@ -323,7 +342,7 @@ func Delete(channel *model.Channel) error {
 		if err := model.DeleteChannelModelsByChannelIDWithDB(tx, channel.Id); err != nil {
 			return err
 		}
-		if err := model.DeleteChannelCapabilityResultsByChannelIDWithDB(tx, channel.Id); err != nil {
+		if err := model.DeleteChannelTestsByChannelIDWithDB(tx, channel.Id); err != nil {
 			return err
 		}
 		if err := tx.Where("channel_id = ?", strings.TrimSpace(channel.Id)).Delete(&model.Ability{}).Error; err != nil {
@@ -377,7 +396,10 @@ func UpdateTestModelByID(id string, testModel string) error {
 		if err := tx.Model(&model.Channel{}).Where("id = ?", id).Update("test_model", testModel).Error; err != nil {
 			return err
 		}
-		return model.DeleteChannelCapabilityResultsByChannelIDWithDB(tx, id)
+		if err := model.DeleteChannelTestsByChannelIDWithDB(tx, id); err != nil {
+			return err
+		}
+		return model.ResetChannelModelTestStateWithDB(tx, id, nil)
 	})
 }
 
@@ -398,7 +420,7 @@ func deleteChannelsByQuery(query *gorm.DB) (int64, error) {
 		if err := model.DeleteChannelModelsByChannelIDsWithDB(tx, channelIDs); err != nil {
 			return err
 		}
-		if err := model.DeleteChannelCapabilityResultsByChannelIDsWithDB(tx, channelIDs); err != nil {
+		if err := model.DeleteChannelTestsByChannelIDsWithDB(tx, channelIDs); err != nil {
 			return err
 		}
 		if err := tx.Where("channel_id IN ?", channelIDs).Delete(&model.Ability{}).Error; err != nil {

@@ -37,7 +37,8 @@ func sanitizeChannelForResponse(channel *model.Channel) {
 	channel.Models = strings.TrimSpace(channel.Models)
 	channel.AvailableModels = model.NormalizeChannelModelIDsPreserveOrder(channel.AvailableModels)
 	channel.ModelConfigs = model.NormalizeChannelModelConfigsPreserveOrder(channel.ModelConfigs)
-	channel.SetCapabilityResults(channel.CapabilityResults)
+	channel.SetChannelAbilities(channel.Abilities)
+	channel.SetChannelTests(channel.Tests)
 	channel.KeySet = strings.TrimSpace(channel.Key) != ""
 	channel.Key = ""
 }

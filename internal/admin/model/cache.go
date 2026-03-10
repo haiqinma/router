@@ -175,6 +175,9 @@ func InitChannelCache() {
 	if err := HydrateChannelsWithModels(DB, channels); err != nil {
 		logger.SysError("failed to hydrate channel models for cache: " + err.Error())
 	}
+	if err := HydrateChannelsWithAbilities(DB, channels); err != nil {
+		logger.SysError("failed to hydrate channel abilities for cache: " + err.Error())
+	}
 	var abilities []*Ability
 	DB.Where("enabled = ?", true).Find(&abilities)
 	groups := make(map[string]bool)

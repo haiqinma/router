@@ -48,6 +48,14 @@ func getPromptTokens(textRequest *relaymodel.GeneralOpenAIRequest, relayMode int
 	switch relayMode {
 	case relaymode.ChatCompletions:
 		return openai.CountTokenMessages(textRequest.Messages, textRequest.Model)
+	case relaymode.Responses:
+		if len(textRequest.Messages) > 0 {
+			return openai.CountTokenMessages(textRequest.Messages, textRequest.Model)
+		}
+		if messages := parseInputAsMessages(textRequest.Input); len(messages) > 0 {
+			return openai.CountTokenMessages(messages, textRequest.Model)
+		}
+		return openai.CountTokenInput(textRequest.Input, textRequest.Model)
 	case relaymode.Completions:
 		return openai.CountTokenInput(textRequest.Prompt, textRequest.Model)
 	case relaymode.Moderations:
@@ -192,6 +200,12 @@ func isErrorHappened(meta *meta.Meta, resp *http.Response) bool {
 func setSystemPrompt(ctx context.Context, request *relaymodel.GeneralOpenAIRequest, prompt string) (reset bool) {
 	if prompt == "" {
 		return false
+	}
+	if len(request.Messages) == 0 {
+		if messages := parseInputAsMessages(request.Input); len(messages) > 0 {
+			request.Messages = messages
+			request.Input = nil
+		}
 	}
 	if len(request.Messages) == 0 {
 		return false

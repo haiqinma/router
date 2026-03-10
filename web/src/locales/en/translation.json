@@ -289,25 +289,29 @@
       },
       "capability_tester": {
         "title": "Capability Test",
-        "hint": "Run real probes against the current draft channel and selected models. The system automatically picks text / image / audio / video models by type for the corresponding capability checks, and skips a capability when no matching type is selected.",
-        "button": "Run Tests",
-        "empty": "No test result yet. Click \"Run Tests\" to probe chat, responses, images, audio, and videos by model type.",
+        "hint": "Shows the models selected in step 2 and lets you choose the real upstream endpoint for each model. Text models default to /v1/responses and can be switched to /v1/chat/completions. Other model types use fixed endpoints. Supports both single-row and bulk testing.",
+        "button": "Test Selected Models",
+        "single": "Test",
+        "selection": "Selected {{selected}} / {{total}}",
+        "verify_required": "Please finish the current model tests before continuing.",
+        "empty": "No testable models yet. Please select models in step 2 first.",
         "last_tested": "Last tested at: {{time}}",
-        "test_success": "Capability tests completed",
-        "test_failed": "Capability test failed",
-        "stale": "Connection info or model selection changed. Please run capability tests again.",
+        "test_success": "Model tests completed",
+        "test_failed": "Model test failed",
+        "stale": "Connection info, model selection, or endpoint changed. Please run model tests again.",
         "status": {
           "supported": "Supported",
           "unsupported": "Unsupported",
           "skipped": "Skipped"
         },
         "table": {
-          "capability": "Capability",
+          "model": "Model",
+          "type": "Type",
           "endpoint": "Endpoint",
-          "model": "Test Model",
           "status": "Status",
           "latency": "Latency",
-          "message": "Message"
+          "message": "Message",
+          "actions": "Actions"
         }
       },
     "messages": {

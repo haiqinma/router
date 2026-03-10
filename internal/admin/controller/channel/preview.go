@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 
 	"github.com/yeying-community/router/common/client"
 	"github.com/yeying-community/router/common/config"
@@ -45,6 +46,7 @@ type previewCapabilitiesRequest struct {
 	Models       []string             `json:"models"`
 	ModelConfigs []model.ChannelModel `json:"model_configs"`
 	TestModel    string               `json:"test_model"`
+	TargetModels []string             `json:"target_models"`
 }
 
 type openAIModelCard struct {
@@ -72,60 +74,10 @@ type openAIModelsResponse struct {
 	} `json:"error,omitempty"`
 }
 
-type previewCapabilityResult struct {
-	Capability string `json:"capability"`
-	Label      string `json:"label"`
-	Endpoint   string `json:"endpoint"`
-	Model      string `json:"model,omitempty"`
-	Status     string `json:"status"`
-	Supported  bool   `json:"supported"`
-	Message    string `json:"message,omitempty"`
-	LatencyMs  int64  `json:"latency_ms,omitempty"`
-}
-
 const (
-	previewCapabilityStatusSupported   = "supported"
-	previewCapabilityStatusUnsupported = "unsupported"
-	previewCapabilityStatusSkipped     = "skipped"
-
 	previewCapabilityTestModeCapability = "capability"
 	previewCapabilityTestModeModel      = "model"
 )
-
-type channelCapabilityModelSelection struct {
-	TextModel    string
-	ImageModel   string
-	AudioModel   string
-	VideoModel   string
-	RunChat      bool
-	RunResponses bool
-	RunImages    bool
-	RunAudio     bool
-	RunVideo     bool
-}
-
-func persistPreviewCapabilityResults(channelID string, results []previewCapabilityResult) error {
-	normalizedChannelID := strings.TrimSpace(channelID)
-	if normalizedChannelID == "" {
-		return nil
-	}
-	rows := make([]model.ChannelCapabilityResult, 0, len(results))
-	for idx, item := range results {
-		rows = append(rows, model.ChannelCapabilityResult{
-			ChannelId:  normalizedChannelID,
-			Capability: strings.TrimSpace(item.Capability),
-			Label:      strings.TrimSpace(item.Label),
-			Endpoint:   strings.TrimSpace(item.Endpoint),
-			Model:      strings.TrimSpace(item.Model),
-			Status:     model.NormalizeChannelCapabilityStatus(item.Status),
-			Supported:  item.Supported && item.Status == previewCapabilityStatusSupported,
-			Message:    strings.TrimSpace(item.Message),
-			LatencyMs:  item.LatencyMs,
-			SortOrder:  int64(idx),
-		})
-	}
-	return model.ReplaceChannelCapabilityResultsWithDB(model.DB, normalizedChannelID, rows)
-}
 
 func resolveModelsURL(baseURL string) string {
 	resolvedBaseURL := strings.TrimRight(strings.TrimSpace(baseURL), "/")
@@ -424,183 +376,145 @@ func resolveSelectionModelType(row model.ChannelModel) string {
 	return model.InferModelType(referenceModel)
 }
 
-func pickCapabilityModels(channel *model.Channel, mode string, requestedModel string) channelCapabilityModelSelection {
-	selection := channelCapabilityModelSelection{}
-	normalizedMode := normalizePreviewCapabilityTestMode(mode)
+func resolvePreviewTargetModels(channel *model.Channel, mode string, requestedModel string, requestedModels []string) []model.ChannelModel {
 	selectedRows := selectedChannelModelConfigs(channel)
-	if normalizedMode == previewCapabilityTestModeModel {
+	if len(selectedRows) == 0 {
+		return nil
+	}
+
+	targets := model.NormalizeChannelModelIDsPreserveOrder(requestedModels)
+	if len(targets) == 0 && normalizePreviewCapabilityTestMode(mode) == previewCapabilityTestModeModel {
 		targetModel := strings.TrimSpace(requestedModel)
 		if targetModel == "" && channel != nil {
 			targetModel = strings.TrimSpace(channel.TestModel)
 		}
-		if targetModel == "" && len(selectedRows) > 0 {
-			targetModel = selectedRows[0].Model
+		if targetModel != "" {
+			targets = []string{targetModel}
 		}
-		if targetModel == "" {
-			return selection
-		}
-		targetType := model.InferModelType(targetModel)
-		for _, row := range selectedRows {
-			if row.Model != targetModel && row.UpstreamModel != targetModel {
-				continue
-			}
-			targetModel = row.Model
-			targetType = resolveSelectionModelType(row)
-			break
-		}
-		switch targetType {
-		case model.ProviderModelTypeImage:
-			selection.ImageModel = targetModel
-			selection.RunImages = true
-		case model.ProviderModelTypeAudio:
-			selection.AudioModel = targetModel
-			selection.RunAudio = true
-		case model.ProviderModelTypeVideo:
-			selection.VideoModel = targetModel
-			selection.RunVideo = true
-		default:
-			selection.TextModel = targetModel
-			selection.RunChat = true
-			selection.RunResponses = true
-		}
-		return selection
+	}
+	if len(targets) == 0 {
+		return selectedRows
 	}
 
-	selection.RunChat = true
-	selection.RunResponses = true
-	selection.RunImages = true
-	selection.RunAudio = true
-	selection.RunVideo = true
+	result := make([]model.ChannelModel, 0, len(targets))
+	targetSet := make(map[string]struct{}, len(targets))
+	for _, item := range targets {
+		targetSet[item] = struct{}{}
+	}
 	for _, row := range selectedRows {
-		switch resolveSelectionModelType(row) {
-		case model.ProviderModelTypeImage:
-			if selection.ImageModel == "" {
-				selection.ImageModel = row.Model
-			}
-		case model.ProviderModelTypeAudio:
-			if selection.AudioModel == "" {
-				selection.AudioModel = row.Model
-			}
-		case model.ProviderModelTypeVideo:
-			if selection.VideoModel == "" {
-				selection.VideoModel = row.Model
-			}
-		default:
-			if selection.TextModel == "" {
-				selection.TextModel = row.Model
-			}
+		if _, ok := targetSet[strings.TrimSpace(row.Model)]; ok {
+			result = append(result, row)
+			continue
+		}
+		if _, ok := targetSet[strings.TrimSpace(row.UpstreamModel)]; ok {
+			result = append(result, row)
 		}
 	}
-	return selection
+	return result
 }
 
-func runChannelCapabilityTests(channel *model.Channel, mode string, requestedModel string) ([]previewCapabilityResult, error) {
-	normalizedMode := normalizePreviewCapabilityTestMode(mode)
-	selection := pickCapabilityModels(channel, normalizedMode, requestedModel)
-	results := make([]previewCapabilityResult, 0, 5)
-
-	if normalizedMode == previewCapabilityTestModeModel &&
-		!selection.RunChat &&
-		!selection.RunResponses &&
-		!selection.RunImages &&
-		!selection.RunAudio &&
-		!selection.RunVideo {
-		return nil, fmt.Errorf("未找到可用于模型测试的模型")
+func buildPreviewChannelTestResult(row model.ChannelModel, latencyMs int64, message string, err error) model.ChannelTest {
+	modelType := resolveSelectionModelType(row)
+	endpoint := model.NormalizeChannelModelEndpoint(modelType, row.Endpoint)
+	result := model.ChannelTest{
+		Model:         strings.TrimSpace(row.Model),
+		UpstreamModel: strings.TrimSpace(row.UpstreamModel),
+		Type:          modelType,
+		Endpoint:      endpoint,
+		LatencyMs:     latencyMs,
+		Message:       strings.TrimSpace(message),
 	}
+	if result.UpstreamModel == "" {
+		result.UpstreamModel = result.Model
+	}
+	if err == nil {
+		result.Status = model.ChannelTestStatusSupported
+		result.Supported = true
+		return result
+	}
+	errMessage := strings.TrimSpace(err.Error())
+	if errMessage == "" {
+		errMessage = "能力测试失败"
+	}
+	result.Message = errMessage
+	result.Status = model.ChannelTestStatusUnsupported
+	if strings.Contains(strings.ToLower(errMessage), "暂不自动探测") {
+		result.Status = model.ChannelTestStatusSkipped
+	}
+	return result
+}
 
-	if selection.RunChat {
-		if strings.TrimSpace(selection.TextModel) == "" {
-			results = append(results, previewCapabilityResult{
-				Capability: "chat",
-				Label:      "Chat",
-				Endpoint:   "/v1/chat/completions",
-				Status:     previewCapabilityStatusSkipped,
-				Message:    "未找到可用于文本能力测试的模型",
-			})
-		} else {
-			latencyMs, message, execErr := executePreviewTextCapability(channel, "/v1/chat/completions", &relaymodel.GeneralOpenAIRequest{
-				Model: selection.TextModel,
+func runSingleChannelModelTest(channel *model.Channel, row model.ChannelModel) model.ChannelTest {
+	modelType := resolveSelectionModelType(row)
+	endpoint := model.NormalizeChannelModelEndpoint(modelType, row.Endpoint)
+
+	switch modelType {
+	case model.ProviderModelTypeImage:
+		latencyMs, message, execErr := executePreviewImageCapability(channel, row.Model)
+		return buildPreviewChannelTestResult(model.ChannelModel{
+			Model:         row.Model,
+			UpstreamModel: row.UpstreamModel,
+			Type:          modelType,
+			Endpoint:      model.ChannelModelEndpointImages,
+		}, latencyMs, message, execErr)
+	case model.ProviderModelTypeAudio:
+		latencyMs, message, execErr := executePreviewAudioCapability(channel, row.Model)
+		return buildPreviewChannelTestResult(model.ChannelModel{
+			Model:         row.Model,
+			UpstreamModel: row.UpstreamModel,
+			Type:          modelType,
+			Endpoint:      model.ChannelModelEndpointAudio,
+		}, latencyMs, message, execErr)
+	case model.ProviderModelTypeVideo:
+		latencyMs, message, execErr := executePreviewVideoCapability(channel, row.Model)
+		return buildPreviewChannelTestResult(model.ChannelModel{
+			Model:         row.Model,
+			UpstreamModel: row.UpstreamModel,
+			Type:          modelType,
+			Endpoint:      model.ChannelModelEndpointVideos,
+		}, latencyMs, message, execErr)
+	default:
+		if endpoint == model.ChannelModelEndpointChat {
+			latencyMs, message, execErr := executePreviewTextCapability(channel, endpoint, &relaymodel.GeneralOpenAIRequest{
+				Model: row.Model,
 				Messages: []relaymodel.Message{{
 					Role:    "user",
 					Content: config.TestPrompt,
 				}},
 			})
-			results = append(results, buildPreviewCapabilityResult("chat", "Chat", "/v1/chat/completions", selection.TextModel, latencyMs, message, execErr))
+			return buildPreviewChannelTestResult(model.ChannelModel{
+				Model:         row.Model,
+				UpstreamModel: row.UpstreamModel,
+				Type:          modelType,
+				Endpoint:      endpoint,
+			}, latencyMs, message, execErr)
 		}
+		latencyMs, message, execErr := executePreviewTextCapability(channel, model.ChannelModelEndpointResponses, &relaymodel.GeneralOpenAIRequest{
+			Model: row.Model,
+			Input: []relaymodel.Message{{
+				Role:    "user",
+				Content: config.TestPrompt,
+			}},
+		})
+		return buildPreviewChannelTestResult(model.ChannelModel{
+			Model:         row.Model,
+			UpstreamModel: row.UpstreamModel,
+			Type:          modelType,
+			Endpoint:      model.ChannelModelEndpointResponses,
+		}, latencyMs, message, execErr)
 	}
+}
 
-	if selection.RunResponses {
-		if strings.TrimSpace(selection.TextModel) == "" {
-			results = append(results, previewCapabilityResult{
-				Capability: "responses",
-				Label:      "Responses",
-				Endpoint:   "/v1/responses",
-				Status:     previewCapabilityStatusSkipped,
-				Message:    "未找到可用于文本能力测试的模型",
-			})
-		} else {
-			latencyMs, message, execErr := executePreviewTextCapability(channel, "/v1/responses", &relaymodel.GeneralOpenAIRequest{
-				Model: selection.TextModel,
-				Input: []relaymodel.Message{{
-					Role:    "user",
-					Content: config.TestPrompt,
-				}},
-			})
-			results = append(results, buildPreviewCapabilityResult("responses", "Responses", "/v1/responses", selection.TextModel, latencyMs, message, execErr))
-		}
+func runChannelCapabilityTests(channel *model.Channel, mode string, requestedModel string, requestedModels []string) ([]model.ChannelTest, error) {
+	targetRows := resolvePreviewTargetModels(channel, mode, requestedModel, requestedModels)
+	if len(targetRows) == 0 {
+		return nil, fmt.Errorf("未找到可用于测试的模型")
 	}
-
-	if selection.RunImages {
-		if strings.TrimSpace(selection.ImageModel) == "" {
-			results = append(results, previewCapabilityResult{
-				Capability: "images",
-				Label:      "Images",
-				Endpoint:   "/v1/images/generations",
-				Status:     previewCapabilityStatusSkipped,
-				Message:    "未选择图片模型，已跳过图片能力测试",
-			})
-		} else {
-			latencyMs, message, execErr := executePreviewImageCapability(channel, selection.ImageModel)
-			results = append(results, buildPreviewCapabilityResult("images", "Images", "/v1/images/generations", selection.ImageModel, latencyMs, message, execErr))
-		}
+	results := make([]model.ChannelTest, 0, len(targetRows))
+	for _, row := range targetRows {
+		results = append(results, runSingleChannelModelTest(channel, row))
 	}
-
-	if selection.RunAudio {
-		if strings.TrimSpace(selection.AudioModel) == "" {
-			results = append(results, previewCapabilityResult{
-				Capability: "audio",
-				Label:      "Audio",
-				Endpoint:   "/v1/audio/speech",
-				Status:     previewCapabilityStatusSkipped,
-				Message:    "未选择音频模型，已跳过音频能力测试",
-			})
-		} else {
-			latencyMs, message, execErr := executePreviewAudioCapability(channel, selection.AudioModel)
-			result := buildPreviewCapabilityResult("audio", "Audio", "/v1/audio/speech", selection.AudioModel, latencyMs, message, execErr)
-			if execErr != nil && strings.Contains(strings.ToLower(execErr.Error()), "暂不自动探测") {
-				result.Status = previewCapabilityStatusSkipped
-				result.Message = execErr.Error()
-			}
-			results = append(results, result)
-		}
-	}
-
-	if selection.RunVideo {
-		if strings.TrimSpace(selection.VideoModel) == "" {
-			results = append(results, previewCapabilityResult{
-				Capability: "videos",
-				Label:      "Videos",
-				Endpoint:   "/v1/videos",
-				Status:     previewCapabilityStatusSkipped,
-				Message:    "未选择视频模型，已跳过视频能力测试",
-			})
-		} else {
-			latencyMs, message, execErr := executePreviewVideoCapability(channel, selection.VideoModel)
-			results = append(results, buildPreviewCapabilityResult("videos", "Videos", "/v1/videos", selection.VideoModel, latencyMs, message, execErr))
-		}
-	}
-
-	return results, nil
+	return model.NormalizeChannelTestRows(results), nil
 }
 
 func resolvePreviewModelName(channel *model.Channel, requestedModel string) string {
@@ -924,26 +838,29 @@ func executePreviewVideoCapability(channel *model.Channel, modelName string) (in
 	return latencyMs, "视频接口返回成功", nil
 }
 
-func buildPreviewCapabilityResult(capability string, label string, endpoint string, modelName string, latencyMs int64, message string, err error) previewCapabilityResult {
-	result := previewCapabilityResult{
-		Capability: capability,
-		Label:      label,
-		Endpoint:   endpoint,
-		Model:      strings.TrimSpace(modelName),
-		LatencyMs:  latencyMs,
+func persistPreviewChannelTests(channelID string, rows []model.ChannelModel, results []model.ChannelTest) error {
+	normalizedChannelID := strings.TrimSpace(channelID)
+	if normalizedChannelID == "" {
+		return nil
 	}
-	if err == nil {
-		result.Status = previewCapabilityStatusSupported
-		result.Supported = true
-		result.Message = strings.TrimSpace(message)
-		return result
+	targetModels := make([]string, 0, len(results))
+	for _, item := range results {
+		if strings.TrimSpace(item.Model) == "" {
+			continue
+		}
+		targetModels = append(targetModels, item.Model)
 	}
-	result.Message = strings.TrimSpace(err.Error())
-	if result.Message == "" {
-		result.Message = "能力测试失败"
-	}
-	result.Status = previewCapabilityStatusUnsupported
-	return result
+	targetModels = model.NormalizeChannelModelIDsPreserveOrder(targetModels)
+	return model.DB.Transaction(func(tx *gorm.DB) error {
+		insertedResults, err := model.AppendChannelTestsForModelsWithDB(tx, normalizedChannelID, targetModels, results)
+		if err != nil {
+			return err
+		}
+		if err := model.ReplaceChannelModelConfigsWithDB(tx, normalizedChannelID, model.ApplyChannelTestResultsToModelConfigs(rows, insertedResults)); err != nil {
+			return err
+		}
+		return model.EnsureChannelTestModelWithDB(tx, normalizedChannelID)
+	})
 }
 
 // PreviewChannelModels godoc
@@ -1005,8 +922,11 @@ func PreviewChannelModels(c *gin.Context) {
 			})
 			return
 		}
-		if err := model.DeleteChannelCapabilityResultsByChannelIDWithDB(model.DB, draftID); err != nil {
-			logChannelAdminWarn(c, "preview_capabilities_reset", stringField("draft_id", draftID), stringField("reason", err.Error()))
+		if err := model.DeleteChannelTestsByChannelIDWithDB(model.DB, draftID); err != nil {
+			logChannelAdminWarn(c, "preview_tests_reset", stringField("draft_id", draftID), stringField("reason", err.Error()))
+		}
+		if err := model.ResetChannelModelTestStateWithDB(model.DB, draftID, nil); err != nil {
+			logChannelAdminWarn(c, "preview_tests_state_reset", stringField("draft_id", draftID), stringField("reason", err.Error()))
 		}
 		savedChannel, getErr := channelsvc.GetByID(draftID, true)
 		if getErr != nil {
@@ -1079,7 +999,11 @@ func PreviewChannelCapabilities(c *gin.Context) {
 		return
 	}
 
-	results, err := runChannelCapabilityTests(previewChannel, previewCapabilityTestModeCapability, "")
+	testMode := previewCapabilityTestModeCapability
+	if len(req.TargetModels) == 1 || strings.TrimSpace(req.TestModel) != "" {
+		testMode = previewCapabilityTestModeModel
+	}
+	results, err := runChannelCapabilityTests(previewChannel, testMode, req.TestModel, req.TargetModels)
 	if err != nil {
 		logChannelAdminWarn(c, "preview_capabilities", stringField("source", keySource), stringField("draft_id", strings.TrimSpace(req.DraftID)), stringField("base_url", previewChannel.GetBaseURL()), stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{
@@ -1088,15 +1012,29 @@ func PreviewChannelCapabilities(c *gin.Context) {
 		})
 		return
 	}
+	abilities := model.BuildChannelAbilitiesFromTests(strings.TrimSpace(req.DraftID), results)
+	modelConfigs := previewChannel.GetModelConfigs()
 	if draftID := strings.TrimSpace(req.DraftID); draftID != "" {
-		if err := persistPreviewCapabilityResults(draftID, results); err != nil {
+		if err := persistPreviewChannelTests(draftID, previewChannel.GetModelConfigs(), results); err != nil {
 			logChannelAdminWarn(c, "preview_capabilities_save", stringField("draft_id", draftID), stringField("reason", err.Error()))
 			c.JSON(http.StatusOK, gin.H{
 				"success": false,
-				"message": "保存能力测试结果失败",
+				"message": "保存模型测试结果失败",
 			})
 			return
 		}
+		savedChannel, getErr := channelsvc.GetByID(draftID, true)
+		if getErr != nil {
+			logChannelAdminWarn(c, "preview_capabilities_reload", stringField("draft_id", draftID), stringField("reason", getErr.Error()))
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "读取渠道测试结果失败",
+			})
+			return
+		}
+		modelConfigs = savedChannel.GetModelConfigs()
+		results = savedChannel.Tests
+		abilities = savedChannel.Abilities
 	}
 
 	logChannelAdminInfo(c, "preview_capabilities", stringField("source", keySource), stringField("draft_id", strings.TrimSpace(req.DraftID)), stringField("base_url", previewChannel.GetBaseURL()), intField("results", len(results)))
@@ -1104,7 +1042,9 @@ func PreviewChannelCapabilities(c *gin.Context) {
 		"success": true,
 		"message": "",
 		"data": gin.H{
-			"results": results,
+			"results":       results,
+			"abilities":     abilities,
+			"model_configs": modelConfigs,
 		},
 		"meta": gin.H{
 			"source":     "channel",

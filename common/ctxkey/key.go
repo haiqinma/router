@@ -15,6 +15,7 @@ const (
 	Group               = "group"
 	ModelMapping        = "model_mapping"
 	ChannelModelConfigs = "channel_model_configs"
+	ChannelAbilities    = "channel_abilities"
 	ChannelName         = "channel_name"
 	TokenId             = "token_id"
 	TokenName           = "token_name"

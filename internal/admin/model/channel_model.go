@@ -17,7 +17,12 @@ type ChannelModel struct {
 	Model         string   `json:"model" gorm:"primaryKey;type:varchar(255)"`
 	UpstreamModel string   `json:"upstream_model" gorm:"type:varchar(255);default:'';index"`
 	Type          string   `json:"type" gorm:"type:varchar(32);default:'text'"`
+	Endpoint      string   `json:"endpoint" gorm:"type:varchar(255);default:''"`
 	Selected      bool     `json:"selected" gorm:"default:true;index"`
+	TestStatus    string   `json:"test_status,omitempty" gorm:"type:varchar(32);default:'';index"`
+	TestRound     int64    `json:"test_round,omitempty" gorm:"bigint;default:0"`
+	TestedAt      int64    `json:"tested_at,omitempty" gorm:"bigint;index"`
+	LatencyMs     int64    `json:"latency_ms,omitempty" gorm:"bigint"`
 	InputPrice    *float64 `json:"input_price,omitempty" gorm:"type:double precision"`
 	OutputPrice   *float64 `json:"output_price,omitempty" gorm:"type:double precision"`
 	PriceUnit     string   `json:"price_unit,omitempty" gorm:"type:varchar(64);default:''"`
@@ -383,6 +388,17 @@ func normalizeChannelModelRow(row *ChannelModel) {
 		row.UpstreamModel = row.Model
 	}
 	row.Type = normalizeExplicitChannelModelType(row.Type)
+	row.Endpoint = NormalizeChannelModelEndpoint(row.Type, row.Endpoint)
+	row.TestStatus = normalizeChannelModelTestStatus(row.TestStatus)
+	if row.TestRound < 0 {
+		row.TestRound = 0
+	}
+	if row.TestedAt < 0 {
+		row.TestedAt = 0
+	}
+	if row.LatencyMs < 0 {
+		row.LatencyMs = 0
+	}
 	row.PriceUnit = strings.TrimSpace(strings.ToLower(row.PriceUnit))
 	row.Currency = normalizeChannelModelCurrency(row.Currency)
 	row.InputPrice = cloneNormalizedChannelModelPrice(row.InputPrice)
@@ -443,6 +459,70 @@ func replaceChannelModelRowsWithDB(db *gorm.DB, channelID string, rows []Channel
 	})
 }
 
+func ApplyChannelTestResultsToModelConfigs(rows []ChannelModel, results []ChannelTest) []ChannelModel {
+	if len(rows) == 0 {
+		return []ChannelModel{}
+	}
+	resultByModel := make(map[string]ChannelTest, len(results))
+	for _, item := range NormalizeChannelTestRows(results) {
+		modelID := strings.TrimSpace(item.Model)
+		if modelID == "" {
+			continue
+		}
+		resultByModel[modelID] = item
+	}
+	next := make([]ChannelModel, 0, len(rows))
+	for _, row := range NormalizeChannelModelConfigsPreserveOrder(rows) {
+		if item, ok := resultByModel[strings.TrimSpace(row.Model)]; ok {
+			row.Type = item.Type
+			row.Endpoint = item.Endpoint
+			row.TestStatus = item.Status
+			row.TestRound = item.Round
+			row.TestedAt = item.TestedAt
+			row.LatencyMs = item.LatencyMs
+			row.Selected = item.Supported && item.Status == ChannelTestStatusSupported
+		}
+		next = append(next, row)
+	}
+	return NormalizeChannelModelConfigsPreserveOrder(next)
+}
+
+func ResetChannelModelTestState(rows []ChannelModel) []ChannelModel {
+	if len(rows) == 0 {
+		return []ChannelModel{}
+	}
+	next := make([]ChannelModel, 0, len(rows))
+	for _, row := range NormalizeChannelModelConfigsPreserveOrder(rows) {
+		row.TestStatus = ""
+		row.TestRound = 0
+		row.TestedAt = 0
+		row.LatencyMs = 0
+		next = append(next, row)
+	}
+	return NormalizeChannelModelConfigsPreserveOrder(next)
+}
+
+func ResetChannelModelTestStateWithDB(db *gorm.DB, channelID string, modelIDs []string) error {
+	if db == nil {
+		return fmt.Errorf("database handle is nil")
+	}
+	normalizedChannelID := strings.TrimSpace(channelID)
+	if normalizedChannelID == "" {
+		return nil
+	}
+	query := db.Model(&ChannelModel{}).Where("channel_id = ?", normalizedChannelID)
+	normalizedModels := NormalizeChannelModelIDsPreserveOrder(modelIDs)
+	if len(normalizedModels) > 0 {
+		query = query.Where("model IN ?", normalizedModels)
+	}
+	return query.Updates(map[string]any{
+		"test_status": "",
+		"test_round":  0,
+		"tested_at":   0,
+		"latency_ms":  0,
+	}).Error
+}
+
 func BuildFetchedChannelModelConfigs(existingRows []ChannelModel, fetchedRows []ChannelModel, channelProtocol int, selectAll bool) []ChannelModel {
 	normalizedFetchedRows := NormalizeChannelModelConfigsPreserveOrder(fetchedRows)
 	normalizedExisting := NormalizeChannelModelConfigsPreserveOrder(existingRows)
@@ -498,6 +578,28 @@ func BuildFetchedChannelModelConfigs(existingRows []ChannelModel, fetchedRows []
 	return NormalizeChannelModelConfigsPreserveOrder(rows)
 }
 
+func FindSelectedChannelModelConfig(rows []ChannelModel, candidates ...string) (ChannelModel, bool) {
+	normalizedRows := NormalizeChannelModelConfigsPreserveOrder(rows)
+	if len(normalizedRows) == 0 {
+		return ChannelModel{}, false
+	}
+	normalizedCandidates := normalizeTrimmedValuesPreserveOrder(candidates)
+	if len(normalizedCandidates) == 0 {
+		return ChannelModel{}, false
+	}
+	for _, row := range normalizedRows {
+		if !row.Selected {
+			continue
+		}
+		for _, candidate := range normalizedCandidates {
+			if candidate == strings.TrimSpace(row.Model) || candidate == strings.TrimSpace(row.UpstreamModel) {
+				return row, true
+			}
+		}
+	}
+	return ChannelModel{}, false
+}
+
 func loadChannelProtocolByChannelIDWithDB(db *gorm.DB, channelID string) (int, error) {
 	if db == nil {
 		return 0, fmt.Errorf("database handle is nil")
@@ -526,10 +628,24 @@ func completeChannelModelRowDefaults(row *ChannelModel, channelProtocol int) {
 	}
 	normalizeChannelModelRow(row)
 	row.Type = resolveChannelModelType(row.Type, channelProtocol, row.UpstreamModel, row.Model)
+	row.Endpoint = NormalizeChannelModelEndpoint(row.Type, row.Endpoint)
 	row.PriceUnit = normalizeChannelModelPriceUnit(row.PriceUnit, row.Type, channelProtocol, row.UpstreamModel, row.Model)
 	row.Currency = normalizeChannelModelCurrency(row.Currency)
 	row.InputPrice = cloneNormalizedChannelModelPrice(row.InputPrice)
 	row.OutputPrice = cloneNormalizedChannelModelPrice(row.OutputPrice)
+}
+
+func normalizeChannelModelTestStatus(raw string) string {
+	switch strings.TrimSpace(strings.ToLower(raw)) {
+	case "":
+		return ""
+	case ChannelTestStatusSupported:
+		return ChannelTestStatusSupported
+	case ChannelTestStatusSkipped:
+		return ChannelTestStatusSkipped
+	default:
+		return ChannelTestStatusUnsupported
+	}
 }
 
 func normalizeExplicitChannelModelType(raw string) string {
@@ -611,4 +727,56 @@ func cloneNormalizedChannelModelPrice(value *float64) *float64 {
 		normalized = 0
 	}
 	return &normalized
+}
+
+const (
+	ChannelModelEndpointChat      = "/v1/chat/completions"
+	ChannelModelEndpointResponses = "/v1/responses"
+	ChannelModelEndpointImages    = "/v1/images/generations"
+	ChannelModelEndpointAudio     = "/v1/audio/speech"
+	ChannelModelEndpointVideos    = "/v1/videos"
+)
+
+func DefaultChannelModelEndpoint(modelType string) string {
+	switch normalizeModelType(modelType, "") {
+	case ProviderModelTypeImage:
+		return ChannelModelEndpointImages
+	case ProviderModelTypeAudio:
+		return ChannelModelEndpointAudio
+	case ProviderModelTypeVideo:
+		return ChannelModelEndpointVideos
+	default:
+		return ChannelModelEndpointResponses
+	}
+}
+
+func NormalizeChannelModelEndpoint(modelType string, endpoint string) string {
+	normalizedType := normalizeModelType(modelType, "")
+	normalizedEndpoint := strings.TrimSpace(strings.ToLower(endpoint))
+	switch normalizedType {
+	case ProviderModelTypeImage:
+		if normalizedEndpoint == ChannelModelEndpointImages {
+			return ChannelModelEndpointImages
+		}
+		return ChannelModelEndpointImages
+	case ProviderModelTypeAudio:
+		if normalizedEndpoint == ChannelModelEndpointAudio {
+			return ChannelModelEndpointAudio
+		}
+		return ChannelModelEndpointAudio
+	case ProviderModelTypeVideo:
+		if normalizedEndpoint == ChannelModelEndpointVideos {
+			return ChannelModelEndpointVideos
+		}
+		return ChannelModelEndpointVideos
+	default:
+		switch normalizedEndpoint {
+		case ChannelModelEndpointChat:
+			return ChannelModelEndpointChat
+		case ChannelModelEndpointResponses:
+			return ChannelModelEndpointResponses
+		default:
+			return ChannelModelEndpointResponses
+		}
+	}
 }

@@ -534,6 +534,27 @@ code {
     padding: 0.72rem 0.92rem !important;
 }
 
+.ui.selection.dropdown.router-mini-dropdown,
+.ui.selection.dropdown.router-mini-dropdown > .text,
+.ui.selection.dropdown.router-mini-dropdown > .default.text,
+.ui.selection.dropdown.router-mini-dropdown .menu > .item {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    line-height: 1.35 !important;
+}
+
+.ui.selection.dropdown.router-mini-dropdown {
+    min-height: 34px !important;
+    height: 34px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    min-width: 220px !important;
+}
+
+.ui.selection.dropdown.router-mini-dropdown .menu > .item {
+    padding: 0.68rem 0.88rem !important;
+}
+
 .ui.form .field .ui.input.router-inline-input input,
 .ui.input.router-inline-input > input {
     font-size: 13px !important;

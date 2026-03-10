@@ -6,14 +6,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
-	"path/filepath"
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/yeying-community/router/common"
 	"github.com/yeying-community/router/common/config"
-	"github.com/yeying-community/router/common/helper"
 	"github.com/yeying-community/router/common/logger"
 	adminmodel "github.com/yeying-community/router/internal/admin/model"
 	"github.com/yeying-community/router/internal/relay"
@@ -42,8 +38,6 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	meta.OriginModelName = textRequest.Model
 	textRequest.Model, _ = getMappedModelName(textRequest.Model, meta.ModelMapping)
 	meta.ActualModelName = textRequest.Model
-	// set system prompt if not empty
-	systemPromptReset := setSystemPrompt(ctx, textRequest, meta.ForcedSystemPrompt)
 	groupRatio := adminmodel.GetGroupBillingRatio(meta.Group)
 	pricing, err := adminmodel.ResolveChannelModelPricing(meta.ChannelProtocol, meta.ChannelModelConfigs, textRequest.Model)
 	if err != nil {
@@ -69,6 +63,16 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 		return bizErr
 	}
 
+	upstreamMode, upstreamPath := resolveChannelTextUpstream(meta, meta.OriginModelName, textRequest.Model)
+	meta.UpstreamMode = upstreamMode
+	meta.UpstreamRequestPath = upstreamPath
+	upstreamRequest, err := convertTextRequestForUpstream(textRequest, meta.Mode, upstreamMode)
+	if err != nil {
+		return openai.ErrorWrapper(err, "convert_request_failed", http.StatusBadRequest)
+	}
+	// set system prompt on the request shape that will actually be sent upstream
+	systemPromptReset := setSystemPrompt(ctx, upstreamRequest, meta.ForcedSystemPrompt)
+
 	adaptor := relay.GetAdaptor(meta.APIType)
 	if adaptor == nil {
 		return openai.ErrorWrapper(fmt.Errorf("invalid api type: %d", meta.APIType), "invalid_api_type", http.StatusBadRequest)
@@ -76,7 +80,7 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	adaptor.Init(meta)
 
 	// get request body
-	requestBody, err := getRequestBody(c, meta, textRequest, adaptor)
+	requestBody, err := getRequestBody(c, meta, upstreamRequest, adaptor)
 	if err != nil {
 		return openai.ErrorWrapper(err, "convert_request_failed", http.StatusInternalServerError)
 	}
@@ -100,40 +104,31 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 		return respErr
 	}
 	// post-consume quota
-	go postConsumeQuota(ctx, usage, meta, textRequest, pricing, preConsumedQuota, groupRatio, systemPromptReset)
+	go postConsumeQuota(ctx, usage, meta, upstreamRequest, pricing, preConsumedQuota, groupRatio, systemPromptReset)
 	return nil
 }
 
 func getRequestBody(c *gin.Context, meta *meta.Meta, textRequest *model.GeneralOpenAIRequest, adaptor adaptor.Adaptor) (io.Reader, error) {
-	if meta.Mode == relaymode.Responses {
-		if normalizeResponsesInput(textRequest) {
-			jsonData, err := json.Marshal(textRequest)
-			if err != nil {
-				return nil, err
-			}
-			preview := string(jsonData)
-			if len(preview) > 400 {
-				preview = preview[:400]
-			}
-			logger.SysLogf("[responses_body] len=%d preview=%s", len(jsonData), preview)
-			return bytes.NewBuffer(jsonData), nil
+	upstreamMode := meta.Mode
+	if meta.UpstreamMode != 0 {
+		upstreamMode = meta.UpstreamMode
+	}
+	if upstreamMode == relaymode.Responses {
+		if textRequest.Input == nil && len(textRequest.Messages) > 0 {
+			textRequest.Input = textRequest.Messages
+			textRequest.Messages = nil
 		}
-		rawBody, _ := common.GetRequestBody(c)
-		if rawBody != nil {
-			rid := helper.GetTraceID(c.Request.Context())
-			if rid != "" {
-				dumpPath := filepath.Join("/tmp", "resp_body_"+rid+".json")
-				_ = os.WriteFile(dumpPath, rawBody, 0644)
-				logger.SysLogf("[responses_body_dump] path=%s len=%d", dumpPath, len(rawBody))
-			}
-			preview := string(rawBody)
-			if len(preview) > 400 {
-				preview = preview[:400]
-			}
-			logger.SysLogf("[responses_body_raw] len=%d preview=%s", len(rawBody), preview)
-			return bytes.NewBuffer(rawBody), nil
+		normalizeResponsesInput(textRequest)
+		jsonData, err := json.Marshal(textRequest)
+		if err != nil {
+			return nil, err
 		}
-		return c.Request.Body, nil
+		preview := string(jsonData)
+		if len(preview) > 400 {
+			preview = preview[:400]
+		}
+		logger.SysLogf("[responses_body] len=%d preview=%s", len(jsonData), preview)
+		return bytes.NewBuffer(jsonData), nil
 	}
 	if !config.EnforceIncludeUsage &&
 		meta.APIType == apitype.OpenAI &&
@@ -146,7 +141,7 @@ func getRequestBody(c *gin.Context, meta *meta.Meta, textRequest *model.GeneralO
 
 	// get request body
 	var requestBody io.Reader
-	convertedRequest, err := adaptor.ConvertRequest(c, meta.Mode, textRequest)
+	convertedRequest, err := adaptor.ConvertRequest(c, upstreamMode, textRequest)
 	if err != nil {
 		logger.Debugf(c.Request.Context(), "converted request failed: %s\n", err.Error())
 		return nil, err

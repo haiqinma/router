@@ -22,6 +22,7 @@ type Meta struct {
 	Group               string
 	ModelMapping        map[string]string
 	ChannelModelConfigs []model.ChannelModel
+	ChannelAbilities    []model.ChannelAbility
 	// BaseURL is the proxy url set in the channel config
 	BaseURL  string
 	APIKey   string
@@ -31,30 +32,34 @@ type Meta struct {
 	// OriginModelName is the model name from the raw user request
 	OriginModelName string
 	// ActualModelName is the model name after mapping
-	ActualModelName    string
-	RequestURLPath     string
-	PromptTokens       int // only for DoResponse
-	ForcedSystemPrompt string
-	StartTime          time.Time
+	ActualModelName     string
+	RequestURLPath      string
+	UpstreamMode        int
+	UpstreamRequestPath string
+	PromptTokens        int // only for DoResponse
+	ForcedSystemPrompt  string
+	StartTime           time.Time
 }
 
 func GetByContext(c *gin.Context) *Meta {
 	normalizedPath := relaymode.NormalizePath(c.Request.URL.String())
 	meta := Meta{
-		Mode:               relaymode.GetByPath(c.Request.URL.Path),
-		ChannelProtocol:    c.GetInt(ctxkey.Channel),
-		ChannelId:          c.GetString(ctxkey.ChannelId),
-		TokenId:            c.GetString(ctxkey.TokenId),
-		TokenName:          c.GetString(ctxkey.TokenName),
-		UserId:             c.GetString(ctxkey.Id),
-		Group:              c.GetString(ctxkey.Group),
-		ModelMapping:       c.GetStringMapString(ctxkey.ModelMapping),
-		OriginModelName:    c.GetString(ctxkey.RequestModel),
-		BaseURL:            c.GetString(ctxkey.BaseURL),
-		APIKey:             strings.TrimPrefix(c.Request.Header.Get("Authorization"), "Bearer "),
-		RequestURLPath:     normalizedPath,
-		ForcedSystemPrompt: c.GetString(ctxkey.SystemPrompt),
-		StartTime:          time.Now(),
+		Mode:                relaymode.GetByPath(c.Request.URL.Path),
+		ChannelProtocol:     c.GetInt(ctxkey.Channel),
+		ChannelId:           c.GetString(ctxkey.ChannelId),
+		TokenId:             c.GetString(ctxkey.TokenId),
+		TokenName:           c.GetString(ctxkey.TokenName),
+		UserId:              c.GetString(ctxkey.Id),
+		Group:               c.GetString(ctxkey.Group),
+		ModelMapping:        c.GetStringMapString(ctxkey.ModelMapping),
+		OriginModelName:     c.GetString(ctxkey.RequestModel),
+		BaseURL:             c.GetString(ctxkey.BaseURL),
+		APIKey:              strings.TrimPrefix(c.Request.Header.Get("Authorization"), "Bearer "),
+		RequestURLPath:      normalizedPath,
+		UpstreamMode:        relaymode.GetByPath(c.Request.URL.Path),
+		UpstreamRequestPath: normalizedPath,
+		ForcedSystemPrompt:  c.GetString(ctxkey.SystemPrompt),
+		StartTime:           time.Now(),
 	}
 	cfg, ok := c.Get(ctxkey.Config)
 	if ok {
@@ -63,6 +68,11 @@ func GetByContext(c *gin.Context) *Meta {
 	if channelModelConfigs, ok := c.Get(ctxkey.ChannelModelConfigs); ok {
 		if rows, castOK := channelModelConfigs.([]model.ChannelModel); castOK {
 			meta.ChannelModelConfigs = rows
+		}
+	}
+	if channelAbilities, ok := c.Get(ctxkey.ChannelAbilities); ok {
+		if rows, castOK := channelAbilities.([]model.ChannelAbility); castOK {
+			meta.ChannelAbilities = rows
 		}
 	}
 	if meta.BaseURL == "" {
