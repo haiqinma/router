@@ -58,11 +58,12 @@ const UsersTable = () => {
   const [orderBy, setOrderBy] = useState('');
   const [roleUpdatingUsername, setRoleUpdatingUsername] = useState('');
 
-  const loadUsers = useCallback(async (startIdx) => {
-    const res = await API.get(`/api/v1/admin/user/?p=${startIdx}&order=${orderBy}`);
+  const loadUsers = useCallback(async (page) => {
+    const normalizedPage = Number(page) > 0 ? Number(page) : 1;
+    const res = await API.get(`/api/v1/admin/user/?page=${normalizedPage}&order=${orderBy}`);
     const { success, message, data } = res.data;
     if (success) {
-      if (startIdx === 0) {
+      if (normalizedPage === 1) {
         setUsers(data);
       } else {
         setUsers((prev) => [...prev, ...data]);
@@ -115,14 +116,14 @@ const UsersTable = () => {
     (async () => {
       if (activePage === Math.ceil(users.length / ITEMS_PER_PAGE) + 1) {
         // In this case we have to load more data and then append them.
-        await loadUsers(activePage - 1, orderBy);
+        await loadUsers(activePage);
       }
       setActivePage(activePage);
     })();
   };
 
   useEffect(() => {
-    loadUsers(0)
+    loadUsers(1)
       .then()
       .catch((reason) => {
         showError(reason);
@@ -202,7 +203,7 @@ const UsersTable = () => {
   const searchUsers = async () => {
     if (searchKeyword === '') {
       // if keyword is blank, load files instead.
-      await loadUsers(0);
+      await loadUsers(1);
       setActivePage(1);
       setOrderBy('');
       return;

@@ -23,7 +23,7 @@ func normalizeStatLogType(raw int) int {
 // @Tags admin
 // @Security BearerAuth
 // @Produce json
-// @Param p query int false "Page index"
+// @Param page query int false "Page (1-based)"
 // @Param type query int false "Log type"
 // @Param start_timestamp query int false "Start timestamp (unix)"
 // @Param end_timestamp query int false "End timestamp (unix)"
@@ -35,9 +35,9 @@ func normalizeStatLogType(raw int) int {
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/admin/log [get]
 func GetAllLogs(c *gin.Context) {
-	p, _ := strconv.Atoi(c.Query("p"))
-	if p < 0 {
-		p = 0
+	page, _ := strconv.Atoi(c.Query("page"))
+	if page < 1 {
+		page = 1
 	}
 	logType, _ := strconv.Atoi(c.Query("type"))
 	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
@@ -46,7 +46,7 @@ func GetAllLogs(c *gin.Context) {
 	tokenName := c.Query("token_name")
 	modelName := c.Query("model_name")
 	channel := c.Query("channel")
-	logs, err := logsvc.GetAll(logType, startTimestamp, endTimestamp, modelName, username, tokenName, p*config.ItemsPerPage, config.ItemsPerPage, channel)
+	logs, err := logsvc.GetAll(logType, startTimestamp, endTimestamp, modelName, username, tokenName, (page-1)*config.ItemsPerPage, config.ItemsPerPage, channel)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -67,7 +67,7 @@ func GetAllLogs(c *gin.Context) {
 // @Tags public
 // @Security BearerAuth
 // @Produce json
-// @Param p query int false "Page index"
+// @Param page query int false "Page (1-based)"
 // @Param type query int false "Log type"
 // @Param start_timestamp query int false "Start timestamp (unix)"
 // @Param end_timestamp query int false "End timestamp (unix)"
@@ -77,9 +77,9 @@ func GetAllLogs(c *gin.Context) {
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/public/log/self [get]
 func GetUserLogs(c *gin.Context) {
-	p, _ := strconv.Atoi(c.Query("p"))
-	if p < 0 {
-		p = 0
+	page, _ := strconv.Atoi(c.Query("page"))
+	if page < 1 {
+		page = 1
 	}
 	userId := c.GetString(ctxkey.Id)
 	logType, _ := strconv.Atoi(c.Query("type"))
@@ -87,7 +87,7 @@ func GetUserLogs(c *gin.Context) {
 	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
 	tokenName := c.Query("token_name")
 	modelName := c.Query("model_name")
-	logs, err := logsvc.GetUser(userId, logType, startTimestamp, endTimestamp, modelName, tokenName, p*config.ItemsPerPage, config.ItemsPerPage)
+	logs, err := logsvc.GetUser(userId, logType, startTimestamp, endTimestamp, modelName, tokenName, (page-1)*config.ItemsPerPage, config.ItemsPerPage)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,

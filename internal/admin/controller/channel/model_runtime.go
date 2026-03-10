@@ -1019,9 +1019,9 @@ func persistChannelModelTests(channelID string, rows []model.ChannelModel, resul
 }
 
 func parseChannelModelPageParams(c *gin.Context) (page int, pageSize int, keyword string) {
-	page = 0
-	if raw := strings.TrimSpace(c.Query("p")); raw != "" {
-		if parsed, err := strconv.Atoi(raw); err == nil && parsed >= 0 {
+	page = 1
+	if raw := strings.TrimSpace(c.Query("page")); raw != "" {
+		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 {
 			page = parsed
 		}
 	}
@@ -1039,7 +1039,7 @@ func parseChannelModelPageParams(c *gin.Context) (page int, pageSize int, keywor
 }
 
 func buildChannelModelListData(channelID string, page int, pageSize int, keyword string) (channelModelListData, error) {
-	rows, total, err := model.ListChannelModelRowsPageWithDB(model.DB, channelID, page, pageSize, keyword)
+	rows, total, err := model.ListChannelModelRowsPageWithDB(model.DB, channelID, page-1, pageSize, keyword)
 	if err != nil {
 		return channelModelListData{}, err
 	}
@@ -1089,7 +1089,7 @@ func buildChannelTestListData(channelID string) (channelTestListData, error) {
 // @Security BearerAuth
 // @Produce json
 // @Param id path string true "Channel ID"
-// @Param p query int false "Page index"
+// @Param page query int false "Page (1-based)"
 // @Param page_size query int false "Page size"
 // @Param keyword query string false "Keyword"
 // @Success 200 {object} docs.StandardResponse

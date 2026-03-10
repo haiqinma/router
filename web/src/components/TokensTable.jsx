@@ -86,16 +86,17 @@ const TokensTable = () => {
   const [searching, setSearching] = useState(false);
   const [orderBy, setOrderBy] = useState('');
 
-  const loadTokens = useCallback(async (startIdx) => {
-    const res = await API.get(`/api/v1/public/token/?p=${startIdx}&order=${orderBy}`);
+  const loadTokens = useCallback(async (page) => {
+    const normalizedPage = Number(page) > 0 ? Number(page) : 1;
+    const res = await API.get(`/api/v1/public/token/?page=${normalizedPage}&order=${orderBy}`);
     const { success, message, data } = res.data;
     if (success) {
-      if (startIdx === 0) {
+      if (normalizedPage === 1) {
         setTokens(data);
       } else {
         setTokens((prev) => {
           let next = [...prev];
-          next.splice(startIdx * ITEMS_PER_PAGE, data.length, ...data);
+          next.splice((normalizedPage - 1) * ITEMS_PER_PAGE, data.length, ...data);
           return next;
         });
       }
@@ -109,7 +110,7 @@ const TokensTable = () => {
     (async () => {
       if (activePage === Math.ceil(tokens.length / ITEMS_PER_PAGE) + 1) {
         // In this case we have to load more data and then append them.
-        await loadTokens(activePage - 1, orderBy);
+        await loadTokens(activePage);
       }
       setActivePage(activePage);
     })();
@@ -117,7 +118,7 @@ const TokensTable = () => {
 
   const refresh = async () => {
     setLoading(true);
-    await loadTokens(activePage - 1);
+    await loadTokens(activePage);
   };
 
   const onCopy = async (type, key) => {
@@ -212,7 +213,7 @@ const TokensTable = () => {
   };
 
   useEffect(() => {
-    loadTokens(0)
+    loadTokens(1)
       .then()
       .catch((reason) => {
         showError(reason);
@@ -257,7 +258,7 @@ const TokensTable = () => {
   const searchTokens = async () => {
     if (searchKeyword === '') {
       // if keyword is blank, load files instead.
-      await loadTokens(0);
+      await loadTokens(1);
       setActivePage(1);
       setOrderBy('');
       return;

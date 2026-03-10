@@ -213,24 +213,25 @@ const LogsTable = () => {
   };
 
   const loadLogs = useCallback(
-    async (startIdx) => {
+    async (page) => {
+      const normalizedPage = Number(page) > 0 ? Number(page) : 1;
       let url = '';
       let localStartTimestamp = Date.parse(start_timestamp) / 1000;
       let localEndTimestamp = Date.parse(end_timestamp) / 1000;
       if (isAdminUser) {
-        url = `/api/v1/admin/log/?p=${startIdx}&type=${logType}&username=${username}&token_name=${token_name}&model_name=${model_name}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}&channel=${channel}`;
+        url = `/api/v1/admin/log/?page=${normalizedPage}&type=${logType}&username=${username}&token_name=${token_name}&model_name=${model_name}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}&channel=${channel}`;
       } else {
-        url = `/api/v1/public/log/self/?p=${startIdx}&type=${logType}&token_name=${token_name}&model_name=${model_name}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`;
+        url = `/api/v1/public/log/self/?page=${normalizedPage}&type=${logType}&token_name=${token_name}&model_name=${model_name}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`;
       }
       const res = await API.get(url);
       const { success, message, data } = res.data;
       if (success) {
-        if (startIdx === 0) {
+        if (normalizedPage === 1) {
           setLogs(data);
         } else {
           setLogs((prev) => {
             let next = [...prev];
-            next.splice(startIdx * ITEMS_PER_PAGE, data.length, ...data);
+            next.splice((normalizedPage - 1) * ITEMS_PER_PAGE, data.length, ...data);
             return next;
           });
         }
@@ -255,7 +256,7 @@ const LogsTable = () => {
     (async () => {
       if (activePage === Math.ceil(logs.length / ITEMS_PER_PAGE) + 1) {
         // In this case we have to load more data and then append them.
-        await loadLogs(activePage - 1);
+        await loadLogs(activePage);
       }
       setActivePage(activePage);
     })();
@@ -264,7 +265,7 @@ const LogsTable = () => {
   const refresh = useCallback(async () => {
     setLoading(true);
     setActivePage(1);
-    await loadLogs(0);
+    await loadLogs(1);
   }, [loadLogs]);
 
   useEffect(() => {

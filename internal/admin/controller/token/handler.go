@@ -20,20 +20,20 @@ import (
 // @Tags public
 // @Security BearerAuth
 // @Produce json
-// @Param p query int false "Page index"
+// @Param page query int false "Page (1-based)"
 // @Param order query string false "Order"
 // @Success 200 {object} docs.TokenListResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/public/token [get]
 func GetAllTokens(c *gin.Context) {
 	userId := c.GetString(ctxkey.Id)
-	p, _ := strconv.Atoi(c.Query("p"))
-	if p < 0 {
-		p = 0
+	page, _ := strconv.Atoi(c.Query("page"))
+	if page < 1 {
+		page = 1
 	}
 
 	order := c.Query("order")
-	tokens, err := tokensvc.GetAll(userId, p*config.ItemsPerPage, config.ItemsPerPage, order)
+	tokens, err := tokensvc.GetAll(userId, (page-1)*config.ItemsPerPage, config.ItemsPerPage, order)
 
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{

@@ -36,14 +36,14 @@ async function fetchSelectedChannelModels(channelId) {
     return [];
   }
   const items = [];
-  let page = 0;
-  while (page < 50) {
-    const res = await API.get(`/api/v1/admin/channel/${normalizedChannelId}/models`, {
-      params: {
-        p: page,
-        page_size: 100,
-      },
-    });
+    let page = 1;
+    while (page < 50) {
+      const res = await API.get(`/api/v1/admin/channel/${normalizedChannelId}/models`, {
+        params: {
+          page,
+          page_size: 100,
+        },
+      });
     const { success, data } = res.data || {};
     if (!success) {
       return [];
@@ -58,8 +58,8 @@ async function fetchSelectedChannelModels(channelId) {
     ) {
       break;
     }
-    page += 1;
-  }
+      page += 1;
+    }
   return items
     .filter((item) => item && item.selected === true && item.inactive !== true)
     .map((item) => (item.model || '').toString().trim())

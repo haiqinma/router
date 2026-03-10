@@ -17,16 +17,16 @@ import (
 // @Tags admin
 // @Security BearerAuth
 // @Produce json
-// @Param p query int false "Page index"
+// @Param page query int false "Page (1-based)"
 // @Success 200 {object} docs.StandardResponse
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/admin/redemption [get]
 func GetAllRedemptions(c *gin.Context) {
-	p, _ := strconv.Atoi(c.Query("p"))
-	if p < 0 {
-		p = 0
+	page, _ := strconv.Atoi(c.Query("page"))
+	if page < 1 {
+		page = 1
 	}
-	redemptions, err := model.GetAllRedemptions(p*config.ItemsPerPage, config.ItemsPerPage)
+	redemptions, err := model.GetAllRedemptions((page-1)*config.ItemsPerPage, config.ItemsPerPage)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,

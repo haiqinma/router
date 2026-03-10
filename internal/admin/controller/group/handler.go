@@ -43,11 +43,6 @@ func parseGroupListPageParams(c *gin.Context) (page int, pageSize int, keyword s
 			page = parsed
 		}
 	}
-	if raw := strings.TrimSpace(c.Query("p")); raw != "" {
-		if parsed, err := strconv.Atoi(raw); err == nil && parsed >= 0 {
-			page = parsed + 1
-		}
-	}
 	pageSize = config.ItemsPerPage
 	if raw := strings.TrimSpace(c.Query("page_size")); raw != "" {
 		if parsed, err := strconv.Atoi(raw); err == nil && parsed > 0 {

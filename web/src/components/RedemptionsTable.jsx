@@ -63,11 +63,12 @@ const RedemptionsTable = () => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searching, setSearching] = useState(false);
 
-  const loadRedemptions = useCallback(async (startIdx) => {
-    const res = await API.get(`/api/v1/admin/redemption/?p=${startIdx}`);
+  const loadRedemptions = useCallback(async (page) => {
+    const normalizedPage = Number(page) > 0 ? Number(page) : 1;
+    const res = await API.get(`/api/v1/admin/redemption/?page=${normalizedPage}`);
     const { success, message, data } = res.data;
     if (success) {
-      if (startIdx === 0) {
+      if (normalizedPage === 1) {
         setRedemptions(data);
       } else {
         setRedemptions((prev) => [...prev, ...data]);
@@ -82,14 +83,14 @@ const RedemptionsTable = () => {
     (async () => {
       if (activePage === Math.ceil(redemptions.length / ITEMS_PER_PAGE) + 1) {
         // In this case we have to load more data and then append them.
-        await loadRedemptions(activePage - 1);
+        await loadRedemptions(activePage);
       }
       setActivePage(activePage);
     })();
   };
 
   useEffect(() => {
-    loadRedemptions(0)
+    loadRedemptions(1)
       .then()
       .catch((reason) => {
         showError(reason);
@@ -134,7 +135,7 @@ const RedemptionsTable = () => {
   const searchRedemptions = async () => {
     if (searchKeyword === '') {
       // if keyword is blank, load files instead.
-      await loadRedemptions(0);
+      await loadRedemptions(1);
       setActivePage(1);
       return;
     }
@@ -178,7 +179,7 @@ const RedemptionsTable = () => {
 
   const refresh = async () => {
     setLoading(true);
-    await loadRedemptions(0);
+    await loadRedemptions(1);
     setActivePage(1);
   };
 
