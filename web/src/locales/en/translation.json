@@ -116,6 +116,7 @@
         "reload": "Reload Saved Catalog",
         "load_defaults": "Load Built-in Default Models",
         "add_provider": "Add Provider",
+        "refresh": "Refresh",
         "save": "Save Catalog"
       },
       "table": {
@@ -706,6 +707,7 @@
     },
     "buttons": {
       "add": "Add User",
+      "refresh": "Refresh",
       "delete": "Delete",
       "delete_user": "Delete User",
       "enable": "Enable",

@@ -116,6 +116,7 @@
         "reload": "加载已保存配置",
         "load_defaults": "载入系统默认模型列表",
         "add_provider": "新增供应商",
+        "refresh": "刷新",
         "save": "保存配置"
       },
       "table": {
@@ -706,6 +707,7 @@
     },
     "buttons": {
       "add": "新增用户",
+      "refresh": "刷新",
       "delete": "删除",
       "delete_user": "删除用户",
       "enable": "启用",

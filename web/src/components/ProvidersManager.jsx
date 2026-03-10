@@ -861,6 +861,15 @@ const ProvidersManager = () => {
           >
             {t('channel.providers.buttons.add_provider')}
           </Button>
+          <Button
+            type='button'
+            className='router-page-button'
+            disabled={saving || loading}
+            loading={loading}
+            onClick={reloadCurrentPage}
+          >
+            {t('channel.providers.buttons.refresh')}
+          </Button>
         </div>
         <Form className='router-search-form-md'>
           <Form.Input

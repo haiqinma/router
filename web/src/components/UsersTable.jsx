@@ -75,6 +75,11 @@ const UsersTable = () => {
     setLoading(false);
   }, [orderBy]);
 
+  const refresh = async () => {
+    setLoading(true);
+    await loadUsers(activePage);
+  };
+
   const loadGroups = useCallback(async () => {
     try {
       const rows = [];
@@ -322,6 +327,14 @@ const UsersTable = () => {
         <div className='router-toolbar-start'>
           <Button className='router-page-button' as={Link} to='/user/add' loading={loading}>
             {t('user.buttons.add')}
+          </Button>
+          <Button
+            className='router-page-button'
+            loading={loading}
+            disabled={loading}
+            onClick={refresh}
+          >
+            {t('user.buttons.refresh')}
           </Button>
         </div>
         <div className='router-toolbar-end'>
