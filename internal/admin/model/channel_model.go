@@ -18,7 +18,7 @@ type ChannelModel struct {
 	UpstreamModel string   `json:"upstream_model" gorm:"type:varchar(255);default:'';index"`
 	Type          string   `json:"type" gorm:"type:varchar(32);default:'text'"`
 	Endpoint      string   `json:"endpoint" gorm:"type:varchar(255);default:''"`
-	Selected      bool     `json:"selected" gorm:"default:true;index"`
+	Selected      bool     `json:"selected" gorm:"default:false;index"`
 	TestStatus    string   `json:"test_status,omitempty" gorm:"type:varchar(32);default:'';index"`
 	TestRound     int64    `json:"test_round,omitempty" gorm:"bigint;default:0"`
 	TestedAt      int64    `json:"tested_at,omitempty" gorm:"bigint;index"`
@@ -471,7 +471,7 @@ func replaceChannelModelRowsWithDB(db *gorm.DB, channelID string, rows []Channel
 		if len(dbRows) == 0 {
 			return nil
 		}
-		return tx.Create(&dbRows).Error
+		return tx.Select("*").Create(&dbRows).Error
 	})
 }
 
