@@ -306,18 +306,28 @@ const TokensTable = () => {
 
   return (
     <>
-      <Form onSubmit={searchTokens}>
-        <Form.Input
-          className='router-section-input'
-          icon='search'
-          fluid
-          iconPosition='left'
-          placeholder={t('token.search')}
-          value={searchKeyword}
-          loading={searching}
-          onChange={handleKeywordChange}
-        />
-      </Form>
+      <div className='router-toolbar'>
+        <div className='router-toolbar-start'>
+          <Button className='router-page-button' as={Link} to='/token/add' loading={loading}>
+            {t('token.buttons.add')}
+          </Button>
+          <Button className='router-page-button' onClick={refresh} loading={loading}>
+            {t('token.buttons.refresh')}
+          </Button>
+        </div>
+        <Form onSubmit={searchTokens} style={{ minWidth: '320px', marginLeft: 'auto' }}>
+          <Form.Input
+            className='router-section-input'
+            icon='search'
+            fluid
+            iconPosition='left'
+            placeholder={t('token.search')}
+            value={searchKeyword}
+            loading={searching}
+            onChange={handleKeywordChange}
+          />
+        </Form>
+      </div>
 
       <Table basic={'very'} compact className='router-list-table'>
         <Table.Header>
@@ -502,12 +512,6 @@ const TokensTable = () => {
             <Table.HeaderCell colSpan='7'>
               <div className='router-toolbar'>
                 <div className='router-toolbar-start'>
-                  <Button className='router-page-button' as={Link} to='/token/add' loading={loading}>
-                    {t('token.buttons.add')}
-                  </Button>
-                  <Button className='router-page-button' onClick={refresh} loading={loading}>
-                    {t('token.buttons.refresh')}
-                  </Button>
                   <Dropdown
                     className='router-section-dropdown'
                     placeholder={t('token.sort.placeholder')}

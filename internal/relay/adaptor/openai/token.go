@@ -55,6 +55,9 @@ func getTokenEncoder(model string) *tiktoken.Tiktoken {
 		return tokenEncoder
 	}
 	switch {
+	case strings.HasPrefix(model, "gpt-5"):
+		tokenEncoderMap[model] = tokenEncoderMap["gpt-4o"]
+		return tokenEncoderMap["gpt-4o"]
 	case strings.HasPrefix(model, "gpt-3.5"):
 		tokenEncoderMap[model] = tokenEncoderMap["gpt-3.5-turbo"]
 		return tokenEncoderMap["gpt-3.5-turbo"]
