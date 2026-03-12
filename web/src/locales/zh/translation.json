@@ -118,7 +118,7 @@
     },
     "providers": {
       "title": "供应商管理",
-      "search": "搜索供应商、名称、来源、模型...",
+      "search": "搜索供应商、名称、模型...",
       "fetch": {
         "provider": "供应商",
         "base_url": "Base URL",

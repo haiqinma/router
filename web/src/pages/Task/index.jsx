@@ -551,24 +551,26 @@ const Task = () => {
                 <Table.HeaderCell
                   colSpan={isAdminPage && isUserScope ? '9' : '8'}
                 >
-                  <div className='router-toolbar'>
+                  <div className='router-toolbar router-task-footer-toolbar'>
                     <div className='router-toolbar-start'>
                       <span className='router-toolbar-meta'>
                         {t('task.summary', { total })}
                       </span>
                     </div>
-                    <Pagination
-                      className='router-page-pagination'
-                      activePage={page}
-                      totalPages={totalPages}
-                      siblingRange={1}
-                      boundaryRange={0}
-                      onPageChange={(e, { activePage }) => {
-                        const nextPage = Number(activePage || 1);
-                        setPage(nextPage);
-                        loadTasks(nextPage).then();
-                      }}
-                    />
+                    <div className='router-toolbar-end'>
+                      <Pagination
+                        className='router-page-pagination'
+                        activePage={page}
+                        totalPages={totalPages}
+                        siblingRange={1}
+                        boundaryRange={0}
+                        onPageChange={(e, { activePage }) => {
+                          const nextPage = Number(activePage || 1);
+                          setPage(nextPage);
+                          loadTasks(nextPage).then();
+                        }}
+                      />
+                    </div>
                   </div>
                 </Table.HeaderCell>
               </Table.Row>

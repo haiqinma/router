@@ -474,14 +474,22 @@ const collectProviderCapabilities = (row) => {
   return PROVIDER_CAPABILITY_ORDER.filter((type) => capabilitySet.has(type));
 };
 
-const countComplexPricingModels = (row) => {
-  const details = detailsFromCatalogItem(row);
-  return details.filter(
-    (detail) =>
-      Array.isArray(detail?.price_components) &&
-      detail.price_components.length > 0,
-  ).length;
+const formatProviderPriceCellValue = (value) => {
+  const normalized = Number(value || 0);
+  return Number.isFinite(normalized) && normalized > 0 ? normalized : '-';
 };
+
+const hasComplexInputPricing = (detail) =>
+  Array.isArray(detail?.price_components) &&
+  detail.price_components.some(
+    (component) => Number(component?.input_price || 0) > 0,
+  );
+
+const hasComplexOutputPricing = (detail) =>
+  Array.isArray(detail?.price_components) &&
+  detail.price_components.some(
+    (component) => Number(component?.output_price || 0) > 0,
+  );
 
 const ProvidersManager = () => {
   const { t } = useTranslation();
@@ -1726,9 +1734,6 @@ const ProvidersManager = () => {
               <Table.HeaderCell>
                 {t('channel.providers.model_detail_table.source')}
               </Table.HeaderCell>
-              <Table.HeaderCell width={2}>
-                {t('channel.providers.model_detail_table.price_components')}
-              </Table.HeaderCell>
             </Table.Row>
           </Table.Header>
           <Table.Body>
@@ -1736,55 +1741,71 @@ const ProvidersManager = () => {
               <Table.Row>
                 <Table.Cell
                   className='router-empty-cell'
-                  colSpan={9}
+                  colSpan={8}
                   textAlign='center'
                 >
                   {t('channel.providers.model_detail_table.empty')}
                 </Table.Cell>
               </Table.Row>
             ) : (
-              pageRows.map((detail, index) => (
-                <Table.Row key={`${detail.model || 'model'}-${index}`}>
-                  <Table.Cell className='router-cell-min-260'>
-                    {detail.model || '-'}
-                  </Table.Cell>
-                  <Table.Cell className='router-cell-min-120'>
-                    {detail.type || 'text'}
-                  </Table.Cell>
-                  <Table.Cell>
-                    {(detail.capabilities || []).length > 0
-                      ? detail.capabilities.map((type) => (
-                          <Label
-                            key={`${detail.model || 'model'}-${type}`}
-                            basic
-                            className='router-tag'
-                          >
-                            {t(`channel.model_types.${type}`)}
-                          </Label>
-                        ))
-                      : '-'}
-                  </Table.Cell>
-                  <Table.Cell>{detail.input_price || 0}</Table.Cell>
-                  <Table.Cell>{detail.output_price || 0}</Table.Cell>
-                  <Table.Cell>{detail.price_unit || '-'}</Table.Cell>
-                  <Table.Cell>{detail.currency || 'USD'}</Table.Cell>
-                  <Table.Cell>{detail.source || 'manual'}</Table.Cell>
-                  <Table.Cell>
-                    {(detail.price_components || []).length > 0 ? (
-                      <Button
-                        type='button'
-                        basic
-                        className='router-inline-button'
-                        onClick={() => openPricingDetail(detail)}
-                      >
-                        {t('channel.providers.model_detail_table.detail')}
-                      </Button>
-                    ) : (
-                      '-'
-                    )}
-                  </Table.Cell>
-                </Table.Row>
-              ))
+              pageRows.map((detail, index) => {
+                const showInputDetail = hasComplexInputPricing(detail);
+                const showOutputDetail = hasComplexOutputPricing(detail);
+                return (
+                  <Table.Row key={`${detail.model || 'model'}-${index}`}>
+                    <Table.Cell className='router-cell-min-260'>
+                      {detail.model || '-'}
+                    </Table.Cell>
+                    <Table.Cell className='router-cell-min-120'>
+                      {detail.type || 'text'}
+                    </Table.Cell>
+                    <Table.Cell>
+                      {(detail.capabilities || []).length > 0
+                        ? detail.capabilities.map((type) => (
+                            <Label
+                              key={`${detail.model || 'model'}-${type}`}
+                              basic
+                              className='router-tag'
+                            >
+                              {t(`channel.model_types.${type}`)}
+                            </Label>
+                          ))
+                        : '-'}
+                    </Table.Cell>
+                    <Table.Cell>
+                      {showInputDetail ? (
+                        <Button
+                          type='button'
+                          basic
+                          className='router-inline-button'
+                          onClick={() => openPricingDetail(detail)}
+                        >
+                          {t('channel.providers.model_detail_table.detail')}
+                        </Button>
+                      ) : (
+                        formatProviderPriceCellValue(detail.input_price)
+                      )}
+                    </Table.Cell>
+                    <Table.Cell>
+                      {showOutputDetail ? (
+                        <Button
+                          type='button'
+                          basic
+                          className='router-inline-button'
+                          onClick={() => openPricingDetail(detail)}
+                        >
+                          {t('channel.providers.model_detail_table.detail')}
+                        </Button>
+                      ) : (
+                        formatProviderPriceCellValue(detail.output_price)
+                      )}
+                    </Table.Cell>
+                    <Table.Cell>{detail.price_unit || '-'}</Table.Cell>
+                    <Table.Cell>{detail.currency || 'USD'}</Table.Cell>
+                    <Table.Cell>{detail.source || 'manual'}</Table.Cell>
+                  </Table.Row>
+                );
+              })
             )}
           </Table.Body>
         </Table>
@@ -1859,9 +1880,6 @@ const ProvidersManager = () => {
             <Table.HeaderCell width={3} textAlign='left'>
               {t('channel.providers.table.capabilities')}
             </Table.HeaderCell>
-            <Table.HeaderCell width={2} textAlign='left'>
-              {t('channel.providers.table.source')}
-            </Table.HeaderCell>
             <Table.HeaderCell width={3} textAlign='left'>
               {t('channel.providers.table.updated_at')}
             </Table.HeaderCell>
@@ -1875,7 +1893,7 @@ const ProvidersManager = () => {
             <Table.Row>
               <Table.Cell
                 className='router-empty-cell'
-                colSpan={6}
+                colSpan={5}
                 textAlign='center'
               >
                 {loading
@@ -1912,16 +1930,6 @@ const ProvidersManager = () => {
                           </Label>
                         ))
                       : '-'}
-                  </Table.Cell>
-                  <Table.Cell textAlign='left'>
-                    <Label className='router-tag'>{row.source || '-'}</Label>
-                    {countComplexPricingModels(row) > 0 ? (
-                      <Label color='blue' basic className='router-tag'>
-                        {t('channel.providers.table.complex_pricing_count', {
-                          count: countComplexPricingModels(row),
-                        })}
-                      </Label>
-                    ) : null}
                   </Table.Cell>
                   <Table.Cell textAlign='left'>
                     {row.updated_at ? timestamp2string(row.updated_at) : '-'}
@@ -2270,8 +2278,12 @@ const ProvidersManager = () => {
           </Table.Header>
           <Table.Body>
             <Table.Row>
-              <Table.Cell>{pricingDetailModel?.input_price || 0}</Table.Cell>
-              <Table.Cell>{pricingDetailModel?.output_price || 0}</Table.Cell>
+              <Table.Cell>
+                {formatProviderPriceCellValue(pricingDetailModel?.input_price)}
+              </Table.Cell>
+              <Table.Cell>
+                {formatProviderPriceCellValue(pricingDetailModel?.output_price)}
+              </Table.Cell>
               <Table.Cell>{pricingDetailModel?.price_unit || '-'}</Table.Cell>
               <Table.Cell>{pricingDetailModel?.currency || 'USD'}</Table.Cell>
               <Table.Cell>{pricingDetailModel?.source || 'manual'}</Table.Cell>
@@ -2326,8 +2338,12 @@ const ProvidersManager = () => {
                   >
                     <Table.Cell>{component.component || '-'}</Table.Cell>
                     <Table.Cell>{component.condition || '-'}</Table.Cell>
-                    <Table.Cell>{component.input_price || 0}</Table.Cell>
-                    <Table.Cell>{component.output_price || 0}</Table.Cell>
+                    <Table.Cell>
+                      {formatProviderPriceCellValue(component.input_price)}
+                    </Table.Cell>
+                    <Table.Cell>
+                      {formatProviderPriceCellValue(component.output_price)}
+                    </Table.Cell>
                     <Table.Cell>{component.price_unit || '-'}</Table.Cell>
                     <Table.Cell>{component.currency || 'USD'}</Table.Cell>
                     <Table.Cell>{component.source || 'manual'}</Table.Cell>

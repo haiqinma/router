@@ -965,6 +965,24 @@ code {
     white-space: nowrap;
 }
 
+.router-task-footer-toolbar {
+    align-items: center;
+    flex-wrap: nowrap;
+}
+
+.router-task-footer-toolbar > .router-toolbar-start {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.router-task-footer-toolbar > .router-toolbar-end {
+    flex: 0 0 auto;
+}
+
+.router-task-footer-toolbar .router-page-pagination {
+    margin: 0 !important;
+}
+
 .router-log-query-box {
     width: 100%;
     min-height: 38px;
@@ -1365,6 +1383,16 @@ code {
 }
 
 @media only screen and (max-width: 600px) {
+    .router-task-footer-toolbar {
+        align-items: stretch;
+        flex-wrap: wrap;
+    }
+
+    .router-task-footer-toolbar > .router-toolbar-end {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
     .hide-on-mobile {
         display: none !important;
     }

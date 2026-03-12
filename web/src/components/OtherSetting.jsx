@@ -4,22 +4,16 @@ import { Divider, Form, Grid, Header, Message } from 'semantic-ui-react';
 import { API, showError } from '../helpers';
 
 const optionKeys = [
-  'Footer',
   'Notice',
   'About',
-  'SystemName',
-  'Logo',
   'HomePageContent'
 ];
 
 const OtherSetting = () => {
   const { t } = useTranslation();
   let [inputs, setInputs] = useState({
-    Footer: '',
     Notice: '',
     About: '',
-    SystemName: '',
-    Logo: '',
     HomePageContent: '',
   });
   let [loading, setLoading] = useState(false);
@@ -63,20 +57,12 @@ const OtherSetting = () => {
     setInputs((inputs) => ({ ...inputs, [name]: value }));
   };
 
-  const submitNotice = async () => {
-    await updateOption('Notice', inputs.Notice);
-  };
-
-  const submitSystemName = async () => {
-    await updateOption('SystemName', inputs.SystemName);
-  };
-
-  const submitLogo = async () => {
-    await updateOption('Logo', inputs.Logo);
-  };
-
   const submitAbout = async () => {
     await updateOption('About', inputs.About);
+  };
+
+  const submitNotice = async () => {
+    await updateOption('Notice', inputs.Notice);
   };
 
   const submitOption = async (key) => {
@@ -87,50 +73,25 @@ const OtherSetting = () => {
     <Grid columns={1}>
       <Grid.Column>
         <Form loading={loading}>
-          <Header as='h3' className='router-section-title'>{t('setting.other.notice.title')}</Header>
+          <Header as='h3' className='router-section-title'>
+            {t('setting.system.notice', '站点公告')}
+          </Header>
           <Form.Group widths='equal'>
             <Form.TextArea
               className='router-section-textarea router-code-textarea router-code-textarea-sm'
-              label={t('setting.other.notice.content')}
-              placeholder={t('setting.other.notice.content_placeholder')}
-              value={inputs.Notice}
               name='Notice'
+              value={inputs.Notice}
               onChange={handleInputChange}
+              placeholder={t('setting.system.notice_placeholder', '支持 Markdown')}
             />
           </Form.Group>
           <Form.Button className='router-section-button' onClick={submitNotice}>
-            {t('setting.other.notice.buttons.save')}
+            {t('setting.system.buttons.save')}
           </Form.Button>
 
-          <Divider />
-          <Header as='h3' className='router-section-title'>{t('setting.other.system.title')}</Header>
-          <Form.Group widths='equal'>
-            <Form.Input
-              className='router-section-input'
-              label={t('setting.other.system.name')}
-              placeholder={t('setting.other.system.name_placeholder')}
-              value={inputs.SystemName}
-              name='SystemName'
-              onChange={handleInputChange}
-            />
-          </Form.Group>
-          <Form.Button className='router-section-button' onClick={submitSystemName}>
-            {t('setting.other.system.buttons.save_name')}
-          </Form.Button>
-          <Form.Group widths='equal'>
-            <Form.Input
-              className='router-section-input'
-              label={t('setting.other.system.logo')}
-              placeholder={t('setting.other.system.logo_placeholder')}
-              value={inputs.Logo}
-              name='Logo'
-              type='url'
-              onChange={handleInputChange}
-            />
-          </Form.Group>
-          <Form.Button className='router-section-button' onClick={submitLogo}>
-            {t('setting.other.system.buttons.save_logo')}
-          </Form.Button>
+          <Message className='router-section-message'>
+            {t('setting.other.copyright.notice')}
+          </Message>
 
           <Divider />
           <Header as='h3' className='router-section-title'>{t('setting.other.content.title')}</Header>
@@ -159,20 +120,6 @@ const OtherSetting = () => {
           </Form.Group>
           <Form.Button className='router-section-button' onClick={submitAbout}>
             {t('setting.other.content.buttons.save_about')}
-          </Form.Button>
-          <Message className='router-section-message'>{t('setting.other.copyright.notice')}</Message>
-          <Form.Group widths='equal'>
-            <Form.Input
-              className='router-section-input'
-              label={t('setting.other.content.footer.title')}
-              placeholder={t('setting.other.content.footer.placeholder')}
-              value={inputs.Footer}
-              name='Footer'
-              onChange={handleInputChange}
-            />
-          </Form.Group>
-          <Form.Button className='router-section-button' onClick={() => submitOption('Footer')}>
-            {t('setting.other.content.buttons.save_footer')}
           </Form.Button>
         </Form>
       </Grid.Column>

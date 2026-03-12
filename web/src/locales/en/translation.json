@@ -118,7 +118,7 @@
     },
     "providers": {
       "title": "Provider Catalog",
-      "search": "Search provider, name, source, model...",
+      "search": "Search provider, name, model...",
       "fetch": {
         "provider": "Provider",
         "base_url": "Base URL",

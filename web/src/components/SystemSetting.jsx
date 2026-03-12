@@ -9,7 +9,6 @@ const SystemSetting = () => {
     PasswordLoginEnabled: 'true',
     PasswordRegisterEnabled: 'true',
     RegisterEnabled: 'true',
-    Notice: '',
     SMTPServer: '',
     SMTPPort: '',
     SMTPAccount: '',
@@ -81,13 +80,6 @@ const SystemSetting = () => {
     await updateOption('ServerAddress', removeTrailingSlash(inputs.ServerAddress));
     await updateOption('TopUpLink', inputs.TopUpLink);
     await updateOption('ChatLink', inputs.ChatLink);
-    setLoading(false);
-    showSuccess(t('setting.system.saved', '已保存'));
-  };
-
-  const submitNotice = async () => {
-    setLoading(true);
-    await updateOption('Notice', inputs.Notice);
     setLoading(false);
     showSuccess(t('setting.system.saved', '已保存'));
   };
@@ -226,19 +218,6 @@ const SystemSetting = () => {
           onChange={(_, data) => handleChange(_, { ...data, value: data.checked ? 'true' : 'false' })}
         />
         <Button className='router-section-button' onClick={submitAuth}>{t('setting.system.buttons.save')}</Button>
-      </Form>
-
-      <Divider />
-      <Header as='h3' className='router-section-title'>{t('setting.system.notice', '站点公告')}</Header>
-      <Form>
-        <Form.TextArea
-          className='router-section-textarea'
-          name='Notice'
-          value={inputs.Notice}
-          onChange={handleChange}
-          placeholder={t('setting.system.notice_placeholder', '支持 Markdown')}
-        />
-        <Button className='router-section-button' onClick={submitNotice}>{t('setting.system.buttons.save')}</Button>
       </Form>
     </Segment>
   );
