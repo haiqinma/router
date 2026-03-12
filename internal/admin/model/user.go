@@ -43,6 +43,7 @@ type User struct {
 	Group            string  `json:"group" gorm:"type:varchar(32);default:''"`
 	AffCode          string  `json:"aff_code" gorm:"type:varchar(32);column:aff_code;uniqueIndex"`
 	InviterId        string  `json:"inviter_id" gorm:"type:char(36);column:inviter_id;index"`
+	HasPassword      bool    `json:"has_password" gorm:"column:has_password;default:false"`
 	CanManageUsers   bool    `json:"can_manage_users" gorm:"-"`
 }
 

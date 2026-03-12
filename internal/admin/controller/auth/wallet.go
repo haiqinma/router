@@ -331,6 +331,7 @@ func autoCreateWalletUser(addr string, ctx context.Context) (*model.User, error)
 		Role:          model.RoleCommonUser,
 		Status:        model.UserStatusEnabled,
 		WalletAddress: &addr,
+		HasPassword:   false,
 	}
 	if err := user.Insert(ctx, ""); err != nil {
 		return nil, err
@@ -449,6 +450,7 @@ func WalletVerifyProto(c *gin.Context) {
 			"wallet_address":   user.WalletAddress,
 			"role":             model.ExposedRole(user),
 			"status":           user.Status,
+			"has_password":     user.HasPassword,
 			"can_manage_users": model.CanManageUsers(user),
 		},
 	}

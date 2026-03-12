@@ -154,6 +154,9 @@ func DeleteByID(id string) error {
 func Create(ctx context.Context, user *model.User, inviterId string) error {
 	var err error
 	if user.Password != "" {
+		if !user.HasPassword {
+			user.HasPassword = true
+		}
 		user.Password, err = common.Password2Hash(user.Password)
 		if err != nil {
 			return err
@@ -211,6 +214,7 @@ func Create(ctx context.Context, user *model.User, inviterId string) error {
 func Update(user *model.User, updatePassword bool) error {
 	var err error
 	if updatePassword {
+		user.HasPassword = true
 		user.Password, err = common.Password2Hash(user.Password)
 		if err != nil {
 			return err

@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+
 	"gorm.io/gorm"
 )
 
@@ -35,6 +36,11 @@ func runMainBaselineMigrationWithDB(tx *gorm.DB) error {
 		return err
 	}
 	if err := syncDefaultProviderCatalogWithDB(tx); err != nil {
+		return err
+	}
+	if err := tx.Exec(
+		"UPDATE users SET has_password = TRUE WHERE has_password = FALSE AND wallet_address IS NULL AND COALESCE(password, '') <> ''",
+	).Error; err != nil {
 		return err
 	}
 	return nil

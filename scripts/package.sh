@@ -4,12 +4,14 @@ set -euo pipefail
 root_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 project_name="${PROJECT_NAME:-$(basename "$root_dir")}"
 out_dir="$root_dir/output"
-bin_src="$root_dir/build/router"
-env_template="$root_dir/.env.template"
-starter_src="$root_dir/scripts/starter.sh"
 remote_name="${PACKAGE_REMOTE:-origin}"
 auto_build="${AUTO_BUILD:-true}"
 tag_arg="${1:-}"
+source_dir=""
+worktree_dir=""
+bin_src=""
+config_template=""
+starter_src=""
 
 usage() {
   echo "Usage: $(basename "$0") [v<major>.<minor>.<patch>]" >&2
@@ -34,8 +36,31 @@ increment_patch_tag() {
   echo "v${major}.${minor}.$((patch + 1))"
 }
 
+ensure_remote_exists() {
+  if ! git -C "$root_dir" remote get-url "$remote_name" >/dev/null 2>&1; then
+    echo "Remote not found: $remote_name" >&2
+    exit 1
+  fi
+}
+
+fetch_remote_refs() {
+  ensure_remote_exists
+  echo "Fetching latest refs from remote '$remote_name'..."
+  git -C "$root_dir" fetch "$remote_name" --prune --tags
+}
+
+prepare_source_dir() {
+  local ref="$1"
+  worktree_dir="$(mktemp -d "${TMPDIR:-/tmp}/${project_name}-package.XXXXXX")"
+  git -C "$root_dir" worktree add --detach "$worktree_dir" "$ref" >/dev/null
+  source_dir="$worktree_dir"
+  bin_src="$source_dir/build/router"
+  config_template="$source_dir/config.yaml.template"
+  starter_src="$source_dir/scripts/starter.sh"
+}
+
 verify_artifacts() {
-  local web_build_dir="$root_dir/web/dist"
+  local web_build_dir="$source_dir/web/dist"
   if [[ ! -x "$bin_src" ]]; then
     echo "Missing binary: $bin_src" >&2
     echo "Build first: mkdir -p build && go build -o build/router ./cmd/router" >&2
@@ -46,8 +71,8 @@ verify_artifacts() {
     echo "Build first: npm run build --prefix web" >&2
     exit 1
   fi
-  if [[ ! -f "$env_template" ]]; then
-    echo "Missing config template: $env_template" >&2
+  if [[ ! -f "$config_template" ]]; then
+    echo "Missing config template: $config_template" >&2
     exit 1
   fi
   if [[ ! -f "$starter_src" ]]; then
@@ -64,74 +89,68 @@ build_artifacts() {
     echo "Missing npm command in PATH" >&2
     exit 1
   fi
-  if [[ ! -x "$root_dir/web/node_modules/.bin/vite" ]]; then
+  if [[ ! -x "$source_dir/web/node_modules/.bin/vite" ]]; then
     echo "Missing frontend builder (vite), installing dependencies..."
-    (cd "$root_dir" && npm install --prefix web)
+    (cd "$source_dir" && npm install --prefix web)
   fi
-  if [[ ! -x "$root_dir/web/node_modules/.bin/vite" ]]; then
+  if [[ ! -x "$source_dir/web/node_modules/.bin/vite" ]]; then
     echo "vite not found after dependency installation" >&2
     exit 1
   fi
   echo "Building frontend static assets..."
-  (cd "$root_dir" && npm run build --prefix web)
-  if [[ ! -d "$root_dir/web/dist" ]]; then
-    echo "Missing frontend build for embed: $root_dir/web/dist" >&2
+  (cd "$source_dir" && npm run build --prefix web)
+  if [[ ! -d "$source_dir/web/dist" ]]; then
+    echo "Missing frontend build for embed: $source_dir/web/dist" >&2
     echo "Ensure frontend build outputs web/dist." >&2
     exit 1
   fi
   echo "Building backend binary..."
-  mkdir -p "$root_dir/build"
-  (cd "$root_dir" && go build -o build/router ./cmd/router)
+  mkdir -p "$source_dir/build"
+  (cd "$source_dir" && go build -o build/router ./cmd/router)
 }
 
-original_ref="$(git -C "$root_dir" symbolic-ref --quiet --short HEAD || true)"
-if [[ -z "$original_ref" ]]; then
-  original_ref="$(git -C "$root_dir" rev-parse --short=12 HEAD)"
-fi
-switched_ref=0
-
-restore_ref() {
-  if [[ "$switched_ref" -eq 1 ]]; then
-    git -C "$root_dir" checkout -q "$original_ref"
+cleanup() {
+  if [[ -n "$worktree_dir" && -d "$worktree_dir" ]]; then
+    git -C "$root_dir" worktree remove --force "$worktree_dir" >/dev/null 2>&1 || rm -rf "$worktree_dir"
   fi
 }
-trap restore_ref EXIT
+trap cleanup EXIT
 
 target_tag=""
+build_ref=""
+build_hash_full=""
 
 if [[ -n "$tag_arg" ]]; then
   if ! is_semver_tag "$tag_arg"; then
     usage
     exit 1
   fi
+  fetch_remote_refs
   if ! git -C "$root_dir" rev-parse -q --verify "refs/tags/$tag_arg" >/dev/null; then
     echo "Tag not found, skip package: $tag_arg"
     exit 0
   fi
   target_tag="$tag_arg"
-  current_head="$(git -C "$root_dir" rev-parse HEAD)"
-  tag_head="$(git -C "$root_dir" rev-list -n 1 "$target_tag")"
-  if [[ "$current_head" != "$tag_head" ]]; then
-    git -C "$root_dir" checkout -q "$target_tag"
-    switched_ref=1
-  fi
-
+  build_ref="$target_tag"
+  build_hash_full="$(git -C "$root_dir" rev-list -n 1 "$target_tag")"
+  prepare_source_dir "$build_ref"
   build_artifacts
 else
-  if ! git -C "$root_dir" rev-parse -q --verify refs/heads/main >/dev/null; then
-    echo "Missing local branch: main" >&2
+  fetch_remote_refs
+  remote_main_ref="refs/remotes/$remote_name/main"
+  if ! git -C "$root_dir" rev-parse -q --verify "$remote_main_ref" >/dev/null; then
+    echo "Missing remote branch: $remote_name/main" >&2
     exit 1
   fi
-
   max_tag="$(extract_max_tag)"
-  main_hash_full="$(git -C "$root_dir" rev-parse main)"
+  main_hash_full="$(git -C "$root_dir" rev-parse "$remote_main_ref")"
   max_tag_hash_full=""
   if [[ -n "$max_tag" ]]; then
     max_tag_hash_full="$(git -C "$root_dir" rev-list -n 1 "$max_tag")"
   fi
 
   if [[ -n "$max_tag_hash_full" && "$max_tag_hash_full" == "$main_hash_full" ]]; then
-    echo "Latest tag $max_tag already matches main HEAD, skip package."
+    echo "Latest tag $max_tag already matches $remote_name/main HEAD, skip package."
     exit 0
   fi
 
@@ -145,18 +164,9 @@ else
     echo "Tag already exists, refuse to overwrite: $target_tag" >&2
     exit 1
   fi
-
-  if ! git -C "$root_dir" remote get-url "$remote_name" >/dev/null 2>&1; then
-    echo "Remote not found: $remote_name" >&2
-    exit 1
-  fi
-
-  current_head="$(git -C "$root_dir" rev-parse HEAD)"
-  if [[ "$current_head" != "$main_hash_full" ]]; then
-    git -C "$root_dir" checkout -q "$main_hash_full"
-    switched_ref=1
-  fi
-
+  build_ref="$main_hash_full"
+  build_hash_full="$main_hash_full"
+  prepare_source_dir "$build_ref"
   build_artifacts
 
   git -C "$root_dir" tag "$target_tag" "$main_hash_full"
@@ -165,22 +175,19 @@ else
     echo "Failed to push tag to remote: $target_tag" >&2
     exit 1
   fi
-
-  current_ref="$(git -C "$root_dir" symbolic-ref --quiet --short HEAD || true)"
-  if [[ "$current_ref" != "$target_tag" ]]; then
-    git -C "$root_dir" checkout -q "$target_tag"
-    switched_ref=1
-  fi
 fi
 
-target_hash="$(git -C "$root_dir" rev-parse --short=7 HEAD)"
+if [[ -z "$build_hash_full" ]]; then
+  build_hash_full="$(git -C "$root_dir" rev-parse "$build_ref")"
+fi
+target_hash="$(git -C "$root_dir" rev-parse --short=7 "$build_hash_full")"
 pkg_name="${project_name}-${target_tag}-${target_hash}"
 stage_dir="$out_dir/$pkg_name"
 archive_path="$out_dir/${pkg_name}.tar.gz"
 
-web_build_dir="$root_dir/web/dist"
+web_build_dir="$source_dir/web/dist"
 if [[ ! -d "$web_build_dir" ]]; then
-  echo "Missing frontend build: $root_dir/web/dist" >&2
+  echo "Missing frontend build: $source_dir/web/dist" >&2
   echo "Build first: npm run build --prefix web" >&2
   exit 1
 fi
@@ -192,7 +199,7 @@ rm -rf "$stage_dir"
 mkdir -p "$stage_dir/build" "$stage_dir/scripts" "$stage_dir/web"
 
 cp "$bin_src" "$stage_dir/build/"
-cp "$env_template" "$stage_dir/"
+cp "$config_template" "$stage_dir/"
 cp "$starter_src" "$stage_dir/scripts/"
 cp -R "$web_build_dir" "$stage_dir/web/"
 

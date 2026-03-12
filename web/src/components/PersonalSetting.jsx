@@ -1,163 +1,138 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Divider, Form, Header, Message, Segment } from 'semantic-ui-react';
-import { Link, useNavigate } from 'react-router-dom';
-import { API, copy, showError, showSuccess } from '../helpers';
-import { UserContext } from '../context/User';
-import { WEB3_TOKEN_STORAGE_KEY } from '../helpers/web3';
 import {
-  getWalletContext,
-  signWalletMessage,
-  logoutWallet,
-} from '../services/web3Auth';
+  Button,
+  Form,
+  Header,
+  Input,
+  Modal,
+  Segment,
+} from 'semantic-ui-react';
+import { API, showError, showSuccess } from '../helpers';
+import { UserContext } from '../context/User';
+
+const defaultPasswordModal = {
+  open: false,
+  mode: 'set',
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+  submitting: false,
+};
+
+const normalizeUser = (user) => {
+  if (!user || typeof user !== 'object') return null;
+  return {
+    ...user,
+    display_name: user.display_name ?? user.displayName ?? '',
+  };
+};
 
 const PersonalSetting = () => {
   const { t } = useTranslation();
   const [userState, userDispatch] = useContext(UserContext);
-  const navigate = useNavigate();
-
-  const [status, setStatus] = useState({});
-  const [systemToken, setSystemToken] = useState('');
-  const [affLink, setAffLink] = useState('');
-  const [walletBinding, setWalletBinding] = useState(userState?.user?.wallet_address || '');
-  const [inputs, setInputs] = useState({
-    self_account_deletion_confirmation: '',
-  });
-  const [loading, setLoading] = useState(false);
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordLoading, setPasswordLoading] = useState(false);
-
-  useEffect(() => {
-    const cached = localStorage.getItem('status');
-    if (cached) {
-      setStatus(JSON.parse(cached));
-    }
-    if (userState?.user?.wallet_address) {
-      setWalletBinding(userState.user.wallet_address);
-    }
-  }, [userState?.user?.wallet_address]);
-
-  const handleInputChange = (e, { name, value }) => {
-    setInputs((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const bindWallet = async () => {
-    try {
-      if (!status.wallet_login) {
-        showError('管理员未开启钱包登录');
-        return;
-      }
-      const { provider, address, chainId } = await getWalletContext();
-      const nonceResp = await API.post('/api/v1/public/common/auth/challenge', {
-        address,
-        chain_id: chainId,
-      });
-      const payload = nonceResp?.data?.data;
-      if (nonceResp?.data?.success === false) {
-        showError(nonceResp.data?.message || '获取挑战失败');
-        return;
-      }
-      const nonceData = { nonce: payload?.nonce, message: payload?.message || payload?.result };
-      if (!nonceData.nonce || !nonceData.message) {
-        showError('服务器返回的挑战数据异常');
-        return;
-      }
-      const { signature } = await signWalletMessage(
-        nonceData.message,
-        address,
-        provider
-      );
-      const res = await API.post('/api/v1/public/oauth/wallet/bind', {
-        address,
-        signature,
-        nonce: nonceData.nonce,
-        chain_id: chainId,
-      });
-      const { success, message } = res.data;
-      if (success) {
-        showSuccess('钱包绑定成功');
-        setWalletBinding(address);
-      } else {
-        showError(message);
-      }
-    } catch (err) {
-      if (err?.code === 4001) {
-        showError('用户取消了签名');
-      } else {
-        showError(err.message || '绑定失败');
-      }
-    }
-  };
-
-  const generateAccessToken = async () => {
-    const res = await API.get('/api/v1/public/user/token');
-    const { success, message, data } = res.data;
-    if (success) {
-      setSystemToken(data);
-      setAffLink('');
-      await copy(data);
-      showSuccess('令牌已重置并已复制到剪贴板');
-    } else {
-      showError(message);
-    }
-  };
-
-  const getAffLink = async () => {
-    const res = await API.get('/api/v1/public/user/aff');
-    const { success, message, data } = res.data;
-    if (success) {
-      const link = `${window.location.origin}/register?aff=${data}`;
-      setAffLink(link);
-      setSystemToken('');
-      await copy(link);
-      showSuccess('邀请链接已复制到剪切板');
-    } else {
-      showError(message);
-    }
-  };
-
-  const deleteAccount = async () => {
-    if (inputs.self_account_deletion_confirmation !== userState.user.username) {
-      showError('请输入你的账户名以确认删除！');
-      return;
-    }
-    setLoading(true);
-    const res = await API.delete('/api/v1/public/user/self');
-    const { success, message } = res.data;
-    setLoading(false);
-    if (success) {
-      showSuccess('账户已删除！');
-      await API.get('/api/v1/public/user/logout');
-      try {
-        await logoutWallet();
-      } catch (e) {
-        // ignore web3 logout errors
-      }
-      userDispatch({ type: 'logout' });
-      localStorage.removeItem('user');
-      localStorage.removeItem(WEB3_TOKEN_STORAGE_KEY);
-      localStorage.removeItem('wallet_token_expires_at');
-      navigate('/login');
-    } else {
-      showError(message);
-    }
-  };
-
-  const getCurrentUser = () => {
-    if (userState?.user) {
-      return userState.user;
-    }
+  const currentUser = useMemo(() => {
+    const contextUser = normalizeUser(userState?.user);
+    if (contextUser) return contextUser;
     const cached = localStorage.getItem('user');
     if (!cached) return null;
     try {
-      return JSON.parse(cached);
-    } catch (e) {
+      return normalizeUser(JSON.parse(cached));
+    } catch (error) {
       return null;
+    }
+  }, [userState?.user]);
+
+  const [username, setUsername] = useState('');
+  const [profileSubmitting, setProfileSubmitting] = useState(false);
+  const [passwordModal, setPasswordModal] = useState(defaultPasswordModal);
+
+  useEffect(() => {
+    setUsername(currentUser?.username || '');
+  }, [currentUser?.username]);
+
+  useEffect(() => {
+    if (!currentUser || typeof currentUser.has_password === 'boolean') {
+      return;
+    }
+    syncCurrentUser();
+  }, [currentUser]);
+
+  const walletAddress = currentUser?.wallet_address || '-';
+  const hasPassword = currentUser?.has_password === true;
+
+  const syncCurrentUser = async () => {
+    const res = await API.get('/api/v1/public/user/self');
+    const { success, message, data } = res.data || {};
+    if (!success) {
+      showError(message || t('user.messages.load_failed', '加载失败'));
+      return false;
+    }
+    const nextUser = normalizeUser(data);
+    userDispatch({ type: 'login', payload: nextUser });
+    localStorage.setItem('user', JSON.stringify(nextUser));
+    return true;
+  };
+
+  const submitUsername = async () => {
+    const trimmedUsername = (username || '').trim();
+    if (!trimmedUsername) {
+      showError(t('user.edit.username_placeholder'));
+      return;
+    }
+    if (!currentUser?.username) {
+      showError('用户信息不存在');
+      return;
+    }
+    setProfileSubmitting(true);
+    try {
+      const res = await API.put('/api/v1/public/user/self', {
+        username: trimmedUsername,
+        display_name: currentUser?.display_name || '',
+        password: '',
+      });
+      const { success, message } = res.data || {};
+      if (!success) {
+        showError(message || t('user.messages.update_failed', '更新失败'));
+        return;
+      }
+      await syncCurrentUser();
+      showSuccess(t('user.messages.update_success'));
+    } finally {
+      setProfileSubmitting(false);
     }
   };
 
-  const submitPasswordChange = async () => {
+  const openPasswordModal = (mode) => {
+    setPasswordModal({
+      ...defaultPasswordModal,
+      open: true,
+      mode,
+    });
+  };
+
+  const closePasswordModal = () => {
+    if (passwordModal.submitting) return;
+    setPasswordModal(defaultPasswordModal);
+  };
+
+  const updatePasswordModalField = (name, value) => {
+    setPasswordModal((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const submitPassword = async () => {
+    const isModify = passwordModal.mode === 'modify';
+    const currentPassword = passwordModal.currentPassword || '';
+    const newPassword = passwordModal.newPassword || '';
+    const confirmPassword = passwordModal.confirmPassword || '';
+
+    if (isModify && currentPassword.length < 8) {
+      showError('请输入当前密码');
+      return;
+    }
     if (newPassword.length < 8) {
       showError(t('messages.error.password_length'));
       return;
@@ -166,126 +141,138 @@ const PersonalSetting = () => {
       showError(t('messages.error.password_mismatch'));
       return;
     }
-    const currentUser = getCurrentUser();
-    if (!currentUser?.username) {
-      showError('用户信息不存在');
-      return;
-    }
-    setPasswordLoading(true);
-    const payload = {
-      username: currentUser.username,
-      display_name:
-        currentUser.display_name ?? currentUser.displayName ?? '',
-      password: newPassword,
-    };
-    const res = await API.put('/api/v1/public/user/self', payload);
-    const { success, message } = res.data;
-    setPasswordLoading(false);
-    if (success) {
-      showSuccess(t('user.messages.update_success'));
-      setNewPassword('');
-      setConfirmPassword('');
-    } else {
-      showError(message);
+
+    setPasswordModal((prev) => ({ ...prev, submitting: true }));
+    try {
+      let res;
+      if (isModify) {
+        res = await API.post('/api/v1/public/user/self/password', {
+          current_password: currentPassword,
+          new_password: newPassword,
+        });
+      } else {
+        res = await API.put('/api/v1/public/user/self', {
+          username: currentUser?.username || '',
+          display_name: currentUser?.display_name || '',
+          password: newPassword,
+        });
+      }
+      const { success, message } = res.data || {};
+      if (!success) {
+        showError(message || t('user.messages.update_failed', '更新失败'));
+        return;
+      }
+      showSuccess(isModify ? '密码修改成功' : '密码设置成功');
+      setPasswordModal(defaultPasswordModal);
+    } finally {
+      setPasswordModal((prev) =>
+        prev.open ? { ...prev, submitting: false } : defaultPasswordModal
+      );
     }
   };
 
   return (
     <div className='router-page-stack'>
       <Segment>
-        <Header as='h3' className='router-section-title'>{t('setting.personal.binding.title', '钱包绑定')}</Header>
-        <p className='router-section-copy'>
-          {walletBinding ? `当前绑定地址：${walletBinding}` : '尚未绑定钱包'}
-        </p>
-        <Button className='router-section-button' primary onClick={bindWallet} disabled={!status.wallet_login}>
-          {status.wallet_login ? '绑定 / 更换钱包' : '管理员未开启钱包登录'}
-        </Button>
-        {!status.wallet_login && (
-          <Message warning className='router-section-message router-settings-note'>
-            管理员未开启钱包登录，仍可使用账号密码登录。
-          </Message>
-        )}
-      </Segment>
-
-      <Segment>
-        <Header as='h3' className='router-section-title'>{t('setting.personal.tokens.title', '令牌与邀请')}</Header>
-        <Button className='router-section-button router-settings-action' color='blue' onClick={generateAccessToken}>
-          生成并复制系统令牌
-        </Button>
-        {systemToken && (
-          <Message success className='router-section-message router-break-all'>
-            {systemToken}
-          </Message>
-        )}
-        <Divider />
-        <Button className='router-section-button' onClick={getAffLink}>生成并复制邀请链接</Button>
-        {affLink && (
-          <Message success className='router-section-message router-break-all'>
-            {affLink}
-          </Message>
-        )}
-      </Segment>
-
-      <Segment>
         <Header as='h3' className='router-section-title'>
-          {t('setting.personal.password.title', '修改密码')}
+          账户信息
         </Header>
         <Form>
           <Form.Input
             className='router-section-input'
-            label={t('user.edit.password')}
-            placeholder={t('user.edit.password_placeholder')}
-            type='password'
-            value={newPassword}
-            onChange={(e, { value }) => setNewPassword(value)}
-            autoComplete='new-password'
+            label='钱包地址'
+            value={walletAddress}
+            readOnly
           />
           <Form.Input
             className='router-section-input'
-            label={t('auth.register.confirm_password')}
-            placeholder={t('auth.register.confirm_password')}
-            type='password'
-            value={confirmPassword}
-            onChange={(e, { value }) => setConfirmPassword(value)}
-            autoComplete='new-password'
+            label={t('user.edit.username')}
+            name='username'
+            placeholder={t('user.edit.username_placeholder')}
+            value={username}
+            onChange={(e, { value }) => setUsername(value)}
           />
           <Button
             className='router-section-button'
             primary
-            loading={passwordLoading}
-            onClick={submitPasswordChange}
+            loading={profileSubmitting}
+            onClick={submitUsername}
           >
-            {t('user.edit.buttons.submit')}
+            保存用户名
           </Button>
         </Form>
       </Segment>
 
       <Segment>
-        <Header as='h3' color='red' className='router-section-title'>
-          {t('setting.personal.delete.title', '删除账户')}
+        <Header as='h3' className='router-section-title'>
+          密码设置
         </Header>
-        <p className='router-section-copy'>删除账户将同时清除钱包绑定与令牌。</p>
-        <Form>
-          <Form.Input
-            className='router-section-input'
-            label='请输入账户名以确认删除'
-            placeholder={userState.user?.username}
-            name='self_account_deletion_confirmation'
-            value={inputs.self_account_deletion_confirmation}
-            onChange={handleInputChange}
-          />
-          <Button className='router-section-button' negative loading={loading} onClick={deleteAccount}>
-            {t('setting.personal.delete.confirm', '确认删除')}
-          </Button>
-        </Form>
+        <Button
+          className='router-section-button'
+          primary
+          onClick={() => openPasswordModal(hasPassword ? 'modify' : 'set')}
+        >
+          {hasPassword ? '修改密码' : '设置密码'}
+        </Button>
       </Segment>
 
-      <Message info className='router-section-message'>
-        <span className='router-inline-copy'>
-          <Link to='/reset'>{t('auth.login.reset_password', '找回密码')}</Link>
-          <span>仍可通过账号密码登录，无需第三方账号。</span>
-        </span>
-      </Message>
+      <Modal size='tiny' open={passwordModal.open} onClose={closePasswordModal}>
+        <Modal.Header>
+          {passwordModal.mode === 'modify' ? '修改密码' : '设置密码'}
+        </Modal.Header>
+        <Modal.Content>
+          <Form>
+            {passwordModal.mode === 'modify' ? (
+              <Form.Field>
+                <label>当前密码</label>
+                <Input
+                  type='password'
+                  value={passwordModal.currentPassword}
+                  onChange={(e, { value }) =>
+                    updatePasswordModalField('currentPassword', value)
+                  }
+                  autoComplete='current-password'
+                />
+              </Form.Field>
+            ) : null}
+            <Form.Field>
+              <label>新密码</label>
+              <Input
+                type='password'
+                value={passwordModal.newPassword}
+                onChange={(e, { value }) =>
+                  updatePasswordModalField('newPassword', value)
+                }
+                autoComplete='new-password'
+              />
+            </Form.Field>
+            <Form.Field>
+              <label>确认新密码</label>
+              <Input
+                type='password'
+                value={passwordModal.confirmPassword}
+                onChange={(e, { value }) =>
+                  updatePasswordModalField('confirmPassword', value)
+                }
+                autoComplete='new-password'
+              />
+            </Form.Field>
+          </Form>
+        </Modal.Content>
+        <Modal.Actions>
+          <Button className='router-modal-button' onClick={closePasswordModal}>
+            {t('common.cancel', '取消')}
+          </Button>
+          <Button
+            className='router-modal-button'
+            primary
+            loading={passwordModal.submitting}
+            onClick={submitPassword}
+          >
+            {passwordModal.mode === 'modify' ? '确认修改' : '确认设置'}
+          </Button>
+        </Modal.Actions>
+      </Modal>
     </div>
   );
 };

@@ -26,6 +26,11 @@ import (
 	"gorm.io/gorm"
 )
 
+type updateSelfPasswordRequest struct {
+	CurrentPassword string `json:"current_password"`
+	NewPassword     string `json:"new_password"`
+}
+
 type LoginRequest struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -134,6 +139,7 @@ func SetupLogin(user *model.User, c *gin.Context) {
 		Role:           model.ExposedRole(user),
 		Status:         user.Status,
 		WalletAddress:  user.WalletAddress,
+		HasPassword:    user.HasPassword,
 		CanManageUsers: model.CanManageUsers(user),
 	}
 	logger.Loginf(c.Request.Context(), "password login success user=%s role=%d", user.Id, model.EffectiveRole(user))
@@ -217,6 +223,7 @@ func Register(c *gin.Context) {
 		Password:    user.Password,
 		DisplayName: user.Username,
 		InviterId:   inviterId,
+		HasPassword: true,
 	}
 	cleanUser.Email = user.Email
 	if err := usersvc.Create(ctx, &cleanUser, inviterId); err != nil {
@@ -742,6 +749,9 @@ func UpdateUser(c *gin.Context) {
 		updatedUser.Role = model.RoleAdminUser
 	}
 	updatePassword := updatedUser.Password != ""
+	if updatePassword {
+		updatedUser.HasPassword = true
+	}
 	if err := usersvc.Update(&updatedUser, updatePassword); err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -814,6 +824,76 @@ func UpdateSelf(c *gin.Context) {
 		"message": "",
 	})
 	return
+}
+
+// UpdateSelfPassword godoc
+// @Summary Update current user password with current password verification
+// @Tags public
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Success 200 {object} docs.StandardResponse
+// @Failure 401 {object} docs.ErrorResponse
+// @Router /api/v1/public/user/self/password [post]
+func UpdateSelfPassword(c *gin.Context) {
+	var req updateSelfPasswordRequest
+	if err := json.NewDecoder(c.Request.Body).Decode(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": i18n.Translate(c, "invalid_parameter"),
+		})
+		return
+	}
+	req.CurrentPassword = strings.TrimSpace(req.CurrentPassword)
+	req.NewPassword = strings.TrimSpace(req.NewPassword)
+	if len(req.CurrentPassword) < 8 || len(req.NewPassword) < 8 {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "密码长度不能少于 8 位",
+		})
+		return
+	}
+	userID := c.GetString(ctxkey.Id)
+	originUser, err := usersvc.GetByID(userID, true)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	if !originUser.HasPassword {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "当前账户尚未设置密码，请先设置密码",
+		})
+		return
+	}
+	if !common.ValidatePasswordAndHash(req.CurrentPassword, originUser.Password) {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "当前密码错误",
+		})
+		return
+	}
+	cleanUser := model.User{
+		Id:          userID,
+		Username:    originUser.Username,
+		DisplayName: originUser.DisplayName,
+		Password:    req.NewPassword,
+		HasPassword: true,
+	}
+	if err := usersvc.Update(&cleanUser, true); err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+	})
 }
 
 // DeleteUser godoc
@@ -947,6 +1027,7 @@ func CreateUser(c *gin.Context) {
 		Username:    user.Username,
 		Password:    user.Password,
 		DisplayName: user.DisplayName,
+		HasPassword: strings.TrimSpace(user.Password) != "",
 	}
 	if err := usersvc.Create(ctx, &cleanUser, ""); err != nil {
 		c.JSON(http.StatusOK, gin.H{

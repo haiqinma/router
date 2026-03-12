@@ -448,6 +448,7 @@ func autoCreateWalletUser(addr string, ctx context.Context) (*model.User, error)
 		Role:          model.RoleCommonUser,
 		Status:        model.UserStatusEnabled,
 		WalletAddress: &addr,
+		HasPassword:   false,
 	}
 	if err := user.Insert(ctx, ""); err != nil {
 		return nil, err
