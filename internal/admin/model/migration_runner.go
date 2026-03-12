@@ -76,6 +76,13 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return tx.AutoMigrate(&AsyncTask{}, &UserTask{})
 			},
 		},
+		{
+			Version:     "202603121630_main_provider_catalog_gpt_image1_pricing",
+			Description: "sync default provider catalog to add openai gpt-image-1 complex pricing",
+			Up: func(tx *gorm.DB) error {
+				return syncDefaultProviderCatalogWithDB(tx)
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }

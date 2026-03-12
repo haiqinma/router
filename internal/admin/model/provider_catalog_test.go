@@ -37,6 +37,38 @@ func TestBuildDefaultProviderCatalogSeeds_OpenAIIncludesDALLE3(t *testing.T) {
 	t.Fatalf("expected openai provider to exist")
 }
 
+func TestBuildDefaultProviderCatalogSeeds_OpenAIIncludesGPTImage1ComplexPricing(t *testing.T) {
+	seeds := BuildDefaultProviderCatalogSeeds(1700000000)
+	for _, seed := range seeds {
+		if seed.Provider != "openai" {
+			continue
+		}
+		for _, detail := range seed.ModelDetails {
+			if detail.Model != "gpt-image-1" {
+				continue
+			}
+			if detail.Type != ProviderModelTypeImage {
+				t.Fatalf("gpt-image-1 type=%q, want %q", detail.Type, ProviderModelTypeImage)
+			}
+			if detail.InputPrice != 0.011 {
+				t.Fatalf("gpt-image-1 input_price=%v, want 0.011", detail.InputPrice)
+			}
+			if detail.PriceUnit != ProviderPriceUnitPerImage {
+				t.Fatalf("gpt-image-1 price_unit=%q, want %q", detail.PriceUnit, ProviderPriceUnitPerImage)
+			}
+			if detail.Currency != ProviderPriceCurrencyUSD {
+				t.Fatalf("gpt-image-1 currency=%q, want %q", detail.Currency, ProviderPriceCurrencyUSD)
+			}
+			if len(detail.PriceComponents) != 9 {
+				t.Fatalf("gpt-image-1 price_components=%d, want 9", len(detail.PriceComponents))
+			}
+			return
+		}
+		t.Fatalf("expected openai seed to include gpt-image-1")
+	}
+	t.Fatalf("expected openai provider to exist")
+}
+
 func TestBuildDefaultProviderCatalogSeeds_ModelDetailsMeta(t *testing.T) {
 	seeds := BuildDefaultProviderCatalogSeeds(1700000000)
 	if len(seeds) == 0 {
