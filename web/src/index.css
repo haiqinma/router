@@ -285,6 +285,12 @@ code {
     padding: 0.8rem 0.96rem !important;
 }
 
+.ui.selection.dropdown.router-detail-filter-dropdown > .text,
+.ui.selection.dropdown.router-detail-filter-dropdown > .default.text,
+.ui.selection.dropdown.router-detail-filter-dropdown .menu > .item {
+    font-weight: 400 !important;
+}
+
 .ui.multiple.selection.dropdown.router-section-dropdown > .label {
     font-size: 12px !important;
     font-weight: 500 !important;

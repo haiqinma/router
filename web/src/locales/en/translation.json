@@ -261,10 +261,10 @@
         "next_step": "Next",
         "fetch_models": "Fetch Models",
         "verify_and_fetch_models": "Verify & Fetch Models",
-        "select_all": "Select All",
+        "select_all": "Enable All",
         "fill_models": "Fill Related Models",
         "fill_all": "Fill All Models",
-        "clear": "Clear All Models",
+        "clear": "Disable All",
         "add_custom": "Add",
         "custom_placeholder": "Enter custom model name"
       },
@@ -283,10 +283,10 @@
         },
         "filters": {
           "all": "All Models",
-          "unassigned": "Unassigned Only",
-          "manual": "Manual Assignment Only"
+          "enabled": "Enabled",
+          "disabled": "Disabled"
         },
-        "assignment_summary": "Assigned {{assigned}}, unassigned {{unassigned}}, auto-importable {{auto}}, manual {{manual}}",
+        "assignment_summary": "Assigned {{assigned}}, unassigned {{unassigned}}",
         "auto_assign": "Auto Import",
         "auto_assign_empty": "No models can be auto-imported right now",
         "auto_assign_success": "Imported {{success}} models, failed {{failed}}",

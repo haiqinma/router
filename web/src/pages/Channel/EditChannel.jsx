@@ -1108,7 +1108,6 @@ const EditChannel = () => {
   const [providerCatalogLoaded, setProviderCatalogLoaded] = useState(false);
   const [appendProviderModalOpen, setAppendProviderModalOpen] = useState(false);
   const [appendingProviderModel, setAppendingProviderModel] = useState(false);
-  const [autoAssigningProviders, setAutoAssigningProviders] = useState(false);
   const [complexPricingModalOpen, setComplexPricingModalOpen] = useState(false);
   const [complexPricingModalData, setComplexPricingModalData] = useState(null);
   const [appendProviderForm, setAppendProviderForm] = useState({
@@ -1377,10 +1376,6 @@ const EditChannel = () => {
     setComplexPricingModalOpen(false);
     setComplexPricingModalData(null);
   }, []);
-  const inferAssignableProviderForRow = useCallback(
-    (row) => inferAssignableProviderForRowWithOptions(row, providerOptions),
-    [providerOptions],
-  );
   const canSelectChannelModel = useCallback(
     (row) =>
       row?.inactive !== true && getProviderOwnersForModel(row).length > 0,
@@ -1396,47 +1391,32 @@ const EditChannel = () => {
         const owners = getProviderOwnersForModel(row);
         if (owners.length > 0) {
           acc.assigned += 1;
-          return acc;
-        }
-        acc.unassigned += 1;
-        const inferredProvider = inferAssignableProviderForRow(row);
-        if (inferredProvider !== '') {
-          acc.autoAssignable += 1;
         } else {
-          acc.manualRequired += 1;
+          acc.unassigned += 1;
         }
         return acc;
       },
       {
         assigned: 0,
         unassigned: 0,
-        autoAssignable: 0,
-        manualRequired: 0,
       },
     );
-  }, [
-    getProviderOwnersForModel,
-    inferAssignableProviderForRow,
-    visibleModelConfigs,
-  ]);
+  }, [getProviderOwnersForModel, visibleModelConfigs]);
   const detailFilteredModelConfigs = useMemo(() => {
     if (!isDetailMode) {
       return visibleModelConfigs;
     }
     return visibleModelConfigs.filter((row) => {
-      const hasOwners = getProviderOwnersForModel(row).length > 0;
-      if (detailModelFilter === 'unassigned') {
-        return !hasOwners;
+      if (detailModelFilter === 'enabled') {
+        return row.selected === true;
       }
-      if (detailModelFilter === 'manual') {
-        return !hasOwners && inferAssignableProviderForRow(row) === '';
+      if (detailModelFilter === 'disabled') {
+        return row.selected !== true;
       }
       return true;
     });
   }, [
     detailModelFilter,
-    getProviderOwnersForModel,
-    inferAssignableProviderForRow,
     isDetailMode,
     visibleModelConfigs,
   ]);
@@ -1470,16 +1450,6 @@ const EditChannel = () => {
     const offset = (detailModelPage - 1) * CHANNEL_MODEL_PAGE_SIZE;
     return searchedModelConfigs.slice(offset, offset + CHANNEL_MODEL_PAGE_SIZE);
   }, [searchedModelConfigs, detailModelPage]);
-  const autoAssignableRows = useMemo(() => {
-    return visibleModelConfigs.filter((row) => {
-      const owners = getProviderOwnersForModel(row);
-      return owners.length === 0 && inferAssignableProviderForRow(row) !== '';
-    });
-  }, [
-    getProviderOwnersForModel,
-    inferAssignableProviderForRow,
-    visibleModelConfigs,
-  ]);
   const modelSelectionSummaryText = useMemo(
     () =>
       t('channel.edit.model_selector.summary', {
@@ -1495,8 +1465,6 @@ const EditChannel = () => {
     return t('channel.edit.model_selector.assignment_summary', {
       assigned: detailModelStats.assigned,
       unassigned: detailModelStats.unassigned,
-      auto: detailModelStats.autoAssignable,
-      manual: detailModelStats.manualRequired,
     });
   }, [detailModelStats, isDetailMode, t]);
   const modelSectionMetaText = useMemo(() => {
@@ -2642,82 +2610,6 @@ const EditChannel = () => {
     t,
   ]);
 
-  const handleAutoAssignModels = useCallback(async () => {
-    const catalog = await loadProviderCatalogIndex({
-      silent: false,
-      force: true,
-    });
-    if (!catalog) {
-      return;
-    }
-    const assignableRows = visibleModelConfigs.filter((row) => {
-      const owners = getProviderOwnersForModel(row);
-      return (
-        owners.length === 0 &&
-        inferAssignableProviderForRowWithOptions(
-          row,
-          catalog.providerOptions,
-        ) !== ''
-      );
-    });
-    if (assignableRows.length === 0) {
-      showInfo(t('channel.edit.model_selector.auto_assign_empty'));
-      return;
-    }
-    setAutoAssigningProviders(true);
-    let successCount = 0;
-    let failedCount = 0;
-    try {
-      for (const row of assignableRows) {
-        const providerId = inferAssignableProviderForRowWithOptions(
-          row,
-          catalog.providerOptions,
-        );
-        const modelName = (row?.upstream_model || row?.model || '')
-          .toString()
-          .trim();
-        if (providerId === '' || modelName === '') {
-          failedCount += 1;
-          continue;
-        }
-        try {
-          const res = await API.post(
-            `/api/v1/admin/providers/${providerId}/model`,
-            {
-              model: modelName,
-              type: normalizeChannelModelType(row?.type),
-            },
-          );
-          if (res?.data?.success) {
-            successCount += 1;
-          } else {
-            failedCount += 1;
-          }
-        } catch {
-          failedCount += 1;
-        }
-      }
-      await loadProviderCatalogIndex({ silent: true, force: true });
-      if (successCount > 0) {
-        showSuccess(
-          t('channel.edit.model_selector.auto_assign_success', {
-            success: successCount,
-            failed: failedCount,
-          }),
-        );
-      } else {
-        showInfo(t('channel.edit.model_selector.auto_assign_empty'));
-      }
-    } finally {
-      setAutoAssigningProviders(false);
-    }
-  }, [
-    getProviderOwnersForModel,
-    loadProviderCatalogIndex,
-    t,
-    visibleModelConfigs,
-  ]);
-
   const handleRunModelTests = useCallback(
     async ({ targetModels = [], scope = 'batch' } = {}) => {
       if (inputs.protocol === 'proxy') {
@@ -2914,6 +2806,31 @@ const EditChannel = () => {
       );
     },
     [visibleModelConfigs],
+  );
+
+  const persistDetailModelConfigField = useCallback(
+    async (upstreamModel, field, value) => {
+      if (!isDetailMode) {
+        return;
+      }
+      const nextConfigs = visibleModelConfigs.map((row) => {
+        if (row.upstream_model !== upstreamModel) {
+          return row;
+        }
+        if (field === 'input_price' || field === 'output_price') {
+          return {
+            ...row,
+            [field]: normalizePriceOverrideValue(value),
+          };
+        }
+        return {
+          ...row,
+          [field]: value,
+        };
+      });
+      await persistDetailModelConfigs(nextConfigs);
+    },
+    [isDetailMode, persistDetailModelConfigs, visibleModelConfigs],
   );
 
   const selectAllModels = useCallback(() => {
@@ -3863,7 +3780,7 @@ const EditChannel = () => {
             {showStepTwo && inputs.protocol !== 'proxy' && (
               <Form.Field>
                 <div className='router-toolbar router-block-gap-xs'>
-                  <div className='router-toolbar-start'>
+                  <div className='router-toolbar-start router-block-gap-sm'>
                     <span className='router-section-title router-section-title-inline'>
                       {isDetailMode
                         ? t('channel.edit.detail_models_title')
@@ -3872,77 +3789,66 @@ const EditChannel = () => {
                     <span className='router-toolbar-meta'>
                       ({modelSectionMetaText})
                     </span>
+                    {isDetailMode && (
+                      <>
+                        <Button
+                          type='button'
+                          className='router-page-button'
+                          onClick={selectAllModels}
+                          disabled={
+                            detailModelMutating ||
+                            visibleModelConfigs.length === 0
+                          }
+                        >
+                          {t('channel.edit.buttons.select_all')}
+                        </Button>
+                        <Button
+                          type='button'
+                          className='router-page-button'
+                          onClick={clearSelectedModels}
+                          disabled={
+                            detailModelMutating || inputs.models.length === 0
+                          }
+                        >
+                          {t('channel.edit.buttons.clear')}
+                        </Button>
+                        <Dropdown
+                          selection
+                          className='router-section-dropdown router-dropdown-min-170 router-detail-filter-dropdown'
+                          compact
+                          options={[
+                            {
+                              key: 'all',
+                              value: 'all',
+                              text: t('channel.edit.model_selector.filters.all'),
+                            },
+                            {
+                              key: 'enabled',
+                              value: 'enabled',
+                              text: t(
+                                'channel.edit.model_selector.filters.enabled',
+                              ),
+                            },
+                            {
+                              key: 'disabled',
+                              value: 'disabled',
+                              text: t(
+                                'channel.edit.model_selector.filters.disabled',
+                              ),
+                            },
+                          ]}
+                          value={detailModelFilter}
+                          onChange={(e, { value }) =>
+                            setDetailModelFilter((value || 'all').toString())
+                          }
+                        />
+                      </>
+                    )}
                   </div>
                   {isDetailMode ? (
                     <div className='router-toolbar-end router-block-gap-sm'>
-                      <Button
-                        type='button'
-                        className='router-page-button'
-                        onClick={selectAllModels}
-                        disabled={
-                          detailModelMutating ||
-                          visibleModelConfigs.length === 0
-                        }
-                      >
-                        {t('channel.edit.buttons.select_all')}
-                      </Button>
-                      <Button
-                        type='button'
-                        className='router-page-button'
-                        onClick={clearSelectedModels}
-                        disabled={
-                          detailModelMutating || inputs.models.length === 0
-                        }
-                      >
-                        {t('channel.edit.buttons.clear')}
-                      </Button>
-                      <Dropdown
-                        selection
-                        className='router-section-dropdown router-dropdown-min-170'
-                        compact
-                        options={[
-                          {
-                            key: 'all',
-                            value: 'all',
-                            text: t('channel.edit.model_selector.filters.all'),
-                          },
-                          {
-                            key: 'unassigned',
-                            value: 'unassigned',
-                            text: t(
-                              'channel.edit.model_selector.filters.unassigned',
-                            ),
-                          },
-                          {
-                            key: 'manual',
-                            value: 'manual',
-                            text: t(
-                              'channel.edit.model_selector.filters.manual',
-                            ),
-                          },
-                        ]}
-                        value={detailModelFilter}
-                        onChange={(e, { value }) =>
-                          setDetailModelFilter((value || 'all').toString())
-                        }
-                      />
-                      <Button
-                        type='button'
-                        className='router-section-button'
-                        color='blue'
-                        loading={autoAssigningProviders}
-                        disabled={
-                          detailModelMutating ||
-                          autoAssigningProviders ||
-                          providerCatalogLoading ||
-                          autoAssignableRows.length === 0
-                        }
-                        onClick={handleAutoAssignModels}
-                      >
-                        {t('channel.edit.model_selector.auto_assign')}
-                      </Button>
                       <Form.Input
-                        className='router-inline-input router-search-form-sm'
+                        className='router-section-input router-search-form-sm'
                         icon='search'
                         iconPosition='left'
                         placeholder={t(
@@ -3971,7 +3877,7 @@ const EditChannel = () => {
                       </Button>
                     </div>
                   ) : (
-                    <div className='router-toolbar-end'>
+                    <div className='router-toolbar-end router-block-gap-sm'>
                       <Button
                         type='button'
                         className='router-page-button'
@@ -4005,22 +3911,8 @@ const EditChannel = () => {
                       >
                         {t('channel.edit.buttons.clear')}
                       </Button>
-                      <Button
-                        type='button'
-                        className='router-page-button'
-                        color='blue'
-                        loading={autoAssigningProviders}
-                        disabled={
-                          autoAssigningProviders ||
-                          providerCatalogLoading ||
-                          autoAssignableRows.length === 0
-                        }
-                        onClick={handleAutoAssignModels}
-                      >
-                        {t('channel.edit.model_selector.auto_assign')}
-                      </Button>
                       <Form.Input
-                        className='router-inline-input router-search-form-sm'
+                        className='router-section-input router-search-form-sm'
                         icon='search'
                         iconPosition='left'
                         placeholder={t(
@@ -4067,11 +3959,6 @@ const EditChannel = () => {
                       <Table.HeaderCell width={2}>
                         {t('channel.edit.model_selector.table.output_price')}
                       </Table.HeaderCell>
-                      {isDetailMode && (
-                        <Table.HeaderCell width={1}>
-                          {t('channel.edit.model_selector.table.actions')}
-                        </Table.HeaderCell>
-                      )}
                     </Table.Row>
                   </Table.Header>
                   <Table.Body>
@@ -4079,7 +3966,7 @@ const EditChannel = () => {
                       <Table.Row>
                         <Table.Cell
                           className='router-empty-cell'
-                          colSpan={isDetailMode ? 9 : 8}
+                          colSpan={8}
                         >
                           {modelSearchKeyword.trim() !== ''
                             ? t('channel.edit.model_selector.empty_search')
@@ -4246,9 +4133,30 @@ const EditChannel = () => {
                                     )}
                                   </Button>
                                 ) : (
-                                  <span className='router-nowrap'>
-                                    {row.input_price ?? '-'}
-                                  </span>
+                                  <Form.Input
+                                    className='router-inline-input'
+                                    type='number'
+                                    min='0'
+                                    step='0.01'
+                                    transparent
+                                    placeholder='-'
+                                    disabled={detailModelMutating}
+                                    value={row.input_price ?? ''}
+                                    onChange={(e, { value }) =>
+                                      updateModelConfigField(
+                                        row.upstream_model,
+                                        'input_price',
+                                        value,
+                                      )
+                                    }
+                                    onBlur={(e, { value }) =>
+                                      persistDetailModelConfigField(
+                                        row.upstream_model,
+                                        'input_price',
+                                        value,
+                                      )
+                                    }
+                                  />
                                 )
                               ) : (
                                 <Form.Input
@@ -4283,9 +4191,30 @@ const EditChannel = () => {
                                     )}
                                   </Button>
                                 ) : (
-                                  <span className='router-nowrap'>
-                                    {row.output_price ?? '-'}
-                                  </span>
+                                  <Form.Input
+                                    className='router-inline-input'
+                                    type='number'
+                                    min='0'
+                                    step='0.01'
+                                    transparent
+                                    placeholder='-'
+                                    disabled={detailModelMutating}
+                                    value={row.output_price ?? ''}
+                                    onChange={(e, { value }) =>
+                                      updateModelConfigField(
+                                        row.upstream_model,
+                                        'output_price',
+                                        value,
+                                      )
+                                    }
+                                    onBlur={(e, { value }) =>
+                                      persistDetailModelConfigField(
+                                        row.upstream_model,
+                                        'output_price',
+                                        value,
+                                      )
+                                    }
+                                  />
                                 )
                               ) : (
                                 <Form.Input
@@ -4306,27 +4235,6 @@ const EditChannel = () => {
                                 />
                               )}
                             </Table.Cell>
-                            {isDetailMode && (
-                              <Table.Cell
-                                collapsing
-                                className='router-nowrap router-cell-shrink'
-                              >
-                                {isUnassigned ? (
-                                  <Button
-                                    type='button'
-                                    className='router-inline-button'
-                                    basic
-                                    onClick={() => openAppendProviderModal(row)}
-                                  >
-                                    {t(
-                                      'channel.edit.model_selector.provider_add',
-                                    )}
-                                  </Button>
-                                ) : (
-                                  '-'
-                                )}
-                              </Table.Cell>
-                            )}
                           </Table.Row>
                         );
                       })

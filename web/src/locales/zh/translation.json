@@ -261,10 +261,10 @@
         "next_step": "下一步",
         "fetch_models": "获取模型",
         "verify_and_fetch_models": "验证连接并获取模型",
-        "select_all": "全选",
+        "select_all": "启用全部",
         "fill_models": "填入相关模型",
         "fill_all": "填入所有模型",
-        "clear": "清除所有模型",
+        "clear": "停用全部",
         "add_custom": "填入",
         "custom_placeholder": "输入自定义模型名称"
       },
@@ -283,10 +283,10 @@
         },
         "filters": {
           "all": "全部模型",
-          "unassigned": "仅看未归属",
-          "manual": "仅看待手动归属"
+          "enabled": "已启用的",
+          "disabled": "未启用的"
         },
-        "assignment_summary": "已归属 {{assigned}}，未归属 {{unassigned}}，可自动录入 {{auto}}，待手动录入 {{manual}}",
+        "assignment_summary": "已归属 {{assigned}}，未归属 {{unassigned}}",
         "auto_assign": "一键录入",
         "auto_assign_empty": "当前没有可一键录入的模型",
         "auto_assign_success": "已一键录入 {{success}} 个模型，失败 {{failed}} 个",
