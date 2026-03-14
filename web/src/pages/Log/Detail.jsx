@@ -155,16 +155,20 @@ const LogDetail = () => {
                       {t('log.detail.fields.channel')}
                     </div>
                     <div className='router-detail-value'>
-                      {log?.channel ? (
-                        <Label
-                          basic
-                          className='router-tag'
-                          as={Link}
-                          to={`/channel/detail/${log.channel}`}
-                          state={{ from: currentPagePath }}
-                        >
-                          {log?.channel_name || log?.channel}
-                        </Label>
+                      {isAdminPage ? (
+                        log?.channel ? (
+                          <Label
+                            basic
+                            className='router-tag'
+                            as={Link}
+                            to={`/channel/detail/${log.channel}`}
+                            state={{ from: currentPagePath }}
+                          >
+                            {log?.channel_name || log?.channel}
+                          </Label>
+                        ) : (
+                          '-'
+                        )
                       ) : (
                         '-'
                       )}
@@ -178,14 +182,16 @@ const LogDetail = () => {
                       {renderText(log?.model_name)}
                     </pre>
                   </div>
-                  <div className='router-detail-item'>
-                    <div className='router-detail-label'>
-                      {t('log.detail.fields.username')}
+                  {isAdminPage ? (
+                    <div className='router-detail-item'>
+                      <div className='router-detail-label'>
+                        {t('log.detail.fields.username')}
+                      </div>
+                      <pre className='router-detail-value'>
+                        {renderText(log?.username)}
+                      </pre>
                     </div>
-                    <pre className='router-detail-value'>
-                      {renderText(log?.username)}
-                    </pre>
-                  </div>
+                  ) : null}
                   <div className='router-detail-item'>
                     <div className='router-detail-label'>
                       {t('log.detail.fields.token_name')}

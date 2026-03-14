@@ -12,7 +12,6 @@ import {
 import {
   API,
   copy,
-  isAdmin,
   showError,
   showSuccess,
   showWarning,
@@ -155,12 +154,12 @@ const LogsTable = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const currentPagePath = `${location.pathname}${location.search}${location.hash}`;
+  const isAdminScope = location.pathname.startsWith('/admin/');
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activePage, setActivePage] = useState(1);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [logType, setLogType] = useState(0);
-  const isAdminUser = isAdmin();
   let now = new Date();
   const [inputs, setInputs] = useState({
     username: '',
@@ -213,7 +212,7 @@ const LogsTable = () => {
         type: 'text',
       },
     ];
-    if (isAdminUser) {
+    if (isAdminScope) {
       items.push(
         {
           key: 'channel',
@@ -230,7 +229,7 @@ const LogsTable = () => {
       );
     }
     return items;
-  }, [isAdminUser, t]);
+  }, [isAdminScope, t]);
 
   const conditionalFilterOptions = useMemo(
     () =>
@@ -284,7 +283,7 @@ const LogsTable = () => {
       let url = '';
       let localStartTimestamp = Date.parse(start_timestamp) / 1000;
       let localEndTimestamp = Date.parse(end_timestamp) / 1000;
-      if (isAdminUser) {
+      if (isAdminScope) {
         url = `/api/v1/admin/log/?page=${normalizedPage}&type=${logType}&username=${username}&token_name=${token_name}&model_name=${model_name}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}&channel=${channel}`;
       } else {
         url = `/api/v1/public/log?page=${normalizedPage}&type=${logType}&token_name=${token_name}&model_name=${model_name}&start_timestamp=${localStartTimestamp}&end_timestamp=${localEndTimestamp}`;
@@ -307,7 +306,7 @@ const LogsTable = () => {
       setLoading(false);
     },
     [
-      isAdminUser,
+      isAdminScope,
       logType,
       username,
       token_name,
@@ -386,8 +385,8 @@ const LogsTable = () => {
     });
   }, [logs, searchKeyword]);
 
-  const detailBasePath = isAdminUser ? '/admin/log' : '/workspace/log';
-  const tableColSpan = isAdminUser
+  const detailBasePath = isAdminScope ? '/admin/log' : '/workspace/log';
+  const tableColSpan = isAdminScope
     ? showUserTokenQuota()
       ? 9
       : 4
@@ -525,7 +524,7 @@ const LogsTable = () => {
             >
               {t('log.table.time')}
             </Table.HeaderCell>
-            {isAdminUser && (
+            {isAdminScope && (
               <Table.HeaderCell
                 className='router-sortable-header'
                 onClick={() => {
@@ -556,7 +555,7 @@ const LogsTable = () => {
             </Table.HeaderCell>
             {showUserTokenQuota() && (
               <>
-                {isAdminUser && (
+                {isAdminScope && (
                   <Table.HeaderCell
                     className='router-sortable-header'
                     onClick={() => {
@@ -631,7 +630,7 @@ const LogsTable = () => {
                   <Table.Cell>
                     {renderTimestamp(log.created_at, log.trace_id)}
                   </Table.Cell>
-                  {isAdminUser && (
+                  {isAdminScope && (
                     <Table.Cell>
                       {log.channel ? (
                         <Label
@@ -655,7 +654,7 @@ const LogsTable = () => {
                   </Table.Cell>
                   {showUserTokenQuota() && (
                     <>
-                      {isAdminUser && (
+                      {isAdminScope && (
                         <Table.Cell>
                           {log.username ? (
                             <Label
