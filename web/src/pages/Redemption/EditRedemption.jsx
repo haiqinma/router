@@ -1,17 +1,13 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button, Form, Card } from 'semantic-ui-react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { API, downloadTextAsFile, showError, showSuccess } from '../../helpers';
 import { renderQuotaWithPrompt } from '../../helpers/render';
 
 const EditRedemption = () => {
   const { t } = useTranslation();
-  const params = useParams();
   const navigate = useNavigate();
-  const redemptionId = params.id;
-  const isEdit = redemptionId !== undefined;
-  const [loading, setLoading] = useState(isEdit);
   const originInputs = {
     name: '',
     quota: 100000,
@@ -28,55 +24,26 @@ const EditRedemption = () => {
     setInputs((inputs) => ({ ...inputs, [name]: value }));
   };
 
-  const loadRedemption = useCallback(async () => {
-    let res = await API.get(`/api/v1/admin/redemption/${redemptionId}`);
-    const { success, message, data } = res.data;
-    if (success) {
-      setInputs(data);
-    } else {
-      showError(message);
-    }
-    setLoading(false);
-  }, [redemptionId]);
-  useEffect(() => {
-    if (isEdit) {
-      loadRedemption().then();
-    }
-  }, [isEdit, loadRedemption]);
-
   const submit = async () => {
-    if (!isEdit && inputs.name === '') return;
-    let localInputs = inputs;
+    if (inputs.name === '') return;
+    const localInputs = { ...inputs };
     localInputs.count = parseInt(localInputs.count);
     localInputs.quota = parseInt(localInputs.quota);
-    let res;
-    if (isEdit) {
-      res = await API.put(`/api/v1/admin/redemption/`, {
-        ...localInputs,
-        id: redemptionId,
-      });
-    } else {
-      res = await API.post(`/api/v1/admin/redemption/`, {
-        ...localInputs,
-      });
-    }
+    const res = await API.post(`/api/v1/admin/redemption/`, {
+      ...localInputs,
+    });
     const { success, message, data } = res.data;
     if (success) {
-      if (isEdit) {
-        showSuccess(t('redemption.messages.update_success'));
-        navigate('/redemption');
-      } else {
-        showSuccess(t('redemption.messages.create_success'));
-        if (data) {
-          let text = '';
-          for (let i = 0; i < data.length; i++) {
-            text += data[i] + '\n';
-          }
-          downloadTextAsFile(text, `${inputs.name}.txt`);
+      showSuccess(t('redemption.messages.create_success'));
+      if (data) {
+        let text = '';
+        for (let i = 0; i < data.length; i++) {
+          text += data[i] + '\n';
         }
-        setInputs(originInputs);
-        navigate('/redemption');
+        downloadTextAsFile(text, `${inputs.name}.txt`);
       }
+      setInputs(originInputs);
+      navigate('/redemption');
     } else {
       showError(message);
     }
@@ -87,9 +54,21 @@ const EditRedemption = () => {
       <Card fluid className='chart-card'>
         <Card.Content>
           <Card.Header className='header router-page-title'>
-            {isEdit ? t('redemption.edit.title_edit') : t('redemption.edit.title_create')}
+            {t('redemption.edit.title_create')}
           </Card.Header>
-          <Form loading={loading} autoComplete='new-password'>
+          <div className='router-toolbar router-block-gap-sm'>
+            <div className='router-toolbar-start'>
+              <Button className='router-page-button' onClick={handleCancel}>
+                {t('redemption.edit.buttons.cancel')}
+              </Button>
+            </div>
+            <div className='router-toolbar-end'>
+              <Button className='router-page-button' positive onClick={submit}>
+                {t('redemption.edit.buttons.submit')}
+              </Button>
+            </div>
+          </div>
+          <Form autoComplete='new-password'>
             <Form.Field>
               <Form.Input
                 className='router-section-input'
@@ -99,7 +78,7 @@ const EditRedemption = () => {
                 onChange={handleInputChange}
                 value={name}
                 autoComplete='new-password'
-                required={!isEdit}
+                required
               />
             </Form.Field>
             <Form.Field>
@@ -114,30 +93,18 @@ const EditRedemption = () => {
                 type='number'
               />
             </Form.Field>
-            {!isEdit && (
-              <>
-                <Form.Field>
-                  <Form.Input
-                    className='router-section-input'
-                    label={t('redemption.edit.count')}
-                    name='count'
-                    placeholder={t('redemption.edit.count_placeholder')}
-                    onChange={handleInputChange}
-                    value={count}
-                    autoComplete='new-password'
-                    type='number'
-                  />
-                </Form.Field>
-              </>
-            )}
-            <div className='router-toolbar-start router-block-gap-sm'>
-              <Button className='router-page-button' onClick={handleCancel}>
-                {t('redemption.edit.buttons.cancel')}
-              </Button>
-              <Button className='router-page-button' positive onClick={submit}>
-                {t('redemption.edit.buttons.submit')}
-              </Button>
-            </div>
+            <Form.Field>
+              <Form.Input
+                className='router-section-input'
+                label={t('redemption.edit.count')}
+                name='count'
+                placeholder={t('redemption.edit.count_placeholder')}
+                onChange={handleInputChange}
+                value={count}
+                autoComplete='new-password'
+                type='number'
+              />
+            </Form.Field>
           </Form>
         </Card.Content>
       </Card>

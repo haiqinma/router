@@ -8,7 +8,7 @@ import {
   Pagination,
   Table,
 } from 'semantic-ui-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   API,
   copy,
@@ -56,7 +56,9 @@ function renderStatus(status, t) {
 
 const RedemptionsTable = () => {
   const { t } = useTranslation();
+  const location = useLocation();
   const navigate = useNavigate();
+  const currentPagePath = `${location.pathname}${location.search}${location.hash}`;
   const [redemptions, setRedemptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activePage, setActivePage] = useState(1);
@@ -273,7 +275,11 @@ const RedemptionsTable = () => {
                   key={redemption.id}
                   className='router-row-clickable'
                   onClick={() => {
-                    navigate(`/redemption/${redemption.id}`);
+                    navigate(`/redemption/${redemption.id}`, {
+                      state: {
+                        from: currentPagePath,
+                      },
+                    });
                   }}
                 >
                   <Table.Cell>
@@ -343,13 +349,6 @@ const RedemptionsTable = () => {
                         {redemption.status === 1
                           ? t('redemption.buttons.disable')
                           : t('redemption.buttons.enable')}
-                      </Button>
-                      <Button
-                        className='router-inline-button'
-                        as={Link}
-                        to={'/redemption/edit/' + redemption.id}
-                      >
-                        {t('redemption.buttons.edit')}
                       </Button>
                     </div>
                   </Table.Cell>

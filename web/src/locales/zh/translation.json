@@ -553,6 +553,12 @@
       "add": "新增令牌",
       "refresh": "刷新"
     },
+    "detail": {
+      "title": "令牌详情",
+      "buttons": {
+        "back": "返回"
+      }
+    },
     "edit": {
       "title_edit": "更新令牌信息",
       "title_create": "创建新的令牌",
@@ -665,6 +671,7 @@
       }
     },
     "detail": {
+      "title": "兑换码详情",
       "code": "兑换码",
       "redeemed_by": "兑换用户",
       "buttons": {

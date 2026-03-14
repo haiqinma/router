@@ -120,6 +120,40 @@ function UserEditRedirect() {
   );
 }
 
+function RedemptionEditRedirect() {
+  const location = useLocation();
+  const suffix = location.pathname.startsWith('/admin/redemption/edit/')
+    ? location.pathname.slice('/admin/redemption/edit/'.length)
+    : '';
+  const nextSearchParams = new URLSearchParams(location.search);
+  nextSearchParams.set('edit', '1');
+  const search = nextSearchParams.toString();
+  return (
+    <Navigate
+      to={`/admin/redemption/${suffix}${search ? `?${search}` : ''}${location.hash}`}
+      state={location.state}
+      replace
+    />
+  );
+}
+
+function TokenEditRedirect() {
+  const location = useLocation();
+  const suffix = location.pathname.startsWith('/workspace/token/edit/')
+    ? location.pathname.slice('/workspace/token/edit/'.length)
+    : '';
+  const nextSearchParams = new URLSearchParams(location.search);
+  nextSearchParams.set('edit', '1');
+  const search = nextSearchParams.toString();
+  return (
+    <Navigate
+      to={`/workspace/token/${suffix}${search ? `?${search}` : ''}${location.hash}`}
+      state={location.state}
+      replace
+    />
+  );
+}
+
 function App() {
   const [, userDispatch] = useContext(UserContext);
   const [, statusDispatch] = useContext(StatusContext);
@@ -251,10 +285,18 @@ function App() {
       >
         <Route path='/workspace/token' element={<Token />} />
         <Route
-          path='/workspace/token/edit/:id'
+          path='/workspace/token/:id'
           element={
             <Suspense fallback={<Loading />}>
               <EditToken />
+            </Suspense>
+          }
+        />
+        <Route
+          path='/workspace/token/edit/:id'
+          element={
+            <Suspense fallback={<Loading />}>
+              <TokenEditRedirect />
             </Suspense>
           }
         />
@@ -345,7 +387,7 @@ function App() {
           path='/admin/redemption/edit/:id'
           element={
             <Suspense fallback={<Loading />}>
-              <EditRedemption />
+              <RedemptionEditRedirect />
             </Suspense>
           }
         />

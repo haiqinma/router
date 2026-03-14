@@ -553,6 +553,12 @@
       "add": "Add New Token",
       "refresh": "Refresh"
     },
+    "detail": {
+      "title": "Token Detail",
+      "buttons": {
+        "back": "Back"
+      }
+    },
     "edit": {
       "title_edit": "Update Token Information",
       "title_create": "Create New Token",
@@ -665,6 +671,7 @@
       }
     },
     "detail": {
+      "title": "Redemption Detail",
       "code": "Code",
       "redeemed_by": "Redeemed By",
       "buttons": {

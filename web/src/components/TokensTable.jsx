@@ -10,7 +10,7 @@ import {
   Popup,
   Table,
 } from 'semantic-ui-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   API,
   copy,
@@ -76,7 +76,9 @@ function renderShortToken(key) {
 
 const TokensTable = () => {
   const { t } = useTranslation();
+  const location = useLocation();
   const navigate = useNavigate();
+  const currentPagePath = `${location.pathname}${location.search}${location.hash}`;
 
   const OPEN_LINK_OPTIONS = [
     { key: 'next', text: t('token.copy_options.next'), value: 'next' },
@@ -459,7 +461,13 @@ const TokensTable = () => {
                 <Table.Row
                   key={token.id}
                   className='router-row-clickable'
-                  onClick={() => navigate(`/token/edit/${token.id}`)}
+                  onClick={() =>
+                    navigate(`/token/${token.id}`, {
+                      state: {
+                        from: currentPagePath,
+                      },
+                    })
+                  }
                 >
                   <Table.Cell>
                     {token.name ? token.name : t('token.table.no_name')}
@@ -471,11 +479,21 @@ const TokensTable = () => {
                         role='button'
                         tabIndex={0}
                         className='router-text-link'
-                        onClick={() => navigate(`/token/edit/${token.id}`)}
+                        onClick={() =>
+                          navigate(`/token/${token.id}`, {
+                            state: {
+                              from: currentPagePath,
+                            },
+                          })
+                        }
                         onKeyDown={(event) => {
                           if (event.key === 'Enter' || event.key === ' ') {
                             event.preventDefault();
-                            navigate(`/token/edit/${token.id}`);
+                            navigate(`/token/${token.id}`, {
+                              state: {
+                                from: currentPagePath,
+                              },
+                            });
                           }
                         }}
                       >
@@ -553,13 +571,6 @@ const TokensTable = () => {
                         {token.status === 1
                           ? t('token.buttons.disable')
                           : t('token.buttons.enable')}
-                      </Button>
-                      <Button
-                        className='router-inline-button'
-                        as={Link}
-                        to={'/token/edit/' + token.id}
-                      >
-                        {t('token.buttons.edit')}
                       </Button>
                     </div>
                   </Table.Cell>

@@ -63,6 +63,7 @@ const UserDetail = () => {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState('');
   const [persistedUsername, setPersistedUsername] = useState('');
+  const [groupMap, setGroupMap] = useState({});
   const [inputs, setInputs] = useState({
     username: '',
     email: '',
@@ -75,6 +76,48 @@ const UserDetail = () => {
     request_count: 0,
     can_manage_users: false,
   });
+
+  const loadGroups = useCallback(async () => {
+    try {
+      const rows = [];
+      let page = 1;
+      while (page <= 50) {
+        const res = await API.get('/api/v1/admin/groups', {
+          params: {
+            page,
+            page_size: 100,
+          },
+        });
+        const { success, message, data } = res.data || {};
+        if (!success) {
+          showError(message || t('user.messages.operation_failed'));
+          return;
+        }
+        const pageItems = Array.isArray(data?.items) ? data.items : [];
+        rows.push(...pageItems);
+        const total = Number(data?.total || pageItems.length || 0);
+        if (
+          pageItems.length === 0 ||
+          rows.length >= total ||
+          pageItems.length < 100
+        ) {
+          break;
+        }
+        page += 1;
+      }
+      const nextMap = {};
+      rows.forEach((group) => {
+        const id = (group?.id || '').toString().trim();
+        if (id === '') {
+          return;
+        }
+        nextMap[id] = (group?.name || '').toString().trim() || id;
+      });
+      setGroupMap(nextMap);
+    } catch (error) {
+      showError(error?.message || error);
+    }
+  }, [t]);
 
   const loadUser = useCallback(async () => {
     if (!userId) {
@@ -115,7 +158,21 @@ const UserDetail = () => {
 
   useEffect(() => {
     loadUser().then();
-  }, [loadUser]);
+    loadGroups().then();
+  }, [loadGroups, loadUser]);
+
+  const groupDisplayValue = useMemo(() => {
+    const raw = (inputs.group || '').toString().trim();
+    if (raw === '') {
+      return '-';
+    }
+    return raw
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item !== '')
+      .map((item) => groupMap[item] || item)
+      .join(', ') || '-';
+  }, [groupMap, inputs.group]);
 
   const isProtectedUser = inputs.can_manage_users === true;
   const canManageRole = isRoot() && !isProtectedUser;
@@ -214,7 +271,7 @@ const UserDetail = () => {
               <Form.Input
                 className='router-section-input'
                 label={t('user.edit.group')}
-                value={readOnlyValue(inputs.group)}
+                value={groupDisplayValue}
                 readOnly
               />
               <Form.Input
