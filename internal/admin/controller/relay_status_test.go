@@ -67,6 +67,26 @@ func TestNormalizeFinalRelayErrorKeepsLocalServiceErrors(t *testing.T) {
 	}
 }
 
+func TestNormalizeFinalRelayErrorForUpstreamQuotaExhausted(t *testing.T) {
+	err := &relaymodel.ErrorWithStatusCode{
+		StatusCode: http.StatusPaymentRequired,
+		Error: relaymodel.Error{
+			Message: "每日额度超限",
+			Type:    "insufficient_quota",
+			Code:    "insufficient_quota",
+		},
+	}
+
+	normalizeFinalRelayError(err)
+
+	if err.StatusCode != http.StatusServiceUnavailable {
+		t.Fatalf("unexpected status code: got %d want %d", err.StatusCode, http.StatusServiceUnavailable)
+	}
+	if err.Message != "当前分组可用上游额度不足，请稍后再试" {
+		t.Fatalf("unexpected message: got %q", err.Message)
+	}
+}
+
 func TestShouldDisableChannelModelCapabilityForModelNotFoundCode(t *testing.T) {
 	err := &relaymodel.ErrorWithStatusCode{
 		StatusCode: http.StatusNotFound,

@@ -81,7 +81,8 @@ func Relay(c *gin.Context) {
 	traceID := c.GetString(helper.TraceIDKey)
 	retryTimes := config.RetryTimes
 	retryCount := 0
-	if !shouldRetry(c, bizErr.StatusCode) {
+	retryable := shouldRetry(c, bizErr.StatusCode)
+	if !retryable {
 		logger.RelayWarnf(ctx, relaylogging.NewFields("RETRY").
 			String("decision", "skip").
 			Int("status", bizErr.StatusCode).
@@ -92,6 +93,17 @@ func Relay(c *gin.Context) {
 			String("reason", "status_not_retryable").
 			Build())
 		retryTimes = 0
+	}
+	if retryable && retryTimes <= 0 {
+		logger.RelayWarnf(ctx, relaylogging.NewFields("RETRY").
+			String("decision", "skip").
+			Int("status", bizErr.StatusCode).
+			String("channel_id", channelId).
+			String("channel_name", channelName).
+			String("group", group).
+			String("model", originalModel).
+			String("reason", "retry_disabled").
+			Build())
 	}
 	for i := retryTimes; i > 0; i-- {
 		channel, selectionStats, err := dbmodel.CacheSelectRandomSatisfiedChannelForRequestExcluding(group, originalModel, requestPath, false, failedChannelIDs)
@@ -180,6 +192,9 @@ func shouldRetry(c *gin.Context, statusCode int) bool {
 	if _, ok := c.Get(ctxkey.SpecificChannelId); ok {
 		return false
 	}
+	if statusCode == http.StatusPaymentRequired {
+		return true
+	}
 	if statusCode == http.StatusTooManyRequests {
 		return true
 	}
@@ -199,11 +214,40 @@ func normalizeFinalRelayError(err *model.ErrorWithStatusCode) {
 	if err == nil {
 		return
 	}
+	if isUpstreamQuotaRelayError(err) {
+		err.StatusCode = http.StatusServiceUnavailable
+		err.Error.Message = "当前分组可用上游额度不足，请稍后再试"
+		return
+	}
 	if !isTransientUpstreamRelayError(err) {
 		return
 	}
 	err.StatusCode = http.StatusServiceUnavailable
 	err.Error.Message = "当前分组可用上游暂时不可用，请稍后再试"
+}
+
+func isUpstreamQuotaRelayError(err *model.ErrorWithStatusCode) bool {
+	if err == nil {
+		return false
+	}
+	if err.StatusCode == http.StatusPaymentRequired {
+		return true
+	}
+	lowerType := strings.ToLower(strings.TrimSpace(err.Type))
+	if lowerType == "insufficient_quota" || lowerType == "billing_error" {
+		return true
+	}
+	lowerCode := strings.ToLower(errorCodeString(err.Code))
+	if lowerCode == "insufficient_quota" || lowerCode == "billing_hard_limit_reached" {
+		return true
+	}
+	lowerMessage := strings.ToLower(strings.TrimSpace(err.Message))
+	return strings.Contains(lowerMessage, "额度") ||
+		strings.Contains(lowerMessage, "欠费") ||
+		strings.Contains(lowerMessage, "quota") ||
+		strings.Contains(lowerMessage, "credit") ||
+		strings.Contains(lowerMessage, "balance") ||
+		strings.Contains(lowerMessage, "daily limit")
 }
 
 func isTransientUpstreamRelayError(err *model.ErrorWithStatusCode) bool {
