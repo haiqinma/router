@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	openaiadaptor "github.com/yeying-community/router/internal/relay/adaptor/openai"
+	relaymodel "github.com/yeying-community/router/internal/relay/model"
 )
 
 type responsesEnvelope struct {
@@ -98,5 +99,151 @@ func parseTextModelTestResponse(resp string) (string, error) {
 	if responsesErr == nil {
 		return responsesText, nil
 	}
+	if isLikelySSEPayload(resp) {
+		streamText, streamErr := parseTextModelTestStreamResponse(resp)
+		if streamErr == nil {
+			return streamText, nil
+		}
+		return "", fmt.Errorf("parse as chat failed: %v; parse as responses failed: %v; parse as stream failed: %v", chatErr, responsesErr, streamErr)
+	}
 	return "", fmt.Errorf("parse as chat failed: %v; parse as responses failed: %v", chatErr, responsesErr)
+}
+
+type streamEnvelope struct {
+	Error *struct {
+		Message string `json:"message"`
+	} `json:"error"`
+}
+
+type streamTextPayload struct {
+	Type       string `json:"type"`
+	Delta      string `json:"delta"`
+	Text       string `json:"text"`
+	OutputText string `json:"output_text"`
+	Message    string `json:"message"`
+}
+
+type chatStreamChoice struct {
+	Delta relaymodel.Message `json:"delta"`
+}
+
+type chatStreamEnvelope struct {
+	Choices []chatStreamChoice `json:"choices"`
+}
+
+func isLikelySSEPayload(resp string) bool {
+	trimmed := strings.TrimSpace(resp)
+	if trimmed == "" {
+		return false
+	}
+	lower := strings.ToLower(trimmed)
+	return strings.HasPrefix(lower, "event:") || strings.HasPrefix(lower, "data:")
+}
+
+func parseTextModelTestStreamResponse(resp string) (string, error) {
+	lines := strings.Split(resp, "\n")
+	currentEvent := ""
+	textParts := make([]string, 0, 8)
+	sawData := false
+	for _, rawLine := range lines {
+		line := strings.TrimSpace(strings.TrimSuffix(rawLine, "\r"))
+		if line == "" {
+			currentEvent = ""
+			continue
+		}
+		if strings.HasPrefix(line, "event:") {
+			currentEvent = strings.TrimSpace(strings.TrimPrefix(line, "event:"))
+			continue
+		}
+		if !strings.HasPrefix(line, "data:") {
+			continue
+		}
+		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+		if data == "" {
+			continue
+		}
+		sawData = true
+		if data == "[DONE]" {
+			continue
+		}
+
+		var envelope streamEnvelope
+		if err := json.Unmarshal([]byte(data), &envelope); err == nil && envelope.Error != nil {
+			message := strings.TrimSpace(envelope.Error.Message)
+			if message == "" {
+				message = "stream response contains error"
+			}
+			return "", errors.New(message)
+		}
+
+		var responsePayload streamTextPayload
+		if err := json.Unmarshal([]byte(data), &responsePayload); err == nil {
+			text := extractTextFromStreamPayload(currentEvent, responsePayload)
+			if text != "" {
+				textParts = append(textParts, text)
+				continue
+			}
+		}
+
+		var chatPayload chatStreamEnvelope
+		if err := json.Unmarshal([]byte(data), &chatPayload); err == nil {
+			for _, choice := range chatPayload.Choices {
+				if deltaText := strings.TrimSpace(choice.Delta.StringContent()); deltaText != "" {
+					textParts = append(textParts, deltaText)
+				}
+			}
+		}
+	}
+
+	if len(textParts) > 0 {
+		return strings.TrimSpace(strings.Join(textParts, "")), nil
+	}
+	if sawData {
+		return "流式接口返回成功", nil
+	}
+	return "", errors.New("stream response has no usable data")
+}
+
+func extractTextFromStreamPayload(event string, payload streamTextPayload) string {
+	switch strings.TrimSpace(event) {
+	case "response.output_text.delta":
+		if strings.TrimSpace(payload.Delta) != "" {
+			return strings.TrimSpace(payload.Delta)
+		}
+	case "response.output_text", "response.completed":
+		if strings.TrimSpace(payload.Text) != "" {
+			return strings.TrimSpace(payload.Text)
+		}
+		if strings.TrimSpace(payload.OutputText) != "" {
+			return strings.TrimSpace(payload.OutputText)
+		}
+		if strings.TrimSpace(payload.Delta) != "" {
+			return strings.TrimSpace(payload.Delta)
+		}
+	default:
+		if strings.TrimSpace(payload.Text) != "" {
+			return strings.TrimSpace(payload.Text)
+		}
+		if strings.TrimSpace(payload.OutputText) != "" {
+			return strings.TrimSpace(payload.OutputText)
+		}
+		if strings.TrimSpace(payload.Delta) != "" {
+			return strings.TrimSpace(payload.Delta)
+		}
+		if strings.TrimSpace(payload.Message) != "" {
+			return strings.TrimSpace(payload.Message)
+		}
+	}
+	if strings.HasPrefix(strings.TrimSpace(payload.Type), "response.output_text") {
+		if strings.TrimSpace(payload.Delta) != "" {
+			return strings.TrimSpace(payload.Delta)
+		}
+		if strings.TrimSpace(payload.Text) != "" {
+			return strings.TrimSpace(payload.Text)
+		}
+		if strings.TrimSpace(payload.OutputText) != "" {
+			return strings.TrimSpace(payload.OutputText)
+		}
+	}
+	return ""
 }
