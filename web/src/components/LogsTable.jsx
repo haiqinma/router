@@ -519,6 +519,7 @@ const LogsTable = () => {
               type='button'
               className='router-section-button router-log-query-button'
               onClick={refresh}
+              loading={loading}
             >
               {t('log.buttons.submit')}
             </Button>
@@ -720,9 +721,6 @@ const LogsTable = () => {
                       setLogType(value);
                     }}
                   />
-                  <Button className='router-page-button' onClick={refresh} loading={loading}>
-                    {t('log.buttons.refresh')}
-                  </Button>
                 </div>
                 <Pagination
                   className='router-page-pagination'
