@@ -347,7 +347,6 @@ const UsersTable = () => {
             className='router-page-button'
             as={Link}
             to='/user/add'
-            disabled={loading}
           >
             {t('user.buttons.add')}
           </Button>

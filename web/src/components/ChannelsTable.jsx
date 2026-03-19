@@ -880,7 +880,7 @@ const ChannelsTable = () => {
                 className='router-page-button'
                 as={Link}
                 to='/channel/add'
-                disabled={actionBusy}
+                disabled={batchDeleting || batchDisabling}
               >
                 {t('channel.buttons.add')}
               </Button>

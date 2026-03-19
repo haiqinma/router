@@ -61,8 +61,6 @@ const EditRedemption = () => {
               <Button className='router-page-button' onClick={handleCancel}>
                 {t('redemption.edit.buttons.cancel')}
               </Button>
-            </div>
-            <div className='router-toolbar-end'>
               <Button className='router-page-button' positive onClick={submit}>
                 {t('redemption.edit.buttons.submit')}
               </Button>

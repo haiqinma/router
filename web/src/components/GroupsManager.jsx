@@ -666,7 +666,7 @@ const GroupsManager = ({ detailGroupId = '' }) => {
           <Button
             type='button'
             className='router-page-button'
-            disabled={submitting || loading}
+            disabled={submitting}
             onClick={openCreatePanel}
           >
             {t('group_manage.buttons.add')}

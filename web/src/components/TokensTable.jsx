@@ -351,7 +351,6 @@ const TokensTable = () => {
             className='router-page-button'
             as={Link}
             to='/token/add'
-            disabled={loading}
           >
             {t('token.buttons.add')}
           </Button>

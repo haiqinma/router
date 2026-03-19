@@ -1833,7 +1833,7 @@ const ProvidersManager = () => {
           <Button
             type='button'
             className='router-page-button'
-            disabled={saving || loading}
+            disabled={saving}
             onClick={openCreatePanel}
           >
             {t('channel.providers.buttons.add_provider')}
