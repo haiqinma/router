@@ -339,6 +339,8 @@ const Dashboard = () => {
   const [calendarUnit, setCalendarUnit] = useState('usd');
   const [calendarData, setCalendarData] = useState([]);
   const [activeFilters, setActiveFilters] = useState(['time']);
+  const [dailyPackageQuota, setDailyPackageQuota] = useState(null);
+  const [dailyPackageQuotaLoading, setDailyPackageQuotaLoading] = useState(false);
 
   const allModels = useMemo(
     () => Array.from(new Set(Object.values(providers).flat())),
@@ -401,6 +403,10 @@ const Dashboard = () => {
   useEffect(() => {
     fetchCalendarData();
   }, [calendarGranularity, selectedModelsKey, selectionReady]);
+
+  useEffect(() => {
+    fetchDailyPackageQuota();
+  }, []);
 
   const toStartTimestamp = (dateStr) => {
     const date = parseDateInput(dateStr);
@@ -529,6 +535,23 @@ const Dashboard = () => {
     } catch (error) {
       console.error('Failed to fetch calendar data:', error);
       setCalendarData([]);
+    }
+  };
+
+  const fetchDailyPackageQuota = async () => {
+    setDailyPackageQuotaLoading(true);
+    try {
+      const response = await API.get('/api/v1/public/user/quota/daily');
+      if (response.data?.success) {
+        setDailyPackageQuota(response.data.data || null);
+        return;
+      }
+      setDailyPackageQuota(null);
+    } catch (error) {
+      console.error('Failed to fetch daily package quota:', error);
+      setDailyPackageQuota(null);
+    } finally {
+      setDailyPackageQuotaLoading(false);
     }
   };
 
@@ -891,8 +914,75 @@ const Dashboard = () => {
     padding: { left: 30, right: 30 }, // 增加两侧的内边距，确保首尾标签完整显示
   };
 
+  const packageLimitDisplay = useMemo(() => {
+    if (!dailyPackageQuota) return '-';
+    if (dailyPackageQuota.unlimited) return t('common.unlimited');
+    return formatCountValue(dailyPackageQuota.limit || 0);
+  }, [dailyPackageQuota, t]);
+
+  const packageRemainingDisplay = useMemo(() => {
+    if (!dailyPackageQuota) return '-';
+    if (dailyPackageQuota.unlimited) return t('common.unlimited');
+    return formatCountValue(dailyPackageQuota.remaining_quota || 0);
+  }, [dailyPackageQuota, t]);
+
   return (
     <div className='dashboard-container'>
+      <Card fluid className='chart-card dashboard-spend-card'>
+        <Card.Content>
+          <Card.Header className='router-card-header router-section-title'>
+            {t('dashboard.spending.package_daily.title')}
+          </Card.Header>
+          <div className='dashboard-spend-summary'>
+            <div className='dashboard-spend-period-row'>
+              <div className='dashboard-spend-label'>
+                {t('dashboard.spending.package_daily.group')}
+                : {dailyPackageQuota?.group_name || '-'}
+              </div>
+              <Button
+                type='button'
+                className='router-inline-button'
+                loading={dailyPackageQuotaLoading}
+                onClick={() => fetchDailyPackageQuota()}
+              >
+                {t('dashboard.admin.buttons.refresh')}
+              </Button>
+            </div>
+            <div className='dashboard-spend-summary-row'>
+              <div className='dashboard-spend-metric'>
+                <div className='dashboard-spend-label'>
+                  {t('dashboard.spending.package_daily.remaining')}
+                </div>
+                <div className='dashboard-spend-value'>{packageRemainingDisplay}</div>
+              </div>
+              <div className='dashboard-spend-metric'>
+                <div className='dashboard-spend-label'>
+                  {t('dashboard.spending.package_daily.consumed')}
+                </div>
+                <div className='dashboard-spend-value'>
+                  {dailyPackageQuota ? formatCountValue(dailyPackageQuota.consumed_quota || 0) : '-'}
+                </div>
+              </div>
+            </div>
+            <div className='dashboard-spend-summary-row'>
+              <div className='dashboard-spend-metric'>
+                <div className='dashboard-spend-label'>
+                  {t('dashboard.spending.package_daily.limit')}
+                </div>
+                <div className='dashboard-spend-value'>{packageLimitDisplay}</div>
+              </div>
+              <div className='dashboard-spend-metric'>
+                <div className='dashboard-spend-label'>
+                  {t('dashboard.spending.package_daily.biz_date')}
+                </div>
+                <div className='dashboard-spend-value'>
+                  {dailyPackageQuota?.biz_date || '-'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </Card.Content>
+      </Card>
       <div className='dashboard-spend-section'>
         <div className='dashboard-spend-stack'>
           <Card fluid className='chart-card dashboard-spend-card'>

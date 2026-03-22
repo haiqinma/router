@@ -15,13 +15,13 @@ import (
 
 const groupDailyQuotaExceededCode = "group_daily_quota_exceeded"
 
-func reserveGroupDailyQuota(groupID string, quota int64) (model.GroupDailyQuotaReservation, *relaymodel.ErrorWithStatusCode) {
-	reservation, allowed, err := model.ReserveGroupDailyQuota(groupID, quota)
+func reserveGroupDailyQuota(groupID string, userID string, quota int64) (model.GroupDailyQuotaReservation, *relaymodel.ErrorWithStatusCode) {
+	reservation, allowed, err := model.ReserveGroupDailyQuota(groupID, userID, quota)
 	if err != nil {
 		return model.GroupDailyQuotaReservation{}, openai.ErrorWrapper(err, "reserve_group_daily_quota_failed", http.StatusInternalServerError)
 	}
 	if !allowed {
-		return model.GroupDailyQuotaReservation{}, openai.ErrorWrapper(errors.New("当前分组每日额度已达上限，请明日再试"), groupDailyQuotaExceededCode, http.StatusForbidden)
+		return model.GroupDailyQuotaReservation{}, openai.ErrorWrapper(errors.New("当前分组套餐每日额度已达上限，请明日再试"), groupDailyQuotaExceededCode, http.StatusForbidden)
 	}
 	return reservation, nil
 }

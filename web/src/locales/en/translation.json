@@ -854,6 +854,15 @@
     "title": "User Management",
     "detail": {
       "title": "User Detail",
+      "daily_quota_title": "Today's Package Quota",
+      "daily_quota_group": "Package Group",
+      "daily_quota_limit": "Today's Limit",
+      "daily_quota_consumed": "Today's Consumed",
+      "daily_quota_reserved": "Today's Reserved",
+      "daily_quota_remaining": "Today's Remaining",
+      "daily_quota_biz_date": "Business Date",
+      "daily_quota_timezone": "Timezone",
+      "daily_quota_updated_at": "Updated At",
       "buttons": {
         "back": "Back",
         "edit": "Edit"
@@ -891,6 +900,7 @@
       "create_success": "User account created successfully!",
       "operation_success": "Operation completed successfully!",
       "operation_failed": "Operation failed",
+      "daily_quota_load_failed": "Failed to load user's daily package quota",
       "wallet_copy_success": "Wallet address copied",
       "wallet_copy_failed": "Copy failed, please copy manually"
     },
@@ -1058,6 +1068,14 @@
       },
       "analysis": {
         "title": "Spending Analysis"
+      },
+      "package_daily": {
+        "title": "Today's Package Quota",
+        "group": "Package Group",
+        "limit": "Today's Limit",
+        "consumed": "Today's Consumed",
+        "remaining": "Today's Remaining",
+        "biz_date": "Business Date"
       }
     },
     "admin": {

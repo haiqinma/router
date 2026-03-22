@@ -61,3 +61,7 @@ func ReplaceChannelBindings(id string, channelIDs []string) error {
 func ReplaceModelConfigs(id string, channelIDs []string, modelConfigs []model.GroupModelConfigItem, explicitChannels bool) error {
 	return model.ReplaceGroupModelConfigs(id, channelIDs, modelConfigs, explicitChannels)
 }
+
+func GetDailyQuotaSnapshot(id string, userID string, bizDate string) (model.GroupDailyQuotaSnapshot, error) {
+	return model.GetGroupDailyQuotaSnapshot(id, userID, bizDate)
+}

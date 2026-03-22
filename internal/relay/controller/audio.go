@@ -86,7 +86,7 @@ func RelayAudioHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 			return openai.ErrorWrapper(err, "calculate_audio_quota_failed", http.StatusInternalServerError)
 		}
 	}
-	groupReservation, groupQuotaErr := reserveGroupDailyQuota(group, preConsumedQuota)
+	groupReservation, groupQuotaErr := reserveGroupDailyQuota(group, userId, preConsumedQuota)
 	if groupQuotaErr != nil {
 		return groupQuotaErr
 	}

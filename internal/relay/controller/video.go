@@ -367,7 +367,7 @@ func RelayVideoHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	if err != nil {
 		return openai.ErrorWrapper(err, "calculate_video_quota_failed", http.StatusInternalServerError)
 	}
-	groupReservation, groupQuotaErr := reserveGroupDailyQuota(meta.Group, quota)
+	groupReservation, groupQuotaErr := reserveGroupDailyQuota(meta.Group, meta.UserId, quota)
 	if groupQuotaErr != nil {
 		return groupQuotaErr
 	}

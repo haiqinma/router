@@ -132,6 +132,50 @@ func GetGroup(c *gin.Context) {
 	})
 }
 
+// GetGroupDailyQuota godoc
+// @Summary Get group daily quota snapshot by date (admin)
+// @Tags admin
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "Group ID"
+// @Param user_id query string true "User ID"
+// @Param date query string false "Biz date in YYYY-MM-DD, defaults to today in group timezone"
+// @Success 200 {object} docs.StandardResponse
+// @Failure 401 {object} docs.ErrorResponse
+// @Router /api/v1/admin/group/{id}/quota/daily [get]
+func GetGroupDailyQuota(c *gin.Context) {
+	id := strings.TrimSpace(c.Param("id"))
+	if id == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "分组 ID 不能为空",
+		})
+		return
+	}
+	userID := strings.TrimSpace(c.Query("user_id"))
+	if userID == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "用户 ID 不能为空",
+		})
+		return
+	}
+	bizDate := strings.TrimSpace(c.Query("date"))
+	data, err := groupsvc.GetDailyQuotaSnapshot(id, userID, bizDate)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    data,
+	})
+}
+
 // CreateGroup godoc
 // @Summary Create group (admin)
 // @Tags admin

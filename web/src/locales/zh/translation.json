@@ -854,6 +854,15 @@
     "title": "用户管理",
     "detail": {
       "title": "用户详情",
+      "daily_quota_title": "今日套餐额度",
+      "daily_quota_group": "套餐分组",
+      "daily_quota_limit": "今日上限",
+      "daily_quota_consumed": "今日已用",
+      "daily_quota_reserved": "今日预占",
+      "daily_quota_remaining": "今日剩余",
+      "daily_quota_biz_date": "业务日",
+      "daily_quota_timezone": "时区",
+      "daily_quota_updated_at": "更新时间",
       "buttons": {
         "back": "返回",
         "edit": "编辑"
@@ -891,6 +900,7 @@
       "create_success": "用户账户创建成功！",
       "operation_success": "操作成功完成！",
       "operation_failed": "操作失败",
+      "daily_quota_load_failed": "加载用户今日套餐额度失败",
       "wallet_copy_success": "钱包地址已复制",
       "wallet_copy_failed": "复制失败，请手动复制"
     },
@@ -1058,6 +1068,14 @@
       },
       "analysis": {
         "title": "花费分析"
+      },
+      "package_daily": {
+        "title": "今日套餐额度",
+        "group": "套餐分组",
+        "limit": "今日上限",
+        "consumed": "今日已用",
+        "remaining": "今日剩余",
+        "biz_date": "业务日"
       }
     },
     "admin": {

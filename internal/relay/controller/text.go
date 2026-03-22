@@ -67,7 +67,7 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	promptTokens := getPromptTokens(textRequest, meta.Mode)
 	meta.PromptTokens = promptTokens
 	groupReservedQuota := billing.ComputeTextPreConsumedQuota(promptTokens, textRequest.MaxTokens, pricing, groupRatio)
-	groupReservation, groupQuotaErr := reserveGroupDailyQuota(meta.Group, groupReservedQuota)
+	groupReservation, groupQuotaErr := reserveGroupDailyQuota(meta.Group, meta.UserId, groupReservedQuota)
 	if groupQuotaErr != nil {
 		return groupQuotaErr
 	}

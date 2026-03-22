@@ -129,6 +129,13 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return tx.AutoMigrate(&GroupQuotaDailyCounter{})
 			},
 		},
+		{
+			Version:     "202603202030_user_group_daily_quota_counters",
+			Description: "switch group daily quota counters to user+group scoped counters",
+			Up: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&GroupQuotaDailyCounter{})
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }

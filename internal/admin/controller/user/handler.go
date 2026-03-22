@@ -795,6 +795,121 @@ func GetSelf(c *gin.Context) {
 	return
 }
 
+func parseGroupReferences(raw string) []string {
+	parts := strings.FieldsFunc(raw, func(r rune) bool {
+		return r == ',' || r == '\n' || r == '\r'
+	})
+	items := make([]string, 0, len(parts))
+	seen := make(map[string]struct{}, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed == "" {
+			continue
+		}
+		if _, ok := seen[trimmed]; ok {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		items = append(items, trimmed)
+	}
+	return items
+}
+
+func resolveUserDailyQuotaGroupID(user *model.User, requestedGroupRef string) (string, error) {
+	trimmedRequested := strings.TrimSpace(requestedGroupRef)
+	if trimmedRequested != "" {
+		groupCatalog, err := model.ResolveGroupCatalogByReference(trimmedRequested)
+		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return "", fmt.Errorf("分组不存在")
+			}
+			return "", err
+		}
+		return strings.TrimSpace(groupCatalog.Id), nil
+	}
+	if user == nil {
+		return "", fmt.Errorf("用户不存在")
+	}
+	groupRefs := parseGroupReferences(user.Group)
+	if len(groupRefs) == 0 {
+		return "", fmt.Errorf("当前用户未绑定分组")
+	}
+	for _, groupRef := range groupRefs {
+		groupCatalog, err := model.ResolveGroupCatalogByReference(groupRef)
+		if err != nil {
+			continue
+		}
+		if groupID := strings.TrimSpace(groupCatalog.Id); groupID != "" {
+			return groupID, nil
+		}
+	}
+	return "", fmt.Errorf("当前用户未绑定有效分组")
+}
+
+// GetCurrentUserDailyQuota godoc
+// @Summary Get current user's daily package quota snapshot
+// @Tags public
+// @Security BearerAuth
+// @Produce json
+// @Param group_id query string false "Group ID (optional, defaults to user's first bound group)"
+// @Param date query string false "Biz date in YYYY-MM-DD, defaults to today in group timezone"
+// @Success 200 {object} docs.StandardResponse
+// @Failure 401 {object} docs.ErrorResponse
+// @Router /api/v1/public/user/quota/daily [get]
+func GetCurrentUserDailyQuota(c *gin.Context) {
+	userID := c.GetString(ctxkey.Id)
+	if strings.TrimSpace(userID) == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "用户 ID 不能为空",
+		})
+		return
+	}
+	user, err := usersvc.GetByID(userID, false)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	groupID, err := resolveUserDailyQuotaGroupID(user, c.Query("group_id"))
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	bizDate := strings.TrimSpace(c.Query("date"))
+	snapshot, err := model.GetGroupDailyQuotaSnapshot(groupID, userID, bizDate)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	groupCatalog, _ := model.GetGroupCatalogByID(groupID)
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data": gin.H{
+			"group_id":        snapshot.GroupID,
+			"group_name":      strings.TrimSpace(groupCatalog.Name),
+			"user_id":         snapshot.UserID,
+			"biz_date":        snapshot.BizDate,
+			"limit":           snapshot.Limit,
+			"consumed_quota":  snapshot.ConsumedQuota,
+			"reserved_quota":  snapshot.ReservedQuota,
+			"remaining_quota": snapshot.RemainingQuota,
+			"unlimited":       snapshot.Unlimited,
+			"timezone":        snapshot.Timezone,
+			"updated_at":      snapshot.UpdatedAt,
+		},
+	})
+}
+
 // UpdateUser godoc
 // @Summary Update user (admin)
 // @Tags admin

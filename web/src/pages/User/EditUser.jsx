@@ -56,6 +56,35 @@ const readOnlyValue = (value) => {
   return normalized || '-';
 };
 
+const createEmptyDailyQuota = () => ({
+  group_id: '',
+  group_name: '',
+  user_id: '',
+  biz_date: '',
+  limit: 0,
+  consumed_quota: 0,
+  reserved_quota: 0,
+  remaining_quota: 0,
+  unlimited: true,
+  timezone: '',
+  updated_at: 0,
+});
+
+const parseFirstGroupRef = (raw) => {
+  const normalized = (raw || '').toString().trim();
+  if (normalized === '') {
+    return '';
+  }
+  const parts = normalized
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item !== '');
+  if (parts.length === 0) {
+    return '';
+  }
+  return parts[0];
+};
+
 const UserDetail = () => {
   const { t } = useTranslation();
   const { id: userId } = useParams();
@@ -65,6 +94,8 @@ const UserDetail = () => {
   const [actionLoading, setActionLoading] = useState('');
   const [persistedUsername, setPersistedUsername] = useState('');
   const [groupMap, setGroupMap] = useState({});
+  const [dailyQuota, setDailyQuota] = useState(createEmptyDailyQuota());
+  const [dailyQuotaLoading, setDailyQuotaLoading] = useState(false);
   const [inputs, setInputs] = useState({
     username: '',
     email: '',
@@ -172,8 +203,11 @@ const UserDetail = () => {
   }, [navigate, userId]);
 
   useEffect(() => {
-    loadUser().then();
-    loadGroups().then();
+    const init = async () => {
+      await loadGroups();
+      await loadUser();
+    };
+    init().then();
   }, [loadGroups, loadUser]);
 
   const groupDisplayValue = useMemo(() => {
@@ -199,8 +233,60 @@ const UserDetail = () => {
     [groupMap],
   );
 
+  const currentGroupId = useMemo(() => {
+    const groupRef = parseFirstGroupRef(inputs.group);
+    if (groupRef === '') {
+      return '';
+    }
+    if (groupMap[groupRef]) {
+      return groupRef;
+    }
+    const matched = Object.entries(groupMap).find(([, name]) => name === groupRef);
+    if (matched) {
+      return matched[0];
+    }
+    return groupRef;
+  }, [groupMap, inputs.group]);
+
   const isProtectedUser = inputs.can_manage_users === true;
   const canManageRole = isRoot() && !isProtectedUser;
+
+  const loadDailyQuota = useCallback(async () => {
+    const normalizedUserId = (userId || '').toString().trim();
+    const normalizedGroupId = (currentGroupId || '').toString().trim();
+    if (normalizedUserId === '' || normalizedGroupId === '') {
+      setDailyQuota(createEmptyDailyQuota());
+      return;
+    }
+    setDailyQuotaLoading(true);
+    try {
+      const encodedGroupID = encodeURIComponent(normalizedGroupId);
+      const res = await API.get(`/api/v1/admin/group/${encodedGroupID}/quota/daily`, {
+        params: {
+          user_id: normalizedUserId,
+        },
+      });
+      const { success, message, data } = res.data || {};
+      if (!success) {
+        showError(message || t('user.messages.daily_quota_load_failed'));
+        return;
+      }
+      setDailyQuota({
+        ...createEmptyDailyQuota(),
+        ...(data || {}),
+        group_id: normalizedGroupId,
+        group_name: groupMap[normalizedGroupId] || normalizedGroupId,
+      });
+    } catch (error) {
+      showError(error?.message || error);
+    } finally {
+      setDailyQuotaLoading(false);
+    }
+  }, [currentGroupId, groupMap, t, userId]);
+
+  useEffect(() => {
+    loadDailyQuota().then();
+  }, [loadDailyQuota]);
 
   const roleControl = useMemo(() => {
     if (!canManageRole) {
@@ -479,6 +565,77 @@ const UserDetail = () => {
                 readOnly
               />
             </Form.Group>
+
+            <div className='router-block-top-sm'>
+              <div className='router-toolbar router-block-gap-xs'>
+                <div className='router-toolbar-title'>
+                  {t('user.detail.daily_quota_title')}
+                </div>
+                <Button
+                  type='button'
+                  className='router-inline-button'
+                  loading={dailyQuotaLoading}
+                  disabled={dailyQuotaLoading || loading || actionLoading !== ''}
+                  onClick={() => loadDailyQuota()}
+                >
+                  {t('user.buttons.refresh')}
+                </Button>
+              </div>
+              <Form.Group widths='equal'>
+                <Form.Input
+                  className='router-section-input'
+                  label={t('user.detail.daily_quota_group')}
+                  value={readOnlyValue(dailyQuota.group_name || groupDisplayValue)}
+                  readOnly
+                />
+                <Form.Input
+                  className='router-section-input'
+                  label={t('user.detail.daily_quota_limit')}
+                  value={dailyQuota.unlimited ? t('common.unlimited') : Number(dailyQuota.limit || 0)}
+                  readOnly
+                />
+                <Form.Input
+                  className='router-section-input'
+                  label={t('user.detail.daily_quota_consumed')}
+                  value={Number(dailyQuota.consumed_quota || 0)}
+                  readOnly
+                />
+                <Form.Input
+                  className='router-section-input'
+                  label={t('user.detail.daily_quota_remaining')}
+                  value={
+                    dailyQuota.unlimited ? t('common.unlimited') : Number(dailyQuota.remaining_quota || 0)
+                  }
+                  readOnly
+                />
+              </Form.Group>
+              <Form.Group widths='equal'>
+                <Form.Input
+                  className='router-section-input'
+                  label={t('user.detail.daily_quota_reserved')}
+                  value={Number(dailyQuota.reserved_quota || 0)}
+                  readOnly
+                />
+                <Form.Input
+                  className='router-section-input'
+                  label={t('user.detail.daily_quota_biz_date')}
+                  value={readOnlyValue(dailyQuota.biz_date)}
+                  readOnly
+                />
+                <Form.Input
+                  className='router-section-input'
+                  label={t('user.detail.daily_quota_timezone')}
+                  value={readOnlyValue(dailyQuota.timezone)}
+                  readOnly
+                />
+                <Form.Input
+                  className='router-section-input'
+                  label={t('user.detail.daily_quota_updated_at')}
+                  value={dailyQuota.updated_at ? new Date(Number(dailyQuota.updated_at) * 1000).toLocaleString('zh-CN', { hour12: false }) : '-'}
+                  readOnly
+                />
+              </Form.Group>
+            </div>
             {isEditing ? (
               <Form.Input
                 className='router-section-input'
