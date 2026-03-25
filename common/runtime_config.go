@@ -198,8 +198,8 @@ func defaultRuntimeConfig() RuntimeConfig {
 		},
 		UCAN: UCANRuntimeConfig{
 			Aud:      "",
-			Resource: "profile",
-			Action:   "read",
+			Resource: "",
+			Action:   config.DefaultUcanAction,
 		},
 		Feature: FeatureRuntimeConfig{
 			Debug:               false,

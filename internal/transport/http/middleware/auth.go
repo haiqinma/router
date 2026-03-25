@@ -288,8 +288,8 @@ func TokenAuth() func(c *gin.Context) {
 
 		// 2) UCAN
 		if common.IsUcanToken(auth) {
-			required := []common.UcanCapability{{Resource: config.UcanResource, Action: config.UcanAction}}
-			address, err := common.VerifyUcanInvocation(auth, common.ResolveUcanAudience(), required)
+			requiredSets := common.ResolveUcanRequiredCapabilitySets()
+			address, err := common.VerifyUcanInvocationAny(auth, common.ResolveUcanAudience(), requiredSets)
 			if err != nil {
 				logger.Loginf(ctx, "token auth ucan verify failed err=%v", err)
 				abortWithMessage(c, http.StatusUnauthorized, err.Error())

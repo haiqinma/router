@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/yeying-community/router/common"
-	"github.com/yeying-community/router/common/config"
 	"github.com/yeying-community/router/common/logger"
 	"github.com/yeying-community/router/internal/admin/model"
 )
@@ -62,8 +61,8 @@ func PublicProfile(c *gin.Context) {
 		return
 	}
 
-	required := []common.UcanCapability{{Resource: config.UcanResource, Action: config.UcanAction}}
-	address, err := common.VerifyUcanInvocation(bearer, common.ResolveUcanAudience(), required)
+	requiredSets := common.ResolveUcanRequiredCapabilitySets()
+	address, err := common.VerifyUcanInvocationAny(bearer, common.ResolveUcanAudience(), requiredSets)
 	if err != nil {
 		logger.Loginf(c.Request.Context(), "UCAN verify failed err=%v", err)
 		writeWeb3ErrorStatus(c, http.StatusUnauthorized, 401, err.Error())

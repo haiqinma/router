@@ -104,34 +104,30 @@ func ResolveUcanRequiredCapabilitySets() [][]UcanCapability {
 
 	current := UcanCapability{Resource: resource, Action: action}
 	defaultCap := UcanCapability{Resource: resolveDefaultUcanResource(), Action: config.DefaultUcanAction}
-	appCompatCap := UcanCapability{Resource: config.AppCompatUcanResource, Action: config.AppCompatUcanAction}
-	compatCap := UcanCapability{Resource: config.CompatUcanResource, Action: config.CompatUcanAction}
-	legacyCap := UcanCapability{Resource: config.LegacyUcanResource, Action: config.LegacyUcanAction}
+	compatCaps := []UcanCapability{
+		{Resource: config.AppCompatUcanResource, Action: config.AppCompatUcanAction},
+		{Resource: config.CompatUcanResource, Action: config.CompatUcanAction},
+		{Resource: config.ProfileCompatUcanResource, Action: config.ProfileCompatUcanAction},
+	}
+
+	knownCaps := make([]UcanCapability, 0, len(compatCaps)+1)
+	knownCaps = append(knownCaps, defaultCap)
+	knownCaps = append(knownCaps, compatCaps...)
 
 	sets := [][]UcanCapability{{current}}
-	isDefault := capabilityEquals(current, defaultCap)
-	isAppCompat := capabilityEquals(current, appCompatCap)
-	isCompat := capabilityEquals(current, compatCap)
-	isLegacy := capabilityEquals(current, legacyCap)
-	if isDefault {
-		sets = appendCapabilitySetIfMissing(sets, appCompatCap)
-		sets = appendCapabilitySetIfMissing(sets, compatCap)
-		sets = appendCapabilitySetIfMissing(sets, legacyCap)
+	isKnown := false
+	for _, cap := range knownCaps {
+		if capabilityEquals(current, cap) {
+			isKnown = true
+			break
+		}
 	}
-	if isAppCompat {
-		sets = appendCapabilitySetIfMissing(sets, defaultCap)
-		sets = appendCapabilitySetIfMissing(sets, compatCap)
-		sets = appendCapabilitySetIfMissing(sets, legacyCap)
+	if !isKnown {
+		return sets
 	}
-	if isCompat {
-		sets = appendCapabilitySetIfMissing(sets, appCompatCap)
-		sets = appendCapabilitySetIfMissing(sets, defaultCap)
-		sets = appendCapabilitySetIfMissing(sets, legacyCap)
-	}
-	if isLegacy {
-		sets = appendCapabilitySetIfMissing(sets, appCompatCap)
-		sets = appendCapabilitySetIfMissing(sets, defaultCap)
-		sets = appendCapabilitySetIfMissing(sets, compatCap)
+
+	for _, cap := range knownCaps {
+		sets = appendCapabilitySetIfMissing(sets, cap)
 	}
 	return sets
 }

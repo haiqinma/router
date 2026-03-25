@@ -96,12 +96,15 @@ var UcanAud = ""
 
 const DefaultUcanResourcePrefix = "llm:"
 const DefaultUcanAction = "invoke"
+
 const AppCompatUcanResource = "app:*"
 const AppCompatUcanAction = "invoke"
 const CompatUcanResource = "router:llm"
 const CompatUcanAction = "invoke"
-const LegacyUcanResource = "profile"
-const LegacyUcanAction = "read"
+
+// Compatibility alias for previously issued tokens.
+const ProfileCompatUcanResource = "profile"
+const ProfileCompatUcanAction = "read"
 
 var UcanResource = ""
 var UcanAction = DefaultUcanAction

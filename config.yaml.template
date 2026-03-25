@@ -63,8 +63,8 @@ cors:
 ucan:
   # 公网部署建议显式设置 did:web:<your-domain>
   aud: ""
-  resource: profile
-  action: read
+  resource: ""
+  action: invoke
 
 feature:
   debug: false

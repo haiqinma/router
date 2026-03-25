@@ -6,7 +6,7 @@ import (
 	"github.com/yeying-community/router/common/config"
 )
 
-func TestResolveUcanRequiredCapabilitySets_DefaultIncludesAppCompat(t *testing.T) {
+func TestResolveUcanRequiredCapabilitySets_DefaultIncludesCompatAliases(t *testing.T) {
 	prevResource := config.UcanResource
 	prevAction := config.UcanAction
 	prevAud := config.UcanAud
@@ -34,9 +34,32 @@ func TestResolveUcanRequiredCapabilitySets_DefaultIncludesAppCompat(t *testing.T
 		Action:   config.CompatUcanAction,
 	})
 	assertHasSingleCapabilitySet(t, sets, UcanCapability{
-		Resource: config.LegacyUcanResource,
-		Action:   config.LegacyUcanAction,
+		Resource: config.ProfileCompatUcanResource,
+		Action:   config.ProfileCompatUcanAction,
 	})
+}
+
+func TestResolveUcanRequiredCapabilitySets_CustomCapabilityNoCompatFallback(t *testing.T) {
+	prevResource := config.UcanResource
+	prevAction := config.UcanAction
+	defer func() {
+		config.UcanResource = prevResource
+		config.UcanAction = prevAction
+	}()
+
+	config.UcanResource = "custom:capability"
+	config.UcanAction = "read"
+
+	sets := ResolveUcanRequiredCapabilitySets()
+	if len(sets) != 1 || len(sets[0]) != 1 {
+		t.Fatalf("expected only one required capability set, got %#v", sets)
+	}
+	if !capabilityEquals(sets[0][0], UcanCapability{
+		Resource: "custom:capability",
+		Action:   "read",
+	}) {
+		t.Fatalf("unexpected required capability: %#v", sets[0][0])
+	}
 }
 
 func TestCapsAllow_AppWildcardRequiredMatchesExactAvailable(t *testing.T) {
