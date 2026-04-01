@@ -63,6 +63,29 @@ const readOnlyValue = (value) => {
   return normalized || '-';
 };
 
+const formatDateTime = (timestamp) => {
+  const value = Number(timestamp || 0);
+  if (!Number.isFinite(value) || value <= 0) {
+    return '-';
+  }
+  return new Date(value * 1000).toLocaleString('zh-CN', { hour12: false });
+};
+
+const resolvePackageStatusText = (status, t) => {
+  switch (Number(status)) {
+    case 1:
+      return t('user.detail.package_status_types.active');
+    case 2:
+      return t('user.detail.package_status_types.expired');
+    case 3:
+      return t('user.detail.package_status_types.replaced');
+    case 4:
+      return t('user.detail.package_status_types.canceled');
+    default:
+      return t('user.detail.package_status_types.unknown');
+  }
+};
+
 const createEmptyDailyQuota = () => ({
   group_id: '',
   group_name: '',
@@ -103,6 +126,11 @@ const createEmptyUserQuotaSummary = () => ({
   },
 });
 
+const createEmptyActivePackage = () => ({
+  has_active_subscription: false,
+  subscription: null,
+});
+
 const normalizeQuotaSnapshot = (raw, fallback = {}) => ({
   ...fallback,
   ...(raw || {}),
@@ -128,6 +156,37 @@ const normalizeUserQuotaSummary = (raw) => {
     ...(raw || {}),
     daily: normalizeQuotaSnapshot(raw?.daily, empty.daily),
     monthly_emergency: normalizeQuotaSnapshot(raw?.monthly_emergency, empty.monthly_emergency),
+  };
+};
+
+const normalizeActivePackage = (raw) => {
+  if (!raw || typeof raw !== 'object') {
+    return createEmptyActivePackage();
+  }
+  const subscription =
+    raw.subscription && typeof raw.subscription === 'object'
+      ? {
+          id: (raw.subscription.id || '').toString().trim(),
+          user_id: (raw.subscription.user_id || '').toString().trim(),
+          package_id: (raw.subscription.package_id || '').toString().trim(),
+          package_name: (raw.subscription.package_name || '').toString().trim(),
+          group_id: (raw.subscription.group_id || '').toString().trim(),
+          group_name: (raw.subscription.group_name || '').toString().trim(),
+          daily_quota_limit: Number(raw.subscription.daily_quota_limit || 0),
+          monthly_emergency_quota_limit: Number(
+            raw.subscription.monthly_emergency_quota_limit || 0,
+          ),
+          quota_reset_timezone: (raw.subscription.quota_reset_timezone || '').toString().trim(),
+          started_at: Number(raw.subscription.started_at || 0),
+          expires_at: Number(raw.subscription.expires_at || 0),
+          status: Number(raw.subscription.status || 0),
+          source: (raw.subscription.source || '').toString().trim(),
+        }
+      : null;
+  const hasActive = raw.has_active_subscription === true && subscription !== null;
+  return {
+    has_active_subscription: hasActive,
+    subscription: hasActive ? subscription : null,
   };
 };
 
@@ -160,6 +219,8 @@ const UserDetail = () => {
   const [groupMap, setGroupMap] = useState({});
   const [dailyQuota, setDailyQuota] = useState(createEmptyDailyQuota());
   const [dailyQuotaLoading, setDailyQuotaLoading] = useState(false);
+  const [activePackage, setActivePackage] = useState(createEmptyActivePackage());
+  const [activePackageLoading, setActivePackageLoading] = useState(false);
   const [userQuotaSummary, setUserQuotaSummary] = useState(createEmptyUserQuotaSummary());
   const [userQuotaSummaryLoading, setUserQuotaSummaryLoading] = useState(false);
   const [inputs, setInputs] = useState({
@@ -304,6 +365,30 @@ const UserDetail = () => {
     }
   }, [t, userId]);
 
+  const loadActivePackage = useCallback(async () => {
+    const normalizedUserId = (userId || '').toString().trim();
+    if (normalizedUserId === '') {
+      setActivePackage(createEmptyActivePackage());
+      return;
+    }
+    setActivePackageLoading(true);
+    try {
+      const res = await API.get(
+        `/api/v1/admin/user/${encodeURIComponent(normalizedUserId)}/package/subscription`,
+      );
+      const { success, message, data } = res.data || {};
+      if (!success) {
+        showError(message || t('user.messages.active_package_load_failed'));
+        return;
+      }
+      setActivePackage(normalizeActivePackage(data));
+    } catch (error) {
+      showError(error?.message || error);
+    } finally {
+      setActivePackageLoading(false);
+    }
+  }, [t, userId]);
+
   useEffect(() => {
     const init = async () => {
       await loadGroups();
@@ -352,6 +437,8 @@ const UserDetail = () => {
 
   const isProtectedUser = inputs.can_manage_users === true;
   const canManageRole = isRoot() && !isProtectedUser;
+  const hasActivePackage = activePackage.has_active_subscription === true && activePackage.subscription;
+  const activePackageSubscription = hasActivePackage ? activePackage.subscription : null;
 
   const loadDailyQuota = useCallback(async () => {
     const normalizedUserId = (userId || '').toString().trim();
@@ -390,6 +477,10 @@ const UserDetail = () => {
   useEffect(() => {
     loadUserQuotaSummary().then();
   }, [loadUserQuotaSummary]);
+
+  useEffect(() => {
+    loadActivePackage().then();
+  }, [loadActivePackage]);
 
   const roleControl = useMemo(() => {
     if (!canManageRole) {
@@ -530,6 +621,7 @@ const UserDetail = () => {
       showSuccess(t('user.messages.update_success'));
       await loadUser();
       await loadUserQuotaSummary();
+      await loadActivePackage();
       setIsEditing(false);
     } catch (error) {
       showError(error?.message || error);
@@ -547,6 +639,7 @@ const UserDetail = () => {
     inputs.role,
     inputs.status,
     loadUser,
+    loadActivePackage,
     loadUserQuotaSummary,
     t,
     userId,
@@ -761,6 +854,128 @@ const UserDetail = () => {
                 readOnly
               />
             </Form.Group>
+
+            <div className='router-block-top-sm'>
+              <div className='router-toolbar router-block-gap-xs'>
+                <div className='router-toolbar-title'>
+                  {t('user.detail.package_title')}
+                </div>
+                <Button
+                  type='button'
+                  className='router-inline-button'
+                  loading={activePackageLoading}
+                  disabled={activePackageLoading || loading || actionLoading !== ''}
+                  onClick={() => loadActivePackage()}
+                >
+                  {t('user.buttons.refresh')}
+                </Button>
+              </div>
+              <Form.Group widths='equal'>
+                <Form.Input
+                  className='router-section-input'
+                  label={t('user.detail.package_name')}
+                  value={
+                    hasActivePackage
+                      ? readOnlyValue(activePackageSubscription?.package_name)
+                      : t('user.detail.package_none')
+                  }
+                  readOnly
+                />
+                <Form.Input
+                  className='router-section-input'
+                  label={t('user.detail.package_group')}
+                  value={
+                    hasActivePackage
+                      ? readOnlyValue(
+                          activePackageSubscription?.group_name ||
+                            activePackageSubscription?.group_id,
+                        )
+                      : '-'
+                  }
+                  readOnly
+                />
+                <Form.Input
+                  className='router-section-input'
+                  label={t('user.detail.package_status')}
+                  value={
+                    hasActivePackage
+                      ? resolvePackageStatusText(activePackageSubscription?.status, t)
+                      : '-'
+                  }
+                  readOnly
+                />
+                <Form.Input
+                  className='router-section-input'
+                  label={t('user.detail.package_source')}
+                  value={
+                    hasActivePackage
+                      ? readOnlyValue(activePackageSubscription?.source)
+                      : '-'
+                  }
+                  readOnly
+                />
+              </Form.Group>
+              <Form.Group widths='equal'>
+                <Form.Input
+                  className='router-section-input'
+                  label={t('user.detail.package_daily_limit')}
+                  value={
+                    hasActivePackage
+                      ? Number(activePackageSubscription?.daily_quota_limit || 0) > 0
+                        ? formatYYCValue(activePackageSubscription?.daily_quota_limit || 0)
+                        : t('common.unlimited')
+                      : '-'
+                  }
+                  readOnly
+                />
+                <Form.Input
+                  className='router-section-input'
+                  label={t('user.detail.package_monthly_emergency_limit')}
+                  value={
+                    hasActivePackage
+                      ? formatYYCValue(
+                          activePackageSubscription?.monthly_emergency_quota_limit || 0,
+                        )
+                      : '-'
+                  }
+                  readOnly
+                />
+                <Form.Input
+                  className='router-section-input'
+                  label={t('user.detail.package_timezone')}
+                  value={
+                    hasActivePackage
+                      ? readOnlyValue(activePackageSubscription?.quota_reset_timezone)
+                      : '-'
+                  }
+                  readOnly
+                />
+                <Form.Input
+                  className='router-section-input'
+                  label={t('user.detail.package_started_at')}
+                  value={
+                    hasActivePackage
+                      ? formatDateTime(activePackageSubscription?.started_at)
+                      : '-'
+                  }
+                  readOnly
+                />
+              </Form.Group>
+              <Form.Group widths='equal'>
+                <Form.Input
+                  className='router-section-input'
+                  label={t('user.detail.package_expires_at')}
+                  value={
+                    hasActivePackage
+                      ? Number(activePackageSubscription?.expires_at || 0) > 0
+                        ? formatDateTime(activePackageSubscription?.expires_at)
+                        : t('common.unlimited')
+                      : '-'
+                  }
+                  readOnly
+                />
+              </Form.Group>
+            </div>
 
             <div className='router-block-top-sm'>
               <div className='router-toolbar router-block-gap-xs'>

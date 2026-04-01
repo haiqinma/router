@@ -37,6 +37,27 @@ type LoginRequest struct {
 	Password string `json:"password"`
 }
 
+type activeUserPackageSubscriptionView struct {
+	Id                         string `json:"id"`
+	UserID                     string `json:"user_id"`
+	PackageID                  string `json:"package_id"`
+	PackageName                string `json:"package_name"`
+	GroupID                    string `json:"group_id"`
+	GroupName                  string `json:"group_name,omitempty"`
+	DailyQuotaLimit            int64  `json:"daily_quota_limit"`
+	MonthlyEmergencyQuotaLimit int64  `json:"monthly_emergency_quota_limit"`
+	QuotaResetTimezone         string `json:"quota_reset_timezone"`
+	StartedAt                  int64  `json:"started_at"`
+	ExpiresAt                  int64  `json:"expires_at"`
+	Status                     int    `json:"status"`
+	Source                     string `json:"source,omitempty"`
+}
+
+type activeUserPackageSubscriptionPayload struct {
+	HasActiveSubscription bool                               `json:"has_active_subscription"`
+	Subscription          *activeUserPackageSubscriptionView `json:"subscription,omitempty"`
+}
+
 func exposedUser(user *model.User) *presenter.User {
 	if user == nil {
 		return nil
@@ -71,6 +92,37 @@ func requesterCanReadUser(c *gin.Context, targetUser *model.User) bool {
 		return true
 	}
 	return c.GetInt(ctxkey.Role) >= model.EffectiveRole(targetUser)
+}
+
+func buildActiveUserPackageSubscriptionView(subscription model.UserPackageSubscription) *activeUserPackageSubscriptionView {
+	groupID := strings.TrimSpace(subscription.GroupID)
+	groupName := ""
+	if groupID != "" {
+		if groupCatalog, err := model.GetGroupCatalogByID(groupID); err == nil {
+			groupName = strings.TrimSpace(groupCatalog.Name)
+		}
+	}
+	source := ""
+	if packageID := strings.TrimSpace(subscription.PackageID); packageID != "" {
+		if servicePackage, err := model.GetServicePackageByID(packageID); err == nil {
+			source = strings.TrimSpace(servicePackage.Source)
+		}
+	}
+	return &activeUserPackageSubscriptionView{
+		Id:                         strings.TrimSpace(subscription.Id),
+		UserID:                     strings.TrimSpace(subscription.UserID),
+		PackageID:                  strings.TrimSpace(subscription.PackageID),
+		PackageName:                strings.TrimSpace(subscription.PackageName),
+		GroupID:                    groupID,
+		GroupName:                  groupName,
+		DailyQuotaLimit:            subscription.DailyQuotaLimit,
+		MonthlyEmergencyQuotaLimit: subscription.MonthlyEmergencyQuotaLimit,
+		QuotaResetTimezone:         strings.TrimSpace(subscription.QuotaResetTimezone),
+		StartedAt:                  subscription.StartedAt,
+		ExpiresAt:                  subscription.ExpiresAt,
+		Status:                     subscription.Status,
+		Source:                     source,
+	}
 }
 
 // Login godoc
@@ -375,6 +427,67 @@ func GetUser(c *gin.Context) {
 		"data":    exposedUser(user),
 	})
 	return
+}
+
+// GetUserActivePackageSubscription godoc
+// @Summary Get current active package subscription for user (admin)
+// @Tags admin
+// @Security BearerAuth
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} docs.StandardResponse
+// @Failure 401 {object} docs.ErrorResponse
+// @Router /api/v1/admin/user/{id}/package/subscription [get]
+func GetUserActivePackageSubscription(c *gin.Context) {
+	id := strings.TrimSpace(c.Param("id"))
+	if id == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "id 为空",
+		})
+		return
+	}
+	targetUser, err := usersvc.GetByID(id, false)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	if !requesterCanReadUser(c, targetUser) {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "无权获取同级或更高等级用户的信息",
+		})
+		return
+	}
+	subscription, err := model.GetActiveUserPackageSubscription(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusOK, gin.H{
+				"success": true,
+				"message": "",
+				"data": activeUserPackageSubscriptionPayload{
+					HasActiveSubscription: false,
+				},
+			})
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data": activeUserPackageSubscriptionPayload{
+			HasActiveSubscription: true,
+			Subscription:          buildActiveUserPackageSubscriptionView(subscription),
+		},
+	})
 }
 
 // GetUserDashboard godoc

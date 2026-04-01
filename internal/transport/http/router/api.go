@@ -197,6 +197,7 @@ func SetApiRouter(engine *gin.Engine) {
 			adminUserRoute.GET("/", user.GetAllUsers)
 			adminUserRoute.GET("/search", user.SearchUsers)
 			adminUserRoute.GET("/:id", user.GetUser)
+			adminUserRoute.GET("/:id/package/subscription", user.GetUserActivePackageSubscription)
 			adminUserRoute.GET("/:id/quota/summary", user.GetUserQuotaSummary)
 			adminUserRoute.POST("/", user.CreateUser)
 			adminUserRoute.POST("/manage", user.ManageUser)
