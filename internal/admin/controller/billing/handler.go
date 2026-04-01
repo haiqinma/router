@@ -2,11 +2,13 @@ package billing
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/yeying-community/router/common/config"
 	"github.com/yeying-community/router/common/ctxkey"
+	"github.com/yeying-community/router/common/helper"
 	"github.com/yeying-community/router/internal/admin/model"
 	billingsvc "github.com/yeying-community/router/internal/admin/service/billing"
 	relaymodel "github.com/yeying-community/router/internal/relay/model"
@@ -159,18 +161,49 @@ func UpdateBillingCurrency(c *gin.Context) {
 // @Failure 401 {object} docs.ErrorResponse
 // @Router /api/v1/admin/billing/fx/sync [post]
 func SyncBillingCurrenciesFromFX(c *gin.Context) {
+	runAt := helper.GetTimestamp()
+	_ = model.UpdateOption("FXAutoSyncLastRunAt", strconv.FormatInt(runAt, 10))
+
 	result, err := billingsvc.SyncBillingCurrenciesFromFX(c.Request.Context())
 	if err != nil {
+		_ = model.UpdateOption("FXAutoSyncLastError", strings.TrimSpace(err.Error()))
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": "同步汇率失败: " + err.Error(),
 		})
 		return
 	}
+	_ = model.UpdateOption("FXAutoSyncLastSuccessAt", strconv.FormatInt(runAt, 10))
+	_ = model.UpdateOption("FXAutoSyncLastError", "")
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
 		"data":    result,
+	})
+}
+
+// GetFXSyncStatus godoc
+// @Summary Get FX auto-sync status (admin)
+// @Tags admin
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} docs.StandardResponse
+// @Failure 401 {object} docs.ErrorResponse
+// @Router /api/v1/admin/billing/fx/status [get]
+func GetFXSyncStatus(c *gin.Context) {
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data": gin.H{
+			"enabled":            config.FXAutoSyncEnabled,
+			"interval_seconds":   config.FXAutoSyncIntervalSeconds,
+			"provider":           config.FXAutoSyncProvider,
+			"last_run_at":        config.FXAutoSyncLastRunAt,
+			"last_success_at":    config.FXAutoSyncLastSuccessAt,
+			"last_error":         config.FXAutoSyncLastError,
+			"min_interval":       60,
+			"loop_check_seconds": 30,
+		},
 	})
 }
 

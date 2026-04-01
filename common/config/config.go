@@ -17,6 +17,12 @@ var ChatLink = ""
 var QuotaPerUnit = 500 * 1000.0 // $0.002 / 1K tokens
 var DisplayInCurrencyEnabled = true
 var DisplayTokenStatEnabled = true
+var FXAutoSyncEnabled = false
+var FXAutoSyncIntervalSeconds = 6 * 60 * 60
+var FXAutoSyncProvider = "frankfurter"
+var FXAutoSyncLastRunAt int64 = 0
+var FXAutoSyncLastSuccessAt int64 = 0
+var FXAutoSyncLastError = ""
 
 // Any options with "Secret", "Token" in its key won't be return by GetOptions
 

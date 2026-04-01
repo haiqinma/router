@@ -36,6 +36,12 @@ func InitOptionMap() {
 	config.OptionMap["LogConsumeEnabled"] = strconv.FormatBool(config.LogConsumeEnabled)
 	config.OptionMap["DisplayInCurrencyEnabled"] = strconv.FormatBool(config.DisplayInCurrencyEnabled)
 	config.OptionMap["DisplayTokenStatEnabled"] = strconv.FormatBool(config.DisplayTokenStatEnabled)
+	config.OptionMap["FXAutoSyncEnabled"] = strconv.FormatBool(config.FXAutoSyncEnabled)
+	config.OptionMap["FXAutoSyncIntervalSeconds"] = strconv.Itoa(config.FXAutoSyncIntervalSeconds)
+	config.OptionMap["FXAutoSyncProvider"] = config.FXAutoSyncProvider
+	config.OptionMap["FXAutoSyncLastRunAt"] = strconv.FormatInt(config.FXAutoSyncLastRunAt, 10)
+	config.OptionMap["FXAutoSyncLastSuccessAt"] = strconv.FormatInt(config.FXAutoSyncLastSuccessAt, 10)
+	config.OptionMap["FXAutoSyncLastError"] = config.FXAutoSyncLastError
 	config.OptionMap["ChannelDisableThreshold"] = strconv.FormatFloat(config.ChannelDisableThreshold, 'f', -1, 64)
 	config.OptionMap["SMTPServer"] = ""
 	config.OptionMap["SMTPFrom"] = ""
@@ -128,6 +134,8 @@ func UpdateOptionMap(key string, value string) (err error) {
 			config.DisplayInCurrencyEnabled = boolValue
 		case "DisplayTokenStatEnabled":
 			config.DisplayTokenStatEnabled = boolValue
+		case "FXAutoSyncEnabled":
+			config.FXAutoSyncEnabled = boolValue
 		}
 	}
 	switch key {
@@ -164,6 +172,26 @@ func UpdateOptionMap(key string, value string) (err error) {
 		config.PreConsumedQuota, _ = strconv.ParseInt(value, 10, 64)
 	case "RetryTimes":
 		config.RetryTimes, _ = strconv.Atoi(value)
+	case "FXAutoSyncIntervalSeconds":
+		interval, _ := strconv.Atoi(value)
+		if interval < 60 {
+			interval = 60
+			config.OptionMap[key] = strconv.Itoa(interval)
+		}
+		config.FXAutoSyncIntervalSeconds = interval
+	case "FXAutoSyncProvider":
+		provider := strings.TrimSpace(value)
+		if provider == "" {
+			provider = "frankfurter"
+			config.OptionMap[key] = provider
+		}
+		config.FXAutoSyncProvider = provider
+	case "FXAutoSyncLastRunAt":
+		config.FXAutoSyncLastRunAt, _ = strconv.ParseInt(value, 10, 64)
+	case "FXAutoSyncLastSuccessAt":
+		config.FXAutoSyncLastSuccessAt, _ = strconv.ParseInt(value, 10, 64)
+	case "FXAutoSyncLastError":
+		config.FXAutoSyncLastError = strings.TrimSpace(value)
 	case "TopUpLink":
 		config.TopUpLink = value
 	case "TopUpCallbackToken":

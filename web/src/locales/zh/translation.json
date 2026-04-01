@@ -1524,9 +1524,18 @@
           "name": "例如 US Dollar",
           "yyc_per_unit": "例如 500000"
         },
+        "auto_sync": {
+          "enabled": "启用自动汇率同步",
+          "interval_seconds": "同步间隔（秒）",
+          "provider": "汇率来源",
+          "last_run": "最近运行：{{value}}",
+          "last_success": "最近成功：{{value}}",
+          "last_error": "最近错误：{{value}}"
+        },
         "buttons": {
           "add": "新增币种",
           "sync_fx": "同步汇率",
+          "save_auto_sync": "保存自动同步设置",
           "save": "保存",
           "cancel": "取消"
         },
@@ -1534,6 +1543,7 @@
           "load_failed": "加载计费币种失败",
           "sync_failed": "同步汇率失败",
           "sync_success": "汇率同步完成，已更新 {{count}} 个币种",
+          "sync_interval_invalid": "同步间隔必须大于或等于 60 秒",
           "save_failed": "保存计费币种失败",
           "save_success": "计费币种已保存",
           "code_required": "币种代码不能为空",

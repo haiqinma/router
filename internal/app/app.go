@@ -18,6 +18,7 @@ import (
 	task "github.com/yeying-community/router/internal/admin/controller/task"
 	"github.com/yeying-community/router/internal/admin/model"
 	_ "github.com/yeying-community/router/internal/admin/repository/bootstrap"
+	billingsvc "github.com/yeying-community/router/internal/admin/service/billing"
 	"github.com/yeying-community/router/internal/relay/adaptor/openai"
 	"github.com/yeying-community/router/internal/transport/http/middleware"
 	"github.com/yeying-community/router/internal/transport/http/router"
@@ -79,6 +80,7 @@ func Run() {
 	}
 	if config.IsMasterNode {
 		task.StartAsyncTaskWorkers()
+		billingsvc.StartFXAutoSyncWorker()
 	}
 	openai.InitTokenEncoders()
 	client.Init()
