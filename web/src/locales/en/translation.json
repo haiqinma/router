@@ -1607,6 +1607,9 @@
         "inviter_reward_placeholder": "e.g.: 2000",
         "invitee_reward": "Reward Quota for Using Invite Code",
         "invitee_reward_placeholder": "e.g.: 1000",
+        "messages": {
+          "amount_invalid": "Quota must be greater than or equal to 0"
+        },
         "buttons": {
           "save": "Save Quota Settings"
         }

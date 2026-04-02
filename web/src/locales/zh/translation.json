@@ -1605,6 +1605,9 @@
         "inviter_reward_placeholder": "例如：2000",
         "invitee_reward": "新用户使用邀请码奖励额度",
         "invitee_reward_placeholder": "例如：1000",
+        "messages": {
+          "amount_invalid": "额度必须大于或等于 0"
+        },
         "buttons": {
           "save": "保存额度设置"
         }
