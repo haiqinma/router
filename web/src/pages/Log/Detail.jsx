@@ -3,7 +3,7 @@ import { Breadcrumb, Card, Label } from 'semantic-ui-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { API, showError, timestamp2string } from '../../helpers';
-import { renderQuota } from '../../helpers/render';
+import { renderQuota, YYC_SYMBOL } from '../../helpers/render';
 
 function renderType(type, t) {
   switch (Number(type)) {
@@ -84,7 +84,7 @@ function renderRate(rate, currency) {
     return '-';
   }
   const suffix = renderText(currency);
-  return suffix === '-' ? formatNumber(rate, 6) : `${formatNumber(rate, 6)} YYC/${suffix}`;
+  return suffix === '-' ? formatNumber(rate, 6) : `${formatNumber(rate, 6)} ${YYC_SYMBOL}/${suffix}`;
 }
 
 function normalizeLogDetail(data) {

@@ -21,7 +21,7 @@ import {
 import { ITEMS_PER_PAGE } from '../constants';
 import {
   formatDecimalNumber,
-  formatYYCValue,
+  YYC_SYMBOL,
 } from '../helpers/render';
 
 function renderTimestamp(timestamp) {
@@ -47,18 +47,14 @@ function formatByCurrencyMinorUnit(amount, currency) {
     Number.isInteger(minorUnit) && minorUnit >= 0 ? minorUnit : 8;
   const unit = (currency?.code || '').toString().trim().toUpperCase();
   if (unit === 'YYC') {
-    return formatYYCValue(Math.round(normalizedAmount), false);
+    return formatDecimalNumber(Math.round(normalizedAmount), 0);
   }
-  const display = formatDecimalNumber(normalizedAmount, maximumFractionDigits);
-  return unit ? `${display} ${unit}` : display;
+  return formatDecimalNumber(normalizedAmount, maximumFractionDigits);
 }
 
 function buildDisplayValue(redemption, displayUnit, currencyIndex) {
   const yycValue = Number(redemption?.yyc_value ?? redemption?.quota ?? 0);
-  if (displayUnit === 'YYC') {
-    return formatYYCValue(yycValue, false);
-  }
-  const targetCurrency = currencyIndex[displayUnit];
+  const targetCurrency = currencyIndex[displayUnit] || currencyIndex.YYC;
   const rate = Number(targetCurrency?.yyc_per_unit || 0);
   if (!Number.isFinite(rate) || rate <= 0) {
     return '-';
@@ -115,25 +111,39 @@ const RedemptionsTable = () => {
   const [currencyIndex, setCurrencyIndex] = useState({
     USD: {
       code: 'USD',
+      symbol: '$',
+      minor_unit: 2,
+      yyc_per_unit: 0,
+    },
+    CNY: {
+      code: 'CNY',
+      symbol: '¥',
       minor_unit: 2,
       yyc_per_unit: 0,
     },
     YYC: {
       code: 'YYC',
+      symbol: YYC_SYMBOL,
       minor_unit: 0,
       yyc_per_unit: 1,
     },
   });
 
   const displayUnitOptions = useMemo(() => {
-    const items = [{ value: 'YYC', label: 'YYC' }];
+    const items = [
+      {
+        value: 'YYC',
+        label: YYC_SYMBOL,
+      },
+    ];
     Object.values(currencyIndex)
       .filter((item) => item && item.code && item.code !== 'YYC')
       .sort((a, b) => `${a.code}`.localeCompare(`${b.code}`))
       .forEach((item) => {
+        const symbol = (item?.symbol || '').toString().trim();
         items.push({
           value: item.code,
-          label: item.code,
+          label: symbol || item.code,
         });
       });
     return items;
@@ -150,6 +160,7 @@ const RedemptionsTable = () => {
       const next = {
         YYC: {
           code: 'YYC',
+          symbol: YYC_SYMBOL,
           minor_unit: 0,
           yyc_per_unit: 1,
         },
@@ -167,21 +178,23 @@ const RedemptionsTable = () => {
           };
         });
       setCurrencyIndex(next);
-      if (next.USD) {
-        setDisplayUnit('USD');
-        return;
-      }
-      if (next[displayUnit]) {
-        return;
-      }
-      const fallbackUnit = Object.keys(next)
-        .filter((code) => code)
-        .sort((a, b) => a.localeCompare(b))[0];
-      setDisplayUnit(fallbackUnit || 'YYC');
+      setDisplayUnit((current) => {
+        const normalizedCurrent = (current || '').toString().trim().toUpperCase();
+        if (normalizedCurrent && next[normalizedCurrent]) {
+          return normalizedCurrent;
+        }
+        if (next.USD) {
+          return 'USD';
+        }
+        const fallbackUnit = Object.keys(next)
+          .filter((code) => code)
+          .sort((a, b) => a.localeCompare(b))[0];
+        return fallbackUnit || 'YYC';
+      });
     } catch (error) {
       showError(error?.message || error);
     }
-  }, [displayUnit]);
+  }, []);
 
   const loadRedemptions = useCallback(async (page) => {
     const normalizedPage = Number(page) > 0 ? Number(page) : 1;
