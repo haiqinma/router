@@ -8,6 +8,7 @@ type Provider struct {
 	OfficialURL string `json:"official_url" gorm:"column:official_url;type:text"`
 	SortOrder   int    `json:"sort_order" gorm:"column:sort_order;type:int;not null;default:1000"`
 	Source      string `json:"source" gorm:"type:varchar(32);default:'manual'"`
+	CreatedAt   int64  `json:"created_at" gorm:"bigint"`
 	UpdatedAt   int64  `json:"updated_at" gorm:"bigint"`
 }
 

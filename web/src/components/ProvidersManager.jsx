@@ -333,6 +333,7 @@ const createEmptyRow = () => ({
   model_details: [],
   sort_order: 0,
   source: 'manual',
+  created_at: 0,
   updated_at: 0,
 });
 
@@ -347,6 +348,7 @@ const toEditableRows = (items) => {
     model_details: detailsFromCatalogItem(item),
     sort_order: Number(item?.sort_order || 0),
     source: item?.source || 'manual',
+    created_at: item?.created_at || 0,
     updated_at: item?.updated_at || 0,
   }));
 };
@@ -2569,6 +2571,9 @@ const ProvidersManager = () => {
               {t('channel.providers.table.capabilities')}
             </Table.HeaderCell>
             <Table.HeaderCell width={3} textAlign='left'>
+              {t('channel.providers.table.created_at')}
+            </Table.HeaderCell>
+            <Table.HeaderCell width={3} textAlign='left'>
               {t('channel.providers.table.updated_at')}
             </Table.HeaderCell>
             <Table.HeaderCell width={2} textAlign='left'>
@@ -2581,7 +2586,7 @@ const ProvidersManager = () => {
             <Table.Row>
               <Table.Cell
                 className='router-empty-cell'
-                colSpan={5}
+                colSpan={6}
                 textAlign='center'
               >
                 {loading
@@ -2618,6 +2623,9 @@ const ProvidersManager = () => {
                           </Label>
                         ))
                       : '-'}
+                  </Table.Cell>
+                  <Table.Cell textAlign='left'>
+                    {row.created_at ? timestamp2string(row.created_at) : '-'}
                   </Table.Cell>
                   <Table.Cell textAlign='left'>
                     {row.updated_at ? timestamp2string(row.updated_at) : '-'}
@@ -2810,6 +2818,14 @@ const ProvidersManager = () => {
                   className='router-section-input'
                   label={t('channel.providers.table.source')}
                   value={viewRow.source || '-'}
+                  readOnly
+                />
+                <Form.Input
+                  className='router-section-input'
+                  label={t('channel.providers.table.created_at')}
+                  value={
+                    viewRow.created_at ? timestamp2string(viewRow.created_at) : '-'
+                  }
                   readOnly
                 />
                 <Form.Input

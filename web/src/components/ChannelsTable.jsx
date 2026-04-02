@@ -290,6 +290,8 @@ const ChannelsTable = () => {
     const next = { ...channel };
     next.id = (next.id || '').toString().trim();
     next.protocol = (next.protocol || '').toString().trim().toLowerCase();
+    next.created_time = Number(next.created_time || 0);
+    next.updated_at = Number(next.updated_at || 0);
     if (next.protocol === '') {
       next.protocol = 'openai';
     }
@@ -623,7 +625,7 @@ const ChannelsTable = () => {
     pagedChannelIds.length > 0 &&
     pagedChannelIds.every((id) => selectedChannelIds.includes(id));
   const inBatchSelectMode = selectionMode !== selectionModeNone;
-  const footerColSpan = 7 + (inBatchSelectMode ? 1 : 0);
+  const footerColSpan = 9 + (inBatchSelectMode ? 1 : 0);
   const actionBusy = batchDeleting || batchDisabling;
 
   const toggleChannelSelection = (channelId, checked) => {
@@ -980,6 +982,22 @@ const ChannelsTable = () => {
             <Table.HeaderCell
               className='router-sortable-header'
               onClick={() => {
+                sortChannel('created_time');
+              }}
+            >
+              {t('channel.table.created_time')}
+            </Table.HeaderCell>
+            <Table.HeaderCell
+              className='router-sortable-header'
+              onClick={() => {
+                sortChannel('updated_at');
+              }}
+            >
+              {t('channel.table.updated_at')}
+            </Table.HeaderCell>
+            <Table.HeaderCell
+              className='router-sortable-header'
+              onClick={() => {
                 sortChannel('capabilities');
               }}
             >
@@ -1037,6 +1055,12 @@ const ChannelsTable = () => {
                   {renderProtocol(channel.protocol, protocolMap)}
                 </Table.Cell>
                 <Table.Cell>{renderStatus(channel.status, t)}</Table.Cell>
+                <Table.Cell>
+                  {channel.created_time ? renderTimestamp(channel.created_time) : '-'}
+                </Table.Cell>
+                <Table.Cell>
+                  {channel.updated_at ? renderTimestamp(channel.updated_at) : '-'}
+                </Table.Cell>
                 <Table.Cell>
                   {renderCapabilities(channel.capabilities, t)}
                 </Table.Cell>

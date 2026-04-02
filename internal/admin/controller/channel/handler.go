@@ -37,6 +37,7 @@ type channelListItem struct {
 	Name               string   `json:"name"`
 	Weight             *uint    `json:"weight,omitempty"`
 	CreatedTime        int64    `json:"created_time"`
+	UpdatedAt          int64    `json:"updated_at"`
 	TestTime           int64    `json:"test_time"`
 	Capabilities       []string `json:"capabilities"`
 	BaseURL            string   `json:"base_url,omitempty"`
@@ -105,6 +106,7 @@ func buildChannelListItem(channel *model.Channel) channelListItem {
 		Name:               strings.TrimSpace(channel.Name),
 		Weight:             channel.Weight,
 		CreatedTime:        channel.CreatedTime,
+		UpdatedAt:          channel.UpdatedAt,
 		TestTime:           channel.TestTime,
 		Capabilities:       capabilities,
 		BaseURL:            baseURL,
@@ -309,6 +311,7 @@ func AddChannel(c *gin.Context) {
 	}
 	channel.NormalizeModelConfigState()
 	channel.CreatedTime = helper.GetTimestamp()
+	channel.UpdatedAt = channel.CreatedTime
 	channel.NormalizeIdentity()
 	err = channelsvc.Insert(&channel)
 	if err != nil {
@@ -375,6 +378,7 @@ func CreateChannel(c *gin.Context) {
 		BaseURL:     &baseURL,
 		Config:      strings.TrimSpace(req.Config),
 		CreatedTime: helper.GetTimestamp(),
+		UpdatedAt:   helper.GetTimestamp(),
 	}
 	if err := channelsvc.Insert(&channel); err != nil {
 		logChannelAdminWarn(c, "create_record", stringField("name", channel.DisplayName()), stringField("protocol", channel.GetProtocol()), stringField("reason", err.Error()))

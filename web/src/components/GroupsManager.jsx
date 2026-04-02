@@ -21,6 +21,7 @@ const createEmptyModelConfig = () => ({
   channel_id: '',
   upstream_model: '',
   enabled: true,
+  priority: null,
 });
 
 const sortGroupModelConfigRows = (items) =>
@@ -28,6 +29,11 @@ const sortGroupModelConfigRows = (items) =>
     const modelDiff = (a?.model || '').localeCompare(b?.model || '');
     if (modelDiff !== 0) {
       return modelDiff;
+    }
+    const priorityDiff =
+      toSafePriorityNumber(b?.priority, 0) - toSafePriorityNumber(a?.priority, 0);
+    if (priorityDiff !== 0) {
+      return priorityDiff;
     }
     const channelNameDiff = (a?.channel_name || '').localeCompare(b?.channel_name || '');
     if (channelNameDiff !== 0) {
@@ -124,6 +130,7 @@ const ensureSelectedChannelsHaveModelRows = (rows, selectedChannelIDs, channelLo
         model: item?.model || item?.upstream_model || '',
         channel_id: channelID,
         upstream_model: item?.upstream_model || item?.model || '',
+        priority: channel?.priority ?? null,
       });
     });
   });
@@ -144,6 +151,16 @@ const channelStatusColor = (status) => {
   if (normalized === 4) return 'blue';
   return 'grey';
 };
+
+const toSafePriorityNumber = (value, fallback = 0) => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return Math.trunc(Number(fallback) || 0);
+  }
+  return Math.trunc(parsed);
+};
+
+const formatPriorityLabel = (value) => `P${toSafePriorityNumber(value, 0)}`;
 
 const GroupsManager = ({ detailGroupId = '' }) => {
   const { t } = useTranslation();
@@ -172,8 +189,8 @@ const GroupsManager = ({ detailGroupId = '' }) => {
   const [detailModelSearchKeyword, setDetailModelSearchKeyword] = useState('');
   const [detailEditingSection, setDetailEditingSection] = useState('');
   const [detailModelModalOpen, setDetailModelModalOpen] = useState(false);
-  const [detailEditingModelIndex, setDetailEditingModelIndex] = useState(-1);
-  const [detailModelDraft, setDetailModelDraft] = useState(createEmptyModelConfig());
+  const [detailModelEditTarget, setDetailModelEditTarget] = useState('');
+  const [detailModelChannelDrafts, setDetailModelChannelDrafts] = useState([]);
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -299,8 +316,8 @@ const GroupsManager = ({ detailGroupId = '' }) => {
     setDetailModelSearchKeyword('');
     setDetailEditingSection('');
     setDetailModelModalOpen(false);
-    setDetailEditingModelIndex(-1);
-    setDetailModelDraft(createEmptyModelConfig());
+    setDetailModelEditTarget('');
+    setDetailModelChannelDrafts([]);
   };
 
   const clearDeleteState = () => {
@@ -536,12 +553,17 @@ const GroupsManager = ({ detailGroupId = '' }) => {
         return null;
       }
       seenModelConfigKeys.add(dedupeKey);
-      normalizedModelConfigs.push({
+      const normalizedItem = {
         model,
         channel_id: channelID,
         upstream_model: upstreamModel,
         enabled: item?.enabled !== false,
-      });
+      };
+      const rawPriority = item?.priority;
+      if (rawPriority !== '' && rawPriority !== null && typeof rawPriority !== 'undefined') {
+        normalizedItem.priority = toSafePriorityNumber(rawPriority, 0);
+      }
+      normalizedModelConfigs.push(normalizedItem);
     }
     return normalizedModelConfigs;
   }, [formChannelIDs, formModelConfigs, t]);
@@ -706,8 +728,8 @@ const GroupsManager = ({ detailGroupId = '' }) => {
       return;
     }
     setDetailModelModalOpen(false);
-    setDetailEditingModelIndex(-1);
-    setDetailModelDraft(createEmptyModelConfig());
+    setDetailModelEditTarget('');
+    setDetailModelChannelDrafts([]);
   }, [submitting]);
 
   const cancelDetailSectionEdit = useCallback(() => {
@@ -820,10 +842,6 @@ const GroupsManager = ({ detailGroupId = '' }) => {
     }
   }, [activeGroup, buildNormalizedModelConfigs, formChannelIDs, refreshGroupDetailState, t]);
 
-  const startDetailModelsEdit = useCallback(async () => {
-    await ensureDetailModelsEditable();
-  }, [ensureDetailModelsEditable]);
-
   const openDeleteModal = (row) => {
     if (!row || submitting) return;
     setDeleteTarget(row);
@@ -909,6 +927,7 @@ const GroupsManager = ({ detailGroupId = '' }) => {
             <Table.HeaderCell>{t('group_manage.table.channels')}</Table.HeaderCell>
             <Table.HeaderCell>{t('group_manage.table.billing_ratio')}</Table.HeaderCell>
             <Table.HeaderCell>{t('group_manage.table.status')}</Table.HeaderCell>
+            <Table.HeaderCell>{t('group_manage.table.created_at')}</Table.HeaderCell>
             <Table.HeaderCell>{t('group_manage.table.updated_at')}</Table.HeaderCell>
             <Table.HeaderCell className='router-table-action-cell router-group-action-cell'>
               {t('group_manage.table.actions')}
@@ -918,7 +937,7 @@ const GroupsManager = ({ detailGroupId = '' }) => {
         <Table.Body>
           {visibleRows.length === 0 ? (
             <Table.Row>
-              <Table.Cell className='router-empty-cell' colSpan={7} textAlign='center'>
+              <Table.Cell className='router-empty-cell' colSpan={8} textAlign='center'>
                 {loading
                   ? t('group_manage.messages.loading')
                   : t('group_manage.messages.empty')}
@@ -948,6 +967,7 @@ const GroupsManager = ({ detailGroupId = '' }) => {
                 </Table.Cell>
                 <Table.Cell>{Number(row.billing_ratio ?? 1).toFixed(2)}</Table.Cell>
                 <Table.Cell>{renderGroupStatus(row.enabled)}</Table.Cell>
+                <Table.Cell>{row.created_at ? timestamp2string(row.created_at) : '-'}</Table.Cell>
                 <Table.Cell>{row.updated_at ? timestamp2string(row.updated_at) : '-'}</Table.Cell>
                 <Table.Cell className='router-table-action-cell router-group-action-cell'>
                   <div className='router-action-group-tight'>
@@ -1071,26 +1091,16 @@ const GroupsManager = ({ detailGroupId = '' }) => {
                   {t('group_manage.buttons.confirm')}
                 </Button>
               </>
-            ) : (
-                <Button
-                  type='button'
-                  className='router-page-button'
-                  color='blue'
-                  disabled={submitting || detailModelsEditLocked}
-                  onClick={startDetailModelsEdit}
-                >
-                  {t('group_manage.buttons.edit')}
-                </Button>
-            )}
+            ) : null}
           </div>
         </div>
         <Table compact celled className='router-detail-table'>
           <Table.Header>
             <Table.Row>
               <Table.HeaderCell>{t('group_manage.edit.model')}</Table.HeaderCell>
-              <Table.HeaderCell>{t('group_manage.edit.channel')}</Table.HeaderCell>
-              <Table.HeaderCell>{t('group_manage.edit.upstream_model')}</Table.HeaderCell>
+              <Table.HeaderCell>{t('group_manage.detail.model_channels')}</Table.HeaderCell>
               <Table.HeaderCell collapsing>{t('group_manage.detail.enabled')}</Table.HeaderCell>
+              <Table.HeaderCell collapsing>{t('group_manage.table.actions')}</Table.HeaderCell>
             </Table.Row>
           </Table.Header>
           <Table.Body>
@@ -1107,46 +1117,53 @@ const GroupsManager = ({ detailGroupId = '' }) => {
                 </Table.Cell>
               </Table.Row>
             ) : (
-              detailModelEntries.map(({ item, index }) => (
-                <Table.Row
-                  key={`group-detail-model-${item?.model || '-'}-${item?.channel_id || '-'}-${item?.upstream_model || index}`}
-                >
-                  <Table.Cell className='router-cell-min-240'>{item?.model || '-'}</Table.Cell>
+              detailModelEntries.map((entry) => (
+                <Table.Row key={`group-detail-model-${entry.model || '-'}`}>
+                  <Table.Cell className='router-cell-min-240'>{entry.model || '-'}</Table.Cell>
                   <Table.Cell>
-                    {(item?.channel_id || '').trim() !== '' ? (
-                      <Label
-                        as='a'
-                        className='router-tag'
-                        basic
-                        color={channelStatusColor(item?.channel_status)}
-                        onClick={(event) => {
-                          event.preventDefault();
-                          openChannelDetailFromCurrentPage(item.channel_id);
-                        }}
-                      >
-                        {item?.channel_name || item?.channel_id}
-                        {` · ${item?.channel_protocol || '-'}`}
-                      </Label>
+                    {entry.rows.length > 0 ? (
+                      <div className='router-tag-group'>
+                        {entry.rows.map((item) => (
+                          <Label
+                            as='a'
+                            key={`${entry.model}-${item?.channel_id || '-'}-${item?.upstream_model || '-'}`}
+                            className='router-tag'
+                            basic
+                            color={channelStatusColor(item?.channel_status)}
+                            onClick={(event) => {
+                              event.preventDefault();
+                              openChannelDetailFromCurrentPage(item.channel_id);
+                            }}
+                          >
+                            {item?.channel_name || item?.channel_id}
+                            {` · ${formatPriorityLabel(item?.priority)}`}
+                          </Label>
+                        ))}
+                      </div>
                     ) : (
                       '-'
                     )}
                   </Table.Cell>
-                  <Table.Cell>{item?.upstream_model || '-'}</Table.Cell>
                   <Table.Cell collapsing>
                     <Checkbox
                       toggle
-                      checked={item?.enabled !== false}
+                      checked={entry.allEnabled}
+                      indeterminate={entry.partiallyEnabled}
                       disabled={!detailModelsEditing || submitting}
-                      onChange={(event, { checked }) => {
-                        if (!detailModelsEditing) {
-                          return;
-                        }
-                        updateModelConfigRow(index, (current) => ({
-                          ...current,
-                          enabled: !!checked,
-                        }));
-                      }}
+                      onChange={(event, { checked }) =>
+                        toggleDetailModelEnabled(entry.model, !!checked)
+                      }
                     />
+                  </Table.Cell>
+                  <Table.Cell collapsing>
+                    <Button
+                      type='button'
+                      className='router-inline-button'
+                      disabled={submitting || detailModelsEditLocked}
+                      onClick={() => openDetailModelEdit(entry)}
+                    >
+                      {t('group_manage.buttons.edit')}
+                    </Button>
                   </Table.Cell>
                 </Table.Row>
               ))
@@ -1237,160 +1254,224 @@ const GroupsManager = ({ detailGroupId = '' }) => {
     );
   };
 
-  const detailModelEntries = useMemo(() => {
-    const keyword = detailModelSearchKeyword.trim().toLowerCase();
-    const baseRows = detailModelsEditing
-      ? (Array.isArray(formModelConfigs) ? formModelConfigs : []).map((item, index) => {
-          const channel = formModelChannelLookup[item?.channel_id || ''];
-          return {
-            item: {
-              ...item,
-              enabled: item?.enabled !== false,
-              channel_name: item?.channel_name || channel?.name || item?.channel_id || '',
-              channel_protocol: item?.channel_protocol || channel?.protocol || '',
-              channel_status: Number(item?.channel_status ?? channel?.status ?? 0),
-            },
-            index,
-          };
-        })
-      : (Array.isArray(detailModelRows) ? detailModelRows : []).map((item, index) => ({
-          item: {
-            ...item,
-            enabled: item?.enabled !== false,
-          },
-          index,
-        }));
-    if (keyword === '') {
-      return baseRows;
+  const detailModelSourceRows = useMemo(() => {
+    if (detailModelsEditing) {
+      return (Array.isArray(formModelConfigs) ? formModelConfigs : []).map((item) => {
+        const channel = formModelChannelLookup[item?.channel_id || ''];
+        return {
+          ...item,
+          enabled: item?.enabled !== false,
+          priority:
+            item?.priority ?? channel?.priority ?? 0,
+          channel_name: item?.channel_name || channel?.name || item?.channel_id || '',
+          channel_protocol: item?.channel_protocol || channel?.protocol || '',
+          channel_status: Number(item?.channel_status ?? channel?.status ?? 0),
+        };
+      });
     }
-    return baseRows.filter(({ item }) => {
+    return (Array.isArray(detailModelRows) ? detailModelRows : []).map((item) => ({
+      ...item,
+      enabled: item?.enabled !== false,
+      priority: item?.priority ?? 0,
+    }));
+  }, [detailModelRows, detailModelsEditing, formModelChannelLookup, formModelConfigs]);
+
+  const detailModelEntries = useMemo(() => {
+    const grouped = new Map();
+    detailModelSourceRows.forEach((item) => {
+      const model = (item?.model || '').trim();
+      if (model === '') {
+        return;
+      }
+      if (!grouped.has(model)) {
+        grouped.set(model, {
+          model,
+          rows: [],
+        });
+      }
+      grouped.get(model).rows.push(item);
+    });
+
+    const entries = Array.from(grouped.values())
+      .map((entry) => {
+        const rows = [...entry.rows].sort((left, right) => {
+          const priorityDiff =
+            toSafePriorityNumber(right?.priority, 0) - toSafePriorityNumber(left?.priority, 0);
+          if (priorityDiff !== 0) {
+            return priorityDiff;
+          }
+          const nameDiff = (left?.channel_name || '').localeCompare(right?.channel_name || '');
+          if (nameDiff !== 0) {
+            return nameDiff;
+          }
+          return (left?.channel_id || '').localeCompare(right?.channel_id || '');
+        });
+        const enabledCount = rows.filter((row) => row?.enabled !== false).length;
+        return {
+          model: entry.model,
+          rows,
+          enabledCount,
+          allEnabled: rows.length > 0 && enabledCount === rows.length,
+          partiallyEnabled: enabledCount > 0 && enabledCount < rows.length,
+        };
+      })
+      .sort((left, right) => left.model.localeCompare(right.model));
+
+    const keyword = detailModelSearchKeyword.trim().toLowerCase();
+    if (keyword === '') {
+      return entries;
+    }
+    return entries.filter((entry) => {
       const haystacks = [
-        item?.model || '',
-        item?.upstream_model || '',
-        item?.channel_name || '',
-        item?.channel_id || '',
-        item?.channel_protocol || '',
+        entry.model,
+        ...entry.rows.flatMap((row) => [
+          row?.channel_name || '',
+          row?.channel_id || '',
+          row?.channel_protocol || '',
+          row?.upstream_model || '',
+        ]),
       ];
       return haystacks.some((value) => value.toLowerCase().includes(keyword));
     });
-  }, [
-    detailModelRows,
-    detailModelSearchKeyword,
-    detailModelsEditing,
-    formModelChannelLookup,
-    formModelConfigs,
-  ]);
+  }, [detailModelSearchKeyword, detailModelSourceRows]);
 
-  const createDetailModelDraft = useCallback(
-    (channelID = '') => {
-      const normalizedChannelID = (channelID || '').toString().trim();
-      const channel = formModelChannelLookup[normalizedChannelID];
-      const firstModel = Array.isArray(channel?.models) ? channel.models[0] || null : null;
-      return {
-        model: '',
-        channel_id: normalizedChannelID,
-        upstream_model: firstModel?.upstream_model || '',
-      };
-    },
-    [formModelChannelLookup]
-  );
-
-  const openDetailModelCreate = useCallback(async () => {
+  const openDetailModelEdit = useCallback(async (entry) => {
     const editorState = await ensureDetailModelsEditable();
     if (!editorState) {
       return;
     }
-    const defaultChannelID = toBoundChannelIDs(editorState.channels)[0] || '';
-    setDetailEditingModelIndex(-1);
-    setDetailModelDraft(createDetailModelDraft(defaultChannelID));
-    setDetailModelModalOpen(true);
-  }, [createDetailModelDraft, ensureDetailModelsEditable]);
-
-  const openDetailModelEdit = useCallback(async (row) => {
-    const editorState = await ensureDetailModelsEditable();
-    if (!editorState) {
+    const targetModel = (entry?.model || '').toString().trim();
+    if (targetModel === '') {
       return;
     }
+    const selectedChannelIDSet = new Set(
+      Array.isArray(formChannelIDs) ? formChannelIDs : []
+    );
     const sourceItems = Array.isArray(editorState?.items) ? editorState.items : [];
-    const targetModel = (row?.model || '').toString().trim();
-    const targetChannelID = (row?.channel_id || '').toString().trim();
-    const targetUpstreamModel = (row?.upstream_model || '').toString().trim();
-    const targetIndex = sourceItems.findIndex(
-      (item) =>
-        (item?.model || '').toString().trim() === targetModel &&
-        (item?.channel_id || '').toString().trim() === targetChannelID &&
-        (item?.upstream_model || '').toString().trim() === targetUpstreamModel
+    const existingRows = sourceItems.filter(
+      (item) => (item?.model || '').toString().trim() === targetModel
     );
-    if (targetIndex < 0) {
-      showError(t('group_manage.messages.model_config_load_failed'));
-      return;
-    }
-    setDetailEditingModelIndex(targetIndex);
-    setDetailModelDraft({
-      model: targetModel,
-      channel_id: targetChannelID,
-      upstream_model: targetUpstreamModel,
-    });
-    setDetailModelModalOpen(true);
-  }, [ensureDetailModelsEditable, t]);
-
-  const submitDetailModelDraft = useCallback(() => {
-    const model = (detailModelDraft.model || '').toString().trim();
-    const channelID = (detailModelDraft.channel_id || '').toString().trim();
-    const upstreamModel = (detailModelDraft.upstream_model || '').toString().trim();
-    if (model === '' || channelID === '' || upstreamModel === '') {
-      showInfo(t('group_manage.messages.model_config_incomplete'));
-      return;
-    }
-    const duplicate = (Array.isArray(formModelConfigs) ? formModelConfigs : []).some(
-      (item, index) =>
-        index !== detailEditingModelIndex &&
-        (item?.model || '').toString().trim() === model &&
-        (item?.channel_id || '').toString().trim() === channelID
-    );
-    if (duplicate) {
-      showInfo(t('group_manage.messages.model_config_duplicate'));
-      return;
-    }
-    setFormModelConfigs((prev) => {
-      const nextRows = Array.isArray(prev) ? [...prev] : [];
-      const nextItem = {
-        model,
-        channel_id: channelID,
-        upstream_model: upstreamModel,
-      };
-      if (detailEditingModelIndex >= 0 && detailEditingModelIndex < nextRows.length) {
-        nextRows[detailEditingModelIndex] = {
-          ...nextRows[detailEditingModelIndex],
-          ...nextItem,
-        };
-      } else {
-        nextRows.unshift(nextItem);
+    const existingByChannelID = new Map();
+    existingRows.forEach((item) => {
+      const channelID = (item?.channel_id || '').toString().trim();
+      if (channelID === '' || existingByChannelID.has(channelID)) {
+        return;
       }
-      return sortGroupModelConfigRows(nextRows);
+      existingByChannelID.set(channelID, item);
     });
-    closeDetailModelModal();
-  }, [closeDetailModelModal, detailEditingModelIndex, detailModelDraft, formModelConfigs, t]);
 
-  const removeDetailModelRow = useCallback(async (row) => {
-    const ready = await ensureDetailModelsEditable();
-    if (!ready) {
+    const drafts = [];
+    (Array.isArray(editorState?.channels) ? editorState.channels : []).forEach((channel) => {
+      const channelID = (channel?.id || '').toString().trim();
+      if (channelID === '' || !selectedChannelIDSet.has(channelID)) {
+        return;
+      }
+      const matchedModel = (Array.isArray(channel?.models) ? channel.models : []).find(
+        (item) => (item?.model || '').toString().trim() === targetModel
+      );
+      const existing = existingByChannelID.get(channelID);
+      if (!matchedModel && !existing) {
+        return;
+      }
+      drafts.push({
+        channel_id: channelID,
+        channel_name: channel?.name || channelID,
+        channel_protocol: channel?.protocol || '',
+        channel_status: Number(channel?.status || 0),
+        selected: !!existing,
+        enabled: existing?.enabled !== false,
+        upstream_model:
+          (existing?.upstream_model || '').toString().trim() ||
+          (matchedModel?.upstream_model || matchedModel?.model || '').toString().trim(),
+        priority: String(
+          toSafePriorityNumber(existing?.priority ?? channel?.priority, 0)
+        ),
+      });
+    });
+
+    drafts.sort((left, right) => {
+      if (left.selected !== right.selected) {
+        return left.selected ? -1 : 1;
+      }
+      const priorityDiff =
+        toSafePriorityNumber(right.priority, 0) - toSafePriorityNumber(left.priority, 0);
+      if (priorityDiff !== 0) {
+        return priorityDiff;
+      }
+      return (left.channel_name || '').localeCompare(right.channel_name || '');
+    });
+
+    if (drafts.length === 0) {
+      showInfo(t('group_manage.messages.model_channel_empty'));
       return;
     }
-    const targetModel = (row?.model || '').toString().trim();
-    const targetChannelID = (row?.channel_id || '').toString().trim();
-    const targetUpstreamModel = (row?.upstream_model || '').toString().trim();
+    setDetailModelEditTarget(targetModel);
+    setDetailModelChannelDrafts(drafts);
+    setDetailModelModalOpen(true);
+  }, [ensureDetailModelsEditable, formChannelIDs, t]);
+
+  const updateDetailModelChannelDraft = useCallback((channelID, updater) => {
+    setDetailModelChannelDrafts((prev) =>
+      (Array.isArray(prev) ? prev : []).map((item) => {
+        if ((item?.channel_id || '') !== channelID) {
+          return item;
+        }
+        return typeof updater === 'function' ? updater(item) : item;
+      })
+    );
+  }, []);
+
+  const toggleDetailModelEnabled = useCallback(async (modelName, nextEnabled) => {
+    const editorState = await ensureDetailModelsEditable();
+    if (!editorState) {
+      return;
+    }
+    const normalizedModel = (modelName || '').toString().trim();
+    if (normalizedModel === '') {
+      return;
+    }
     setFormModelConfigs((prev) =>
-      (Array.isArray(prev) ? prev : []).filter(
-        (item) =>
-          !(
-            (item?.model || '').toString().trim() === targetModel &&
-            (item?.channel_id || '').toString().trim() === targetChannelID &&
-            (item?.upstream_model || '').toString().trim() === targetUpstreamModel
-          )
+      sortGroupModelConfigRows(
+        (Array.isArray(prev) ? prev : []).map((item) =>
+          (item?.model || '').toString().trim() === normalizedModel
+            ? { ...item, enabled: !!nextEnabled }
+            : item
+        )
       )
     );
   }, [ensureDetailModelsEditable]);
+
+  const submitDetailModelDraft = useCallback(() => {
+    const model = detailModelEditTarget.trim();
+    if (model === '') {
+      showInfo(t('group_manage.messages.model_config_incomplete'));
+      return;
+    }
+    const selectedDrafts = (Array.isArray(detailModelChannelDrafts) ? detailModelChannelDrafts : []).filter(
+      (item) => !!item?.selected
+    );
+    if (selectedDrafts.length === 0) {
+      showInfo(t('group_manage.messages.model_channel_required'));
+      return;
+    }
+    setFormModelConfigs((prev) => {
+      const baseRows = (Array.isArray(prev) ? prev : []).filter(
+        (item) => (item?.model || '').toString().trim() !== model
+      );
+      const nextRows = selectedDrafts.map((item) => ({
+        model,
+        channel_id: item.channel_id,
+        upstream_model: item.upstream_model,
+        enabled: item.enabled !== false,
+        priority: toSafePriorityNumber(item.priority, 0),
+        channel_name: item.channel_name,
+        channel_protocol: item.channel_protocol,
+        channel_status: item.channel_status,
+      }));
+      return sortGroupModelConfigRows([...baseRows, ...nextRows]);
+    });
+    closeDetailModelModal();
+  }, [closeDetailModelModal, detailModelChannelDrafts, detailModelEditTarget, t]);
 
   const renderEditModelConfigTable = () => (
     <div className='router-block-top-md'>
@@ -1631,19 +1712,9 @@ const GroupsManager = ({ detailGroupId = '' }) => {
                   setForm((prev) => ({
                     ...prev,
                     billing_ratio: e.target.value,
-                  }))
-                }
-              />
-              <Form.Input
-                className='router-section-input'
-                label={t('group_manage.table.status')}
-                value={
-                  activeGroup.enabled
-                    ? t('group_manage.status.enabled')
-                    : t('group_manage.status.disabled')
-                }
-                readOnly
-              />
+                }))
+              }
+            />
             </Form.Group>
             <Form.Group widths='equal'>
               <Form.Input
@@ -1658,6 +1729,12 @@ const GroupsManager = ({ detailGroupId = '' }) => {
                     sort_order: Number(e.target.value || 0),
                   }))
                 }
+              />
+              <Form.Input
+                className='router-section-input'
+                label={t('group_manage.table.created_at')}
+                value={activeGroup.created_at ? timestamp2string(activeGroup.created_at) : '-'}
+                readOnly
               />
               <Form.Input
                 className='router-section-input'
@@ -1927,77 +2004,74 @@ const GroupsManager = ({ detailGroupId = '' }) => {
             ? renderView()
             : renderList()}
 
-      <Modal open={detailModelModalOpen} onClose={closeDetailModelModal} size='small'>
+      <Modal open={detailModelModalOpen} onClose={closeDetailModelModal} size='large'>
         <Modal.Header>
-          {detailEditingModelIndex >= 0
-            ? t('group_manage.buttons.edit')
-            : t('group_manage.buttons.add_model')}
+          {t('group_manage.detail.edit_model_title', {
+            model: detailModelEditTarget || '-',
+          })}
         </Modal.Header>
         <Modal.Content>
-          <Form>
-            <Form.Input
-              className='router-section-input'
-              label={t('group_manage.edit.model')}
-              placeholder={t('group_manage.edit.model_placeholder')}
-              value={detailModelDraft.model || ''}
-              onChange={(e, { value }) =>
-                setDetailModelDraft((prev) => ({
-                  ...prev,
-                  model: value || '',
-                }))
-              }
-            />
-            <Form.Dropdown
-              className='router-section-dropdown'
-              fluid
-              selection
-              search
-              label={t('group_manage.edit.channel')}
-              placeholder={t('group_manage.edit.channel_placeholder')}
-              options={selectedFormChannelOptions}
-              value={detailModelDraft.channel_id || ''}
-              onChange={(e, { value }) => {
-                const nextChannelID = (value || '').toString();
-                const nextChannel = formModelChannelLookup[nextChannelID];
-                const nextModels = Array.isArray(nextChannel?.models) ? nextChannel.models : [];
-                const firstModel = nextModels[0] || null;
-                setDetailModelDraft((prev) => ({
-                  ...prev,
-                  channel_id: nextChannelID,
-                  model:
-                    (prev?.model || '').trim() !== ''
-                      ? prev.model
-                      : firstModel?.model || '',
-                  upstream_model: firstModel?.upstream_model || '',
-                }));
-              }}
-            />
-            <Form.Dropdown
-              className='router-section-dropdown'
-              fluid
-              selection
-              search
-              disabled={
-                (detailModelDraft.channel_id || '').trim() === '' ||
-                getChannelModelOptions(detailModelDraft.channel_id || '').length === 0
-              }
-              label={t('group_manage.edit.upstream_model')}
-              placeholder={t('group_manage.edit.upstream_model_placeholder')}
-              options={getChannelModelOptions(detailModelDraft.channel_id || '')}
-              value={resolveChannelModelOptionValue(detailModelDraft)}
-              onChange={(e, { value }) => {
-                const decoded = decodeChannelModelOptionValue(value);
-                setDetailModelDraft((prev) => ({
-                  ...prev,
-                  upstream_model: decoded.upstream_model || '',
-                  model:
-                    (prev?.model || '').trim() !== ''
-                      ? prev.model
-                      : decoded.model || '',
-                }));
-              }}
-            />
-          </Form>
+          <Table compact celled className='router-detail-table'>
+            <Table.Header>
+              <Table.Row>
+                <Table.HeaderCell collapsing>{t('group_manage.detail.selected')}</Table.HeaderCell>
+                <Table.HeaderCell>{t('group_manage.edit.channel')}</Table.HeaderCell>
+                <Table.HeaderCell>{t('group_manage.edit.upstream_model')}</Table.HeaderCell>
+                <Table.HeaderCell collapsing>{t('group_manage.detail.priority')}</Table.HeaderCell>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
+              {detailModelChannelDrafts.length === 0 ? (
+                <Table.Row>
+                  <Table.Cell className='router-empty-cell' colSpan={4} textAlign='center'>
+                    {t('group_manage.detail.empty_model_channels')}
+                  </Table.Cell>
+                </Table.Row>
+              ) : (
+                detailModelChannelDrafts.map((item) => (
+                  <Table.Row key={`${detailModelEditTarget}-${item.channel_id}`}>
+                    <Table.Cell collapsing>
+                      <Checkbox
+                        checked={!!item.selected}
+                        onChange={(event, { checked }) =>
+                          updateDetailModelChannelDraft(item.channel_id, (current) => ({
+                            ...current,
+                            selected: !!checked,
+                          }))
+                        }
+                      />
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Label
+                        basic
+                        color={channelStatusColor(item?.channel_status)}
+                        className='router-tag'
+                      >
+                        {item.channel_name || item.channel_id}
+                        {item.channel_protocol ? ` · ${item.channel_protocol}` : ''}
+                      </Label>
+                    </Table.Cell>
+                    <Table.Cell>{item.upstream_model || '-'}</Table.Cell>
+                    <Table.Cell collapsing>
+                      <Form.Input
+                        className='router-inline-input'
+                        type='number'
+                        step='1'
+                        disabled={!item.selected}
+                        value={item.priority}
+                        onChange={(e, { value }) =>
+                          updateDetailModelChannelDraft(item.channel_id, (current) => ({
+                            ...current,
+                            priority: value ?? '',
+                          }))
+                        }
+                      />
+                    </Table.Cell>
+                  </Table.Row>
+                ))
+              )}
+            </Table.Body>
+          </Table>
         </Modal.Content>
         <Modal.Actions>
           <Button className='router-modal-button' onClick={closeDetailModelModal} disabled={submitting}>

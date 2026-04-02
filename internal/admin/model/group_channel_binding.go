@@ -307,7 +307,9 @@ func SyncGroupAbilitiesForChannel(groupID string, channel *Channel, existing []A
 		item.Model = modelName
 		item.UpstreamModel = upstream
 		item.Enabled = item.Enabled && channel.Status == ChannelStatusEnabled
-		item.Priority = channel.Priority
+		if item.Priority == nil {
+			item.Priority = helperInt64Pointer(channel.Priority)
+		}
 		result = append(result, item)
 	}
 	for upstream, ability := range defaultByUpstream {

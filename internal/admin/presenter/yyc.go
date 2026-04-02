@@ -106,6 +106,7 @@ type Group struct {
 	BillingRatio float64                         `json:"billing_ratio"`
 	Enabled      bool                            `json:"enabled"`
 	SortOrder    int                             `json:"sort_order"`
+	CreatedAt    int64                           `json:"created_at"`
 	UpdatedAt    int64                           `json:"updated_at"`
 	Channels     []model.GroupChannelBindingItem `json:"channels,omitempty"`
 }
@@ -122,6 +123,7 @@ func NewGroup(group *model.GroupCatalog) *Group {
 		BillingRatio: group.BillingRatio,
 		Enabled:      group.Enabled,
 		SortOrder:    group.SortOrder,
+		CreatedAt:    group.CreatedAt,
 		UpdatedAt:    group.UpdatedAt,
 		Channels:     group.Channels,
 	}

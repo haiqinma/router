@@ -30,6 +30,18 @@ func saveProviderCatalogSeedsToTable(db *gorm.DB, seeds []ProviderCatalogSeed) e
 	modelRows := make([]ProviderModel, 0)
 	componentRows := make([]ProviderModelPriceComponent, 0)
 	providerIDs := make([]string, 0, len(seeds))
+	existingCreatedAtByProvider := make(map[string]int64)
+	existingRows := make([]Provider, 0)
+	if err := db.Select("id", "created_at").Find(&existingRows).Error; err != nil {
+		return err
+	}
+	for _, row := range existingRows {
+		provider := strings.TrimSpace(strings.ToLower(row.Id))
+		if provider == "" || row.CreatedAt <= 0 {
+			continue
+		}
+		existingCreatedAtByProvider[provider] = row.CreatedAt
+	}
 	for _, seed := range seeds {
 		provider := strings.TrimSpace(strings.ToLower(seed.Provider))
 		if provider == "" {
@@ -44,7 +56,13 @@ func saveProviderCatalogSeedsToTable(db *gorm.DB, seeds []ProviderCatalogSeed) e
 			OfficialURL: strings.TrimSpace(seed.OfficialURL),
 			SortOrder:   normalizeProviderSortOrderValue(seed.SortOrder),
 			Source:      "default",
-			UpdatedAt:   now,
+			CreatedAt: func() int64 {
+				if existingCreatedAtByProvider[provider] > 0 {
+					return existingCreatedAtByProvider[provider]
+				}
+				return now
+			}(),
+			UpdatedAt: now,
 		})
 		storeRows := BuildProviderModelStoreRows(provider, details, now)
 		modelRows = append(modelRows, storeRows.Models...)

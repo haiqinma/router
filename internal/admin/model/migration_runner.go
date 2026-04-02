@@ -215,6 +215,45 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return tx.AutoMigrate(&ChannelModel{})
 			},
 		},
+		{
+			Version:     "202604021930_group_created_at",
+			Description: "add created_at column to groups and backfill existing rows from updated_at",
+			Up: func(tx *gorm.DB) error {
+				if err := tx.AutoMigrate(&GroupCatalog{}); err != nil {
+					return err
+				}
+				return tx.Exec(
+					"UPDATE groups SET created_at = COALESCE(NULLIF(updated_at, 0), ?) WHERE COALESCE(created_at, 0) = 0",
+					helper.GetTimestamp(),
+				).Error
+			},
+		},
+		{
+			Version:     "202604022030_provider_created_at",
+			Description: "add created_at column to providers and backfill existing rows from updated_at",
+			Up: func(tx *gorm.DB) error {
+				if err := tx.AutoMigrate(&Provider{}); err != nil {
+					return err
+				}
+				return tx.Exec(
+					"UPDATE providers SET created_at = COALESCE(NULLIF(updated_at, 0), ?) WHERE COALESCE(created_at, 0) = 0",
+					helper.GetTimestamp(),
+				).Error
+			},
+		},
+		{
+			Version:     "202604022130_channel_updated_at",
+			Description: "add updated_at column to channels and backfill existing rows from created_time",
+			Up: func(tx *gorm.DB) error {
+				if err := tx.AutoMigrate(&Channel{}); err != nil {
+					return err
+				}
+				return tx.Exec(
+					"UPDATE channels SET updated_at = COALESCE(NULLIF(created_time, 0), ?) WHERE COALESCE(updated_at, 0) = 0",
+					helper.GetTimestamp(),
+				).Error
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }

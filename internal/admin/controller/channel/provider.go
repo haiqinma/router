@@ -28,6 +28,7 @@ type providerCatalogItem struct {
 	OfficialURL  string                      `json:"official_url,omitempty"`
 	SortOrder    int                         `json:"sort_order,omitempty"`
 	Source       string                      `json:"source,omitempty"`
+	CreatedAt    int64                       `json:"created_at,omitempty"`
 	UpdatedAt    int64                       `json:"updated_at,omitempty"`
 }
 
@@ -158,6 +159,7 @@ func buildProviderCatalogItems(rows []model.Provider) ([]providerCatalogItem, er
 			OfficialURL:  strings.TrimSpace(row.OfficialURL),
 			SortOrder:    normalizeCatalogSortOrder(row.SortOrder),
 			Source:       strings.TrimSpace(strings.ToLower(row.Source)),
+			CreatedAt:    row.CreatedAt,
 			UpdatedAt:    row.UpdatedAt,
 		})
 	}
@@ -312,7 +314,13 @@ func normalizeProviderUpsertItem(providerID string, item providerCatalogItem, ex
 		OfficialURL:  officialURL,
 		SortOrder:    sortOrder,
 		Source:       source,
-		UpdatedAt:    now,
+		CreatedAt: func() int64 {
+			if existing != nil && existing.CreatedAt > 0 {
+				return existing.CreatedAt
+			}
+			return now
+		}(),
+		UpdatedAt: now,
 	}, nil
 }
 
@@ -362,6 +370,7 @@ func saveProviderCatalogItem(item providerCatalogItem, create bool) (providerCat
 		OfficialURL: strings.TrimSpace(normalized.OfficialURL),
 		SortOrder:   normalized.SortOrder,
 		Source:      strings.TrimSpace(strings.ToLower(normalized.Source)),
+		CreatedAt:   normalized.CreatedAt,
 		UpdatedAt:   normalized.UpdatedAt,
 	}
 	if create {

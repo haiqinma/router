@@ -13,6 +13,7 @@ type GroupModelConfigItem struct {
 	ChannelId       string `json:"channel_id"`
 	UpstreamModel   string `json:"upstream_model"`
 	Enabled         *bool  `json:"enabled,omitempty"`
+	Priority        *int64 `json:"priority,omitempty"`
 	ChannelName     string `json:"channel_name,omitempty"`
 	ChannelProtocol string `json:"channel_protocol,omitempty"`
 	ChannelStatus   int    `json:"channel_status,omitempty"`
@@ -29,6 +30,7 @@ type GroupModelConfigChannel struct {
 	Name     string                         `json:"name"`
 	Protocol string                         `json:"protocol"`
 	Status   int                            `json:"status"`
+	Priority *int64                         `json:"priority,omitempty"`
 	Bound    bool                           `json:"bound"`
 	Models   []GroupModelConfigChannelModel `json:"models"`
 }
@@ -83,7 +85,7 @@ func listGroupModelConfigItemsWithDB(db *gorm.DB, groupID string) ([]GroupModelC
 	groupCol := `"group"`
 	if err := db.
 		Where(groupCol+" = ?", groupCatalog.Id).
-		Order("model asc, channel_id asc").
+		Order("model asc, priority desc, channel_id asc").
 		Find(&abilities).Error; err != nil {
 		return nil, err
 	}
@@ -142,6 +144,7 @@ func listGroupModelConfigItemsWithDB(db *gorm.DB, groupID string) ([]GroupModelC
 			ChannelId:       channelID,
 			UpstreamModel:   NormalizeAbilityUpstreamModel(modelName, ability.UpstreamModel),
 			Enabled:         helperBoolPointer(ability.Enabled),
+			Priority:        helperInt64Pointer(ability.Priority),
 			ChannelName:     channel.DisplayName(),
 			ChannelProtocol: channel.GetProtocol(),
 			ChannelStatus:   channel.Status,
@@ -176,7 +179,7 @@ func listGroupModelConfigChannelsWithDB(db *gorm.DB, groupID string) ([]GroupMod
 
 	channels := make([]Channel, 0)
 	if err := db.
-		Select("id", "name", "protocol", "status", "created_time").
+		Select("id", "name", "protocol", "status", "priority", "created_time").
 		Where("status = ?", ChannelStatusEnabled).
 		Order("created_time desc").
 		Find(&channels).Error; err != nil {
@@ -203,6 +206,7 @@ func listGroupModelConfigChannelsWithDB(db *gorm.DB, groupID string) ([]GroupMod
 			Name:     channel.DisplayName(),
 			Protocol: channel.GetProtocol(),
 			Status:   channel.Status,
+			Priority: helperInt64Pointer(channel.Priority),
 			Bound:    bound,
 			Models:   buildGroupModelConfigChannelModels(&channel),
 		})
@@ -277,7 +281,7 @@ func replaceGroupModelConfigsWithDB(db *gorm.DB, groupID string, channelIDs []st
 			ChannelId:     item.ChannelId,
 			UpstreamModel: upstreamModel,
 			Enabled:       resolveGroupModelConfigEnabled(item) && channel.Status == ChannelStatusEnabled,
-			Priority:      channel.Priority,
+			Priority:      resolveGroupModelConfigPriority(item, channel),
 		})
 	}
 
@@ -328,6 +332,7 @@ func normalizeGroupModelConfigItems(items []GroupModelConfigItem) ([]GroupModelC
 			ChannelId:     strings.TrimSpace(item.ChannelId),
 			UpstreamModel: strings.TrimSpace(item.UpstreamModel),
 			Enabled:       item.Enabled,
+			Priority:      helperInt64Pointer(item.Priority),
 		}
 		if normalized.Model == "" && normalized.ChannelId == "" && normalized.UpstreamModel == "" {
 			continue
@@ -417,8 +422,26 @@ func resolveGroupModelConfigEnabled(item GroupModelConfigItem) bool {
 	return *item.Enabled
 }
 
+func resolveGroupModelConfigPriority(item GroupModelConfigItem, channel *Channel) *int64 {
+	if item.Priority != nil {
+		return helperInt64Pointer(item.Priority)
+	}
+	if channel == nil {
+		return nil
+	}
+	return helperInt64Pointer(channel.Priority)
+}
+
 func helperBoolPointer(value bool) *bool {
 	result := value
+	return &result
+}
+
+func helperInt64Pointer(value *int64) *int64 {
+	if value == nil {
+		return nil
+	}
+	result := *value
 	return &result
 }
 

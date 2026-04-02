@@ -20,6 +20,7 @@ type GroupCatalog struct {
 	BillingRatio float64                   `json:"billing_ratio" gorm:"type:numeric(12,6);not null;default:1"`
 	Enabled      bool                      `json:"enabled" gorm:"default:true;index"`
 	SortOrder    int                       `json:"sort_order" gorm:"default:0;index"`
+	CreatedAt    int64                     `json:"created_at" gorm:"bigint;index"`
 	UpdatedAt    int64                     `json:"updated_at" gorm:"bigint;index"`
 	Channels     []GroupChannelBindingItem `json:"channels,omitempty" gorm:"-"`
 }
@@ -454,6 +455,7 @@ func createGroupCatalogWithDB(db *gorm.DB, item GroupCatalog) (GroupCatalog, err
 		BillingRatio: normalizeGroupBillingRatio(item.BillingRatio),
 		Enabled:      true,
 		SortOrder:    maxSortOrder + 1,
+		CreatedAt:    now,
 		UpdatedAt:    now,
 	}
 	row.EnsureID()

@@ -149,6 +149,9 @@ func prepareChannelForCreate(channel *model.Channel) error {
 	if channel.CreatedTime == 0 {
 		channel.CreatedTime = helper.GetTimestamp()
 	}
+	if channel.UpdatedAt == 0 {
+		channel.UpdatedAt = channel.CreatedTime
+	}
 	return nil
 }
 
@@ -299,6 +302,7 @@ func Update(channel *model.Channel) error {
 			return err
 		}
 		resetChannelTests := shouldResetChannelTests(&existing, channel)
+		channel.UpdatedAt = helper.GetTimestamp()
 		if channel.NameProvided {
 			if err := tx.Model(&model.Channel{}).Where("id = ?", channel.Id).Update("name", model.NormalizeChannelIdentifier(channel.Name)).Error; err != nil {
 				return err
@@ -395,7 +399,10 @@ func UpdateStatusByID(id string, status int) {
 	if err != nil {
 		logger.SysError("failed to update ability status: " + err.Error())
 	}
-	err = model.DB.Model(&model.Channel{}).Where("id = ?", id).Update("status", status).Error
+	err = model.DB.Model(&model.Channel{}).Where("id = ?", id).Updates(map[string]any{
+		"status":     status,
+		"updated_at": helper.GetTimestamp(),
+	}).Error
 	if err != nil {
 		logger.SysError("failed to update channel status: " + err.Error())
 	}
@@ -420,7 +427,10 @@ func UpdateTestModelByID(id string, testModel string) error {
 	id = strings.TrimSpace(id)
 	testModel = strings.TrimSpace(testModel)
 	return model.DB.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(&model.Channel{}).Where("id = ?", id).Update("test_model", testModel).Error; err != nil {
+		if err := tx.Model(&model.Channel{}).Where("id = ?", id).Updates(map[string]any{
+			"test_model": testModel,
+			"updated_at": helper.GetTimestamp(),
+		}).Error; err != nil {
 			return err
 		}
 		return model.DeleteChannelTestsByChannelIDWithDB(tx, id)
