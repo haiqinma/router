@@ -32,7 +32,7 @@ const PERIOD_OPTIONS = [
   'all_time',
 ];
 
-const TREND_METRIC_OPTIONS = ['consume_quota', 'topup_quota', 'request_count', 'active_user_count'];
+const TREND_METRIC_OPTIONS = ['spend_amount', 'topup_amount', 'request_count', 'active_user_count'];
 
 const TASK_TYPE_KEYS = {
   channel_model_test: 'channel_model_test',
@@ -41,9 +41,9 @@ const TASK_TYPE_KEYS = {
 };
 
 const EMPTY_SUMMARY = {
-  consume_quota: 0,
-  topup_quota: 0,
-  net_quota: 0,
+  spend_amount: 0,
+  topup_amount: 0,
+  net_amount: 0,
   request_count: 0,
   active_user_count: 0,
   channel_total: 0,
@@ -90,18 +90,18 @@ const normalizeAdminDashboardPayload = (payload) => {
     summary: {
       ...EMPTY_SUMMARY,
       ...summary,
-      consume_quota: Number(summary?.consume_yyc ?? summary?.consume_quota ?? 0),
-      topup_quota: Number(summary?.topup_yyc ?? summary?.topup_quota ?? 0),
-      net_quota: Number(summary?.net_yyc ?? summary?.net_quota ?? 0),
+      spend_amount: Number(summary?.consume_yyc ?? summary?.consume_quota ?? 0),
+      topup_amount: Number(summary?.topup_yyc ?? summary?.topup_quota ?? 0),
+      net_amount: Number(summary?.net_yyc ?? summary?.net_quota ?? 0),
     },
     trend: trend.map((item) => ({
       ...item,
-      consume_quota: Number(item?.consume_yyc ?? item?.consume_quota ?? 0),
-      topup_quota: Number(item?.topup_yyc ?? item?.topup_quota ?? 0),
+      spend_amount: Number(item?.consume_yyc ?? item?.consume_quota ?? 0),
+      topup_amount: Number(item?.topup_yyc ?? item?.topup_quota ?? 0),
     })),
     top_channels: topChannels.map((item) => ({
       ...item,
-      used_quota: Number(item?.yyc_used ?? item?.used_quota ?? 0),
+      usedYyc: Number(item?.yyc_used ?? item?.used_quota ?? 0),
     })),
     recent_tasks: Array.isArray(payload?.recent_tasks) ? payload.recent_tasks : [],
   };
@@ -141,13 +141,13 @@ const AdminDashboard = () => {
   );
   const [period, setPeriod] = useState('last_7_days');
   const [loading, setLoading] = useState(false);
-  const [trendMetric, setTrendMetric] = useState('consume_quota');
+  const [trendMetric, setTrendMetric] = useState('spend_amount');
   const [dashboard, setDashboard] = useState(EMPTY_DASHBOARD);
 
   const toUsd = useCallback(
-    (quota) => {
+    (yycAmount) => {
       const amount = convertYYCToDisplayAmount(
-        quota,
+        yycAmount,
         'USD',
         displayCurrencyIndex
       );
@@ -158,7 +158,7 @@ const AdminDashboard = () => {
   );
 
   const formatUsd = useCallback(
-    (quota) => formatCompactDisplayAmount(toUsd(quota)),
+    (yycAmount) => formatCompactDisplayAmount(toUsd(yycAmount)),
     [toUsd]
   );
 
@@ -273,7 +273,7 @@ const AdminDashboard = () => {
 
   const trendLineColor = useMemo(() => {
     switch (trendMetric) {
-      case 'topup_quota':
+      case 'topup_amount':
         return '#16a34a';
       case 'request_count':
         return '#2563eb';
@@ -285,7 +285,7 @@ const AdminDashboard = () => {
   }, [trendMetric]);
 
   const trendFormatter = (value) => {
-    if (trendMetric === 'consume_quota' || trendMetric === 'topup_quota') {
+    if (trendMetric === 'spend_amount' || trendMetric === 'topup_amount') {
       return formatUsd(value);
     }
     return formatCount(value);
@@ -328,15 +328,15 @@ const AdminDashboard = () => {
           <div className='admin-dashboard-kpi-grid'>
             <div className='admin-dashboard-kpi-item'>
               <div className='admin-dashboard-kpi-label'>{t('dashboard.admin.metrics.consume')}</div>
-              <div className='admin-dashboard-kpi-value'>{formatUsd(dashboard.summary.consume_quota)}</div>
+              <div className='admin-dashboard-kpi-value'>{formatUsd(dashboard.summary.spend_amount)}</div>
             </div>
             <div className='admin-dashboard-kpi-item'>
               <div className='admin-dashboard-kpi-label'>{t('dashboard.admin.metrics.topup')}</div>
-              <div className='admin-dashboard-kpi-value'>{formatUsd(dashboard.summary.topup_quota)}</div>
+              <div className='admin-dashboard-kpi-value'>{formatUsd(dashboard.summary.topup_amount)}</div>
             </div>
             <div className='admin-dashboard-kpi-item'>
               <div className='admin-dashboard-kpi-label'>{t('dashboard.admin.metrics.net')}</div>
-              <div className='admin-dashboard-kpi-value'>{formatUsd(dashboard.summary.net_quota)}</div>
+              <div className='admin-dashboard-kpi-value'>{formatUsd(dashboard.summary.net_amount)}</div>
             </div>
             <div className='admin-dashboard-kpi-item'>
               <div className='admin-dashboard-kpi-label'>{t('dashboard.admin.metrics.request_count')}</div>

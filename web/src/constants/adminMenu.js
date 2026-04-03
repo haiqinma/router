@@ -40,7 +40,7 @@ export const ADMIN_MENU_GROUPS = [
     items: [
       {
         name: 'header.config',
-        to: '/admin/setting?tab=operation&section=quota',
+        to: '/admin/setting?tab=operation&section=balance',
         icon: 'sliders horizontal',
       },
       {

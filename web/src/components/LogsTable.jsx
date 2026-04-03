@@ -22,14 +22,14 @@ import UnitDropdown from './UnitDropdown';
 import { ITEMS_PER_PAGE } from '../constants';
 import {
   renderColorLabel,
-  isQuotaDisplayedInCurrency,
+  isYYCDisplayedInCurrency,
   YYC_SYMBOL,
 } from '../helpers/render';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   buildPublicDisplayCurrencyIndex,
   buildDisplayUnitOptions,
-  formatQuotaForDisplay,
+  formatDisplayAmountFromYYC,
   loadPublicDisplayCurrencyCatalog,
   resolvePreferredDisplayCurrency,
   YYC_DISPLAY_CODE,
@@ -145,9 +145,10 @@ function getLogChannelLabel(log) {
 function normalizeLogEntry(log) {
   return {
     ...(log || {}),
-    quota: Number(log?.yyc_amount ?? log?.quota ?? 0),
-    user_daily_quota: Number(log?.yyc_user_daily ?? log?.user_daily_quota ?? 0),
-    user_emergency_quota: Number(log?.yyc_user_emergency ?? log?.user_emergency_quota ?? 0),
+    // Prefer YYC-native settlement fields, fall back to legacy quota-based logs.
+    yycAmount: Number(log?.yyc_amount ?? log?.quota ?? 0),
+    userDailyYYC: Number(log?.yyc_user_daily ?? log?.user_daily_quota ?? 0),
+    userEmergencyYYC: Number(log?.yyc_user_emergency ?? log?.user_emergency_quota ?? 0),
   };
 }
 
@@ -531,7 +532,7 @@ const LogsTable = () => {
     try {
       if (!isAdminScope) {
         const { currencyIndex: nextIndex } = await loadPublicDisplayCurrencyCatalog();
-        const preferredUnit = isQuotaDisplayedInCurrency() ? 'USD' : YYC_DISPLAY_CODE;
+        const preferredUnit = isYYCDisplayedInCurrency() ? 'USD' : YYC_DISPLAY_CODE;
         setCurrencyIndex(nextIndex);
         setDisplayUnit((current) =>
           resolvePreferredDisplayCurrency(
@@ -557,7 +558,7 @@ const LogsTable = () => {
     }
   }, [isAdminScope, t]);
 
-  const showUserTokenQuota = () => {
+  const showAmountColumns = () => {
     const effectiveLogType = activeFilterKeys.includes('log_type') ? logType : 0;
     return effectiveLogType !== 5;
   };
@@ -731,10 +732,10 @@ const LogsTable = () => {
 
   const detailBasePath = isAdminScope ? '/admin/log' : '/workspace/log';
   const tableColSpan = isAdminScope
-    ? showUserTokenQuota()
+    ? showAmountColumns()
       ? 10
       : 5
-    : showUserTokenQuota()
+    : showAmountColumns()
       ? 7
       : 3;
 
@@ -965,7 +966,7 @@ const LogsTable = () => {
             >
               {t('log.table.model')}
             </Table.HeaderCell>
-            {showUserTokenQuota() && (
+            {showAmountColumns() && (
               <>
                 {isAdminScope && (
                   <Table.HeaderCell
@@ -1011,10 +1012,10 @@ const LogsTable = () => {
                 >
                   {isAdminScope ? (
                     <div className='router-table-header-with-control'>
-                      <span
+                          <span
                         className='router-sortable-header'
                         onClick={() => {
-                          sortLog('quota');
+                          sortLog('yycAmount');
                         }}
                       >
                         {t('log.table.quota')}
@@ -1035,7 +1036,7 @@ const LogsTable = () => {
                   ) : (
                     <span
                       onClick={() => {
-                        sortLog('quota');
+                        sortLog('yycAmount');
                       }}
                     >
                       {t('log.table.quota')}
@@ -1110,7 +1111,7 @@ const LogsTable = () => {
                   <Table.Cell>
                     {log.model_name ? renderColorLabel(log.model_name) : ''}
                   </Table.Cell>
-                  {showUserTokenQuota() && (
+                  {showAmountColumns() && (
                     <>
                       {isAdminScope && (
                         <Table.Cell>
@@ -1141,9 +1142,9 @@ const LogsTable = () => {
                       </Table.Cell>
                       <Table.Cell>
                         {isAdminScope
-                          ? formatQuotaForDisplay(log.quota, displayUnit, currencyIndex)
-                          : log.quota
-                            ? formatQuotaForDisplay(log.quota, displayUnit, currencyIndex, {
+                          ? formatDisplayAmountFromYYC(log.yycAmount, displayUnit, currencyIndex)
+                          : log.yycAmount
+                            ? formatDisplayAmountFromYYC(log.yycAmount, displayUnit, currencyIndex, {
                                 includeSymbol: true,
                                 yycMode: 'compact',
                               })

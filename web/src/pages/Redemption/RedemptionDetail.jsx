@@ -78,9 +78,10 @@ const normalizeFaceValueAmount = (data) => {
   if (Number.isFinite(rawAmount) && rawAmount > 0) {
     return `${rawAmount}`;
   }
-  const yycValue = Number(data?.yyc_value ?? data?.quota ?? 0);
-  if (Number.isFinite(yycValue) && yycValue > 0) {
-    return `${yycValue}`;
+  // Older payloads only returned quota/yyc_value instead of face_value_amount.
+  const creditedYYC = Number(data?.yyc_value ?? data?.quota ?? 0);
+  if (Number.isFinite(creditedYYC) && creditedYYC > 0) {
+    return `${creditedYYC}`;
   }
   return '0';
 };
@@ -98,6 +99,9 @@ const formatGroupLabel = (data) => {
   const id = (data?.group_id || '').toString().trim();
   return id || '-';
 };
+
+// Keep legacy quota fallback for historical redemption payloads.
+const resolveCreditedYYC = (data) => Number(data?.yyc_value ?? data?.quota ?? 0);
 
 const RedemptionDetail = () => {
   const { t } = useTranslation();
@@ -412,7 +416,7 @@ const RedemptionDetail = () => {
                       className='router-section-input'
                       label={t('redemption.table.face_value')}
                       value={formatAmountWithUnit(
-                        redemption?.face_value_amount ?? redemption?.yyc_value ?? redemption?.quota ?? 0,
+                        redemption?.face_value_amount ?? resolveCreditedYYC(redemption),
                         normalizeFaceValueUnit(redemption)
                       )}
                       readOnly
@@ -434,8 +438,8 @@ const RedemptionDetail = () => {
                   ) : (
                     <Form.Input
                       className='router-section-input'
-                      label={t('redemption.table.quota')}
-                      value={redemption ? formatYYCValue(redemption.yyc_value ?? redemption.quota) : ''}
+                      label={t('redemption.table.credited_yyc')}
+                      value={redemption ? formatYYCValue(resolveCreditedYYC(redemption)) : ''}
                       readOnly
                     />
                   )}

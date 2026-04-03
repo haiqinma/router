@@ -5,12 +5,12 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { API, copy, isRoot, showError, showSuccess } from '../../helpers';
 import {
   buildBillingCurrencyIndex,
-  buildQuotaUnitOptions,
-  convertQuotaInputValueUnit,
-  quotaInputToStoredValueByUnit,
-  quotaToInputValueByUnit,
-  resolveDefaultQuotaUnit,
-  resolveQuotaInputStep,
+  buildBillingUnitOptions,
+  convertBillingInputValueUnit,
+  billingInputValueToYYC,
+  yycToBillingInputValue,
+  resolveDefaultBillingUnit,
+  resolveBillingInputStep,
 } from '../../helpers/billing';
 import UnitDropdown from '../../components/UnitDropdown';
 import {
@@ -158,11 +158,11 @@ const normalizeActivePackage = (raw) => {
           package_name: (raw.subscription.package_name || '').toString().trim(),
           group_id: (raw.subscription.group_id || '').toString().trim(),
           group_name: (raw.subscription.group_name || '').toString().trim(),
-          daily_quota_limit: Number(raw.subscription.daily_quota_limit || 0),
-          monthly_emergency_quota_limit: Number(
+          daily_amount: Number(raw.subscription.daily_quota_limit || 0),
+          emergency_amount: Number(
             raw.subscription.monthly_emergency_quota_limit || 0,
           ),
-          quota_reset_timezone: (raw.subscription.quota_reset_timezone || '').toString().trim(),
+          reset_timezone: (raw.subscription.quota_reset_timezone || '').toString().trim(),
           started_at: Number(raw.subscription.started_at || 0),
           expires_at: Number(raw.subscription.expires_at || 0),
           status: Number(raw.subscription.status || 0),
@@ -197,15 +197,15 @@ const UserDetail = () => {
   const [inputs, setInputs] = useState({
     username: '',
     email: '',
-    quota: 0,
+    yyc_balance: 0,
     group: '',
-    daily_quota_limit: 0,
-    monthly_emergency_quota_limit: 0,
-    quota_reset_timezone: 'Asia/Shanghai',
+    daily_amount: 0,
+    emergency_amount: 0,
+    reset_timezone: 'Asia/Shanghai',
     role: 1,
     status: 1,
     wallet_address: '',
-    used_quota: 0,
+    yyc_used: 0,
     request_count: 0,
     can_manage_users: false,
     created_at: 0,
@@ -217,7 +217,7 @@ const UserDetail = () => {
     group: '',
   });
   const [balanceEditInputs, setBalanceEditInputs] = useState({
-    quota: 0,
+    amount: 0,
   });
   const returnPath = useMemo(() => {
     const from = location.state?.from;
@@ -290,17 +290,17 @@ const UserDetail = () => {
       const nextInputs = {
         username: data?.username || '',
         email: data?.email || '',
-        quota: Number(data?.yyc_balance ?? data?.quota ?? 0),
+        yyc_balance: Number(data?.yyc_balance ?? data?.quota ?? 0),
         group: data?.group || '',
-        daily_quota_limit: Number(data?.yyc_daily_limit ?? data?.daily_quota_limit ?? 0),
-        monthly_emergency_quota_limit: Number(
+        daily_amount: Number(data?.yyc_daily_limit ?? data?.daily_quota_limit ?? 0),
+        emergency_amount: Number(
           data?.yyc_monthly_emergency_limit ?? data?.monthly_emergency_quota_limit ?? 0,
         ),
-        quota_reset_timezone: data?.quota_reset_timezone || 'Asia/Shanghai',
+        reset_timezone: data?.quota_reset_timezone || 'Asia/Shanghai',
         role: Number(data?.role || 1),
         status: Number(data?.status || 1),
         wallet_address: walletAddress,
-        used_quota: Number(data?.yyc_used ?? data?.used_quota ?? 0),
+        yyc_used: Number(data?.yyc_used ?? data?.used_quota ?? 0),
         request_count: data?.request_count ?? 0,
         can_manage_users: data?.can_manage_users === true,
         created_at: Number(data?.created_at || 0),
@@ -362,7 +362,7 @@ const UserDetail = () => {
         if (normalizedCurrent && next[normalizedCurrent]) {
           return normalizedCurrent;
         }
-        return resolveDefaultQuotaUnit(next);
+        return resolveDefaultBillingUnit(next);
       });
     } catch (error) {
       showError(error?.message || error);
@@ -431,21 +431,21 @@ const UserDetail = () => {
       })),
     [groupMap],
   );
-  const quotaUnitOptions = useMemo(
-    () => buildQuotaUnitOptions(billingCurrencyIndex),
+  const billingUnitOptions = useMemo(
+    () => buildBillingUnitOptions(billingCurrencyIndex),
     [billingCurrencyIndex],
   );
   const balanceInputStep = useMemo(
-    () => resolveQuotaInputStep(balanceUnit, billingCurrencyIndex),
+    () => resolveBillingInputStep(balanceUnit, billingCurrencyIndex),
     [balanceUnit, billingCurrencyIndex],
   );
-  const balanceQuotaDisplayValue = useMemo(
-    () => quotaToInputValueByUnit(inputs.quota, balanceUnit, billingCurrencyIndex),
-    [balanceUnit, billingCurrencyIndex, inputs.quota],
+  const balanceDisplayValue = useMemo(
+    () => yycToBillingInputValue(inputs.yyc_balance, balanceUnit, billingCurrencyIndex),
+    [balanceUnit, billingCurrencyIndex, inputs.yyc_balance],
   );
-  const usedQuotaDisplayValue = useMemo(
-    () => quotaToInputValueByUnit(inputs.used_quota, balanceUnit, billingCurrencyIndex),
-    [balanceUnit, billingCurrencyIndex, inputs.used_quota],
+  const usedDisplayValue = useMemo(
+    () => yycToBillingInputValue(inputs.yyc_used, balanceUnit, billingCurrencyIndex),
+    [balanceUnit, billingCurrencyIndex, inputs.yyc_used],
   );
 
   const isProtectedUser = inputs.can_manage_users === true;
@@ -466,9 +466,9 @@ const UserDetail = () => {
       return;
     }
     setBalanceEditInputs({
-      quota: quotaToInputValueByUnit(inputs.quota, balanceUnit, billingCurrencyIndex),
+      amount: yycToBillingInputValue(inputs.yyc_balance, balanceUnit, billingCurrencyIndex),
     });
-  }, [balanceUnit, billingCurrencyIndex, editSection, inputs.quota]);
+  }, [balanceUnit, billingCurrencyIndex, editSection, inputs.yyc_balance]);
 
   const roleControl = useMemo(() => {
     if (!canManageRole) {
@@ -548,8 +548,8 @@ const UserDetail = () => {
       if (editSection === 'balance') {
         setBalanceEditInputs((prev) => ({
           ...prev,
-          quota: convertQuotaInputValueUnit(
-            prev.quota,
+          amount: convertBillingInputValueUnit(
+            prev.amount,
             balanceUnit,
             normalizedNextUnit,
             billingCurrencyIndex,
@@ -575,9 +575,9 @@ const UserDetail = () => {
 
   const resetBalanceEditInputs = useCallback(() => {
     setBalanceEditInputs({
-      quota: quotaToInputValueByUnit(inputs.quota ?? 0, balanceUnit, billingCurrencyIndex),
+      amount: yycToBillingInputValue(inputs.yyc_balance ?? 0, balanceUnit, billingCurrencyIndex),
     });
-  }, [balanceUnit, billingCurrencyIndex, inputs.quota]);
+  }, [balanceUnit, billingCurrencyIndex, inputs.yyc_balance]);
 
   const startBasicEditing = useCallback(() => {
     resetBasicEditInputs();
@@ -599,26 +599,27 @@ const UserDetail = () => {
     setEditSection('');
   }, [resetBalanceEditInputs]);
 
-  const updateUser = useCallback(async ({ username, email, group, quota, actionKey }) => {
+  const updateUser = useCallback(async ({ username, email, group, yycBalance, actionKey }) => {
     if (username === '') {
       showError(t('user.edit.username_placeholder'));
       return false;
     }
-    if (!Number.isFinite(quota) || quota < 0) {
+    if (!Number.isFinite(yycBalance) || yycBalance < 0) {
       showError(t('user.messages.operation_failed'));
       return false;
     }
     setActionLoading(actionKey);
     try {
+      // Keep legacy request field names for backend compatibility.
       const res = await API.put('/api/v1/admin/user/', {
         id: userId,
         username,
         email,
         group,
-        quota: Math.trunc(quota),
-        daily_quota_limit: Math.trunc(Number(inputs.daily_quota_limit || 0)),
-        monthly_emergency_quota_limit: Math.trunc(Number(inputs.monthly_emergency_quota_limit || 0)),
-        quota_reset_timezone: inputs.quota_reset_timezone || 'Asia/Shanghai',
+        quota: Math.trunc(yycBalance),
+        daily_quota_limit: Math.trunc(Number(inputs.daily_amount || 0)),
+        monthly_emergency_quota_limit: Math.trunc(Number(inputs.emergency_amount || 0)),
+        quota_reset_timezone: inputs.reset_timezone || 'Asia/Shanghai',
         role: Number(inputs.role || 1),
         status: Number(inputs.status || 1),
         display_name: username,
@@ -642,11 +643,11 @@ const UserDetail = () => {
       setActionLoading('');
     }
   }, [
-    inputs.daily_quota_limit,
-    inputs.monthly_emergency_quota_limit,
+    inputs.daily_amount,
+    inputs.emergency_amount,
     inputs.role,
     inputs.status,
-    inputs.quota_reset_timezone,
+    inputs.reset_timezone,
     loadUser,
     loadActivePackage,
     loadRecentRedemptions,
@@ -662,14 +663,14 @@ const UserDetail = () => {
       username,
       email,
       group,
-      quota: Number(inputs.quota || 0),
+      yycBalance: Number(inputs.yyc_balance || 0),
       actionKey: 'save-basic',
     });
-  }, [basicEditInputs.email, basicEditInputs.group, basicEditInputs.username, inputs.quota, updateUser]);
+  }, [basicEditInputs.email, basicEditInputs.group, basicEditInputs.username, inputs.yyc_balance, updateUser]);
 
   const submitBalance = useCallback(async () => {
-    const quota = quotaInputToStoredValueByUnit(
-      balanceEditInputs.quota,
+    const yycBalance = billingInputValueToYYC(
+      balanceEditInputs.amount,
       balanceUnit,
       billingCurrencyIndex,
     );
@@ -677,11 +678,11 @@ const UserDetail = () => {
       username: (inputs.username || '').toString().trim(),
       email: (inputs.email || '').toString().trim(),
       group: (inputs.group || '').toString().trim(),
-      quota,
+      yycBalance,
       actionKey: 'save-balance',
     });
   }, [
-    balanceEditInputs.quota,
+    balanceEditInputs.amount,
     balanceUnit,
     billingCurrencyIndex,
     inputs.email,
@@ -739,7 +740,22 @@ const UserDetail = () => {
     await loadRecentRedemptions();
   }, [loadRecentRedemptions, loadUser]);
 
-  const renderBalanceQuotaField = useCallback(
+  const formatAmountBySelectedUnit = useCallback(
+    (yycAmount, { unlimited = false } = {}) => {
+      if (unlimited) {
+        return t('common.unlimited');
+      }
+      const convertedAmount = yycToBillingInputValue(
+        yycAmount,
+        balanceUnit,
+        billingCurrencyIndex,
+      );
+      return formatAmountWithUnit(convertedAmount, balanceUnit);
+    },
+    [balanceUnit, billingCurrencyIndex, t],
+  );
+
+  const renderBalanceAmountField = useCallback(
     ({ label, name, value, placeholder = '', editable = false }) => (
       <Form.Field className='router-section-input'>
         <label>{label}</label>
@@ -757,10 +773,10 @@ const UserDetail = () => {
           />
           <UnitDropdown
             variant='inputUnit'
-            options={quotaUnitOptions}
+            options={billingUnitOptions}
             value={balanceUnit}
             onChange={(_, { value }) => handleBalanceUnitChange(value)}
-            disabled={loading || actionLoading !== '' || quotaUnitOptions.length === 0}
+            disabled={loading || actionLoading !== '' || billingUnitOptions.length === 0}
           />
         </div>
       </Form.Field>
@@ -772,7 +788,7 @@ const UserDetail = () => {
       handleBalanceEditInputChange,
       handleBalanceUnitChange,
       loading,
-      quotaUnitOptions,
+      billingUnitOptions,
     ],
   );
 
@@ -1023,17 +1039,19 @@ const UserDetail = () => {
                   label: t('user.detail.package_daily_limit'),
                   value:
                     hasActivePackage
-                      ? Number(activePackageSubscription?.daily_quota_limit || 0) > 0
-                        ? formatYYCValue(activePackageSubscription?.daily_quota_limit || 0)
-                        : t('common.unlimited')
+                      ? Number(activePackageSubscription?.daily_amount || 0) > 0
+                        ? formatAmountBySelectedUnit(
+                            activePackageSubscription?.daily_amount || 0,
+                          )
+                        : formatAmountBySelectedUnit(0, { unlimited: true })
                       : '-'
                 })}
                 {renderReadonlyAmountField({
                   label: t('user.detail.package_monthly_emergency_limit'),
                   value:
                     hasActivePackage
-                      ? formatYYCValue(
-                          activePackageSubscription?.monthly_emergency_quota_limit || 0,
+                      ? formatAmountBySelectedUnit(
+                          activePackageSubscription?.emergency_amount || 0,
                         )
                       : '-'
                 })}
@@ -1050,7 +1068,7 @@ const UserDetail = () => {
                   label: t('user.detail.package_timezone'),
                   value:
                     hasActivePackage
-                      ? readOnlyValue(activePackageSubscription?.quota_reset_timezone)
+                      ? readOnlyValue(activePackageSubscription?.reset_timezone)
                       : '-'
                 })}
                 {renderReadonlyMetaField({
@@ -1126,24 +1144,24 @@ const UserDetail = () => {
                 </div>
                 <Form.Group widths='equal'>
                   {editSection === 'balance' ? (
-                    renderBalanceQuotaField({
+                    renderBalanceAmountField({
                       label: t('user.detail.remaining_amount'),
-                      name: 'quota',
-                      value: balanceEditInputs.quota,
+                      name: 'amount',
+                      value: balanceEditInputs.amount,
                       placeholder: t('user.edit.quota_placeholder'),
                       editable: true,
                     })
                   ) : (
-                    renderBalanceQuotaField({
+                    renderBalanceAmountField({
                       label: t('user.detail.remaining_amount'),
-                      name: 'quota',
-                      value: balanceQuotaDisplayValue,
+                      name: 'amount',
+                      value: balanceDisplayValue,
                     })
                   )}
-                  {renderBalanceQuotaField({
+                  {renderBalanceAmountField({
                     label: t('user.detail.used_amount'),
-                    name: 'used_quota',
-                    value: usedQuotaDisplayValue,
+                    name: 'yyc_used',
+                    value: usedDisplayValue,
                   })}
                   <Form.Field className='router-section-input'>
                     <label>{t('user.table.request_count')}</label>

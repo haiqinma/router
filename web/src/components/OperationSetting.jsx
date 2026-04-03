@@ -8,13 +8,15 @@ import {
   timestamp2string,
 } from '../helpers';
 import {
+  applyBillingInputValues,
   buildBillingCurrencyIndex,
-  buildQuotaUnitOptions,
-  convertQuotaInputValueUnit,
-  quotaInputToStoredValueByUnit,
-  quotaToInputValueByUnit,
-  resolveDefaultQuotaUnit,
-  resolveQuotaInputStep,
+  buildBillingUnitOptions,
+  convertBillingInputValueUnit,
+  createBillingUnitState,
+  BILLING_OPTION_SETTING_KEYS,
+  billingInputValueToYYC,
+  resolveDefaultBillingUnit,
+  resolveBillingInputStep,
 } from '../helpers/billing';
 import UnitDropdown from './UnitDropdown';
 
@@ -30,19 +32,6 @@ const createEmptyBillingCurrency = () => ({
   _isNew: true,
 });
 
-const quotaOptionKeys = [
-  'QuotaForNewUser',
-  'PreConsumedQuota',
-  'QuotaForInviter',
-  'QuotaForInvitee',
-];
-
-const createQuotaUnitState = (defaultUnit = 'USD') =>
-  quotaOptionKeys.reduce((result, key) => {
-    result[key] = defaultUnit;
-    return result;
-  }, {});
-
 const normalizeOptionValue = (value, fallback = '') => {
   if (value === null || value === undefined) {
     return fallback;
@@ -50,33 +39,29 @@ const normalizeOptionValue = (value, fallback = '') => {
   return `${value}`;
 };
 
-const applyQuotaDisplayValues = (rawInputs, quotaUnits, currencyIndex) => {
-  const next = {
-    ...(rawInputs || {}),
-  };
-  quotaOptionKeys.forEach((key) => {
-    next[key] = quotaToInputValueByUnit(
-      rawInputs?.[key] ?? 0,
-      quotaUnits?.[key],
-      currencyIndex
-    );
-  });
-  return next;
+const BALANCE_OPTION_KEYS = {
+  newUserAmount: 'QuotaForNewUser',
+  defaultGroup: 'DefaultUserGroup',
+  inviterRewardAmount: 'QuotaForInviter',
+  inviteeRewardAmount: 'QuotaForInvitee',
+  balanceReminderThreshold: 'QuotaRemindThreshold',
+  preConsumedAmount: 'PreConsumedQuota',
+  usdToYYCRate: 'QuotaPerUnit',
 };
 
 const OperationSetting = ({ section = '' }) => {
   const { t } = useTranslation();
-  let now = new Date();
-  let [inputs, setInputs] = useState({
-    QuotaForNewUser: 0,
-    DefaultUserGroup: '',
-    QuotaForInviter: 0,
-    QuotaForInvitee: 0,
-    QuotaRemindThreshold: 0,
-    PreConsumedQuota: 0,
+  const now = new Date();
+  const [inputs, setInputs] = useState({
+    [BALANCE_OPTION_KEYS.newUserAmount]: 0,
+    [BALANCE_OPTION_KEYS.defaultGroup]: '',
+    [BALANCE_OPTION_KEYS.inviterRewardAmount]: 0,
+    [BALANCE_OPTION_KEYS.inviteeRewardAmount]: 0,
+    [BALANCE_OPTION_KEYS.balanceReminderThreshold]: 0,
+    [BALANCE_OPTION_KEYS.preConsumedAmount]: 0,
     TopUpLink: '',
     ChatLink: '',
-    QuotaPerUnit: 0,
+    [BALANCE_OPTION_KEYS.usdToYYCRate]: 0,
     AutomaticDisableChannelEnabled: '',
     AutomaticEnableChannelEnabled: '',
     ChannelDisableThreshold: 0,
@@ -95,23 +80,27 @@ const OperationSetting = ({ section = '' }) => {
   const [billingLoading, setBillingLoading] = useState(false);
   const [billingCurrenciesReady, setBillingCurrenciesReady] = useState(false);
   const [billingSavingKey, setBillingSavingKey] = useState('');
-  const [quotaUnits, setQuotaUnits] = useState(createQuotaUnitState('USD'));
-  const [quotaDisplayInitialized, setQuotaDisplayInitialized] = useState(false);
-  let [loading, setLoading] = useState(false);
-  let [historyTimestamp, setHistoryTimestamp] = useState(
+  const [billingUnits, setBillingUnits] = useState(createBillingUnitState('USD'));
+  const [billingDisplayInitialized, setBillingDisplayInitialized] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [logCleanupTimestamp, setLogCleanupTimestamp] = useState(
     timestamp2string(now.getTime() / 1000 - 30 * 24 * 3600)
   ); // a month ago
   const normalizedSection = (section || '').trim().toLowerCase();
   const showAllSections =
     normalizedSection === '' || normalizedSection === 'all';
+  const showBalanceSection =
+    showAllSections ||
+    normalizedSection === 'quota' ||
+    normalizedSection === 'balance';
   const sectionVisible = {
-    quota: showAllSections || normalizedSection === 'quota',
+    balance: showBalanceSection,
     monitor: showAllSections || normalizedSection === 'monitor',
     log: showAllSections || normalizedSection === 'log',
     general: showAllSections || normalizedSection === 'general',
     billing: showAllSections || normalizedSection === 'billing',
   };
-  const sectionOrder = ['quota', 'monitor', 'log', 'general', 'billing'];
+  const sectionOrder = ['balance', 'monitor', 'log', 'general', 'billing'];
   const shouldRenderDividerAfter = (key) => {
     if (!showAllSections) {
       return false;
@@ -136,7 +125,7 @@ const OperationSetting = ({ section = '' }) => {
         }
         newInputs[item.key] = item.value;
       });
-      setQuotaDisplayInitialized(false);
+      setBillingDisplayInitialized(false);
       setInputs(newInputs);
       setOriginInputs(newInputs);
     } else {
@@ -163,8 +152,8 @@ const OperationSetting = ({ section = '' }) => {
     },
   ];
 
-  const quotaUnitOptions = useMemo(
-    () => buildQuotaUnitOptions(billingCurrencyIndex),
+  const billingUnitOptions = useMemo(
+    () => buildBillingUnitOptions(billingCurrencyIndex),
     [billingCurrencyIndex]
   );
 
@@ -232,16 +221,16 @@ const OperationSetting = ({ section = '' }) => {
       const nextCurrencyIndex = buildBillingCurrencyIndex(rows, {
         activeOnly: true,
       });
-      const defaultQuotaUnit = resolveDefaultQuotaUnit(nextCurrencyIndex);
+      const defaultBillingUnit = resolveDefaultBillingUnit(nextCurrencyIndex);
       setBillingCurrencies(rows);
       setBillingCurrencyIndex(nextCurrencyIndex);
-      setQuotaUnits((prev) =>
-        quotaOptionKeys.reduce((result, key) => {
+      setBillingUnits((prev) =>
+        BILLING_OPTION_SETTING_KEYS.reduce((result, key) => {
           const currentUnit = (prev?.[key] || '').toString().trim().toUpperCase();
           result[key] =
             currentUnit && nextCurrencyIndex[currentUnit]
               ? currentUnit
-              : defaultQuotaUnit;
+              : defaultBillingUnit;
           return result;
         }, {})
       );
@@ -288,8 +277,8 @@ const OperationSetting = ({ section = '' }) => {
     }
   };
 
-  const submitConfig = async (group) => {
-    switch (group) {
+  const saveSectionConfig = async (sectionKey) => {
+    switch (sectionKey) {
       case 'monitor':
         if (
           originInputs['ChannelDisableThreshold'] !==
@@ -301,96 +290,115 @@ const OperationSetting = ({ section = '' }) => {
           );
         }
         if (
-          originInputs['QuotaRemindThreshold'] !== inputs.QuotaRemindThreshold
+          originInputs[BALANCE_OPTION_KEYS.balanceReminderThreshold] !==
+          inputs[BALANCE_OPTION_KEYS.balanceReminderThreshold]
         ) {
           await updateOption(
-            'QuotaRemindThreshold',
-            inputs.QuotaRemindThreshold
+            BALANCE_OPTION_KEYS.balanceReminderThreshold,
+            inputs[BALANCE_OPTION_KEYS.balanceReminderThreshold]
           );
         }
         break;
-      case 'quota':
+      case 'balance':
         {
-          const quotaForNewUser = quotaInputToStoredValueByUnit(
-            inputs.QuotaForNewUser,
-            quotaUnits.QuotaForNewUser,
+          const yycForNewUser = billingInputValueToYYC(
+            inputs[BALANCE_OPTION_KEYS.newUserAmount],
+            billingUnits[BALANCE_OPTION_KEYS.newUserAmount],
             billingCurrencyIndex
           );
           if (
-            !Number.isFinite(quotaForNewUser) ||
-            quotaForNewUser < 0
+            !Number.isFinite(yycForNewUser) ||
+            yycForNewUser < 0
           ) {
             showError(t('setting.operation.quota.messages.amount_invalid'));
             break;
           }
           if (
-            normalizeOptionValue(originInputs['QuotaForNewUser'], '0') !==
-            `${Math.trunc(quotaForNewUser)}`
+            normalizeOptionValue(originInputs[BALANCE_OPTION_KEYS.newUserAmount], '0') !==
+            `${Math.trunc(yycForNewUser)}`
           ) {
-            await updateOption('QuotaForNewUser', `${Math.trunc(quotaForNewUser)}`);
+            await updateOption(
+              BALANCE_OPTION_KEYS.newUserAmount,
+              `${Math.trunc(yycForNewUser)}`
+            );
           }
         }
-        if (originInputs['DefaultUserGroup'] !== inputs.DefaultUserGroup) {
-          await updateOption('DefaultUserGroup', inputs.DefaultUserGroup);
+        if (
+          originInputs[BALANCE_OPTION_KEYS.defaultGroup] !==
+          inputs[BALANCE_OPTION_KEYS.defaultGroup]
+        ) {
+          await updateOption(
+            BALANCE_OPTION_KEYS.defaultGroup,
+            inputs[BALANCE_OPTION_KEYS.defaultGroup]
+          );
         }
         {
-          const quotaForInvitee = quotaInputToStoredValueByUnit(
-            inputs.QuotaForInvitee,
-            quotaUnits.QuotaForInvitee,
+          const yycForInvitee = billingInputValueToYYC(
+            inputs[BALANCE_OPTION_KEYS.inviteeRewardAmount],
+            billingUnits[BALANCE_OPTION_KEYS.inviteeRewardAmount],
             billingCurrencyIndex
           );
           if (
-            !Number.isFinite(quotaForInvitee) ||
-            quotaForInvitee < 0
+            !Number.isFinite(yycForInvitee) ||
+            yycForInvitee < 0
           ) {
             showError(t('setting.operation.quota.messages.amount_invalid'));
             break;
           }
           if (
-            normalizeOptionValue(originInputs['QuotaForInvitee'], '0') !==
-            `${Math.trunc(quotaForInvitee)}`
+            normalizeOptionValue(originInputs[BALANCE_OPTION_KEYS.inviteeRewardAmount], '0') !==
+            `${Math.trunc(yycForInvitee)}`
           ) {
-            await updateOption('QuotaForInvitee', `${Math.trunc(quotaForInvitee)}`);
+            await updateOption(
+              BALANCE_OPTION_KEYS.inviteeRewardAmount,
+              `${Math.trunc(yycForInvitee)}`
+            );
           }
         }
         {
-          const quotaForInviter = quotaInputToStoredValueByUnit(
-            inputs.QuotaForInviter,
-            quotaUnits.QuotaForInviter,
+          const yycForInviter = billingInputValueToYYC(
+            inputs[BALANCE_OPTION_KEYS.inviterRewardAmount],
+            billingUnits[BALANCE_OPTION_KEYS.inviterRewardAmount],
             billingCurrencyIndex
           );
           if (
-            !Number.isFinite(quotaForInviter) ||
-            quotaForInviter < 0
+            !Number.isFinite(yycForInviter) ||
+            yycForInviter < 0
           ) {
             showError(t('setting.operation.quota.messages.amount_invalid'));
             break;
           }
           if (
-            normalizeOptionValue(originInputs['QuotaForInviter'], '0') !==
-            `${Math.trunc(quotaForInviter)}`
+            normalizeOptionValue(originInputs[BALANCE_OPTION_KEYS.inviterRewardAmount], '0') !==
+            `${Math.trunc(yycForInviter)}`
           ) {
-            await updateOption('QuotaForInviter', `${Math.trunc(quotaForInviter)}`);
+            await updateOption(
+              BALANCE_OPTION_KEYS.inviterRewardAmount,
+              `${Math.trunc(yycForInviter)}`
+            );
           }
         }
         {
-          const preConsumedQuota = quotaInputToStoredValueByUnit(
-            inputs.PreConsumedQuota,
-            quotaUnits.PreConsumedQuota,
+          const preConsumedYYC = billingInputValueToYYC(
+            inputs[BALANCE_OPTION_KEYS.preConsumedAmount],
+            billingUnits[BALANCE_OPTION_KEYS.preConsumedAmount],
             billingCurrencyIndex
           );
           if (
-            !Number.isFinite(preConsumedQuota) ||
-            preConsumedQuota < 0
+            !Number.isFinite(preConsumedYYC) ||
+            preConsumedYYC < 0
           ) {
             showError(t('setting.operation.quota.messages.amount_invalid'));
             break;
           }
           if (
-            normalizeOptionValue(originInputs['PreConsumedQuota'], '0') !==
-            `${Math.trunc(preConsumedQuota)}`
+            normalizeOptionValue(originInputs[BALANCE_OPTION_KEYS.preConsumedAmount], '0') !==
+            `${Math.trunc(preConsumedYYC)}`
           ) {
-            await updateOption('PreConsumedQuota', `${Math.trunc(preConsumedQuota)}`);
+            await updateOption(
+              BALANCE_OPTION_KEYS.preConsumedAmount,
+              `${Math.trunc(preConsumedYYC)}`
+            );
           }
         }
         break;
@@ -401,8 +409,14 @@ const OperationSetting = ({ section = '' }) => {
         if (originInputs['ChatLink'] !== inputs.ChatLink) {
           await updateOption('ChatLink', inputs.ChatLink);
         }
-        if (originInputs['QuotaPerUnit'] !== inputs.QuotaPerUnit) {
-          await updateOption('QuotaPerUnit', inputs.QuotaPerUnit);
+        if (
+          originInputs[BALANCE_OPTION_KEYS.usdToYYCRate] !==
+          inputs[BALANCE_OPTION_KEYS.usdToYYCRate]
+        ) {
+          await updateOption(
+            BALANCE_OPTION_KEYS.usdToYYCRate,
+            inputs[BALANCE_OPTION_KEYS.usdToYYCRate]
+          );
         }
         if (originInputs['RetryTimes'] !== inputs.RetryTimes) {
           await updateOption('RetryTimes', inputs.RetryTimes);
@@ -414,7 +428,7 @@ const OperationSetting = ({ section = '' }) => {
   };
 
   useEffect(() => {
-    if (quotaDisplayInitialized) {
+    if (billingDisplayInitialized) {
       return;
     }
     if (!billingCurrenciesReady) {
@@ -423,66 +437,66 @@ const OperationSetting = ({ section = '' }) => {
     if (Object.keys(originInputs || {}).length === 0) {
       return;
     }
-    const defaultQuotaUnit = resolveDefaultQuotaUnit(billingCurrencyIndex);
-    const nextQuotaUnits = quotaOptionKeys.reduce((result, key) => {
-      const currentUnit = (quotaUnits?.[key] || '').toString().trim().toUpperCase();
+    const defaultBillingUnit = resolveDefaultBillingUnit(billingCurrencyIndex);
+    const nextBillingUnits = BILLING_OPTION_SETTING_KEYS.reduce((result, key) => {
+      const currentUnit = (billingUnits?.[key] || '').toString().trim().toUpperCase();
       result[key] =
         currentUnit && billingCurrencyIndex[currentUnit]
           ? currentUnit
-          : defaultQuotaUnit;
+          : defaultBillingUnit;
       return result;
     }, {});
-    setQuotaUnits(nextQuotaUnits);
+    setBillingUnits(nextBillingUnits);
     setInputs((prev) => ({
       ...prev,
-      ...applyQuotaDisplayValues(originInputs, nextQuotaUnits, billingCurrencyIndex),
+      ...applyBillingInputValues(originInputs, nextBillingUnits, billingCurrencyIndex),
     }));
-    setQuotaDisplayInitialized(true);
+    setBillingDisplayInitialized(true);
   }, [
     billingCurrenciesReady,
     billingCurrencyIndex,
     originInputs,
-    quotaDisplayInitialized,
-    quotaUnits,
+    billingDisplayInitialized,
+    billingUnits,
   ]);
 
-  const renderQuotaInputField = (labelKey, inputKey, placeholderKey) => (
+  const renderBalanceInputField = (labelKey, optionKey, placeholderKey) => (
     <Form.Field>
       <label>{t(labelKey)}</label>
       <div className='router-section-input-with-unit'>
         <Form.Input
           className='router-section-input router-section-input-with-unit-field'
           autoComplete='new-password'
-          value={inputs[inputKey] ?? '0'}
+          value={inputs[optionKey] ?? '0'}
           type='number'
           min='0'
-          step={resolveQuotaInputStep(quotaUnits[inputKey], billingCurrencyIndex)}
+          step={resolveBillingInputStep(billingUnits[optionKey], billingCurrencyIndex)}
           placeholder={t(placeholderKey)}
           onChange={(e) => {
             setInputs((prev) => ({
               ...prev,
-              [inputKey]: e.target.value || '0',
+              [optionKey]: e.target.value || '0',
             }));
           }}
         />
         <UnitDropdown
           variant='inputUnit'
-          options={quotaUnitOptions}
-          value={quotaUnits[inputKey] || resolveDefaultQuotaUnit(billingCurrencyIndex)}
+          options={billingUnitOptions}
+          value={billingUnits[optionKey] || resolveDefaultBillingUnit(billingCurrencyIndex)}
           onChange={(_, { value }) => {
             const nextUnit = (value || 'YYC').toString().trim().toUpperCase();
             setInputs((prev) => ({
               ...prev,
-              [inputKey]: convertQuotaInputValueUnit(
-                prev[inputKey],
-                quotaUnits[inputKey],
+              [optionKey]: convertBillingInputValueUnit(
+                prev[optionKey],
+                billingUnits[optionKey],
                 nextUnit,
                 billingCurrencyIndex
               ),
             }));
-            setQuotaUnits((prev) => ({
+            setBillingUnits((prev) => ({
               ...prev,
-              [inputKey]: nextUnit,
+              [optionKey]: nextUnit,
             }));
           }}
           aria-label={t(labelKey)}
@@ -492,9 +506,8 @@ const OperationSetting = ({ section = '' }) => {
   );
 
   const deleteHistoryLogs = async () => {
-    console.log(inputs);
     const res = await API.delete(
-      `/api/v1/admin/log/?target_timestamp=${Date.parse(historyTimestamp) / 1000}`
+      `/api/v1/admin/log/?target_timestamp=${Date.parse(logCleanupTimestamp) / 1000}`
     );
     const { success, message, data } = res.data;
     if (success) {
@@ -585,54 +598,54 @@ const OperationSetting = ({ section = '' }) => {
     <Grid columns={1}>
       <Grid.Column>
         <Form loading={loading}>
-          {sectionVisible.quota ? (
+          {sectionVisible.balance ? (
             <>
               <Header as='h3' className='router-section-title'>{t('setting.operation.quota.title')}</Header>
               <Form.Group widths='equal'>
-                {renderQuotaInputField(
+                {renderBalanceInputField(
                   'setting.operation.quota.new_user',
-                  'QuotaForNewUser',
+                  BALANCE_OPTION_KEYS.newUserAmount,
                   'setting.operation.quota.new_user_placeholder'
                 )}
                 <Form.Dropdown
                   className='router-section-input'
                   label={t('setting.operation.quota.default_group')}
-                  name='DefaultUserGroup'
+                  name={BALANCE_OPTION_KEYS.defaultGroup}
                   selection
                   clearable
                   search
                   options={groupOptions}
                   onChange={handleInputChange}
-                  value={inputs.DefaultUserGroup || ''}
+                  value={inputs[BALANCE_OPTION_KEYS.defaultGroup] || ''}
                   placeholder={t('setting.operation.quota.default_group_placeholder')}
                 />
-                {renderQuotaInputField(
+                {renderBalanceInputField(
                   'setting.operation.quota.pre_consume',
-                  'PreConsumedQuota',
+                  BALANCE_OPTION_KEYS.preConsumedAmount,
                   'setting.operation.quota.pre_consume_placeholder'
                 )}
               </Form.Group>
               <Form.Group widths='equal'>
-                {renderQuotaInputField(
+                {renderBalanceInputField(
                   'setting.operation.quota.inviter_reward',
-                  'QuotaForInviter',
+                  BALANCE_OPTION_KEYS.inviterRewardAmount,
                   'setting.operation.quota.inviter_reward_placeholder'
                 )}
-                {renderQuotaInputField(
+                {renderBalanceInputField(
                   'setting.operation.quota.invitee_reward',
-                  'QuotaForInvitee',
+                  BALANCE_OPTION_KEYS.inviteeRewardAmount,
                   'setting.operation.quota.invitee_reward_placeholder'
                 )}
               </Form.Group>
               <Form.Button
                 className='router-section-button'
                 onClick={() => {
-                  submitConfig('quota').then();
+                  saveSectionConfig('balance').then();
                 }}
               >
                 {t('setting.operation.quota.buttons.save')}
               </Form.Button>
-              {shouldRenderDividerAfter('quota') ? <Divider /> : null}
+              {shouldRenderDividerAfter('balance') ? <Divider /> : null}
             </>
           ) : null}
 
@@ -656,10 +669,10 @@ const OperationSetting = ({ section = '' }) => {
                 <Form.Input
                   className='router-section-input'
                   label={t('setting.operation.monitor.quota_reminder')}
-                  name='QuotaRemindThreshold'
+                  name={BALANCE_OPTION_KEYS.balanceReminderThreshold}
                   onChange={handleInputChange}
                   autoComplete='new-password'
-                  value={inputs.QuotaRemindThreshold}
+                  value={inputs[BALANCE_OPTION_KEYS.balanceReminderThreshold]}
                   type='number'
                   min='0'
                   placeholder={t(
@@ -686,7 +699,7 @@ const OperationSetting = ({ section = '' }) => {
               <Form.Button
                 className='router-section-button'
                 onClick={() => {
-                  submitConfig('monitor').then();
+                  saveSectionConfig('monitor').then();
                 }}
               >
                 {t('setting.operation.monitor.buttons.save')}
@@ -711,11 +724,11 @@ const OperationSetting = ({ section = '' }) => {
                 <Form.Input
                   className='router-section-input'
                   label={t('setting.operation.log.target_time')}
-                  value={historyTimestamp}
+                  value={logCleanupTimestamp}
                   type='datetime-local'
                   name='history_timestamp'
                   onChange={(e, { value }) => {
-                    setHistoryTimestamp(value);
+                    setLogCleanupTimestamp(value);
                   }}
                 />
               </Form.Group>
@@ -760,10 +773,10 @@ const OperationSetting = ({ section = '' }) => {
                 <Form.Input
                   className='router-section-input'
                   label={t('setting.operation.general.quota_per_unit')}
-                  name='QuotaPerUnit'
+                  name={BALANCE_OPTION_KEYS.usdToYYCRate}
                   onChange={handleInputChange}
                   autoComplete='new-password'
-                  value={inputs.QuotaPerUnit}
+                  value={inputs[BALANCE_OPTION_KEYS.usdToYYCRate]}
                   type='number'
                   step='0.01'
                   placeholder={t(
@@ -811,7 +824,7 @@ const OperationSetting = ({ section = '' }) => {
               <Form.Button
                 className='router-section-button'
                 onClick={() => {
-                  submitConfig('general').then();
+                  saveSectionConfig('general').then();
                 }}
               >
                 {t('setting.operation.general.buttons.save')}

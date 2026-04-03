@@ -3,7 +3,7 @@ import { Breadcrumb, Card, Label } from 'semantic-ui-react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { API, showError, timestamp2string } from '../../helpers';
-import { renderQuota, YYC_SYMBOL } from '../../helpers/render';
+import { renderDisplayAmount, YYC_SYMBOL } from '../../helpers/render';
 
 function renderType(type, t) {
   switch (Number(type)) {
@@ -90,9 +90,11 @@ function renderRate(rate, currency) {
 function normalizeLogDetail(data) {
   return {
     ...(data || {}),
-    quota: Number(data?.yyc_amount ?? data?.quota ?? 0),
-    user_daily_quota: Number(data?.yyc_user_daily ?? data?.user_daily_quota ?? 0),
-    user_emergency_quota: Number(data?.yyc_user_emergency ?? data?.user_emergency_quota ?? 0),
+    // Prefer YYC-native fields, fall back to legacy quota payloads for old logs.
+    yycAmount: Number(data?.yyc_amount ?? data?.quota ?? 0),
+    userDailyYYC: Number(data?.yyc_user_daily ?? data?.user_daily_quota ?? 0),
+    userEmergencyYYC: Number(data?.yyc_user_emergency ?? data?.user_emergency_quota ?? 0),
+    billingYYCAmount: Number(data?.billing_yyc_amount ?? 0),
   };
 }
 
@@ -284,8 +286,8 @@ const LogDetail = () => {
                       {t('log.detail.fields.quota')}
                     </div>
                     <div className='router-detail-value'>
-                      {typeof log?.quota === 'number'
-                        ? renderQuota(log.quota, t, 6)
+                      {typeof log?.yycAmount === 'number'
+                        ? renderDisplayAmount(log.yycAmount, t, 6)
                         : '-'}
                     </div>
                   </div>
@@ -294,8 +296,8 @@ const LogDetail = () => {
                       {t('log.detail.fields.user_daily_quota')}
                     </div>
                     <div className='router-detail-value'>
-                      {typeof log?.user_daily_quota === 'number'
-                        ? renderQuota(log.user_daily_quota, t, 6)
+                      {typeof log?.userDailyYYC === 'number'
+                        ? renderDisplayAmount(log.userDailyYYC, t, 6)
                         : '-'}
                     </div>
                   </div>
@@ -304,8 +306,8 @@ const LogDetail = () => {
                       {t('log.detail.fields.user_emergency_quota')}
                     </div>
                     <div className='router-detail-value'>
-                      {typeof log?.user_emergency_quota === 'number'
-                        ? renderQuota(log.user_emergency_quota, t, 6)
+                      {typeof log?.userEmergencyYYC === 'number'
+                        ? renderDisplayAmount(log.userEmergencyYYC, t, 6)
                         : '-'}
                     </div>
                   </div>
@@ -418,8 +420,8 @@ const LogDetail = () => {
                       {t('log.detail.fields.billing_yyc_amount')}
                     </div>
                     <div className='router-detail-value'>
-                      {typeof log?.billing_yyc_amount === 'number'
-                        ? renderQuota(log.billing_yyc_amount, t, 6)
+                      {typeof log?.billingYYCAmount === 'number'
+                        ? renderDisplayAmount(log.billingYYCAmount, t, 6)
                         : '-'}
                     </div>
                   </div>

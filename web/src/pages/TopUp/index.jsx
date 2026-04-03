@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Button,
   Form,
@@ -53,6 +53,17 @@ const normalizeTopUpResult = (raw) => {
   };
 };
 
+const normalizeRedemptionRecord = (raw) => {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+  return {
+    ...raw,
+    // Keep legacy quota fallback for older redemption history records.
+    yycAmount: Number(raw?.yyc_amount ?? raw?.quota ?? 0) || 0,
+  };
+};
+
 const getStoredDisplayCurrency = () => {
   if (typeof window === 'undefined') {
     return '';
@@ -83,15 +94,15 @@ const TopUp = () => {
   const { t } = useTranslation();
   const initialCurrencyIndex = buildPublicDisplayCurrencyIndex([]);
   const [redemptionCode, setRedemptionCode] = useState('');
-  const [topUpLink, setTopUpLink] = useState('');
-  const [userQuota, setUserQuota] = useState(0);
+  const [externalTopupLink, setExternalTopupLink] = useState('');
+  const [userBalanceYYC, setUserBalanceYYC] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isCreatingTopUpOrder, setIsCreatingTopUpOrder] = useState(false);
-  const [topupOrders, setTopupOrders] = useState([]);
-  const [loadingOrders, setLoadingOrders] = useState(false);
-  const [topupLogs, setTopupLogs] = useState([]);
-  const [loadingLogs, setLoadingLogs] = useState(false);
-  const [recentTopUpResult, setRecentTopUpResult] = useState(null);
+  const [externalTopupOrders, setExternalTopupOrders] = useState([]);
+  const [loadingExternalTopupOrders, setLoadingExternalTopupOrders] = useState(false);
+  const [redemptionRecords, setRedemptionRecords] = useState([]);
+  const [loadingRedemptionRecords, setLoadingRedemptionRecords] = useState(false);
+  const [recentRedemptionResult, setRecentRedemptionResult] = useState(null);
   const [displayCurrencyIndex, setDisplayCurrencyIndex] = useState(
     initialCurrencyIndex
   );
@@ -105,7 +116,7 @@ const TopUp = () => {
     [displayCurrencyIndex]
   );
 
-  const renderBalanceValue = (yycAmount) => {
+  const renderDisplayAmount = (yycAmount) => {
     const normalizedAmount = Number(yycAmount || 0);
     if (!Number.isFinite(normalizedAmount)) {
       return renderYYC(0, t);
@@ -144,7 +155,7 @@ const TopUp = () => {
     }
   }, []);
 
-  const topUp = async () => {
+  const submitRedemption = async () => {
     if (redemptionCode === '') {
       showInfo(t('topup.redeem.empty_code'));
       return;
@@ -159,8 +170,8 @@ const TopUp = () => {
         const normalizedResult =
           normalizeTopUpResult(data) || {
             redeemed_yyc: Number(data ?? 0) || 0,
-            before_yyc_balance: userQuota,
-            after_yyc_balance: userQuota + (Number(data ?? 0) || 0),
+            before_yyc_balance: userBalanceYYC,
+            after_yyc_balance: userBalanceYYC + (Number(data ?? 0) || 0),
             redemption_id: '',
             redemption_name: '',
             group_id: '',
@@ -170,10 +181,10 @@ const TopUp = () => {
             redeemed_at: 0,
           };
         showSuccess(t('topup.redeem.success'));
-        setUserQuota(normalizedResult.after_yyc_balance);
-        setRecentTopUpResult(normalizedResult);
+        setUserBalanceYYC(normalizedResult.after_yyc_balance);
+        setRecentRedemptionResult(normalizedResult);
         setRedemptionCode('');
-        getTopupLogs().then();
+        loadRedemptionRecords().then();
       } else {
         showError(message);
       }
@@ -184,8 +195,8 @@ const TopUp = () => {
     }
   };
 
-  const openTopUpLink = async () => {
-    if (!topUpLink) {
+  const openExternalTopup = async () => {
+    if (!externalTopupLink) {
       showError(t('topup.external_topup.no_link'));
       return;
     }
@@ -209,7 +220,7 @@ const TopUp = () => {
         showError(t('topup.external_topup.request_failed'));
         return;
       }
-      getTopupOrders().then();
+      loadExternalTopupOrders().then();
       popup.location.href = redirectURL;
       popup.focus();
     } catch (err) {
@@ -220,43 +231,47 @@ const TopUp = () => {
     }
   };
 
-  const getUserQuota = async () => {
+  const loadUserBalance = async () => {
     let res = await API.get(`/api/v1/public/user/self`);
     const { success, message, data } = res.data;
     if (success) {
-      setUserQuota(Number(data?.yyc_balance ?? data?.quota ?? 0) || 0);
+      setUserBalanceYYC(Number(data?.yyc_balance ?? data?.quota ?? 0) || 0);
     } else {
       showError(message);
     }
   };
 
-  const getTopupOrders = async () => {
-    setLoadingOrders(true);
+  const loadExternalTopupOrders = async () => {
+    setLoadingExternalTopupOrders(true);
     try {
       const res = await API.get('/api/v1/public/user/topup/orders?page=1&page_size=10');
       const { success, message, data } = res.data;
       if (success) {
-        setTopupOrders(Array.isArray(data?.items) ? data.items : []);
+        setExternalTopupOrders(Array.isArray(data?.items) ? data.items : []);
       } else {
         showError(message);
       }
     } finally {
-      setLoadingOrders(false);
+      setLoadingExternalTopupOrders(false);
     }
   };
 
-  const getTopupLogs = async () => {
-    setLoadingLogs(true);
+  const loadRedemptionRecords = async () => {
+    setLoadingRedemptionRecords(true);
     try {
       const res = await API.get('/api/v1/public/log?page=1&type=1');
       const { success, message, data } = res.data;
       if (success) {
-        setTopupLogs(Array.isArray(data) ? data : []);
+        setRedemptionRecords(
+          Array.isArray(data)
+            ? data.map(normalizeRedemptionRecord).filter(Boolean)
+            : []
+        );
       } else {
         showError(message);
       }
     } finally {
-      setLoadingLogs(false);
+      setLoadingRedemptionRecords(false);
     }
   };
 
@@ -265,16 +280,16 @@ const TopUp = () => {
     if (status) {
       status = JSON.parse(status);
       if (status.top_up_link) {
-        setTopUpLink(status.top_up_link);
+        setExternalTopupLink(status.top_up_link);
       }
     }
-    getUserQuota().then();
-    getTopupOrders().then();
-    getTopupLogs().then();
+    loadUserBalance().then();
+    loadExternalTopupOrders().then();
+    loadRedemptionRecords().then();
     loadDisplayCurrencies().then();
   }, [loadDisplayCurrencies]);
 
-  const renderTopupOrderStatus = (status) => {
+  const renderExternalTopupOrderStatus = (status) => {
     switch (status) {
       case 'created':
         return (
@@ -380,7 +395,7 @@ const TopUp = () => {
                       <div className='router-center-panel'>
                         <Statistic className='router-accent-statistic'>
                           <Statistic.Value>
-                            {renderBalanceValue(userQuota)}
+                            {renderDisplayAmount(userBalanceYYC)}
                           </Statistic.Value>
                           <Statistic.Label>
                             {t('topup.external_topup.current_balance')}
@@ -395,9 +410,9 @@ const TopUp = () => {
                         <Button
                           className='router-section-button router-action-button-wide'
                           primary
-                          onClick={openTopUpLink}
+                          onClick={openExternalTopup}
                           loading={isCreatingTopUpOrder}
-                          disabled={isCreatingTopUpOrder || !topUpLink}
+                          disabled={isCreatingTopUpOrder || !externalTopupLink}
                         >
                           {isCreatingTopUpOrder
                             ? t('topup.external_topup.creating')
@@ -466,7 +481,7 @@ const TopUp = () => {
                           className='router-section-button'
                           color='green'
                           fluid
-                          onClick={topUp}
+                          onClick={submitRedemption}
                           loading={isSubmitting}
                           disabled={isSubmitting}
                         >
@@ -482,7 +497,7 @@ const TopUp = () => {
             </Grid.Column>
           </Grid>
 
-          {recentTopUpResult ? (
+          {recentRedemptionResult ? (
             <Card fluid className='router-soft-card' style={{ marginTop: '1rem' }}>
               <Card.Content>
                 <Card.Header className='router-card-header'>
@@ -495,7 +510,7 @@ const TopUp = () => {
                       className='router-section-button'
                       basic
                       size='small'
-                      onClick={() => setRecentTopUpResult(null)}
+                      onClick={() => setRecentRedemptionResult(null)}
                     >
                       {t('topup.redemption_result.close')}
                     </Button>
@@ -505,37 +520,37 @@ const TopUp = () => {
                   <Table.Body>
                     <Table.Row>
                       <Table.Cell width={4}>{t('topup.redemption_result.fields.redeemed_amount')}</Table.Cell>
-                      <Table.Cell>{renderBalanceValue(recentTopUpResult.redeemed_yyc)}</Table.Cell>
+                      <Table.Cell>{renderDisplayAmount(recentRedemptionResult.redeemed_yyc)}</Table.Cell>
                       <Table.Cell width={4}>{t('topup.redemption_result.fields.redeemed_at')}</Table.Cell>
                       <Table.Cell>
-                        {recentTopUpResult.redeemed_at
-                          ? timestamp2string(recentTopUpResult.redeemed_at)
+                        {recentRedemptionResult.redeemed_at
+                          ? timestamp2string(recentRedemptionResult.redeemed_at)
                           : '-'}
                       </Table.Cell>
                     </Table.Row>
                     <Table.Row>
                       <Table.Cell>{t('topup.redemption_result.fields.before_balance')}</Table.Cell>
-                      <Table.Cell>{renderBalanceValue(recentTopUpResult.before_yyc_balance)}</Table.Cell>
+                      <Table.Cell>{renderDisplayAmount(recentRedemptionResult.before_yyc_balance)}</Table.Cell>
                       <Table.Cell>{t('topup.redemption_result.fields.after_balance')}</Table.Cell>
-                      <Table.Cell>{renderBalanceValue(recentTopUpResult.after_yyc_balance)}</Table.Cell>
+                      <Table.Cell>{renderDisplayAmount(recentRedemptionResult.after_yyc_balance)}</Table.Cell>
                     </Table.Row>
                     <Table.Row>
                       <Table.Cell>{t('topup.redemption_result.fields.redemption_name')}</Table.Cell>
-                      <Table.Cell>{recentTopUpResult.redemption_name || '-'}</Table.Cell>
+                      <Table.Cell>{recentRedemptionResult.redemption_name || '-'}</Table.Cell>
                       <Table.Cell>{t('topup.redemption_result.fields.redemption_id')}</Table.Cell>
-                      <Table.Cell>{recentTopUpResult.redemption_id || '-'}</Table.Cell>
+                      <Table.Cell>{recentRedemptionResult.redemption_id || '-'}</Table.Cell>
                     </Table.Row>
                     <Table.Row>
                       <Table.Cell>{t('topup.redemption_result.fields.group')}</Table.Cell>
                       <Table.Cell>
-                        {recentTopUpResult.group_name || recentTopUpResult.group_id || '-'}
+                        {recentRedemptionResult.group_name || recentRedemptionResult.group_id || '-'}
                       </Table.Cell>
                       <Table.Cell>{t('topup.redemption_result.fields.face_value')}</Table.Cell>
                       <Table.Cell>
-                        {recentTopUpResult.face_value_amount > 0
+                        {recentRedemptionResult.face_value_amount > 0
                           ? formatAmountWithUnit(
-                              recentTopUpResult.face_value_amount,
-                              recentTopUpResult.face_value_unit || 'YYC'
+                              recentRedemptionResult.face_value_amount,
+                              recentRedemptionResult.face_value_unit || 'YYC'
                             )
                           : '-'}
                       </Table.Cell>
@@ -556,8 +571,8 @@ const TopUp = () => {
                   </Header>
                   <Button
                     className='router-section-button'
-                    onClick={getTopupOrders}
-                    loading={loadingOrders}
+                    onClick={loadExternalTopupOrders}
+                    loading={loadingExternalTopupOrders}
                   >
                     {t('topup.external_topup_orders.refresh')}
                   </Button>
@@ -581,21 +596,21 @@ const TopUp = () => {
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
-                  {topupOrders.length === 0 ? (
+                  {externalTopupOrders.length === 0 ? (
                     <Table.Row>
                       <Table.Cell colSpan='4' className='router-text-muted'>
-                        {loadingOrders
+                        {loadingExternalTopupOrders
                           ? t('common.loading')
                           : t('topup.external_topup_orders.empty')}
                       </Table.Cell>
                     </Table.Row>
                   ) : (
-                    topupOrders.map((order) => (
+                    externalTopupOrders.map((order) => (
                       <Table.Row key={order.id}>
                         <Table.Cell>
                           {order.created_at ? timestamp2string(order.created_at) : '-'}
                         </Table.Cell>
-                        <Table.Cell>{renderTopupOrderStatus(order.status)}</Table.Cell>
+                        <Table.Cell>{renderExternalTopupOrderStatus(order.status)}</Table.Cell>
                         <Table.Cell style={{ wordBreak: 'break-all' }}>
                           {order.id || '-'}
                         </Table.Cell>
@@ -620,8 +635,8 @@ const TopUp = () => {
                   </Header>
                   <Button
                     className='router-section-button'
-                    onClick={getTopupLogs}
-                    loading={loadingLogs}
+                    onClick={loadRedemptionRecords}
+                    loading={loadingRedemptionRecords}
                   >
                     {t('topup.redemption_records.refresh')}
                   </Button>
@@ -642,24 +657,24 @@ const TopUp = () => {
                   </Table.Row>
                 </Table.Header>
                 <Table.Body>
-                  {topupLogs.length === 0 ? (
+                  {redemptionRecords.length === 0 ? (
                     <Table.Row>
                       <Table.Cell colSpan='3' className='router-text-muted'>
-                        {loadingLogs
+                        {loadingRedemptionRecords
                           ? t('common.loading')
                           : t('topup.redemption_records.empty')}
                       </Table.Cell>
                     </Table.Row>
                   ) : (
-                    topupLogs.map((log) => (
+                    redemptionRecords.map((log) => (
                       <Table.Row key={log.trace_id || `${log.created_at}-${log.content}`}>
                         <Table.Cell>
                           {log.created_at ? timestamp2string(log.created_at) : '-'}
                         </Table.Cell>
                         <Table.Cell>
-                          {log.quota ? (
+                          {log.yycAmount ? (
                             <Label basic color='green' className='router-tag'>
-                              {renderBalanceValue(log.quota)}
+                              {renderDisplayAmount(log.yycAmount)}
                             </Label>
                           ) : (
                             '-'

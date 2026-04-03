@@ -37,7 +37,7 @@ const Setting = () => {
       key: 'operation',
       label: t('setting.tabs.operation'),
       sections: [
-        { key: 'quota', label: t('setting.operation.quota.title') },
+        { key: 'balance', label: t('setting.operation.quota.title') },
         { key: 'monitor', label: t('setting.operation.monitor.title') },
         { key: 'log', label: t('setting.operation.log.title') },
         { key: 'general', label: t('setting.operation.general.title') },
@@ -83,9 +83,13 @@ const Setting = () => {
       : visibleTabKeys[0] || '';
   const activeGroup = visibleMenuGroups.find((item) => item.key === activeTab);
   const sectionKeys = (activeGroup?.sections || []).map((item) => item.key);
-  const requestedSection = (searchParams.get('section') || '')
+  const rawRequestedSection = (searchParams.get('section') || '')
     .trim()
     .toLowerCase();
+  const requestedSection =
+    activeTab === 'operation' && rawRequestedSection === 'quota'
+      ? 'balance'
+      : rawRequestedSection;
   const activeSection =
     sectionKeys.includes(requestedSection) && requestedSection !== ''
       ? requestedSection

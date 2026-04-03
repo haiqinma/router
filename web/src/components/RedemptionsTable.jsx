@@ -56,17 +56,29 @@ function formatByCurrencyMinorUnit(amount, currency) {
   return formatDecimalNumber(normalizedAmount, maximumFractionDigits);
 }
 
+function normalizeRedemptionRow(row) {
+  return {
+    ...(row || {}),
+    // Prefer YYC-native fields, fall back to historical quota payloads.
+    creditedYYC: Number(row?.yyc_value ?? row?.quota ?? 0),
+    groupLabel: renderGroupLabel(row),
+    createdTime: Number(row?.created_time ?? 0),
+    redeemedTime: Number(row?.redeemed_time ?? 0),
+  };
+}
+
 function buildDisplayValue(redemption, displayUnit, currencyIndex) {
-  const yycValue = Number(redemption?.yyc_value ?? redemption?.quota ?? 0);
+  // Keep legacy quota fallback for older redemption records.
+  const creditedYYC = Number(redemption?.creditedYYC ?? redemption?.yyc_value ?? redemption?.quota ?? 0);
   const targetCurrency = currencyIndex[displayUnit] || currencyIndex.YYC;
   const rate = Number(targetCurrency?.yyc_per_unit || 0);
   if (!Number.isFinite(rate) || rate <= 0) {
     return '-';
   }
-  return formatByCurrencyMinorUnit(yycValue / rate, targetCurrency);
+  return formatByCurrencyMinorUnit(creditedYYC / rate, targetCurrency);
 }
 
-function renderFaceValue(redemption, displayUnit, currencyIndex) {
+function renderDisplayFaceValue(redemption, displayUnit, currencyIndex) {
   return buildDisplayValue(redemption, displayUnit, currencyIndex);
 }
 
@@ -158,15 +170,16 @@ const RedemptionsTable = () => {
     if (success) {
       setIsSearchMode(false);
       setTotalCount(Number(meta?.total || data?.length || 0));
+      const nextRows = (Array.isArray(data) ? data : []).map(normalizeRedemptionRow);
       if (normalizedPage === 1) {
-        setRedemptions(data);
+        setRedemptions(nextRows);
       } else {
         setRedemptions((prev) => {
           const next = [...prev];
           next.splice(
             (normalizedPage - 1) * ITEMS_PER_PAGE,
-            data.length,
-            ...data,
+            nextRows.length,
+            ...nextRows,
           );
           return next;
         });
@@ -253,7 +266,7 @@ const RedemptionsTable = () => {
     if (success) {
       setIsSearchMode(true);
       setTotalCount(Array.isArray(data) ? data.length : 0);
-      setRedemptions(data);
+      setRedemptions((Array.isArray(data) ? data : []).map(normalizeRedemptionRow));
       setActivePage(1);
     } else {
       showError(message);
@@ -360,7 +373,7 @@ const RedemptionsTable = () => {
                 <span
                   className='router-sortable-header'
                   onClick={() => {
-                    sortRedemption('quota');
+                    sortRedemption('creditedYYC');
                   }}
                 >
                   {t('redemption.table.face_value')}
@@ -424,15 +437,15 @@ const RedemptionsTable = () => {
                   <Table.Cell>
                     {redemption.name ? redemption.name : t('redemption.table.no_name')}
                   </Table.Cell>
-                  <Table.Cell>{renderGroupLabel(redemption)}</Table.Cell>
+                  <Table.Cell>{redemption.groupLabel || '-'}</Table.Cell>
                   <Table.Cell>{renderStatus(redemption.status, t)}</Table.Cell>
-                  <Table.Cell>{renderFaceValue(redemption, displayUnit, currencyIndex)}</Table.Cell>
+                  <Table.Cell>{renderDisplayFaceValue(redemption, displayUnit, currencyIndex)}</Table.Cell>
                   <Table.Cell>
-                    {renderTimestamp(redemption.created_time)}
+                    {renderTimestamp(redemption.createdTime || redemption.created_time)}
                   </Table.Cell>
                   <Table.Cell>
-                    {redemption.redeemed_time
-                      ? renderTimestamp(redemption.redeemed_time)
+                    {redemption.redeemedTime
+                      ? renderTimestamp(redemption.redeemedTime)
                       : t('redemption.table.not_redeemed')}{' '}
                   </Table.Cell>
                   <Table.Cell

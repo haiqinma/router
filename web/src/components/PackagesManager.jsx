@@ -14,30 +14,29 @@ import { ITEMS_PER_PAGE } from '../constants';
 import {
   buildBillingCurrencyIndex,
   buildDisplayUnitOptions,
-  buildQuotaUnitOptions,
-  convertQuotaInputValueUnit,
-  quotaInputToStoredValueByUnit,
-  quotaToInputValueByUnit,
-  resolveDefaultQuotaUnit,
-  resolveQuotaInputStep,
+  buildBillingUnitOptions,
+  convertBillingInputValueUnit,
+  billingInputValueToYYC,
+  yycToBillingInputValue,
+  resolveDefaultBillingUnit,
+  resolveBillingInputStep,
 } from '../helpers/billing';
 import UnitDropdown from './UnitDropdown';
 import {
   formatDecimalNumber,
-  renderQuota,
 } from '../helpers/render';
 
-const createEmptyForm = (defaultQuotaUnit = 'USD') => ({
+const createEmptyForm = (defaultBillingUnit = 'USD') => ({
   id: '',
   name: '',
   description: '',
   group_id: '',
-  daily_quota_limit: '0',
-  daily_quota_limit_unit: defaultQuotaUnit,
-  monthly_emergency_quota_limit: '0',
-  monthly_emergency_quota_limit_unit: defaultQuotaUnit,
+  daily_amount: '0',
+  daily_amount_unit: defaultBillingUnit,
+  emergency_amount: '0',
+  emergency_amount_unit: defaultBillingUnit,
   duration_days: 30,
-  quota_reset_timezone: 'Asia/Shanghai',
+  reset_timezone: 'Asia/Shanghai',
   enabled: true,
   sort_order: 0,
   source: 'manual',
@@ -125,9 +124,9 @@ const formatByCurrencyMinorUnit = (amount, currency) => {
   return formatDecimalNumber(normalizedAmount, maximumFractionDigits);
 };
 
-const renderPackageQuotaValue = (quota, displayUnit, currencyIndex) => {
-  const yycValue = Number(quota || 0);
-  if (!Number.isFinite(yycValue)) {
+const renderPackageAmountValue = (yycAmount, displayUnit, currencyIndex) => {
+  const normalizedYYCAmount = Number(yycAmount || 0);
+  if (!Number.isFinite(normalizedYYCAmount)) {
     return '-';
   }
   const targetCurrency = currencyIndex[displayUnit] || currencyIndex.YYC;
@@ -135,7 +134,24 @@ const renderPackageQuotaValue = (quota, displayUnit, currencyIndex) => {
   if (!Number.isFinite(rate) || rate <= 0) {
     return '-';
   }
-  return formatByCurrencyMinorUnit(yycValue / rate, targetCurrency);
+  return formatByCurrencyMinorUnit(normalizedYYCAmount / rate, targetCurrency);
+};
+
+const resolvePackageYYCAmount = (row, type) => {
+  if (type === 'daily') {
+    return Number(row?.yyc_daily_limit ?? row?.daily_quota_limit ?? 0);
+  }
+  return Number(
+    row?.yyc_monthly_emergency_limit ?? row?.monthly_emergency_quota_limit ?? 0
+  );
+};
+
+const renderPackageAmountFieldValue = (row, type, displayUnit, currencyIndex) => {
+  const normalizedYYCAmount = resolvePackageYYCAmount(row, type);
+  if (!Number.isFinite(normalizedYYCAmount)) {
+    return '-';
+  }
+  return renderPackageAmountValue(normalizedYYCAmount, displayUnit, currencyIndex);
 };
 
 const PackagesManager = () => {
@@ -174,8 +190,8 @@ const PackagesManager = () => {
     [currencyIndex]
   );
 
-  const quotaUnitOptions = useMemo(
-    () => buildQuotaUnitOptions(currencyIndex),
+  const billingUnitOptions = useMemo(
+    () => buildBillingUnitOptions(currencyIndex),
     [currencyIndex]
   );
 
@@ -327,24 +343,23 @@ const PackagesManager = () => {
   }, [loadDisplayUnits]);
 
   useEffect(() => {
-    const defaultQuotaUnit = resolveDefaultQuotaUnit(currencyIndex);
+    const defaultBillingUnit = resolveDefaultBillingUnit(currencyIndex);
     setForm((current) => {
       if ((current?.id || '').toString().trim() !== '') {
         return current;
       }
-      const nextDailyUnit = current?.daily_quota_limit_unit || defaultQuotaUnit;
-      const nextEmergencyUnit =
-        current?.monthly_emergency_quota_limit_unit || defaultQuotaUnit;
+      const nextDailyUnit = current?.daily_amount_unit || defaultBillingUnit;
+      const nextEmergencyUnit = current?.emergency_amount_unit || defaultBillingUnit;
       if (
-        nextDailyUnit === current?.daily_quota_limit_unit &&
-        nextEmergencyUnit === current?.monthly_emergency_quota_limit_unit
+        nextDailyUnit === current?.daily_amount_unit &&
+        nextEmergencyUnit === current?.emergency_amount_unit
       ) {
         return current;
       }
       return {
         ...current,
-        daily_quota_limit_unit: nextDailyUnit,
-        monthly_emergency_quota_limit_unit: nextEmergencyUnit,
+        daily_amount_unit: nextDailyUnit,
+        emergency_amount_unit: nextEmergencyUnit,
       };
     });
   }, [currencyIndex]);
@@ -365,7 +380,7 @@ const PackagesManager = () => {
   }, [activePage, totalPages]);
 
   const resetForm = () => {
-    setForm(createEmptyForm(resolveDefaultQuotaUnit(currencyIndex)));
+    setForm(createEmptyForm(resolveDefaultBillingUnit(currencyIndex)));
   };
 
   const closeAllModals = () => {
@@ -424,7 +439,7 @@ const PackagesManager = () => {
       const detail = data || row;
       const resolvedGroupID = (detail?.group_id || row?.group_id || '').toString().trim();
       const resolvedGroupName = (detail?.group_name || row?.group_name || '').toString().trim();
-      const defaultQuotaUnit = resolveDefaultQuotaUnit(currencyIndex);
+      const defaultBillingUnit = resolveDefaultBillingUnit(currencyIndex);
       setGroupOptions((current) =>
         appendGroupOptionIfMissing(current, resolvedGroupID, resolvedGroupName)
       );
@@ -434,20 +449,20 @@ const PackagesManager = () => {
         name: detail.name || '',
         description: detail.description || '',
         group_id: resolvedGroupID,
-        daily_quota_limit: quotaToInputValueByUnit(
+        daily_amount: yycToBillingInputValue(
           Number(detail?.yyc_daily_limit ?? detail?.daily_quota_limit ?? 0),
-          defaultQuotaUnit,
+          defaultBillingUnit,
           currencyIndex
         ),
-        daily_quota_limit_unit: defaultQuotaUnit,
-        monthly_emergency_quota_limit: quotaToInputValueByUnit(
+        daily_amount_unit: defaultBillingUnit,
+        emergency_amount: yycToBillingInputValue(
           Number(detail?.yyc_monthly_emergency_limit ?? detail?.monthly_emergency_quota_limit ?? 0),
-          defaultQuotaUnit,
+          defaultBillingUnit,
           currencyIndex
         ),
-        monthly_emergency_quota_limit_unit: defaultQuotaUnit,
+        emergency_amount_unit: defaultBillingUnit,
         duration_days: Number(detail?.duration_days || 30),
-        quota_reset_timezone: detail?.quota_reset_timezone || 'Asia/Shanghai',
+        reset_timezone: detail?.quota_reset_timezone || 'Asia/Shanghai',
         enabled: Boolean(detail?.enabled),
         sort_order: Number(detail?.sort_order || 0),
         source: detail?.source || 'manual',
@@ -486,14 +501,14 @@ const PackagesManager = () => {
       showInfo(t('package_manage.messages.group_required'));
       return null;
     }
-    const dailyStored = quotaInputToStoredValueByUnit(
-      form.daily_quota_limit ?? 0,
-      form.daily_quota_limit_unit,
+    const dailyStored = billingInputValueToYYC(
+      form.daily_amount ?? 0,
+      form.daily_amount_unit,
       currencyIndex
     );
-    const emergencyStored = quotaInputToStoredValueByUnit(
-      form.monthly_emergency_quota_limit ?? 0,
-      form.monthly_emergency_quota_limit_unit,
+    const emergencyStored = billingInputValueToYYC(
+      form.emergency_amount ?? 0,
+      form.emergency_amount_unit,
       currencyIndex
     );
     if (
@@ -519,7 +534,7 @@ const PackagesManager = () => {
       monthly_emergency_quota_limit: Math.trunc(emergencyStored),
       duration_days: Math.trunc(durationDays),
       quota_reset_timezone:
-        (form.quota_reset_timezone || '').trim() || 'Asia/Shanghai',
+        (form.reset_timezone || '').trim() || 'Asia/Shanghai',
       enabled: Boolean(form.enabled),
       sort_order: Math.trunc(Number(form.sort_order || 0)),
       source: (form.source || '').trim() || 'manual',
@@ -744,20 +759,10 @@ const PackagesManager = () => {
                 <Table.Cell>{row.name || '-'}</Table.Cell>
                 <Table.Cell>{row.group_name || row.group_id || '-'}</Table.Cell>
                 <Table.Cell>
-                  {renderPackageQuotaValue(
-                    row?.yyc_daily_limit ?? row?.daily_quota_limit ?? 0,
-                    displayUnit,
-                    currencyIndex
-                  )}
+                  {renderPackageAmountFieldValue(row, 'daily', displayUnit, currencyIndex)}
                 </Table.Cell>
                 <Table.Cell>
-                  {renderPackageQuotaValue(
-                    row?.yyc_monthly_emergency_limit ??
-                      row?.monthly_emergency_quota_limit ??
-                      0,
-                    displayUnit,
-                    currencyIndex
-                  )}
+                  {renderPackageAmountFieldValue(row, 'emergency', displayUnit, currencyIndex)}
                 </Table.Cell>
                 <Table.Cell>{Number(row.duration_days || 0) || '-'}</Table.Cell>
                 <Table.Cell>{statusLabel(Boolean(row.enabled), t)}</Table.Cell>
@@ -859,29 +864,29 @@ const PackagesManager = () => {
           <div className='router-section-input-with-unit'>
             <Form.Input
               className='router-section-input router-section-input-with-unit-field'
-              value={form.daily_quota_limit}
-              step={resolveQuotaInputStep(form.daily_quota_limit_unit, currencyIndex)}
+              value={form.daily_amount}
+              step={resolveBillingInputStep(form.daily_amount_unit, currencyIndex)}
               min={0}
               type='number'
               onChange={(e) =>
-                setForm((prev) => ({ ...prev, daily_quota_limit: e.target.value || '0' }))
+                setForm((prev) => ({ ...prev, daily_amount: e.target.value || '0' }))
               }
             />
             <UnitDropdown
               variant='inputUnit'
-              options={quotaUnitOptions}
-              value={form.daily_quota_limit_unit}
+              options={billingUnitOptions}
+              value={form.daily_amount_unit}
               onChange={(_, { value }) => {
                 const nextUnit = (value || 'YYC').toString().trim().toUpperCase();
                 setForm((prev) => ({
                   ...prev,
-                  daily_quota_limit: convertQuotaInputValueUnit(
-                    prev.daily_quota_limit,
-                    prev.daily_quota_limit_unit,
+                  daily_amount: convertBillingInputValueUnit(
+                    prev.daily_amount,
+                    prev.daily_amount_unit,
                     nextUnit,
                     currencyIndex
                   ),
-                  daily_quota_limit_unit: nextUnit,
+                  daily_amount_unit: nextUnit,
                 }));
               }}
               aria-label={t('package_manage.form.daily_quota_limit')}
@@ -893,9 +898,9 @@ const PackagesManager = () => {
           <div className='router-section-input-with-unit'>
             <Form.Input
               className='router-section-input router-section-input-with-unit-field'
-              value={form.monthly_emergency_quota_limit}
-              step={resolveQuotaInputStep(
-                form.monthly_emergency_quota_limit_unit,
+              value={form.emergency_amount}
+              step={resolveBillingInputStep(
+                form.emergency_amount_unit,
                 currencyIndex
               )}
               min={0}
@@ -903,25 +908,25 @@ const PackagesManager = () => {
               onChange={(e) =>
                 setForm((prev) => ({
                   ...prev,
-                  monthly_emergency_quota_limit: e.target.value || '0',
+                  emergency_amount: e.target.value || '0',
                 }))
               }
             />
             <UnitDropdown
               variant='inputUnit'
-              options={quotaUnitOptions}
-              value={form.monthly_emergency_quota_limit_unit}
+              options={billingUnitOptions}
+              value={form.emergency_amount_unit}
               onChange={(_, { value }) => {
                 const nextUnit = (value || 'YYC').toString().trim().toUpperCase();
                 setForm((prev) => ({
                   ...prev,
-                  monthly_emergency_quota_limit: convertQuotaInputValueUnit(
-                    prev.monthly_emergency_quota_limit,
-                    prev.monthly_emergency_quota_limit_unit,
+                  emergency_amount: convertBillingInputValueUnit(
+                    prev.emergency_amount,
+                    prev.emergency_amount_unit,
                     nextUnit,
                     currencyIndex
                   ),
-                  monthly_emergency_quota_limit_unit: nextUnit,
+                  emergency_amount_unit: nextUnit,
                 }));
               }}
               aria-label={t('package_manage.form.monthly_emergency_quota_limit')}
@@ -945,9 +950,9 @@ const PackagesManager = () => {
         <Form.Input
           className='router-section-input'
           label={t('package_manage.form.quota_reset_timezone')}
-          value={form.quota_reset_timezone}
+          value={form.reset_timezone}
           onChange={(e, { value }) =>
-            setForm((prev) => ({ ...prev, quota_reset_timezone: value || '' }))
+            setForm((prev) => ({ ...prev, reset_timezone: value || '' }))
           }
         />
       </Form.Group>
@@ -1023,13 +1028,23 @@ const PackagesManager = () => {
             <Form.Input
               className='router-section-input'
               label={t('package_manage.table.daily_quota_limit')}
-              value={renderQuota(activeRow?.daily_quota_limit || 0, t, 6)}
+              value={renderPackageAmountFieldValue(
+                activeRow,
+                'daily',
+                displayUnit,
+                currencyIndex
+              )}
               readOnly
             />
             <Form.Input
               className='router-section-input'
               label={t('package_manage.table.monthly_emergency_quota_limit')}
-              value={renderQuota(activeRow?.monthly_emergency_quota_limit || 0, t, 6)}
+              value={renderPackageAmountFieldValue(
+                activeRow,
+                'emergency',
+                displayUnit,
+                currencyIndex
+              )}
               readOnly
             />
           </Form.Group>
