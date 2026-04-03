@@ -12,9 +12,19 @@ import { useSearchParams } from 'react-router-dom';
 import { API, showError, showInfo, showSuccess, timestamp2string } from '../helpers';
 import { ITEMS_PER_PAGE } from '../constants';
 import {
+  buildBillingCurrencyIndex,
+  buildDisplayUnitOptions,
+  buildQuotaUnitOptions,
+  convertQuotaInputValueUnit,
+  quotaInputToStoredValueByUnit,
+  quotaToInputValueByUnit,
+  resolveDefaultQuotaUnit,
+  resolveQuotaInputStep,
+} from '../helpers/billing';
+import UnitDropdown from './UnitDropdown';
+import {
   formatDecimalNumber,
   renderQuota,
-  YYC_SYMBOL,
 } from '../helpers/render';
 
 const createEmptyForm = (defaultQuotaUnit = 'USD') => ({
@@ -100,30 +110,6 @@ const toUserOptions = (rows) =>
     };
   });
 
-const buildDisplayCurrencyIndex = (rows) => {
-  const next = {
-    YYC: {
-      code: 'YYC',
-      symbol: YYC_SYMBOL,
-      minor_unit: 0,
-      yyc_per_unit: 1,
-    },
-  };
-  (Array.isArray(rows) ? rows : [])
-    .filter((item) => Number(item?.status || 0) === 1)
-    .forEach((item) => {
-      const code = (item?.code || '').toString().trim().toUpperCase();
-      if (!code) {
-        return;
-      }
-      next[code] = {
-        ...item,
-        code,
-      };
-    });
-  return next;
-};
-
 const formatByCurrencyMinorUnit = (amount, currency) => {
   const normalizedAmount = Number(amount || 0);
   if (!Number.isFinite(normalizedAmount)) {
@@ -152,124 +138,6 @@ const renderPackageQuotaValue = (quota, displayUnit, currencyIndex) => {
   return formatByCurrencyMinorUnit(yycValue / rate, targetCurrency);
 };
 
-const resolveDefaultQuotaUnit = (currencyIndex) => {
-  if (currencyIndex?.USD) {
-    return 'USD';
-  }
-  if (currencyIndex?.YYC) {
-    return 'YYC';
-  }
-  return (
-    Object.keys(currencyIndex || {})
-      .filter((code) => code)
-      .sort((a, b) => a.localeCompare(b))[0] || 'YYC'
-  );
-};
-
-const getCurrencyRateToYYC = (unit, currencyIndex) => {
-  const normalizedUnit = (unit || '').toString().trim().toUpperCase();
-  if (normalizedUnit === 'YYC') {
-    return 1;
-  }
-  const rate = Number(currencyIndex?.[normalizedUnit]?.yyc_per_unit || 0);
-  if (!Number.isFinite(rate) || rate <= 0) {
-    return 0;
-  }
-  return rate;
-};
-
-const formatQuotaInputAmount = (amount, unit, currencyIndex) => {
-  const normalizedAmount = Number(amount || 0);
-  if (!Number.isFinite(normalizedAmount) || normalizedAmount === 0) {
-    return '0';
-  }
-  const normalizedUnit = (unit || '').toString().trim().toUpperCase();
-  if (normalizedUnit === 'YYC') {
-    return `${Math.round(normalizedAmount)}`;
-  }
-  const minorUnit = Number(currencyIndex?.[normalizedUnit]?.minor_unit);
-  const fractionDigits =
-    Number.isInteger(minorUnit) && minorUnit >= 0 ? Math.min(minorUnit, 8) : 6;
-  return normalizedAmount.toFixed(fractionDigits).replace(/\.?0+$/, '');
-};
-
-const quotaToInputValueByUnit = (quota, unit, currencyIndex) => {
-  const storedYYC = Number(quota || 0);
-  if (!Number.isFinite(storedYYC) || storedYYC <= 0) {
-    return '0';
-  }
-  const rate = getCurrencyRateToYYC(unit, currencyIndex);
-  if (rate <= 0) {
-    return '0';
-  }
-  return formatQuotaInputAmount(storedYYC / rate, unit, currencyIndex);
-};
-
-const quotaInputToStoredValueByUnit = (value, unit, currencyIndex) => {
-  const normalizedAmount = Number(value ?? 0);
-  if (!Number.isFinite(normalizedAmount) || normalizedAmount < 0) {
-    return NaN;
-  }
-  const rate = getCurrencyRateToYYC(unit, currencyIndex);
-  if (rate <= 0) {
-    return NaN;
-  }
-  if ((unit || '').toString().trim().toUpperCase() === 'YYC') {
-    return Math.round(normalizedAmount);
-  }
-  return Math.round(normalizedAmount * rate);
-};
-
-const convertQuotaInputValueUnit = (value, fromUnit, toUnit, currencyIndex) => {
-  const normalizedAmount = Number(value ?? 0);
-  if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
-    return '0';
-  }
-  const storedYYC = quotaInputToStoredValueByUnit(normalizedAmount, fromUnit, currencyIndex);
-  if (!Number.isFinite(storedYYC) || storedYYC < 0) {
-    return '0';
-  }
-  return quotaToInputValueByUnit(storedYYC, toUnit, currencyIndex);
-};
-
-const buildQuotaUnitOptions = (currencyIndex) => {
-  const seen = new Set();
-  return Object.values(currencyIndex || {})
-    .filter((item) => item && item.code)
-    .sort((a, b) => {
-      if (a.code === 'USD') return -1;
-      if (b.code === 'USD') return 1;
-      if (a.code === 'YYC') return -1;
-      if (b.code === 'YYC') return 1;
-      return `${a.code}`.localeCompare(`${b.code}`);
-    })
-    .reduce((items, item) => {
-      const code = (item.code || '').toString().trim().toUpperCase();
-      if (!code || seen.has(code)) {
-        return items;
-      }
-      seen.add(code);
-      items.push({
-        key: code,
-        value: code,
-        text: (item?.symbol || '').toString().trim() || code,
-      });
-      return items;
-    }, []);
-};
-
-const resolveQuotaInputStep = (unit, currencyIndex) => {
-  const normalizedUnit = (unit || '').toString().trim().toUpperCase();
-  if (normalizedUnit === 'YYC') {
-    return '1';
-  }
-  const minorUnit = Number(currencyIndex?.[normalizedUnit]?.minor_unit);
-  if (!Number.isInteger(minorUnit) || minorUnit <= 0) {
-    return '0.01';
-  }
-  return (1 / 10 ** Math.min(minorUnit, 8)).toFixed(Math.min(minorUnit, 8));
-};
-
 const PackagesManager = () => {
   const { t } = useTranslation();
   const [searchParams] = useSearchParams();
@@ -287,7 +155,7 @@ const PackagesManager = () => {
   const [userLoading, setUserLoading] = useState(false);
   const [displayUnit, setDisplayUnit] = useState('USD');
   const [currencyIndex, setCurrencyIndex] = useState(
-    buildDisplayCurrencyIndex([])
+    buildBillingCurrencyIndex([], { activeOnly: true })
   );
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -301,25 +169,10 @@ const PackagesManager = () => {
   const [assignRow, setAssignRow] = useState(null);
   const [assignForm, setAssignForm] = useState(createEmptyAssignForm());
 
-  const displayUnitOptions = useMemo(() => {
-    const items = [
-      {
-        value: 'YYC',
-        label: YYC_SYMBOL,
-      },
-    ];
-    Object.values(currencyIndex)
-      .filter((item) => item && item.code && item.code !== 'YYC')
-      .sort((a, b) => `${a.code}`.localeCompare(`${b.code}`))
-      .forEach((item) => {
-        const symbol = (item?.symbol || '').toString().trim();
-        items.push({
-          value: item.code,
-          label: symbol || item.code,
-        });
-      });
-    return items;
-  }, [currencyIndex]);
+  const displayUnitOptions = useMemo(
+    () => buildDisplayUnitOptions(currencyIndex, { order: 'yyc-first' }),
+    [currencyIndex]
+  );
 
   const quotaUnitOptions = useMemo(
     () => buildQuotaUnitOptions(currencyIndex),
@@ -443,7 +296,9 @@ const PackagesManager = () => {
         showError(message);
         return;
       }
-      const next = buildDisplayCurrencyIndex(Array.isArray(data) ? data : []);
+      const next = buildBillingCurrencyIndex(Array.isArray(data) ? data : [], {
+        activeOnly: true,
+      });
       setCurrencyIndex(next);
       setDisplayUnit((current) => {
         const normalizedCurrent = (current || '').toString().trim().toUpperCase();
@@ -829,43 +684,35 @@ const PackagesManager = () => {
             <Table.HeaderCell className='router-redemption-face-value-header'>
               <div className='router-table-header-with-control'>
                 <span>{t('package_manage.table.daily_quota_limit')}</span>
-                <select
-                  className='router-table-header-select'
+                <UnitDropdown
+                  variant='header'
+                  compact
+                  options={displayUnitOptions}
                   value={displayUnit}
                   onClick={(e) => {
                     e.stopPropagation();
                   }}
-                  onChange={(e) => {
-                    setDisplayUnit(e.target.value);
+                  onChange={(_, { value }) => {
+                    setDisplayUnit((value || '').toString());
                   }}
-                >
-                  {displayUnitOptions.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
             </Table.HeaderCell>
             <Table.HeaderCell className='router-redemption-face-value-header'>
               <div className='router-table-header-with-control'>
                 <span>{t('package_manage.table.monthly_emergency_quota_limit')}</span>
-                <select
-                  className='router-table-header-select'
+                <UnitDropdown
+                  variant='header'
+                  compact
+                  options={displayUnitOptions}
                   value={displayUnit}
                   onClick={(e) => {
                     e.stopPropagation();
                   }}
-                  onChange={(e) => {
-                    setDisplayUnit(e.target.value);
+                  onChange={(_, { value }) => {
+                    setDisplayUnit((value || '').toString());
                   }}
-                >
-                  {displayUnitOptions.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
             </Table.HeaderCell>
             <Table.HeaderCell>{t('package_manage.table.duration_days')}</Table.HeaderCell>
@@ -1020,11 +867,12 @@ const PackagesManager = () => {
                 setForm((prev) => ({ ...prev, daily_quota_limit: e.target.value || '0' }))
               }
             />
-            <select
-              className='router-section-input-unit-native'
+            <UnitDropdown
+              variant='inputUnit'
+              options={quotaUnitOptions}
               value={form.daily_quota_limit_unit}
-              onChange={(e) => {
-                const nextUnit = (e.target.value || 'YYC').toString().trim().toUpperCase();
+              onChange={(_, { value }) => {
+                const nextUnit = (value || 'YYC').toString().trim().toUpperCase();
                 setForm((prev) => ({
                   ...prev,
                   daily_quota_limit: convertQuotaInputValueUnit(
@@ -1037,13 +885,7 @@ const PackagesManager = () => {
                 }));
               }}
               aria-label={t('package_manage.form.daily_quota_limit')}
-            >
-              {quotaUnitOptions.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.text}
-                </option>
-              ))}
-            </select>
+            />
           </div>
         </Form.Field>
         <Form.Field>
@@ -1065,11 +907,12 @@ const PackagesManager = () => {
                 }))
               }
             />
-            <select
-              className='router-section-input-unit-native'
+            <UnitDropdown
+              variant='inputUnit'
+              options={quotaUnitOptions}
               value={form.monthly_emergency_quota_limit_unit}
-              onChange={(e) => {
-                const nextUnit = (e.target.value || 'YYC').toString().trim().toUpperCase();
+              onChange={(_, { value }) => {
+                const nextUnit = (value || 'YYC').toString().trim().toUpperCase();
                 setForm((prev) => ({
                   ...prev,
                   monthly_emergency_quota_limit: convertQuotaInputValueUnit(
@@ -1082,13 +925,7 @@ const PackagesManager = () => {
                 }));
               }}
               aria-label={t('package_manage.form.monthly_emergency_quota_limit')}
-            >
-              {quotaUnitOptions.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.text}
-                </option>
-              ))}
-            </select>
+            />
           </div>
         </Form.Field>
       </Form.Group>

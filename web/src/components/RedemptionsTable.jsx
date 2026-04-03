@@ -20,9 +20,13 @@ import {
 
 import { ITEMS_PER_PAGE } from '../constants';
 import {
+  buildBillingCurrencyIndex,
+  buildDisplayUnitOptions,
+} from '../helpers/billing';
+import {
   formatDecimalNumber,
-  YYC_SYMBOL,
 } from '../helpers/render';
+import UnitDropdown from './UnitDropdown';
 
 function renderTimestamp(timestamp) {
   return <>{timestamp2string(timestamp)}</>;
@@ -108,46 +112,14 @@ const RedemptionsTable = () => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searching, setSearching] = useState(false);
   const [displayUnit, setDisplayUnit] = useState('USD');
-  const [currencyIndex, setCurrencyIndex] = useState({
-    USD: {
-      code: 'USD',
-      symbol: '$',
-      minor_unit: 2,
-      yyc_per_unit: 0,
-    },
-    CNY: {
-      code: 'CNY',
-      symbol: '¥',
-      minor_unit: 2,
-      yyc_per_unit: 0,
-    },
-    YYC: {
-      code: 'YYC',
-      symbol: YYC_SYMBOL,
-      minor_unit: 0,
-      yyc_per_unit: 1,
-    },
-  });
+  const [currencyIndex, setCurrencyIndex] = useState(
+    buildBillingCurrencyIndex([], { placeholderCodes: ['USD', 'CNY'] })
+  );
 
-  const displayUnitOptions = useMemo(() => {
-    const items = [
-      {
-        value: 'YYC',
-        label: YYC_SYMBOL,
-      },
-    ];
-    Object.values(currencyIndex)
-      .filter((item) => item && item.code && item.code !== 'YYC')
-      .sort((a, b) => `${a.code}`.localeCompare(`${b.code}`))
-      .forEach((item) => {
-        const symbol = (item?.symbol || '').toString().trim();
-        items.push({
-          value: item.code,
-          label: symbol || item.code,
-        });
-      });
-    return items;
-  }, [currencyIndex]);
+  const displayUnitOptions = useMemo(
+    () => buildDisplayUnitOptions(currencyIndex, { order: 'yyc-first' }),
+    [currencyIndex]
+  );
 
   const loadDisplayUnits = useCallback(async () => {
     try {
@@ -157,26 +129,9 @@ const RedemptionsTable = () => {
         showError(message);
         return;
       }
-      const next = {
-        YYC: {
-          code: 'YYC',
-          symbol: YYC_SYMBOL,
-          minor_unit: 0,
-          yyc_per_unit: 1,
-        },
-      };
-      (Array.isArray(data) ? data : [])
-        .filter((item) => Number(item?.status || 0) === 1)
-        .forEach((item) => {
-          const code = (item?.code || '').toString().trim().toUpperCase();
-          if (!code) {
-            return;
-          }
-          next[code] = {
-            ...item,
-            code,
-          };
-        });
+      const next = buildBillingCurrencyIndex(Array.isArray(data) ? data : [], {
+        activeOnly: true,
+      });
       setCurrencyIndex(next);
       setDisplayUnit((current) => {
         const normalizedCurrent = (current || '').toString().trim().toUpperCase();
@@ -410,22 +365,18 @@ const RedemptionsTable = () => {
                 >
                   {t('redemption.table.face_value')}
                 </span>
-                <select
-                  className='router-table-header-select'
+                <UnitDropdown
+                  variant='header'
+                  compact
+                  options={displayUnitOptions}
                   value={displayUnit}
                   onClick={(e) => {
                     e.stopPropagation();
                   }}
-                  onChange={(e) => {
-                    setDisplayUnit(e.target.value);
+                  onChange={(_, { value }) => {
+                    setDisplayUnit((value || '').toString());
                   }}
-                >
-                  {displayUnitOptions.map((item) => (
-                    <option key={item.value} value={item.value}>
-                      {item.label}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
             </Table.HeaderCell>
             <Table.HeaderCell

@@ -7,7 +7,16 @@ import {
   showSuccess,
   timestamp2string,
 } from '../helpers';
-import { YYC_SYMBOL } from '../helpers/render';
+import {
+  buildBillingCurrencyIndex,
+  buildQuotaUnitOptions,
+  convertQuotaInputValueUnit,
+  quotaInputToStoredValueByUnit,
+  quotaToInputValueByUnit,
+  resolveDefaultQuotaUnit,
+  resolveQuotaInputStep,
+} from '../helpers/billing';
+import UnitDropdown from './UnitDropdown';
 
 const createEmptyBillingCurrency = () => ({
   code: '',
@@ -33,152 +42,6 @@ const createQuotaUnitState = (defaultUnit = 'USD') =>
     result[key] = defaultUnit;
     return result;
   }, {});
-
-const buildDisplayCurrencyIndex = (rows) => {
-  const next = {
-    YYC: {
-      code: 'YYC',
-      symbol: YYC_SYMBOL,
-      minor_unit: 0,
-      yyc_per_unit: 1,
-    },
-  };
-  (Array.isArray(rows) ? rows : [])
-    .filter((item) => Number(item?.status || 0) === 1)
-    .forEach((item) => {
-      const code = (item?.code || '').toString().trim().toUpperCase();
-      if (!code) {
-        return;
-      }
-      next[code] = {
-        ...item,
-        code,
-      };
-    });
-  return next;
-};
-
-const resolveDefaultQuotaUnit = (currencyIndex) => {
-  if (currencyIndex?.USD) {
-    return 'USD';
-  }
-  if (currencyIndex?.YYC) {
-    return 'YYC';
-  }
-  return (
-    Object.keys(currencyIndex || {})
-      .filter((code) => code)
-      .sort((a, b) => a.localeCompare(b))[0] || 'YYC'
-  );
-};
-
-const getCurrencyRateToYYC = (unit, currencyIndex) => {
-  const normalizedUnit = (unit || '').toString().trim().toUpperCase();
-  if (normalizedUnit === 'YYC') {
-    return 1;
-  }
-  const rate = Number(currencyIndex?.[normalizedUnit]?.yyc_per_unit || 0);
-  if (!Number.isFinite(rate) || rate <= 0) {
-    return 0;
-  }
-  return rate;
-};
-
-const formatQuotaInputAmount = (amount, unit, currencyIndex) => {
-  const normalizedAmount = Number(amount || 0);
-  if (!Number.isFinite(normalizedAmount) || normalizedAmount === 0) {
-    return '0';
-  }
-  const normalizedUnit = (unit || '').toString().trim().toUpperCase();
-  if (normalizedUnit === 'YYC') {
-    return `${Math.round(normalizedAmount)}`;
-  }
-  const minorUnit = Number(currencyIndex?.[normalizedUnit]?.minor_unit);
-  const fractionDigits =
-    Number.isInteger(minorUnit) && minorUnit >= 0 ? Math.min(minorUnit, 8) : 6;
-  return normalizedAmount.toFixed(fractionDigits).replace(/\.?0+$/, '');
-};
-
-const quotaToInputValueByUnit = (quota, unit, currencyIndex) => {
-  const storedYYC = Number(quota || 0);
-  if (!Number.isFinite(storedYYC) || storedYYC <= 0) {
-    return '0';
-  }
-  const rate = getCurrencyRateToYYC(unit, currencyIndex);
-  if (rate <= 0) {
-    return '0';
-  }
-  return formatQuotaInputAmount(storedYYC / rate, unit, currencyIndex);
-};
-
-const quotaInputToStoredValueByUnit = (value, unit, currencyIndex) => {
-  const normalizedAmount = Number(value ?? 0);
-  if (!Number.isFinite(normalizedAmount) || normalizedAmount < 0) {
-    return NaN;
-  }
-  const rate = getCurrencyRateToYYC(unit, currencyIndex);
-  if (rate <= 0) {
-    return NaN;
-  }
-  if ((unit || '').toString().trim().toUpperCase() === 'YYC') {
-    return Math.round(normalizedAmount);
-  }
-  return Math.round(normalizedAmount * rate);
-};
-
-const convertQuotaInputValueUnit = (value, fromUnit, toUnit, currencyIndex) => {
-  const normalizedAmount = Number(value ?? 0);
-  if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
-    return '0';
-  }
-  const storedYYC = quotaInputToStoredValueByUnit(
-    normalizedAmount,
-    fromUnit,
-    currencyIndex
-  );
-  if (!Number.isFinite(storedYYC) || storedYYC < 0) {
-    return '0';
-  }
-  return quotaToInputValueByUnit(storedYYC, toUnit, currencyIndex);
-};
-
-const buildQuotaUnitOptions = (currencyIndex) => {
-  const seen = new Set();
-  return Object.values(currencyIndex || {})
-    .filter((item) => item && item.code)
-    .sort((a, b) => {
-      if (a.code === 'USD') return -1;
-      if (b.code === 'USD') return 1;
-      if (a.code === 'YYC') return -1;
-      if (b.code === 'YYC') return 1;
-      return `${a.code}`.localeCompare(`${b.code}`);
-    })
-    .reduce((items, item) => {
-      const code = (item.code || '').toString().trim().toUpperCase();
-      if (!code || seen.has(code)) {
-        return items;
-      }
-      seen.add(code);
-      items.push({
-        key: code,
-        value: code,
-        text: (item?.symbol || '').toString().trim() || code,
-      });
-      return items;
-    }, []);
-};
-
-const resolveQuotaInputStep = (unit, currencyIndex) => {
-  const normalizedUnit = (unit || '').toString().trim().toUpperCase();
-  if (normalizedUnit === 'YYC') {
-    return '1';
-  }
-  const minorUnit = Number(currencyIndex?.[normalizedUnit]?.minor_unit);
-  if (!Number.isInteger(minorUnit) || minorUnit <= 0) {
-    return '0.01';
-  }
-  return (1 / 10 ** Math.min(minorUnit, 8)).toFixed(Math.min(minorUnit, 8));
-};
 
 const normalizeOptionValue = (value, fallback = '') => {
   if (value === null || value === undefined) {
@@ -227,7 +90,7 @@ const OperationSetting = ({ section = '' }) => {
   const [groupOptions, setGroupOptions] = useState([]);
   const [billingCurrencies, setBillingCurrencies] = useState([]);
   const [billingCurrencyIndex, setBillingCurrencyIndex] = useState(
-    buildDisplayCurrencyIndex([])
+    buildBillingCurrencyIndex([], { activeOnly: true })
   );
   const [billingLoading, setBillingLoading] = useState(false);
   const [billingCurrenciesReady, setBillingCurrenciesReady] = useState(false);
@@ -366,7 +229,9 @@ const OperationSetting = ({ section = '' }) => {
           _isNew: false,
         }))
         .sort((a, b) => (a.code || '').localeCompare(b.code || ''));
-      const nextCurrencyIndex = buildDisplayCurrencyIndex(rows);
+      const nextCurrencyIndex = buildBillingCurrencyIndex(rows, {
+        activeOnly: true,
+      });
       const defaultQuotaUnit = resolveDefaultQuotaUnit(nextCurrencyIndex);
       setBillingCurrencies(rows);
       setBillingCurrencyIndex(nextCurrencyIndex);
@@ -600,11 +465,12 @@ const OperationSetting = ({ section = '' }) => {
             }));
           }}
         />
-        <select
-          className='router-section-input-unit-native'
+        <UnitDropdown
+          variant='inputUnit'
+          options={quotaUnitOptions}
           value={quotaUnits[inputKey] || resolveDefaultQuotaUnit(billingCurrencyIndex)}
-          onChange={(e) => {
-            const nextUnit = (e.target.value || 'YYC').toString().trim().toUpperCase();
+          onChange={(_, { value }) => {
+            const nextUnit = (value || 'YYC').toString().trim().toUpperCase();
             setInputs((prev) => ({
               ...prev,
               [inputKey]: convertQuotaInputValueUnit(
@@ -620,13 +486,7 @@ const OperationSetting = ({ section = '' }) => {
             }));
           }}
           aria-label={t(labelKey)}
-        >
-          {quotaUnitOptions.map((item) => (
-            <option key={item.value} value={item.value}>
-              {item.text}
-            </option>
-          ))}
-        </select>
+        />
       </div>
     </Form.Field>
   );

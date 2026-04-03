@@ -17,6 +17,7 @@ import {
   timestamp2string,
 } from '../helpers';
 import { useTranslation } from 'react-i18next';
+import UnitDropdown from './UnitDropdown';
 
 import { ITEMS_PER_PAGE } from '../constants';
 import {
@@ -27,8 +28,8 @@ import {
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   buildPublicDisplayCurrencyIndex,
+  buildDisplayUnitOptions,
   formatQuotaForDisplay,
-  listDisplayCurrencies,
   loadPublicDisplayCurrencyCatalog,
   resolvePreferredDisplayCurrency,
   YYC_DISPLAY_CODE,
@@ -395,15 +396,10 @@ const LogsTable = () => {
     [activeFilterKeys, conditionalFilterOptions]
   );
 
-  const displayUnitOptions = useMemo(() => {
-    return listDisplayCurrencies(currencyIndex).map((item) => ({
-      value: item.code,
-      label:
-        item.code === YYC_DISPLAY_CODE
-          ? YYC_SYMBOL
-          : (item?.symbol || '').toString().trim() || item.code,
-    }));
-  }, [currencyIndex]);
+  const displayUnitOptions = useMemo(
+    () => buildDisplayUnitOptions(currencyIndex),
+    [currencyIndex]
+  );
 
   const openFilterDraft = useCallback(
     (filterKey) => {
@@ -1023,22 +1019,18 @@ const LogsTable = () => {
                       >
                         {t('log.table.quota')}
                       </span>
-                      <select
-                        className='router-table-header-select'
+                      <UnitDropdown
+                        variant='header'
+                        compact
+                        options={displayUnitOptions}
                         value={displayUnit}
                         onClick={(e) => {
                           e.stopPropagation();
                         }}
-                        onChange={(e) => {
-                          setDisplayUnit(e.target.value);
+                        onChange={(_, { value }) => {
+                          setDisplayUnit((value || '').toString());
                         }}
-                      >
-                        {displayUnitOptions.map((item) => (
-                          <option key={item.value} value={item.value}>
-                            {item.label}
-                          </option>
-                        ))}
-                      </select>
+                      />
                     </div>
                   ) : (
                     <span

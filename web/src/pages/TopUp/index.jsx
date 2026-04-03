@@ -8,7 +8,6 @@ import {
   Statistic,
   Label,
   Table,
-  Dropdown,
 } from 'semantic-ui-react';
 import {
   API,
@@ -19,16 +18,17 @@ import {
 } from '../../helpers';
 import { formatAmountWithUnit, renderYYC } from '../../helpers/render';
 import {
+  buildDisplayUnitOptions,
   buildPublicDisplayCurrencyIndex,
   convertYYCToDisplayAmount,
   DEFAULT_FIAT_DISPLAY_CODE,
-  listDisplayCurrencies,
   loadPublicDisplayCurrencyCatalog,
   normalizeDisplayCurrencyCode,
   resolvePreferredDisplayCurrency,
   YYC_DISPLAY_CODE,
 } from '../../helpers/billing';
 import { useTranslation } from 'react-i18next';
+import UnitDropdown from '../../components/UnitDropdown';
 
 const TOPUP_DISPLAY_CURRENCY_STORAGE_KEY = 'topup_display_currency';
 
@@ -52,13 +52,6 @@ const normalizeTopUpResult = (raw) => {
     redeemed_at: Number(raw?.redeemed_at ?? 0) || 0,
   };
 };
-
-const buildDisplayCurrencyOptions = (currencyIndex) =>
-  listDisplayCurrencies(currencyIndex).map((item) => ({
-    key: item.code,
-    value: item.code,
-    text: item?.symbol ? `${item.symbol} ${item.code}` : `${item.code}`,
-  }));
 
 const getStoredDisplayCurrency = () => {
   if (typeof window === 'undefined') {
@@ -107,7 +100,10 @@ const TopUp = () => {
   );
   const [loadingDisplayCurrencies, setLoadingDisplayCurrencies] = useState(false);
 
-  const displayCurrencyOptions = buildDisplayCurrencyOptions(displayCurrencyIndex);
+  const displayCurrencyOptions = useMemo(
+    () => buildDisplayUnitOptions(displayCurrencyIndex, { includeCode: true }),
+    [displayCurrencyIndex]
+  );
 
   const renderBalanceValue = (yycAmount) => {
     const normalizedAmount = Number(yycAmount || 0);
@@ -348,10 +344,9 @@ const TopUp = () => {
                 >
                   {t('topup.display_currency')}
                 </span>
-                <Dropdown
-                  selection
+                <UnitDropdown
+                  variant='inline'
                   compact
-                  className='router-inline-dropdown'
                   style={{ minWidth: '108px' }}
                   options={displayCurrencyOptions}
                   value={displayCurrency}

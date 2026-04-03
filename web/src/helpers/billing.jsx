@@ -18,9 +18,31 @@ export const getFallbackUSDYYCPerUnit = () => {
   return raw;
 };
 
-export const buildPublicDisplayCurrencyIndex = (
+const PLACEHOLDER_CURRENCY_MAP = {
+  [DEFAULT_FIAT_DISPLAY_CODE]: {
+    code: DEFAULT_FIAT_DISPLAY_CODE,
+    name: 'US Dollar',
+    symbol: '$',
+    minor_unit: 2,
+    yyc_per_unit: 0,
+  },
+  CNY: {
+    code: 'CNY',
+    name: 'Chinese Yuan',
+    symbol: '¥',
+    minor_unit: 2,
+    yyc_per_unit: 0,
+  },
+};
+
+export const buildBillingCurrencyIndex = (
   rows,
-  fallbackUsdYYCPerUnit = getFallbackUSDYYCPerUnit(),
+  {
+    fallbackUsdYYCPerUnit = 0,
+    activeOnly = false,
+    requirePositiveRate = false,
+    placeholderCodes = [],
+  } = {},
 ) => {
   const next = {
     [YYC_DISPLAY_CODE]: {
@@ -32,12 +54,20 @@ export const buildPublicDisplayCurrencyIndex = (
     },
   };
 
+  (Array.isArray(placeholderCodes) ? placeholderCodes : []).forEach((codeValue) => {
+    const code = normalizeDisplayCurrencyCode(codeValue);
+    const placeholder = PLACEHOLDER_CURRENCY_MAP[code];
+    if (!code || !placeholder) {
+      return;
+    }
+    next[code] = {
+      ...placeholder,
+    };
+  });
+
   if (Number.isFinite(fallbackUsdYYCPerUnit) && fallbackUsdYYCPerUnit > 0) {
     next[DEFAULT_FIAT_DISPLAY_CODE] = {
-      code: DEFAULT_FIAT_DISPLAY_CODE,
-      name: 'US Dollar',
-      symbol: '$',
-      minor_unit: 2,
+      ...PLACEHOLDER_CURRENCY_MAP[DEFAULT_FIAT_DISPLAY_CODE],
       yyc_per_unit: fallbackUsdYYCPerUnit,
     };
   }
@@ -45,20 +75,40 @@ export const buildPublicDisplayCurrencyIndex = (
   (Array.isArray(rows) ? rows : []).forEach((item) => {
     const code = normalizeDisplayCurrencyCode(item?.code);
     const status = Number(item?.status ?? 1);
-    const rate = Number(item?.yyc_per_unit || 0);
-    if (!code || status !== 1 || !Number.isFinite(rate) || rate <= 0) {
+    const rawRate = Number(item?.yyc_per_unit ?? 0);
+    if (!code) {
       return;
     }
+    if (activeOnly && status !== 1) {
+      return;
+    }
+    if (requirePositiveRate && (!Number.isFinite(rawRate) || rawRate <= 0)) {
+      return;
+    }
+    const current = next[code] || {};
     next[code] = {
+      ...current,
       ...item,
       code,
-      minor_unit: Number(item?.minor_unit ?? 2),
-      yyc_per_unit: rate,
+      minor_unit: Number(item?.minor_unit ?? current.minor_unit ?? 2),
+      yyc_per_unit: Number.isFinite(rawRate)
+        ? rawRate
+        : Number(current?.yyc_per_unit ?? 0),
     };
   });
 
   return next;
 };
+
+export const buildPublicDisplayCurrencyIndex = (
+  rows,
+  fallbackUsdYYCPerUnit = getFallbackUSDYYCPerUnit(),
+) =>
+  buildBillingCurrencyIndex(rows, {
+    fallbackUsdYYCPerUnit,
+    activeOnly: true,
+    requirePositiveRate: true,
+  });
 
 export const resolvePreferredDisplayCurrency = (
   currencyIndex,
@@ -92,6 +142,205 @@ export const listDisplayCurrencies = (currencyIndex) =>
       if (b.code === YYC_DISPLAY_CODE) return -1;
       return `${a.code}`.localeCompare(`${b.code}`);
     });
+
+const listQuotaUnitCurrencies = (currencyIndex) =>
+  Object.values(currencyIndex || {})
+    .filter((item) => item?.code)
+    .sort((a, b) => {
+      if (a.code === DEFAULT_FIAT_DISPLAY_CODE) return -1;
+      if (b.code === DEFAULT_FIAT_DISPLAY_CODE) return 1;
+      if (a.code === YYC_DISPLAY_CODE) return -1;
+      if (b.code === YYC_DISPLAY_CODE) return 1;
+      return `${a.code}`.localeCompare(`${b.code}`);
+    });
+
+const listYYCFirstCurrencies = (currencyIndex) => {
+  const items = Object.values(currencyIndex || {}).filter((item) => item?.code);
+  const yycItem = items.find(
+    (item) => normalizeDisplayCurrencyCode(item.code) === YYC_DISPLAY_CODE,
+  );
+  const others = items
+    .filter((item) => normalizeDisplayCurrencyCode(item.code) !== YYC_DISPLAY_CODE)
+    .sort((a, b) => `${a.code}`.localeCompare(`${b.code}`));
+  return yycItem ? [yycItem, ...others] : others;
+};
+
+const buildCurrencyOptionLabel = (item, { includeCode = false } = {}) => {
+  const code = normalizeDisplayCurrencyCode(item?.code);
+  if (!code) {
+    return '';
+  }
+  const symbol = (item?.symbol || '').toString().trim();
+  if (includeCode) {
+    return symbol ? `${symbol} ${code}` : code;
+  }
+  if (code === YYC_DISPLAY_CODE) {
+    return YYC_SYMBOL;
+  }
+  return symbol || code;
+};
+
+export const buildQuotaUnitOptions = (currencyIndex) => {
+  const seen = new Set();
+  return listQuotaUnitCurrencies(currencyIndex).reduce((items, item) => {
+    const code = normalizeDisplayCurrencyCode(item?.code);
+    if (!code || seen.has(code)) {
+      return items;
+    }
+    seen.add(code);
+    items.push({
+      value: code,
+      label: buildCurrencyOptionLabel(item),
+    });
+    return items;
+  }, []);
+};
+
+export const buildDisplayUnitOptions = (
+  currencyIndex,
+  { order = 'display', includeCode = false } = {},
+) => {
+  const items =
+    order === 'yyc-first'
+      ? listYYCFirstCurrencies(currencyIndex)
+      : listDisplayCurrencies(currencyIndex);
+  return items.map((item) => ({
+    value: normalizeDisplayCurrencyCode(item?.code),
+    label: buildCurrencyOptionLabel(item, { includeCode }),
+  }));
+};
+
+export const buildFaceValueUnitOptions = (
+  rows,
+  { currentUnit = '', includeName = true } = {},
+) => {
+  const options = [
+    {
+      value: YYC_DISPLAY_CODE,
+      label: YYC_DISPLAY_CODE,
+    },
+  ];
+  const seen = new Set([YYC_DISPLAY_CODE]);
+  (Array.isArray(rows) ? rows : [])
+    .filter((item) => Number(item?.status ?? 0) === 1)
+    .forEach((item) => {
+      const code = normalizeDisplayCurrencyCode(item?.code);
+      if (!code || seen.has(code)) {
+        return;
+      }
+      seen.add(code);
+      const name = (item?.name || '').toString().trim();
+      options.push({
+        value: code,
+        label: includeName && name ? `${code} (${name})` : code,
+      });
+    });
+
+  const normalizedCurrentUnit = normalizeDisplayCurrencyCode(currentUnit);
+  if (normalizedCurrentUnit && !seen.has(normalizedCurrentUnit)) {
+    options.push({
+      value: normalizedCurrentUnit,
+      label: normalizedCurrentUnit,
+    });
+  }
+  return options;
+};
+
+export const resolveDefaultQuotaUnit = (currencyIndex) => {
+  if (currencyIndex?.[DEFAULT_FIAT_DISPLAY_CODE]) {
+    return DEFAULT_FIAT_DISPLAY_CODE;
+  }
+  if (currencyIndex?.[YYC_DISPLAY_CODE]) {
+    return YYC_DISPLAY_CODE;
+  }
+  return (
+    Object.keys(currencyIndex || {})
+      .filter((code) => code)
+      .sort((a, b) => a.localeCompare(b))[0] || YYC_DISPLAY_CODE
+  );
+};
+
+export const getCurrencyRateToYYC = (unit, currencyIndex) => {
+  const normalizedUnit = normalizeDisplayCurrencyCode(unit);
+  if (normalizedUnit === YYC_DISPLAY_CODE) {
+    return 1;
+  }
+  const rate = Number(currencyIndex?.[normalizedUnit]?.yyc_per_unit || 0);
+  if (!Number.isFinite(rate) || rate <= 0) {
+    return 0;
+  }
+  return rate;
+};
+
+export const formatQuotaInputAmount = (amount, unit, currencyIndex) => {
+  const normalizedAmount = Number(amount || 0);
+  if (!Number.isFinite(normalizedAmount) || normalizedAmount === 0) {
+    return '0';
+  }
+  const normalizedUnit = normalizeDisplayCurrencyCode(unit);
+  if (normalizedUnit === YYC_DISPLAY_CODE) {
+    return `${Math.round(normalizedAmount)}`;
+  }
+  const minorUnit = Number(currencyIndex?.[normalizedUnit]?.minor_unit);
+  const fractionDigits =
+    Number.isInteger(minorUnit) && minorUnit >= 0 ? Math.min(minorUnit, 8) : 6;
+  return normalizedAmount.toFixed(fractionDigits).replace(/\.?0+$/, '');
+};
+
+export const quotaToInputValueByUnit = (quota, unit, currencyIndex) => {
+  const storedYYC = Number(quota || 0);
+  if (!Number.isFinite(storedYYC) || storedYYC <= 0) {
+    return '0';
+  }
+  const rate = getCurrencyRateToYYC(unit, currencyIndex);
+  if (rate <= 0) {
+    return '0';
+  }
+  return formatQuotaInputAmount(storedYYC / rate, unit, currencyIndex);
+};
+
+export const quotaInputToStoredValueByUnit = (value, unit, currencyIndex) => {
+  const normalizedAmount = Number(value ?? 0);
+  if (!Number.isFinite(normalizedAmount) || normalizedAmount < 0) {
+    return NaN;
+  }
+  const rate = getCurrencyRateToYYC(unit, currencyIndex);
+  if (rate <= 0) {
+    return NaN;
+  }
+  if (normalizeDisplayCurrencyCode(unit) === YYC_DISPLAY_CODE) {
+    return Math.round(normalizedAmount);
+  }
+  return Math.round(normalizedAmount * rate);
+};
+
+export const convertQuotaInputValueUnit = (value, fromUnit, toUnit, currencyIndex) => {
+  const normalizedAmount = Number(value ?? 0);
+  if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+    return '0';
+  }
+  const storedYYC = quotaInputToStoredValueByUnit(
+    normalizedAmount,
+    fromUnit,
+    currencyIndex,
+  );
+  if (!Number.isFinite(storedYYC) || storedYYC < 0) {
+    return '0';
+  }
+  return quotaToInputValueByUnit(storedYYC, toUnit, currencyIndex);
+};
+
+export const resolveQuotaInputStep = (unit, currencyIndex) => {
+  const normalizedUnit = normalizeDisplayCurrencyCode(unit);
+  if (normalizedUnit === YYC_DISPLAY_CODE) {
+    return '1';
+  }
+  const minorUnit = Number(currencyIndex?.[normalizedUnit]?.minor_unit);
+  if (!Number.isInteger(minorUnit) || minorUnit <= 0) {
+    return '0.01';
+  }
+  return (1 / 10 ** Math.min(minorUnit, 8)).toFixed(Math.min(minorUnit, 8));
+};
 
 export const convertYYCToDisplayAmount = (
   yycAmount,
