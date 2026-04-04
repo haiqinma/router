@@ -2077,6 +2077,10 @@ code {
     min-width: 140px;
 }
 
+.ui.table.router-package-list-table {
+    min-width: 1120px;
+}
+
 .ui.table.router-billing-currency-table {
     min-width: 980px;
 }
