@@ -578,9 +578,13 @@ const PackagesManager = () => {
       <Table basic='very' compact className='router-hover-table router-list-table'>
         <Table.Header>
           <Table.Row>
-            <Table.HeaderCell>{t('package_manage.table.name')}</Table.HeaderCell>
+            <Table.HeaderCell className='router-package-name-cell'>
+              {t('package_manage.table.name')}
+            </Table.HeaderCell>
             <Table.HeaderCell>{t('package_manage.table.group')}</Table.HeaderCell>
-            <Table.HeaderCell>{t('package_manage.table.sale_price')}</Table.HeaderCell>
+            <Table.HeaderCell className='router-package-sale-price-cell'>
+              {t('package_manage.table.sale_price')}
+            </Table.HeaderCell>
             <Table.HeaderCell className='router-redemption-face-value-header'>
               <div className='router-table-header-with-control'>
                 <span>{t('package_manage.table.daily_quota_limit')}</span>
@@ -615,11 +619,19 @@ const PackagesManager = () => {
                 />
               </div>
             </Table.HeaderCell>
-            <Table.HeaderCell>{t('package_manage.table.duration_days')}</Table.HeaderCell>
-            <Table.HeaderCell>{t('package_manage.table.status')}</Table.HeaderCell>
-            <Table.HeaderCell>{t('package_manage.table.created_at')}</Table.HeaderCell>
-            <Table.HeaderCell>{t('package_manage.table.updated_at')}</Table.HeaderCell>
-            <Table.HeaderCell className='router-table-action-cell'>
+            <Table.HeaderCell className='router-package-duration-cell'>
+              {t('package_manage.table.duration_days')}
+            </Table.HeaderCell>
+            <Table.HeaderCell className='router-package-status-cell'>
+              {t('package_manage.table.status')}
+            </Table.HeaderCell>
+            <Table.HeaderCell className='router-package-created-at-cell'>
+              {t('package_manage.table.created_at')}
+            </Table.HeaderCell>
+            <Table.HeaderCell className='router-package-updated-at-cell'>
+              {t('package_manage.table.updated_at')}
+            </Table.HeaderCell>
+            <Table.HeaderCell className='router-table-action-cell router-package-action-cell'>
               {t('package_manage.table.actions')}
             </Table.HeaderCell>
           </Table.Row>
@@ -641,20 +653,30 @@ const PackagesManager = () => {
                 className={loading || submitting ? '' : 'router-row-clickable'}
                 onClick={() => openViewModal(row)}
               >
-                <Table.Cell>{row.name || '-'}</Table.Cell>
+                <Table.Cell className='router-package-name-cell'>{row.name || '-'}</Table.Cell>
                 <Table.Cell>{row.group_name || row.group_id || '-'}</Table.Cell>
-                <Table.Cell>{`${row.sale_currency || 'CNY'} ${row.sale_price ?? 0}`}</Table.Cell>
+                <Table.Cell className='router-package-sale-price-cell'>
+                  {`${row.sale_currency || 'CNY'} ${row.sale_price ?? 0}`}
+                </Table.Cell>
                 <Table.Cell>
                   {renderPackageAmountFieldValue(row, 'daily', displayUnit, currencyIndex)}
                 </Table.Cell>
                 <Table.Cell>
                   {renderPackageAmountFieldValue(row, 'emergency', displayUnit, currencyIndex)}
                 </Table.Cell>
-                <Table.Cell>{Number(row.duration_days || 0) || '-'}</Table.Cell>
-                <Table.Cell>{statusLabel(Boolean(row.enabled), t)}</Table.Cell>
-                <Table.Cell>{row.created_at ? timestamp2string(row.created_at) : '-'}</Table.Cell>
-                <Table.Cell>{row.updated_at ? timestamp2string(row.updated_at) : '-'}</Table.Cell>
-                <Table.Cell className='router-nowrap'>
+                <Table.Cell className='router-package-duration-cell'>
+                  {Number(row.duration_days || 0) || '-'}
+                </Table.Cell>
+                <Table.Cell className='router-package-status-cell'>
+                  {statusLabel(Boolean(row.enabled), t)}
+                </Table.Cell>
+                <Table.Cell className='router-package-created-at-cell'>
+                  {row.created_at ? timestamp2string(row.created_at) : '-'}
+                </Table.Cell>
+                <Table.Cell className='router-package-updated-at-cell'>
+                  {row.updated_at ? timestamp2string(row.updated_at) : '-'}
+                </Table.Cell>
+                <Table.Cell className='router-nowrap router-package-action-cell'>
                   <div className='router-action-group-tight'>
                     <Button
                       type='button'

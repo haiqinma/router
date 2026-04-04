@@ -145,7 +145,7 @@
       "load_failed": "读取业务流水失败"
     },
     "topup": {
-      "title": "充值记录",
+      "title": "充值",
       "search_placeholder": "搜索用户、订单号、交易号、兑换名称...",
       "empty": "暂无充值记录",
       "columns": {
@@ -155,12 +155,12 @@
       }
     },
     "package": {
-      "title": "套餐记录",
+      "title": "套餐",
       "search_placeholder": "搜索用户、套餐名称、分组、记录 ID...",
       "empty": "暂无套餐记录"
     },
     "redemption": {
-      "title": "兑换记录",
+      "title": "兑换",
       "search_placeholder": "搜索用户、兑换名称、分组、记录 ID...",
       "empty": "暂无兑换记录"
     }
@@ -671,7 +671,7 @@
     "title": "套餐管理",
     "search": "搜索套餐名称或分组",
     "table": {
-      "name": "套餐名称",
+      "name": "名称",
       "group": "分组",
       "sale_price": "售价",
       "daily_quota_limit": "每日额度",

@@ -145,7 +145,7 @@
       "load_failed": "Failed to load business records"
     },
     "topup": {
-      "title": "Top-up Records",
+      "title": "Top-up",
       "search_placeholder": "Search user, order ID, transaction ID, redemption name...",
       "empty": "No top-up records",
       "columns": {
@@ -155,12 +155,12 @@
       }
     },
     "package": {
-      "title": "Package Records",
+      "title": "Package",
       "search_placeholder": "Search user, package, group, record ID...",
       "empty": "No package records"
     },
     "redemption": {
-      "title": "Redemption Records",
+      "title": "Redemption",
       "search_placeholder": "Search user, redemption name, group, record ID...",
       "empty": "No redemption records"
     }
@@ -671,7 +671,7 @@
     "title": "Package Management",
     "search": "Search package name or group",
     "table": {
-      "name": "Package Name",
+      "name": "Name",
       "group": "Group",
       "sale_price": "Sale Price",
       "daily_quota_limit": "Daily Amount",

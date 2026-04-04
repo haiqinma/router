@@ -5,11 +5,9 @@ import { Card, Header } from 'semantic-ui-react';
 import { API, showError, showSuccess } from '../../helpers';
 import { formatAmountWithUnit, renderYYC } from '../../helpers/render';
 import {
-  buildDisplayUnitOptions,
   convertYYCToDisplayAmount,
   loadPublicDisplayCurrencyCatalog,
 } from '../../helpers/billing';
-import UnitDropdown from '../../components/UnitDropdown';
 import BalanceTopUpPage from './BalanceTopUpPage';
 import PackagePurchasePage from './PackagePurchasePage';
 import RedeemCodePage from './RedeemCodePage';
@@ -44,11 +42,6 @@ const TopUpLayout = () => {
   );
   const [loadingDisplayCurrencies, setLoadingDisplayCurrencies] =
     useState(false);
-
-  const displayCurrencyOptions = useMemo(
-    () => buildDisplayUnitOptions(displayCurrencyIndex, { includeCode: true }),
-    [displayCurrencyIndex],
-  );
 
   const renderDisplayAmount = useCallback(
     (yycAmount) => {
@@ -216,8 +209,6 @@ const TopUpLayout = () => {
       userBalanceYYC,
       displayCurrency,
       displayCurrencyIndex,
-      displayCurrencyOptions,
-      loadingDisplayCurrencies,
       renderDisplayAmount,
       loadUserBalance,
       createTopupOrder,
@@ -227,10 +218,8 @@ const TopUpLayout = () => {
       createTopupOrder,
       displayCurrency,
       displayCurrencyIndex,
-      displayCurrencyOptions,
       externalTopupLink,
       loadUserBalance,
-      loadingDisplayCurrencies,
       renderDisplayAmount,
       submitRedemption,
       userBalanceYYC,
@@ -272,64 +261,9 @@ const TopUpLayout = () => {
         <Card fluid className='chart-card'>
           <Card.Content>
             <Card.Header className='router-card-header'>
-              <div className='router-toolbar'>
-                <Header as='h2' className='router-page-title'>
-                  {pageTitle}
-                </Header>
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '1rem',
-                    flexWrap: 'wrap',
-                    justifyContent: 'flex-end',
-                  }}
-                >
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'baseline',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    <span className='router-text-muted'>
-                      {t('topup.external_topup.current_balance')}
-                    </span>
-                    <strong>{renderDisplayAmount(userBalanceYYC)}</strong>
-                  </div>
-                  <div
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                    }}
-                  >
-                    <span className='router-text-muted'>
-                      {t('topup.display_currency')}
-                    </span>
-                    <UnitDropdown
-                      variant='inline'
-                      compact
-                      style={{ minWidth: '108px' }}
-                      options={displayCurrencyOptions}
-                      value={displayCurrency}
-                      loading={loadingDisplayCurrencies}
-                      disabled={
-                        loadingDisplayCurrencies ||
-                        displayCurrencyOptions.length === 0
-                      }
-                      onChange={(_, { value }) => {
-                        const next = resolveDisplayCurrency(
-                          displayCurrencyIndex,
-                          value,
-                        );
-                        setDisplayCurrency(next);
-                        storeDisplayCurrency(next);
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
+              <Header as='h2' className='router-page-title'>
+                {pageTitle}
+              </Header>
             </Card.Header>
 
             {activeContent}
