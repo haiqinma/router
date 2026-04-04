@@ -1101,6 +1101,7 @@
     "title": "User Management",
     "detail": {
       "title": "User Detail",
+      "user_id": "User ID",
       "package_mode_title": "Package Mode",
       "balance_mode_title": "Redemption Mode",
       "remaining_amount": "Remaining",
@@ -1126,9 +1127,15 @@
         "canceled": "Canceled",
         "unknown": "Unknown"
       },
+      "assign": {
+        "package": "Package",
+        "package_placeholder": "Select package template",
+        "package_required": "Please select a package"
+      },
       "buttons": {
         "back": "Back",
-        "edit": "Edit"
+        "edit": "Edit",
+        "gift_package": "Gift Package"
       }
     },
     "edit": {

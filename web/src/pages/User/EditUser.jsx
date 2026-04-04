@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Breadcrumb, Button, Card, Dropdown, Form, Header, Icon, Label } from 'semantic-ui-react';
+import { Breadcrumb, Button, Card, Dropdown, Form, Header, Icon, Label, Modal } from 'semantic-ui-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { API, copy, isRoot, showError, showSuccess } from '../../helpers';
 import {
@@ -154,6 +154,31 @@ const normalizeActivePackage = (raw) => {
   };
 };
 
+const toPackageOptions = (rows) =>
+  (Array.isArray(rows) ? rows : []).map((item) => {
+    const id = (item?.id || '').toString().trim();
+    const name = (item?.name || '').toString().trim() || id;
+    const groupName =
+      (item?.group_name || '').toString().trim() ||
+      (item?.group_id || '').toString().trim();
+    return {
+      key: id,
+      value: id,
+      text: groupName ? `${name} (${groupName})` : name,
+    };
+  });
+
+const parseDatetimeLocalValue = (value) => {
+  if (typeof value !== 'string' || value.trim() === '') {
+    return 0;
+  }
+  const ts = Date.parse(value.trim());
+  if (!Number.isFinite(ts)) {
+    return NaN;
+  }
+  return Math.floor(ts / 1000);
+};
+
 const UserDetail = () => {
   const { t } = useTranslation();
   const { id: userId } = useParams();
@@ -170,6 +195,13 @@ const UserDetail = () => {
   const [balanceUnit, setBalanceUnit] = useState('USD');
   const [activePackage, setActivePackage] = useState(createEmptyActivePackage());
   const [activePackageLoading, setActivePackageLoading] = useState(false);
+  const [packageOptions, setPackageOptions] = useState([]);
+  const [packageOptionsLoading, setPackageOptionsLoading] = useState(false);
+  const [assignPackageOpen, setAssignPackageOpen] = useState(false);
+  const [assignPackageForm, setAssignPackageForm] = useState({
+    package_id: '',
+    start_at: '',
+  });
   const [inputs, setInputs] = useState({
     username: '',
     email: '',
@@ -318,6 +350,46 @@ const UserDetail = () => {
       setActivePackageLoading(false);
     }
   }, [t, userId]);
+
+  const loadPackageOptions = useCallback(async () => {
+    if (packageOptions.length > 0) {
+      return;
+    }
+    setPackageOptionsLoading(true);
+    try {
+      const items = [];
+      let page = 1;
+      while (page <= 50) {
+        const res = await API.get('/api/v1/admin/packages', {
+          params: {
+            page,
+            page_size: 100,
+          },
+        });
+        const { success, message, data } = res.data || {};
+        if (!success) {
+          showError(message || t('package_manage.messages.load_failed'));
+          return;
+        }
+        const pageItems = Array.isArray(data?.items) ? data.items : [];
+        items.push(...pageItems);
+        const total = Number(data?.total || pageItems.length || 0);
+        if (
+          pageItems.length === 0 ||
+          items.length >= total ||
+          pageItems.length < 100
+        ) {
+          break;
+        }
+        page += 1;
+      }
+      setPackageOptions(toPackageOptions(items));
+    } catch (error) {
+      showError(error?.message || error);
+    } finally {
+      setPackageOptionsLoading(false);
+    }
+  }, [packageOptions.length, t]);
 
   const loadBillingCurrencies = useCallback(async () => {
     try {
@@ -661,6 +733,76 @@ const UserDetail = () => {
     await loadUser();
   }, [loadUser]);
 
+  const openAssignPackageModal = useCallback(() => {
+    setAssignPackageForm({
+      package_id: '',
+      start_at: '',
+    });
+    setAssignPackageOpen(true);
+    loadPackageOptions().then();
+  }, [loadPackageOptions]);
+
+  const closeAssignPackageModal = useCallback(() => {
+    if (actionLoading === 'assign-package') {
+      return;
+    }
+    setAssignPackageOpen(false);
+    setAssignPackageForm({
+      package_id: '',
+      start_at: '',
+    });
+  }, [actionLoading]);
+
+  const submitAssignPackage = useCallback(async () => {
+    const normalizedPackageID = (assignPackageForm.package_id || '').toString().trim();
+    const normalizedUserID = (userId || '').toString().trim();
+    if (normalizedPackageID === '') {
+      showInfo(t('user.detail.assign.package_required'));
+      return;
+    }
+    if (normalizedUserID === '') {
+      return;
+    }
+    const startAt = parseDatetimeLocalValue(assignPackageForm.start_at);
+    if (!Number.isFinite(startAt)) {
+      showInfo(t('package_manage.messages.start_at_invalid'));
+      return;
+    }
+    setActionLoading('assign-package');
+    try {
+      const res = await API.post(
+        `/api/v1/admin/package/${encodeURIComponent(normalizedPackageID)}/assign`,
+        {
+          user_id: normalizedUserID,
+          start_at: startAt > 0 ? startAt : 0,
+        }
+      );
+      const { success, message } = res.data || {};
+      if (!success) {
+        showError(message || t('package_manage.messages.assign_failed'));
+        return;
+      }
+      showSuccess(t('package_manage.messages.assign_success'));
+      setAssignPackageOpen(false);
+      setAssignPackageForm({
+        package_id: '',
+        start_at: '',
+      });
+      await loadActivePackage();
+    } catch (error) {
+      showError(error?.message || error);
+    } finally {
+      setActionLoading('');
+    }
+  }, [
+    assignPackageForm.package_id,
+    assignPackageForm.start_at,
+    closeAssignPackageModal,
+    loadActivePackage,
+    t,
+    userId,
+  ]);
+
   const formatAmountBySelectedUnit = useCallback(
     (yycAmount, { unlimited = false } = {}) => {
       if (unlimited) {
@@ -923,6 +1065,14 @@ const UserDetail = () => {
                       type='button'
                       className='router-page-button'
                       disabled={loading || actionLoading !== '' || editSection !== ''}
+                      onClick={openAssignPackageModal}
+                    >
+                      {t('user.detail.buttons.gift_package')}
+                    </Button>
+                    <Button
+                      type='button'
+                      className='router-page-button'
+                      disabled={loading || actionLoading !== '' || editSection !== ''}
                       onClick={openPackageManagement}
                     >
                       {t('package_manage.title')}
@@ -1106,6 +1256,57 @@ const UserDetail = () => {
           </div>
         </Card.Content>
       </Card>
+
+      <Modal open={assignPackageOpen} onClose={closeAssignPackageModal} size='small'>
+        <Modal.Header>{t('user.detail.buttons.gift_package')}</Modal.Header>
+        <Modal.Content>
+          <Form>
+            <Form.Select
+              className='router-section-input'
+              search
+              selection
+              clearable
+              loading={packageOptionsLoading}
+              label={t('user.detail.assign.package')}
+              placeholder={t('user.detail.assign.package_placeholder')}
+              options={packageOptions}
+              value={assignPackageForm.package_id}
+              onChange={(e, { value }) =>
+                setAssignPackageForm((prev) => ({
+                  ...prev,
+                  package_id: (value || '').toString(),
+                }))
+              }
+            />
+            <Form.Input
+              className='router-section-input'
+              type='datetime-local'
+              label={t('package_manage.assign.start_at')}
+              placeholder={t('package_manage.assign.start_at_placeholder')}
+              value={assignPackageForm.start_at}
+              onChange={(e, { value }) =>
+                setAssignPackageForm((prev) => ({
+                  ...prev,
+                  start_at: value || '',
+                }))
+              }
+            />
+          </Form>
+        </Modal.Content>
+        <Modal.Actions>
+          <Button type='button' onClick={closeAssignPackageModal} disabled={actionLoading === 'assign-package'}>
+            {t('common.cancel')}
+          </Button>
+          <Button
+            type='button'
+            color='blue'
+            loading={actionLoading === 'assign-package'}
+            onClick={submitAssignPackage}
+          >
+            {t('common.confirm')}
+          </Button>
+        </Modal.Actions>
+      </Modal>
     </div>
   );
 };

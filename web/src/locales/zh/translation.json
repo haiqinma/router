@@ -1101,6 +1101,7 @@
     "title": "用户管理",
     "detail": {
       "title": "用户详情",
+      "user_id": "用户 ID",
       "package_mode_title": "套餐模式",
       "balance_mode_title": "兑换码模式",
       "remaining_amount": "剩余",
@@ -1126,9 +1127,15 @@
         "canceled": "已取消",
         "unknown": "未知"
       },
+      "assign": {
+        "package": "套餐",
+        "package_placeholder": "请选择套餐模板",
+        "package_required": "请选择套餐"
+      },
       "buttons": {
         "back": "返回",
-        "edit": "编辑"
+        "edit": "编辑",
+        "gift_package": "赠送套餐"
       }
     },
     "edit": {

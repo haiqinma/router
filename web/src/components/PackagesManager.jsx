@@ -44,11 +44,6 @@ const createEmptyForm = (defaultBillingUnit = 'USD') => ({
   source: 'manual',
 });
 
-const createEmptyAssignForm = () => ({
-  user_id: '',
-  start_at: '',
-});
-
 const statusLabel = (enabled, t) =>
   enabled ? (
     <Label basic color='green' className='router-tag'>
@@ -59,17 +54,6 @@ const statusLabel = (enabled, t) =>
       {t('package_manage.status.disabled')}
     </Label>
   );
-
-const parseDatetimeLocalValue = (value) => {
-  if (typeof value !== 'string' || value.trim() === '') {
-    return 0;
-  }
-  const ts = Date.parse(value.trim());
-  if (!Number.isFinite(ts)) {
-    return NaN;
-  }
-  return Math.floor(ts / 1000);
-};
 
 const toGroupOptions = (rows) =>
   (Array.isArray(rows) ? rows : []).map((item) => ({
@@ -96,20 +80,6 @@ const appendGroupOptionIfMissing = (options, groupID, groupName) => {
     },
   ];
 };
-
-const toUserOptions = (rows) =>
-  (Array.isArray(rows) ? rows : []).map((item) => {
-    const id = (item?.id || '').toString().trim();
-    const username = (item?.username || '').toString().trim();
-    const displayName = (item?.display_name || '').toString().trim();
-    const label = username || displayName || id;
-    const shortID = id.length > 10 ? `${id.slice(0, 6)}...${id.slice(-4)}` : id;
-    return {
-      key: id,
-      value: id,
-      text: `${label} (${shortID})`,
-    };
-  });
 
 const formatByCurrencyMinorUnit = (amount, currency) => {
   const normalizedAmount = Number(amount || 0);
@@ -167,8 +137,6 @@ const PackagesManager = () => {
 
   const [groupOptions, setGroupOptions] = useState([]);
   const [groupLoading, setGroupLoading] = useState(false);
-  const [userOptions, setUserOptions] = useState([]);
-  const [userLoading, setUserLoading] = useState(false);
   const [displayUnit, setDisplayUnit] = useState('USD');
   const [currencyIndex, setCurrencyIndex] = useState(
     buildBillingCurrencyIndex([], { activeOnly: true })
@@ -178,12 +146,9 @@ const PackagesManager = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [viewOpen, setViewOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [assignOpen, setAssignOpen] = useState(false);
 
   const [form, setForm] = useState(createEmptyForm('USD'));
   const [activeRow, setActiveRow] = useState(null);
-  const [assignRow, setAssignRow] = useState(null);
-  const [assignForm, setAssignForm] = useState(createEmptyAssignForm());
 
   const displayUnitOptions = useMemo(
     () => buildDisplayUnitOptions(currencyIndex, { order: 'yyc-first' }),
@@ -241,41 +206,6 @@ const PackagesManager = () => {
       setGroupLoading(false);
     }
   }, [t]);
-
-  const loadUserOptions = useCallback(async () => {
-    if (userOptions.length > 0) {
-      return;
-    }
-    setUserLoading(true);
-    try {
-      const items = [];
-      let page = 1;
-      while (page <= 100) {
-        const res = await API.get('/api/v1/admin/user/', {
-          params: {
-            page,
-          },
-        });
-        const { success, message, data, meta } = res.data || {};
-        if (!success) {
-          showError(message || t('package_manage.messages.user_load_failed'));
-          return;
-        }
-        const pageItems = Array.isArray(data) ? data : [];
-        items.push(...pageItems);
-        const total = Number(meta?.total || pageItems.length || 0);
-        if (pageItems.length === 0 || items.length >= total) {
-          break;
-        }
-        page += 1;
-      }
-      setUserOptions(toUserOptions(items));
-    } catch (error) {
-      showError(error);
-    } finally {
-      setUserLoading(false);
-    }
-  }, [t, userOptions.length]);
 
   const loadPackages = useCallback(
     async (page, keyword) => {
@@ -389,10 +319,7 @@ const PackagesManager = () => {
     setEditOpen(false);
     setViewOpen(false);
     setDeleteOpen(false);
-    setAssignOpen(false);
     setActiveRow(null);
-    setAssignRow(null);
-    setAssignForm(createEmptyAssignForm());
     resetForm();
   };
 
@@ -479,17 +406,6 @@ const PackagesManager = () => {
     if (!row || submitting) return;
     setActiveRow(row);
     setDeleteOpen(true);
-  };
-
-  const openAssignModal = (row) => {
-    if (!row || submitting) return;
-    setAssignRow(row);
-    setAssignForm({
-      user_id: '',
-      start_at: '',
-    });
-    setAssignOpen(true);
-    loadUserOptions().then();
   };
 
   const buildPayloadFromForm = () => {
@@ -615,44 +531,6 @@ const PackagesManager = () => {
       } else {
         loadPackages(activePage, normalizedKeyword).then();
       }
-    } catch (error) {
-      showError(error);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const submitAssign = async () => {
-    const packageID = (assignRow?.id || '').toString().trim();
-    const userID = (assignForm.user_id || '').toString().trim();
-    if (packageID === '' || submitting) return;
-    if (userID === '') {
-      showInfo(t('package_manage.messages.user_required'));
-      return;
-    }
-    const startAt = parseDatetimeLocalValue(assignForm.start_at);
-    if (!Number.isFinite(startAt)) {
-      showInfo(t('package_manage.messages.start_at_invalid'));
-      return;
-    }
-    setSubmitting(true);
-    try {
-      const res = await API.post(
-        `/api/v1/admin/package/${encodeURIComponent(packageID)}/assign`,
-        {
-          user_id: userID,
-          start_at: startAt > 0 ? startAt : 0,
-        }
-      );
-      const { success, message } = res.data || {};
-      if (!success) {
-        showError(message || t('package_manage.messages.assign_failed'));
-        return;
-      }
-      showSuccess(t('package_manage.messages.assign_success'));
-      setAssignOpen(false);
-      setAssignRow(null);
-      setAssignForm(createEmptyAssignForm());
     } catch (error) {
       showError(error);
     } finally {
@@ -788,17 +666,6 @@ const PackagesManager = () => {
                       }}
                     >
                       {t('package_manage.buttons.edit')}
-                    </Button>
-                    <Button
-                      type='button'
-                      className='router-inline-button'
-                      disabled={submitting}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openAssignModal(row);
-                      }}
-                    >
-                      {t('package_manage.buttons.assign')}
                     </Button>
                     <Button
                       type='button'
@@ -1170,62 +1037,6 @@ const PackagesManager = () => {
             {t('common.cancel')}
           </Button>
           <Button type='button' color='blue' loading={submitting} onClick={submitEdit}>
-            {t('common.confirm')}
-          </Button>
-        </Modal.Actions>
-      </Modal>
-
-      <Modal
-        open={assignOpen}
-        onClose={closeAllModals}
-        size='small'
-      >
-        <Modal.Header>{t('package_manage.dialog.assign_title')}</Modal.Header>
-        <Modal.Content>
-          <Form>
-            <Form.Select
-              className='router-section-input'
-              search
-              selection
-              clearable
-              loading={userLoading}
-              label={t('package_manage.assign.user_id')}
-              placeholder={t('package_manage.assign.user_id_placeholder')}
-              options={userOptions}
-              value={assignForm.user_id}
-              onChange={(e, { value }) =>
-                setAssignForm((prev) => ({
-                  ...prev,
-                  user_id: (value || '').toString(),
-                }))
-              }
-            />
-            <Form.Input
-              className='router-section-input'
-              type='datetime-local'
-              label={t('package_manage.assign.start_at')}
-              placeholder={t('package_manage.assign.start_at_placeholder')}
-              value={assignForm.start_at}
-              onChange={(e, { value }) =>
-                setAssignForm((prev) => ({
-                  ...prev,
-                  start_at: value || '',
-                }))
-              }
-            />
-            <Form.Input
-              className='router-section-input'
-              label={t('package_manage.assign.package')}
-              value={assignRow?.name || '-'}
-              readOnly
-            />
-          </Form>
-        </Modal.Content>
-        <Modal.Actions>
-          <Button type='button' onClick={closeAllModals} disabled={submitting}>
-            {t('common.cancel')}
-          </Button>
-          <Button type='button' color='blue' loading={submitting} onClick={submitAssign}>
             {t('common.confirm')}
           </Button>
         </Modal.Actions>
