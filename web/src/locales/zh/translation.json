@@ -5,8 +5,10 @@
     "providers": "供应商",
     "group": "分组",
     "token": "令牌",
+    "account": "账户",
     "redemption": "兑换码",
     "topup": "充值",
+    "service": "服务",
     "mine": "我的",
     "records": "记录",
     "user": "用户",
@@ -80,6 +82,24 @@
       "request_failed": "创建充值订单失败",
       "popup_blocked": "浏览器拦截了新窗口，请允许弹窗后重试",
       "no_link": "超级管理员未设置充值链接！"
+    },
+    "pricing": {
+      "title": "报价",
+      "subtitle": "你可以直接购买套餐，也可以先充值余额按需体验服务。",
+      "package_mode_title": "套餐使用",
+      "package_hint": "适合稳定使用，按套餐获取每日额度和应急额度，成本与边界更清晰。",
+      "balance_mode_title": "余额使用",
+      "balance_hint": "适合快速试用或弹性消耗，先充值后使用，用多少扣多少。",
+      "selected": "已选中",
+      "select": "点击选择"
+    },
+    "package_status": {
+      "view_pricing": "查看报价",
+      "empty_description": "当前没有生效套餐。你可以前往报价页购买套餐，或者先充值余额快速体验服务。",
+      "daily_title": "今日套餐额度",
+      "emergency_title": "本月应急额度",
+      "period": "统计周期",
+      "reserved": "预留中"
     },
     "external_topup_orders": {
       "title": "外部充值订单",
@@ -754,6 +774,8 @@
       "name": "名称",
       "status": "状态",
       "token": "令牌",
+      "used_amount": "已用",
+      "remain_amount": "剩余",
       "used_quota": "已用 YYC",
       "remain_quota": "剩余 YYC",
       "created_time": "创建时间",
@@ -1113,8 +1135,8 @@
     "detail": {
       "title": "用户详情",
       "user_id": "用户 ID",
-      "package_mode_title": "套餐模式",
-      "balance_mode_title": "兑换码模式",
+      "package_mode_title": "套餐状态",
+      "balance_mode_title": "余额状态",
       "remaining_amount": "剩余",
       "used_amount": "已用",
       "request_count_hint": "累计请求次数",

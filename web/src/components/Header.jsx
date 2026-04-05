@@ -126,7 +126,7 @@ const Header = ({ workspace = 'user', hideNavButtons = false }) => {
     if (targetWorkspace === 'admin') {
       navigate('/admin/dashboard');
     } else {
-      navigate('/workspace/token');
+      navigate('/workspace/service/pricing');
     }
     setShowSidebar(false);
   };

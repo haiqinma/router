@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Button,
@@ -11,6 +11,7 @@ import {
   Table,
 } from 'semantic-ui-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import UnitDropdown from './UnitDropdown';
 import {
   API,
   copy,
@@ -21,7 +22,13 @@ import {
 } from '../helpers';
 
 import { ITEMS_PER_PAGE } from '../constants';
-import { renderYYC } from '../helpers/render';
+import {
+  buildDisplayUnitOptions,
+  buildPublicDisplayCurrencyIndex,
+  formatDisplayAmountFromYYC,
+  loadPublicDisplayCurrencyCatalog,
+  resolvePreferredDisplayCurrency,
+} from '../helpers/billing';
 
 const normalizeTokenRow = (raw) => {
   if (!raw || typeof raw !== 'object') {
@@ -128,6 +135,12 @@ const TokensTable = () => {
   const [searchKeyword, setSearchKeyword] = useState('');
   const [searching, setSearching] = useState(false);
   const [orderBy, setOrderBy] = useState('');
+  const [currencyIndex, setCurrencyIndex] = useState(() =>
+    buildPublicDisplayCurrencyIndex([]),
+  );
+  const [displayUnit, setDisplayUnit] = useState(() =>
+    resolvePreferredDisplayCurrency(buildPublicDisplayCurrencyIndex([]), 'USD'),
+  );
 
   const loadTokens = useCallback(
     async (page) => {
@@ -280,6 +293,27 @@ const TokensTable = () => {
       });
   }, [loadTokens]);
 
+  useEffect(() => {
+    let disposed = false;
+    loadPublicDisplayCurrencyCatalog().then(
+      ({ currencyIndex: nextIndex, defaultCurrency }) => {
+        if (disposed) {
+          return;
+        }
+        setCurrencyIndex(nextIndex);
+        setDisplayUnit((current) =>
+          resolvePreferredDisplayCurrency(
+            nextIndex,
+            current || defaultCurrency || 'USD',
+          ),
+        );
+      },
+    );
+    return () => {
+      disposed = true;
+    };
+  }, []);
+
   const manageToken = async (id, action, idx) => {
     let data = { id };
     let res;
@@ -386,6 +420,10 @@ const TokensTable = () => {
     Math.ceil((isSearchMode ? visibleTokenCount : totalCount) / ITEMS_PER_PAGE),
     1,
   );
+  const displayUnitOptions = useMemo(
+    () => buildDisplayUnitOptions(currencyIndex),
+    [currencyIndex],
+  );
 
   return (
     <>
@@ -463,20 +501,56 @@ const TokensTable = () => {
             </Table.HeaderCell>
             <Table.HeaderCell>{t('token.table.token')}</Table.HeaderCell>
             <Table.HeaderCell
-              className='router-sortable-header'
-              onClick={() => {
-                sortToken('usedAmount');
-              }}
+              className='router-redemption-face-value-header'
             >
-              {t('token.table.used_quota')}
+              <div className='router-table-header-with-control'>
+                <span
+                  className='router-sortable-header'
+                  onClick={() => {
+                    sortToken('usedAmount');
+                  }}
+                >
+                  {t('token.table.used_amount')}
+                </span>
+                <UnitDropdown
+                  variant='header'
+                  compact
+                  options={displayUnitOptions}
+                  value={displayUnit}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onChange={(_, { value }) => {
+                    setDisplayUnit((value || '').toString());
+                  }}
+                />
+              </div>
             </Table.HeaderCell>
             <Table.HeaderCell
-              className='router-sortable-header'
-              onClick={() => {
-                sortToken('remainingAmount');
-              }}
+              className='router-redemption-face-value-header'
             >
-              {t('token.table.remain_quota')}
+              <div className='router-table-header-with-control'>
+                <span
+                  className='router-sortable-header'
+                  onClick={() => {
+                    sortToken('remainingAmount');
+                  }}
+                >
+                  {t('token.table.remain_amount')}
+                </span>
+                <UnitDropdown
+                  variant='header'
+                  compact
+                  options={displayUnitOptions}
+                  value={displayUnit}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                  onChange={(_, { value }) => {
+                    setDisplayUnit((value || '').toString());
+                  }}
+                />
+              </div>
             </Table.HeaderCell>
             <Table.HeaderCell
               className='router-sortable-header'
@@ -568,11 +642,21 @@ const TokensTable = () => {
                       />
                     </span>
                   </Table.Cell>
-                  <Table.Cell>{renderYYC(token.yycUsed, t)}</Table.Cell>
+                  <Table.Cell>
+                    {formatDisplayAmountFromYYC(
+                      token.yycUsed,
+                      displayUnit,
+                      currencyIndex,
+                    )}
+                  </Table.Cell>
                   <Table.Cell>
                     {token.hasUnlimitedYYCLimit
                       ? t('token.table.unlimited')
-                      : renderYYC(token.yycRemaining, t)}
+                      : formatDisplayAmountFromYYC(
+                          token.yycRemaining,
+                          displayUnit,
+                          currencyIndex,
+                        )}
                   </Table.Cell>
                   <Table.Cell>{renderTimestamp(token.createdTime)}</Table.Cell>
                   <Table.Cell>

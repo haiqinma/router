@@ -2077,6 +2077,33 @@ code {
     min-width: 140px;
 }
 
+.ui.table.router-package-list-table {
+    width: 100% !important;
+    table-layout: fixed;
+}
+
+.ui.table.router-package-list-table thead th,
+.ui.table.router-package-list-table tbody td {
+    padding-left: 0.65rem !important;
+    padding-right: 0.65rem !important;
+}
+
+.ui.table.router-package-list-table th.router-package-created-at-cell,
+.ui.table.router-package-list-table td.router-package-created-at-cell,
+.ui.table.router-package-list-table th.router-package-updated-at-cell,
+.ui.table.router-package-list-table td.router-package-updated-at-cell {
+    width: 140px !important;
+    min-width: 140px;
+}
+
+.ui.table.router-package-list-table td.router-package-name-cell,
+.ui.table.router-package-list-table td.router-package-sale-price-cell,
+.ui.table.router-package-list-table td.router-package-created-at-cell,
+.ui.table.router-package-list-table td.router-package-updated-at-cell {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 .ui.table.router-billing-currency-table {
     min-width: 980px;
 }

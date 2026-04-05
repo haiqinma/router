@@ -10,7 +10,7 @@ const PackagePurchasePage = () => {
   const [packages, setPackages] = useState([]);
   const [selectedPackageId, setSelectedPackageId] = useState('');
   const [loading, setLoading] = useState(false);
-  const [creating, setCreating] = useState(false);
+  const [creatingPackageId, setCreatingPackageId] = useState('');
 
   useEffect(() => {
     const loadPackages = async () => {
@@ -39,13 +39,13 @@ const PackagePurchasePage = () => {
     loadPackages().then();
   }, [t]);
 
-  const handlePurchase = async () => {
-    const packageID = (selectedPackageId || '').trim();
+  const handlePurchase = async (packageId = '') => {
+    const packageID = (packageId || selectedPackageId || '').trim();
     if (!packageID) {
       showInfo(t('topup.external_topup.package_select_required'));
       return;
     }
-    setCreating(true);
+    setCreatingPackageId(packageID);
     try {
       await createTopupOrder({
         business_type: 'package_purchase',
@@ -53,7 +53,7 @@ const PackagePurchasePage = () => {
         return_url: window.location.href,
       });
     } finally {
-      setCreating(false);
+      setCreatingPackageId('');
     }
   };
 
@@ -68,59 +68,191 @@ const PackagePurchasePage = () => {
         </Card.Header>
         <Card.Description className='router-card-fill'>
           <div className='router-card-body-spread'>
-            <div style={{ display: 'grid', gap: '0.75rem' }}>
+            <div style={{ display: 'grid', gap: '0.85rem' }}>
               {loading ? (
                 <div className='router-text-muted'>{t('common.loading')}</div>
               ) : packages.length === 0 ? (
                 <div className='router-text-muted'>{t('topup.external_topup.package_empty')}</div>
               ) : (
-                packages.map((item) => {
-                  const selected = item?.id === selectedPackageId;
-                  return (
-                    <div
-                      key={item?.id || '-'}
-                      onClick={() => setSelectedPackageId(item?.id || '')}
-                      style={{
-                        border: selected ? '1px solid #2563eb' : '1px solid #e5e7eb',
-                        borderRadius: '12px',
-                        padding: '12px 14px',
-                        cursor: 'pointer',
-                        background: selected ? '#eff6ff' : '#fff',
-                        textAlign: 'left',
-                      }}
-                    >
-                      <div style={{ fontWeight: 600 }}>{item?.name || '-'}</div>
-                      <div className='router-text-muted' style={{ marginTop: '0.35rem' }}>
-                        {item?.description || '-'}
-                      </div>
-                      <div style={{ marginTop: '0.5rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                        <span>{`${item?.sale_currency || 'CNY'} ${Number(item?.sale_price ?? 0).toFixed(2)}`}</span>
-                        <span className='router-text-muted'>
-                          {t('user.detail.package_daily_limit')} {renderDisplayAmount(item?.daily_quota_limit || 0)}
-                        </span>
-                        <span className='router-text-muted'>
-                          {t('user.detail.package_monthly_emergency_limit')} {renderDisplayAmount(item?.package_emergency_quota_limit || 0)}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-            </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: '0.85rem',
+                    overflowX: 'auto',
+                    paddingBottom: '0.35rem',
+                    alignItems: 'stretch',
+                    scrollSnapType: 'x proximity',
+                  }}
+                >
+                  {packages.map((item) => {
+                    const selected = item?.id === selectedPackageId;
+                    return (
+                      <div
+                        key={item?.id || '-'}
+                        onClick={() => setSelectedPackageId(item?.id || '')}
+                        style={{
+                          flex: '0 0 320px',
+                          minWidth: '320px',
+                          border: selected ? '1px solid #2563eb' : '1px solid #e5e7eb',
+                          borderRadius: '16px',
+                          padding: '1rem 1rem 0.95rem',
+                          cursor: 'pointer',
+                          background: selected ? '#eff6ff' : '#fff',
+                          textAlign: 'left',
+                          boxShadow: selected
+                            ? '0 12px 30px rgba(37, 99, 235, 0.12)'
+                            : '0 8px 24px rgba(15, 23, 42, 0.06)',
+                          display: 'grid',
+                          gap: '0.85rem',
+                          scrollSnapAlign: 'start',
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            gap: '0.75rem',
+                          }}
+                        >
+                          <div>
+                            <div
+                              style={{
+                                fontSize: '1.05rem',
+                                fontWeight: 700,
+                                color: '#111827',
+                              }}
+                            >
+                              {item?.name || '-'}
+                            </div>
+                            <div
+                              className='router-text-muted'
+                              style={{ marginTop: '0.35rem', lineHeight: 1.6 }}
+                            >
+                              {item?.description || '-'}
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              fontSize: '0.8rem',
+                              lineHeight: 1,
+                              padding: '0.38rem 0.55rem',
+                              borderRadius: '999px',
+                              background: selected ? '#2563eb' : '#f3f4f6',
+                              color: selected ? '#fff' : '#4b5563',
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {selected
+                              ? t('topup.pricing.selected')
+                              : t('topup.pricing.select')}
+                          </div>
+                        </div>
 
-            <div className='router-action-footer'>
-              <Button
-                className='router-section-button'
-                color='green'
-                fluid
-                onClick={handlePurchase}
-                loading={creating}
-                disabled={creating || !externalTopupLink || packages.length === 0}
-              >
-                {creating
-                  ? t('topup.external_topup.creating')
-                  : t('topup.external_topup.package_button')}
-              </Button>
+                        <div
+                          style={{
+                            fontSize: '1.5rem',
+                            fontWeight: 700,
+                            color: selected ? '#1d4ed8' : '#111827',
+                          }}
+                        >
+                          {`${item?.sale_currency || 'CNY'} ${Number(item?.sale_price ?? 0).toFixed(2)}`}
+                        </div>
+
+                        <div
+                          style={{
+                            display: 'grid',
+                            gap: '0.6rem',
+                            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                          }}
+                        >
+                          <div
+                            style={{
+                              borderRadius: '12px',
+                              background: selected ? 'rgba(255,255,255,0.72)' : '#f8fafc',
+                              padding: '0.75rem 0.8rem',
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: '0.78rem',
+                                color: '#6b7280',
+                                marginBottom: '0.3rem',
+                              }}
+                            >
+                              {t('package_manage.table.duration_days')}
+                            </div>
+                            <div style={{ color: '#111827', fontWeight: 600 }}>
+                              {Number(item?.duration_days || 0) || '-'}
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              borderRadius: '12px',
+                              background: selected ? 'rgba(255,255,255,0.72)' : '#f8fafc',
+                              padding: '0.75rem 0.8rem',
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: '0.78rem',
+                                color: '#6b7280',
+                                marginBottom: '0.3rem',
+                              }}
+                            >
+                              {t('user.detail.package_daily_limit')}
+                            </div>
+                            <div style={{ color: '#111827', fontWeight: 600 }}>
+                              {renderDisplayAmount(item?.daily_quota_limit || 0)}
+                            </div>
+                          </div>
+                          <div
+                            style={{
+                              borderRadius: '12px',
+                              background: selected ? 'rgba(255,255,255,0.72)' : '#f8fafc',
+                              padding: '0.75rem 0.8rem',
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: '0.78rem',
+                                color: '#6b7280',
+                                marginBottom: '0.3rem',
+                              }}
+                            >
+                              {t('user.detail.package_monthly_emergency_limit')}
+                            </div>
+                            <div style={{ color: '#111827', fontWeight: 600 }}>
+                              {renderDisplayAmount(
+                                item?.package_emergency_quota_limit || 0,
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <Button
+                          className='router-section-button'
+                          color='green'
+                          fluid
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            handlePurchase(item?.id || '');
+                          }}
+                          loading={creatingPackageId === (item?.id || '')}
+                          disabled={
+                            !externalTopupLink ||
+                            creatingPackageId !== ''
+                          }
+                        >
+                          {creatingPackageId === (item?.id || '')
+                            ? t('topup.external_topup.creating')
+                            : t('topup.external_topup.package_button')}
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </Card.Description>

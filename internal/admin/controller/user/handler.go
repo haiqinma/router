@@ -165,6 +165,22 @@ func buildActiveUserPackageSubscriptionView(subscription model.UserPackageSubscr
 	}
 }
 
+func loadActiveUserPackageSubscriptionPayload(userID string) (activeUserPackageSubscriptionPayload, error) {
+	subscription, err := model.GetActiveUserPackageSubscription(strings.TrimSpace(userID))
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return activeUserPackageSubscriptionPayload{
+				HasActiveSubscription: false,
+			}, nil
+		}
+		return activeUserPackageSubscriptionPayload{}, err
+	}
+	return activeUserPackageSubscriptionPayload{
+		HasActiveSubscription: true,
+		Subscription:          buildActiveUserPackageSubscriptionView(subscription),
+	}, nil
+}
+
 // Login godoc
 // @Summary Password login (session/cookie)
 // @Tags public
@@ -520,18 +536,8 @@ func GetUserActivePackageSubscription(c *gin.Context) {
 		})
 		return
 	}
-	subscription, err := model.GetActiveUserPackageSubscription(id)
+	payload, err := loadActiveUserPackageSubscriptionPayload(id)
 	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusOK, gin.H{
-				"success": true,
-				"message": "",
-				"data": activeUserPackageSubscriptionPayload{
-					HasActiveSubscription: false,
-				},
-			})
-			return
-		}
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
 			"message": err.Error(),
@@ -541,10 +547,39 @@ func GetUserActivePackageSubscription(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data": activeUserPackageSubscriptionPayload{
-			HasActiveSubscription: true,
-			Subscription:          buildActiveUserPackageSubscriptionView(subscription),
-		},
+		"data":    payload,
+	})
+}
+
+// GetCurrentUserActivePackageSubscription godoc
+// @Summary Get current active package subscription for current user
+// @Tags public
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} docs.StandardResponse
+// @Failure 401 {object} docs.ErrorResponse
+// @Router /api/v1/public/user/package/subscription [get]
+func GetCurrentUserActivePackageSubscription(c *gin.Context) {
+	userID := strings.TrimSpace(c.GetString(ctxkey.Id))
+	if userID == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "用户 ID 不能为空",
+		})
+		return
+	}
+	payload, err := loadActiveUserPackageSubscriptionPayload(userID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": err.Error(),
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    payload,
 	})
 }
 

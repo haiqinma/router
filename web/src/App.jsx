@@ -40,6 +40,7 @@ import Package from './pages/Package';
 import Task from './pages/Task';
 import TaskDetail from './pages/Task/Detail';
 import FlowPage from './pages/Flow';
+import ServicePricing from './pages/ServicePricing';
 import AdminLayout from './layouts/AdminLayout';
 import UserLayout from './layouts/UserLayout';
 import UserWorkspaceLayout from './layouts/UserWorkspaceLayout';
@@ -48,7 +49,7 @@ const APP_VERSION = import.meta.env.VITE_APP_VERSION || '';
 
 function AdminOnlyRoute({ children }) {
   if (!isAdmin()) {
-    return <Navigate to='/workspace/token' replace />;
+    return <Navigate to='/workspace/service/pricing' replace />;
   }
   return children;
 }
@@ -56,7 +57,7 @@ function AdminOnlyRoute({ children }) {
 function RootRedirect() {
   return (
     <Navigate
-      to={isAdmin() ? '/admin/dashboard' : '/workspace/token'}
+      to={isAdmin() ? '/admin/dashboard' : '/workspace/service/pricing'}
       replace
     />
   );
@@ -65,7 +66,7 @@ function RootRedirect() {
 function DashboardRedirect() {
   return (
     <Navigate
-      to={isAdmin() ? '/admin/dashboard' : '/workspace/dashboard'}
+      to={isAdmin() ? '/admin/dashboard' : '/workspace/service/pricing'}
       replace
     />
   );
@@ -249,7 +250,7 @@ function App() {
       <Route path='/' element={<RootRedirect />} />
       <Route
         path='/workspace'
-        element={<Navigate to='/workspace/token' replace />}
+        element={<Navigate to='/workspace/service/pricing' replace />}
       />
       <Route
         path='/admin'
@@ -292,7 +293,7 @@ function App() {
         />
         <Route
           path='/workspace/about'
-          element={<Navigate to='/workspace/token' replace />}
+          element={<Navigate to='/workspace/service/pricing' replace />}
         />
       </Route>
 
@@ -371,6 +372,14 @@ function App() {
           }
         />
         <Route path='/workspace/dashboard' element={<Dashboard />} />
+        <Route
+          path='/workspace/service/pricing'
+          element={
+            <Suspense fallback={<Loading />}>
+              <ServicePricing />
+            </Suspense>
+          }
+        />
         <Route
           path='/workspace/setting'
           element={
@@ -541,7 +550,7 @@ function App() {
 
       <Route
         path='/about'
-        element={<Navigate to='/workspace/token' replace />}
+        element={<Navigate to='/workspace/service/pricing' replace />}
       />
       <Route path='/chat' element={<Navigate to='/workspace/chat' replace />} />
       <Route path='/dashboard' element={<DashboardRedirect />} />

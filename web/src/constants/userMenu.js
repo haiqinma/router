@@ -22,9 +22,22 @@ export const isUserRouteActive = (location, to) => {
 export const buildUserWorkspaceMenuItems = ({ includeChat = false } = {}) => {
   const items = [
     {
-      name: 'header.dashboard',
-      to: '/workspace/dashboard',
-      icon: 'chart bar',
+      key: 'service',
+      type: 'group',
+      name: 'header.service',
+      icon: 'grid layout',
+      items: [
+        {
+          name: 'header.dashboard',
+          to: '/workspace/dashboard',
+          icon: 'chart bar',
+        },
+        {
+          name: 'topup.pricing.title',
+          to: '/workspace/service/pricing',
+          icon: 'tags',
+        },
+      ],
     },
   ];
 
@@ -57,6 +70,11 @@ export const buildUserWorkspaceMenuItems = ({ includeChat = false } = {}) => {
           name: 'header.token',
           to: '/workspace/token',
           icon: 'key',
+        },
+        {
+          name: 'header.account',
+          to: '/workspace/setting',
+          icon: 'setting',
         },
       ],
     },
@@ -92,11 +110,6 @@ export const buildUserWorkspaceMenuItems = ({ includeChat = false } = {}) => {
       name: 'header.task',
       to: '/workspace/task',
       icon: 'tasks',
-    },
-    {
-      name: 'header.setting',
-      to: '/workspace/setting',
-      icon: 'setting',
     },
   );
 
