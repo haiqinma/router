@@ -84,6 +84,9 @@ const normalizeModelIDs = (models) => {
 const normalizeBaseURL = (baseURL) =>
   (baseURL || '').trim().replace(/\/+$/, '');
 
+const resolveEffectiveAPIBaseURL = (inputs, config) =>
+  normalizeBaseURL(config?.api_base_url || inputs?.base_url || '');
+
 const normalizeEndpointPath = (value) => {
   const trimmed = (value || '').toString().trim();
   if (trimmed === '') {
@@ -1676,6 +1679,10 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     () => buildEffectiveKey().trim(),
     [buildEffectiveKey],
   );
+  const effectiveAPIBaseURL = useMemo(
+    () => resolveEffectiveAPIBaseURL(inputs, config),
+    [config, inputs],
+  );
   const previewChannelID = useMemo(
     () => ((hasChannelID ? channelId : '') || '').trim(),
     [channelId, hasChannelID],
@@ -1685,10 +1692,10 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
       buildChannelConnectionSignature({
         protocol: inputs.protocol,
         key: effectivePreviewKey,
-        baseURL: inputs.base_url,
+        baseURL: effectiveAPIBaseURL,
         channelID: previewChannelID,
       }),
-    [effectivePreviewKey, inputs.base_url, inputs.protocol, previewChannelID],
+    [effectiveAPIBaseURL, effectivePreviewKey, inputs.protocol, previewChannelID],
   );
   const requiresConnectionVerification = false;
   const showStepOne = isDetailMode ? activeDetailTab === 'overview' : true;
@@ -2275,101 +2282,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     );
   }, []);
 
-  const baseURLField = useMemo(() => {
-    if (inputs.protocol === 'azure') {
-      return (
-        <Form.Field>
-          <Form.Input
-            className='router-section-input'
-            label={t('channel.edit.base_url')}
-            name='base_url'
-            placeholder='请输入 AZURE_OPENAI_ENDPOINT，例如：https://docs-test-001.openai.azure.com'
-            onChange={handleInputChange}
-            value={inputs.base_url}
-            autoComplete='new-password'
-            {...inputReadonlyProps}
-          />
-        </Form.Field>
-      );
-    }
-    if (inputs.protocol === 'custom') {
-      return (
-        <Form.Field>
-          <Form.Input
-            className='router-section-input'
-            required
-            label={t('channel.edit.proxy_url')}
-            name='base_url'
-            placeholder={t('channel.edit.proxy_url_placeholder')}
-            onChange={handleInputChange}
-            value={inputs.base_url}
-            autoComplete='new-password'
-            {...inputReadonlyProps}
-          />
-        </Form.Field>
-      );
-    }
-    if (inputs.protocol === 'openai') {
-      return (
-        <Form.Field>
-          <Form.Input
-            className='router-section-input'
-            label={t('channel.edit.base_url')}
-            name='base_url'
-            placeholder={t('channel.edit.base_url_placeholder')}
-            onChange={handleInputChange}
-            value={inputs.base_url}
-            autoComplete='new-password'
-            {...inputReadonlyProps}
-          />
-        </Form.Field>
-      );
-    }
-    if (inputs.protocol === 'fastgpt') {
-      return (
-        <Form.Field>
-          <Form.Input
-            className='router-section-input'
-            label={t('channel.edit.base_url')}
-            name='base_url'
-            placeholder={
-              '请输入私有部署地址，格式为：https://fastgpt.run' +
-              '/api' +
-              '/openapi'
-            }
-            onChange={handleInputChange}
-            value={inputs.base_url}
-            autoComplete='new-password'
-            {...inputReadonlyProps}
-          />
-        </Form.Field>
-      );
-    }
-    if (inputs.protocol !== 'awsclaude') {
-      return (
-        <Form.Field>
-          <Form.Input
-            className='router-section-input'
-            label={t('channel.edit.proxy_url')}
-            name='base_url'
-            placeholder={t('channel.edit.proxy_url_placeholder')}
-            onChange={handleInputChange}
-            value={inputs.base_url}
-            autoComplete='new-password'
-            {...inputReadonlyProps}
-          />
-        </Form.Field>
-      );
-    }
-    return null;
-  }, [
-    handleInputChange,
-    inputReadonlyProps,
-    inputs.base_url,
-    inputs.protocol,
-    t,
-  ]);
-
   const keyField = useMemo(() => {
     if (inputs.protocol === 'awsclaude' || inputs.protocol === 'vertexai') {
       return null;
@@ -2675,7 +2587,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
       const nextSignature = buildChannelModelTestSignature({
         protocol: inputs.protocol,
         key: effectivePreviewKey,
-        baseURL: inputs.base_url,
+        baseURL: effectiveAPIBaseURL,
         channelID: normalizedChannelId,
         models: nextInputs.models,
         modelConfigs: nextInputs.model_configs,
@@ -2700,9 +2612,9 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
       setChannelEndpointPoliciesError('');
     },
     [
+      effectiveAPIBaseURL,
       effectivePreviewKey,
       inputs,
-      inputs.base_url,
       inputs.protocol,
       loadChannelEndpointPoliciesFromServer,
       loadChannelEndpointsFromServer,
@@ -2750,7 +2662,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
           const loadedModelTestSignature = buildChannelModelTestSignature({
             protocol: normalizedProtocol,
             key: '',
-            baseURL: data.base_url || '',
+            baseURL: resolveEffectiveAPIBaseURL(data, parsedConfig),
             channelID: data.id || targetId,
             models: modelState.selectedModels,
             modelConfigs: modelState.modelConfigs,
@@ -2890,12 +2802,11 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
         if (targetChannelId === '') {
           return false;
         }
-        const normalizedBaseURL = normalizeBaseURL(inputs.base_url);
         const key = buildEffectiveKey().trim();
         const requestSignature = buildChannelConnectionSignature({
           protocol: inputs.protocol,
           key,
-          baseURL: normalizedBaseURL,
+          baseURL: effectiveAPIBaseURL,
           channelID: targetChannelId,
         });
         const res = await API.post(
@@ -2949,7 +2860,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     [
       buildEffectiveKey,
       channelId,
-      inputs.base_url,
+      effectiveAPIBaseURL,
       inputs,
       inputs.protocol,
       isDetailMode,
@@ -4143,20 +4054,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
   };
 
   const renderConnectionFields = () => {
-    if (baseURLField && keyField) {
-      return (
-        <Form.Group widths='equal'>
-          {baseURLField}
-          {keyField}
-        </Form.Group>
-      );
-    }
-    return (
-      <>
-        {baseURLField}
-        {keyField}
-      </>
-    );
+    return keyField || null;
   };
 
   const renderAddressRoutingFields = () => {
