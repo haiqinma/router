@@ -116,6 +116,8 @@ type channelModelTestExecution struct {
 	LatencyMs          int64
 	IsStream           bool
 	Message            string
+	BaseURL            string
+	RequestURL         string
 	InputPayload       string
 	OutputPayload      string
 	ResponseStatusCode int
@@ -891,7 +893,10 @@ func executeChannelTextModelTest(ctx context.Context, channel *model.Channel, pa
 		execution.OutputPayload = marshalJSONForLog(map[string]any{"error": err.Error()})
 		return execution
 	}
-	requestURL := resolveChannelEndpointURL(channel.ResolveAPIBaseURL(path), path)
+	baseURL := channel.ResolveAPIBaseURL(path)
+	requestURL := resolveChannelEndpointURL(baseURL, path)
+	execution.BaseURL = baseURL
+	execution.RequestURL = requestURL
 	requestHeader := http.Header{}
 	requestHeader.Set("Content-Type", "application/json")
 	requestHeader.Set("User-Agent", "router-channel-model-tester/1.0")
@@ -1001,7 +1006,10 @@ func executeChannelTextModelTestRawBody(ctx context.Context, channel *model.Chan
 	if stream {
 		c.Request.Header.Set("Accept", "text/event-stream")
 	}
-	requestURL := resolveChannelEndpointURL(channel.ResolveAPIBaseURL(path), path)
+	baseURL := channel.ResolveAPIBaseURL(path)
+	requestURL := resolveChannelEndpointURL(baseURL, path)
+	execution.BaseURL = baseURL
+	execution.RequestURL = requestURL
 	requestHeader := http.Header{}
 	requestHeader.Set("Content-Type", "application/json")
 	requestHeader.Set("User-Agent", "router-channel-model-tester/1.0")
@@ -1207,7 +1215,10 @@ func executeChannelImageResponsesModelTest(ctx context.Context, channel *model.C
 		execution.OutputPayload = marshalJSONForLog(map[string]any{"error": err.Error()})
 		return execution
 	}
-	requestURL := resolveChannelEndpointURL(channel.ResolveAPIBaseURL(model.ChannelModelEndpointResponses), model.ChannelModelEndpointResponses)
+	baseURL := channel.ResolveAPIBaseURL(model.ChannelModelEndpointResponses)
+	requestURL := resolveChannelEndpointURL(baseURL, model.ChannelModelEndpointResponses)
+	execution.BaseURL = baseURL
+	execution.RequestURL = requestURL
 	requestHeader := http.Header{}
 	requestHeader.Set("Content-Type", "application/json")
 	execution.InputPayload = buildHTTPRequestPayloadForLog(http.MethodPost, requestURL, requestHeader, requestBody)
@@ -1288,7 +1299,10 @@ func executeChannelImageModelTest(ctx context.Context, channel *model.Channel, m
 		execution.OutputPayload = marshalJSONForLog(map[string]any{"error": err.Error()})
 		return execution
 	}
-	requestURL := resolveChannelEndpointURL(channel.ResolveAPIBaseURL("/v1/images/generations"), "/v1/images/generations")
+	baseURL := channel.ResolveAPIBaseURL("/v1/images/generations")
+	requestURL := resolveChannelEndpointURL(baseURL, "/v1/images/generations")
+	execution.BaseURL = baseURL
+	execution.RequestURL = requestURL
 	requestHeader := http.Header{}
 	requestHeader.Set("Content-Type", "application/json")
 	execution.InputPayload = buildHTTPRequestPayloadForLog(http.MethodPost, requestURL, requestHeader, requestBody)
@@ -1371,7 +1385,10 @@ func executeChannelImageEditModelTest(ctx context.Context, channel *model.Channe
 		return execution
 	}
 
-	requestURL := resolveChannelEndpointURL(channel.ResolveAPIBaseURL(model.ChannelModelEndpointImageEdit), model.ChannelModelEndpointImageEdit)
+	baseURL := channel.ResolveAPIBaseURL(model.ChannelModelEndpointImageEdit)
+	requestURL := resolveChannelEndpointURL(baseURL, model.ChannelModelEndpointImageEdit)
+	execution.BaseURL = baseURL
+	execution.RequestURL = requestURL
 	if ctx == nil {
 		ctx = context.Background()
 	}
@@ -1458,7 +1475,10 @@ func executeChannelAudioModelTest(ctx context.Context, channel *model.Channel, m
 		execution.OutputPayload = marshalJSONForLog(map[string]any{"error": err.Error()})
 		return execution
 	}
-	requestURL := resolveChannelEndpointURL(channel.ResolveAPIBaseURL("/v1/audio/speech"), "/v1/audio/speech")
+	baseURL := channel.ResolveAPIBaseURL("/v1/audio/speech")
+	requestURL := resolveChannelEndpointURL(baseURL, "/v1/audio/speech")
+	execution.BaseURL = baseURL
+	execution.RequestURL = requestURL
 	requestHeader := http.Header{}
 	requestHeader.Set("Content-Type", "application/json")
 	requestHeader.Set("Accept", "audio/mpeg")
@@ -1638,7 +1658,10 @@ func executeChannelRealtimeModelTest(ctx context.Context, channel *model.Channel
 	relayMeta.OriginModelName = strings.TrimSpace(modelName)
 	relayMeta.ActualModelName = actualModelName
 
-	requestURL := resolveChannelEndpointURL(channel.ResolveAPIBaseURL(model.ChannelModelEndpointRealtime), model.ChannelModelEndpointRealtime)
+	baseURL := channel.ResolveAPIBaseURL(model.ChannelModelEndpointRealtime)
+	requestURL := resolveChannelEndpointURL(baseURL, model.ChannelModelEndpointRealtime)
+	execution.BaseURL = baseURL
+	execution.RequestURL = requestURL
 	if requestURL == "" {
 		execution.Err = fmt.Errorf("未找到 realtime 测试地址")
 		execution.OutputPayload = marshalJSONForLog(map[string]any{"error": execution.Err.Error()})
@@ -1770,6 +1793,7 @@ func executeChannelVideoModelTest(ctx context.Context, channel *model.Channel, m
 		return execution
 	}
 	baseURL := channel.ResolveAPIBaseURL("/v1/videos")
+	execution.BaseURL = baseURL
 	if strings.TrimSpace(baseURL) == "" {
 		execution.Err = fmt.Errorf("未找到可用于视频模型测试的 Base URL")
 		execution.OutputPayload = marshalJSONForLog(map[string]any{"error": execution.Err.Error()})
@@ -1795,6 +1819,7 @@ func executeChannelVideoModelTest(ctx context.Context, channel *model.Channel, m
 	}
 
 	requestURL := resolveChannelEndpointURL(baseURL, "/v1/videos")
+	execution.RequestURL = requestURL
 	if ctx == nil {
 		ctx = context.Background()
 	}

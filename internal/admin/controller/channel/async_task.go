@@ -230,14 +230,16 @@ func executeChannelModelTestTask(ctx context.Context, task *model.AsyncTask) (st
 		return "", err
 	}
 	resultPayload := map[string]any{
-		"channel_id": channelID,
-		"model":      testResult.Model,
-		"endpoint":   testResult.Endpoint,
-		"is_stream":  testResult.IsStream,
-		"status":     testResult.Status,
-		"supported":  testResult.Supported,
-		"message":    testResult.Message,
-		"latency_ms": testResult.LatencyMs,
+		"channel_id":  channelID,
+		"model":       testResult.Model,
+		"endpoint":    testResult.Endpoint,
+		"is_stream":   testResult.IsStream,
+		"status":      testResult.Status,
+		"supported":   testResult.Supported,
+		"message":     testResult.Message,
+		"latency_ms":  testResult.LatencyMs,
+		"base_url":    execution.BaseURL,
+		"request_url": execution.RequestURL,
 	}
 	if strings.TrimSpace(testResult.ArtifactPath) != "" {
 		resultPayload["artifact_name"] = testResult.ArtifactName
@@ -273,9 +275,10 @@ func executeChannelRefreshModelsTask(task *model.AsyncTask) (string, error) {
 		return "", err
 	}
 	return marshalJSONForLog(map[string]any{
-		"channel_id": channelID,
-		"models_url": fetchTrace.ModelsURL,
-		"count":      len(fetchedRows),
+		"channel_id":   channelID,
+		"api_base_url": runtimeChannel.ResolveAPIBaseURL(""),
+		"models_url":   fetchTrace.ModelsURL,
+		"count":        len(fetchedRows),
 	}), nil
 }
 
@@ -297,8 +300,10 @@ func executeChannelRefreshBalanceTask(task *model.AsyncTask) (string, error) {
 		return "", err
 	}
 	return marshalJSONForLog(map[string]any{
-		"channel_id": channelID,
-		"balance":    balance,
+		"channel_id":       channelID,
+		"account_base_url": channelRow.ResolveAccountBaseURL(),
+		"balance_urls":     resolveChannelBalanceRequestURLs(channelRow),
+		"balance":          balance,
 	}), nil
 }
 
