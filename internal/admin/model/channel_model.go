@@ -14,21 +14,22 @@ const (
 )
 
 type ChannelModel struct {
-	ChannelId     string   `json:"channel_id" gorm:"primaryKey;type:varchar(64);index"`
-	Model         string   `json:"model" gorm:"primaryKey;type:varchar(255)"`
-	UpstreamModel string   `json:"upstream_model" gorm:"type:varchar(255);default:'';index"`
-	Provider      string   `json:"provider,omitempty" gorm:"type:varchar(128);default:'';index"`
-	Type          string   `json:"type" gorm:"type:varchar(32);default:'text'"`
-	Endpoint      string   `json:"endpoint" gorm:"type:varchar(255);default:''"`
-	Endpoints     []string `json:"endpoints,omitempty" gorm:"-"`
-	Inactive      bool     `json:"inactive,omitempty" gorm:"not null;default:false;index"`
-	Selected      bool     `json:"selected" gorm:"default:false;index"`
-	InputPrice    *float64 `json:"input_price,omitempty" gorm:"type:double precision"`
-	OutputPrice   *float64 `json:"output_price,omitempty" gorm:"type:double precision"`
-	PriceUnit     string   `json:"price_unit,omitempty" gorm:"type:varchar(64);default:''"`
-	Currency      string   `json:"currency,omitempty" gorm:"type:varchar(16);default:''"`
-	SortOrder     int      `json:"sort_order" gorm:"default:0"`
-	UpdatedAt     int64    `json:"updated_at" gorm:"bigint"`
+	ChannelId       string                              `json:"channel_id" gorm:"primaryKey;type:varchar(64);index"`
+	Model           string                              `json:"model" gorm:"primaryKey;type:varchar(255)"`
+	UpstreamModel   string                              `json:"upstream_model" gorm:"type:varchar(255);default:'';index"`
+	Provider        string                              `json:"provider,omitempty" gorm:"type:varchar(128);default:'';index"`
+	Type            string                              `json:"type" gorm:"type:varchar(32);default:'text'"`
+	Endpoint        string                              `json:"endpoint" gorm:"type:varchar(255);default:''"`
+	Endpoints       []string                            `json:"endpoints,omitempty" gorm:"-"`
+	Inactive        bool                                `json:"inactive,omitempty" gorm:"not null;default:false;index"`
+	Selected        bool                                `json:"selected" gorm:"default:false;index"`
+	InputPrice      *float64                            `json:"input_price,omitempty" gorm:"type:double precision"`
+	OutputPrice     *float64                            `json:"output_price,omitempty" gorm:"type:double precision"`
+	PriceUnit       string                              `json:"price_unit,omitempty" gorm:"type:varchar(64);default:''"`
+	Currency        string                              `json:"currency,omitempty" gorm:"type:varchar(16);default:''"`
+	PriceComponents []ProviderModelPriceComponentDetail `json:"price_components,omitempty" gorm:"-"`
+	SortOrder       int                                 `json:"sort_order" gorm:"default:0"`
+	UpdatedAt       int64                               `json:"updated_at" gorm:"bigint"`
 }
 
 func (ChannelModel) TableName() string {
@@ -126,6 +127,9 @@ func HydrateChannelsWithModels(db *gorm.DB, channels []*Channel) error {
 
 	rowsByChannelID, err := loadChannelModelRowsByChannelIDs(db, channelIDs)
 	if err != nil {
+		return err
+	}
+	if err := attachChannelModelPriceComponentsWithDB(db, rowsByChannelID); err != nil {
 		return err
 	}
 	for _, channel := range normalizedChannels {
@@ -321,7 +325,12 @@ func DeleteChannelModelsByChannelIDsWithDB(db *gorm.DB, channelIDs []string) err
 	if len(normalizedIDs) == 0 {
 		return nil
 	}
-	return db.Where("channel_id IN ?", normalizedIDs).Delete(&ChannelModel{}).Error
+	return db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("channel_id IN ?", normalizedIDs).Delete(&ChannelModelPriceComponent{}).Error; err != nil {
+			return err
+		}
+		return tx.Where("channel_id IN ?", normalizedIDs).Delete(&ChannelModel{}).Error
+	})
 }
 
 func EnsureChannelTestModelWithDB(db *gorm.DB, channelID string) error {
@@ -396,6 +405,57 @@ func loadChannelModelRowsByChannelIDs(db *gorm.DB, channelIDs []string) (map[str
 	return rowsByChannelID, nil
 }
 
+func attachChannelModelPriceComponentsWithDB(db *gorm.DB, rowsByChannelID map[string][]ChannelModel) error {
+	if db == nil || len(rowsByChannelID) == 0 {
+		return nil
+	}
+	channelIDs := make([]string, 0, len(rowsByChannelID))
+	for channelID := range rowsByChannelID {
+		if strings.TrimSpace(channelID) != "" {
+			channelIDs = append(channelIDs, strings.TrimSpace(channelID))
+		}
+	}
+	channelIDs = normalizeTrimmedValuesPreserveOrder(channelIDs)
+	if len(channelIDs) == 0 {
+		return nil
+	}
+	componentRows := make([]ChannelModelPriceComponent, 0)
+	if err := db.
+		Where("channel_id IN ?", channelIDs).
+		Order("channel_id asc, model asc, sort_order asc, component asc, condition asc").
+		Find(&componentRows).Error; err != nil {
+		return err
+	}
+	componentsByKey := make(map[string][]ProviderModelPriceComponentDetail, len(componentRows))
+	for _, row := range componentRows {
+		channelID := strings.TrimSpace(row.ChannelId)
+		modelName := strings.TrimSpace(row.Model)
+		component := strings.TrimSpace(strings.ToLower(row.Component))
+		if channelID == "" || modelName == "" || component == "" {
+			continue
+		}
+		componentsByKey[channelID+"\x00"+modelName] = append(componentsByKey[channelID+"\x00"+modelName], ProviderModelPriceComponentDetail{
+			Component:   component,
+			Condition:   strings.TrimSpace(row.Condition),
+			InputPrice:  row.InputPrice,
+			OutputPrice: row.OutputPrice,
+			PriceUnit:   strings.TrimSpace(strings.ToLower(row.PriceUnit)),
+			Currency:    strings.TrimSpace(strings.ToUpper(row.Currency)),
+			Source:      strings.TrimSpace(strings.ToLower(row.Source)),
+			SourceURL:   strings.TrimSpace(row.SourceURL),
+			SortOrder:   row.SortOrder,
+			UpdatedAt:   row.UpdatedAt,
+		})
+	}
+	for channelID, rows := range rowsByChannelID {
+		for i := range rows {
+			rows[i].PriceComponents = NormalizeProviderModelPriceComponents(componentsByKey[channelID+"\x00"+rows[i].Model])
+		}
+		rowsByChannelID[channelID] = rows
+	}
+	return nil
+}
+
 func normalizeTrimmedValuesPreserveOrder(values []string) []string {
 	if len(values) == 0 {
 		return []string{}
@@ -431,6 +491,13 @@ func listChannelModelRowsByChannelIDWithDB(db *gorm.DB, channelID string) ([]Cha
 		Find(&rows).Error; err != nil {
 		return nil, err
 	}
+	rowsByChannelID := map[string][]ChannelModel{
+		normalizedChannelID: rows,
+	}
+	if err := attachChannelModelPriceComponentsWithDB(db, rowsByChannelID); err != nil {
+		return nil, err
+	}
+	rows = rowsByChannelID[normalizedChannelID]
 	endpointStateByChannelID, err := loadChannelModelEndpointStateByChannelIDsWithDB(db, []string{normalizedChannelID})
 	if err != nil {
 		return nil, err
@@ -469,6 +536,13 @@ func ListChannelModelRowsPageWithDB(db *gorm.DB, channelID string, page int, pag
 		Find(&rows).Error; err != nil {
 		return nil, 0, err
 	}
+	rowsByChannelID := map[string][]ChannelModel{
+		normalizedChannelID: rows,
+	}
+	if err := attachChannelModelPriceComponentsWithDB(db, rowsByChannelID); err != nil {
+		return nil, 0, err
+	}
+	rows = rowsByChannelID[normalizedChannelID]
 	endpointStateByChannelID, err := loadChannelModelEndpointStateByChannelIDsWithDB(db, []string{normalizedChannelID})
 	if err != nil {
 		return nil, 0, err
@@ -539,6 +613,7 @@ endpointResolved:
 	row.Currency = normalizeChannelModelCurrency(row.Currency)
 	row.InputPrice = cloneNormalizedChannelModelPrice(row.InputPrice)
 	row.OutputPrice = cloneNormalizedChannelModelPrice(row.OutputPrice)
+	row.PriceComponents = NormalizeProviderModelPriceComponents(row.PriceComponents)
 }
 
 func applyChannelModelRows(channel *Channel, rows []ChannelModel) {
@@ -597,12 +672,38 @@ func replaceChannelModelRowsWithDB(db *gorm.DB, channelID string, rows []Channel
 	}
 	now := helper.GetTimestamp()
 	dbRows := make([]ChannelModel, 0, len(normalizedRows))
+	componentRows := make([]ChannelModelPriceComponent, 0)
 	for idx, row := range normalizedRows {
 		row.ChannelId = normalizedChannelID
 		row.SortOrder = idx + 1
 		row.UpdatedAt = now
 		normalizeChannelModelRow(&row)
 		completeChannelModelRowDefaults(&row, channelProtocol)
+		for componentIdx, component := range NormalizeProviderModelPriceComponents(row.PriceComponents) {
+			componentUpdatedAt := component.UpdatedAt
+			if componentUpdatedAt == 0 {
+				componentUpdatedAt = now
+			}
+			componentSortOrder := component.SortOrder
+			if componentSortOrder == 0 {
+				componentSortOrder = componentIdx + 1
+			}
+			componentRows = append(componentRows, ChannelModelPriceComponent{
+				ChannelId:   normalizedChannelID,
+				Model:       row.Model,
+				Component:   component.Component,
+				Condition:   component.Condition,
+				InputPrice:  component.InputPrice,
+				OutputPrice: component.OutputPrice,
+				PriceUnit:   component.PriceUnit,
+				Currency:    component.Currency,
+				Source:      component.Source,
+				SourceURL:   component.SourceURL,
+				SortOrder:   componentSortOrder,
+				UpdatedAt:   componentUpdatedAt,
+			})
+		}
+		row.PriceComponents = nil
 		dbRows = append(dbRows, row)
 	}
 	return db.Transaction(func(tx *gorm.DB) error {
@@ -612,10 +713,19 @@ func replaceChannelModelRowsWithDB(db *gorm.DB, channelID string, rows []Channel
 		if err := tx.Where("channel_id = ?", normalizedChannelID).Delete(&ChannelModel{}).Error; err != nil {
 			return err
 		}
+		if err := tx.Where("channel_id = ?", normalizedChannelID).Delete(&ChannelModelPriceComponent{}).Error; err != nil {
+			return err
+		}
 		if len(dbRows) == 0 {
 			return nil
 		}
-		return tx.Select("*").Create(&dbRows).Error
+		if err := tx.Select("*").Create(&dbRows).Error; err != nil {
+			return err
+		}
+		if len(componentRows) == 0 {
+			return nil
+		}
+		return tx.Select("*").Create(&componentRows).Error
 	})
 }
 

@@ -309,6 +309,28 @@ func TestResolveTraditionalImagePromptInputPrice(t *testing.T) {
 	}
 }
 
+func TestResolveTraditionalImagePromptInputPriceUsesChannelOverride(t *testing.T) {
+	pricing := adminmodel.ResolvedModelPricing{
+		Model:                        "gpt-image-2",
+		InputPrice:                   0.02,
+		HasChannelOverride:           true,
+		HasChannelInputPriceOverride: true,
+		PriceComponents: []adminmodel.ProviderModelPriceComponentDetail{
+			{
+				Component:  adminmodel.ProviderModelPriceComponentText,
+				InputPrice: 0.005,
+			},
+		},
+	}
+	got, err := resolveTraditionalImagePromptInputPrice(pricing)
+	if err != nil {
+		t.Fatalf("resolveTraditionalImagePromptInputPrice() error = %v", err)
+	}
+	if got != 0.02 {
+		t.Fatalf("resolveTraditionalImagePromptInputPrice() = %v, want 0.02", got)
+	}
+}
+
 func TestResolveTraditionalImagePromptInputPriceRequiresTextComponentPrice(t *testing.T) {
 	pricing := adminmodel.ResolvedModelPricing{
 		Model:      "gpt-image-2",

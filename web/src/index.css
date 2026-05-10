@@ -972,7 +972,7 @@ body,
 }
 
 .ui.modal.router-channel-model-editor-modal {
-    width: 640px;
+    width: 860px;
     max-width: calc(100vw - 32px);
 }
 
@@ -987,6 +987,7 @@ body,
     border-radius: 12px;
     background: #fafbfc;
     padding: 14px;
+    min-width: 0;
 }
 
 .router-channel-model-editor-section-title {
@@ -1043,6 +1044,39 @@ body,
 .router-channel-model-editor-provider-row .ui.selection.dropdown {
     flex: 1 1 240px;
     min-width: 240px;
+}
+
+.router-channel-model-editor-table-wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    padding-bottom: 2px;
+}
+
+.ui.table.router-channel-model-editor-pricing-table {
+    width: 100% !important;
+    min-width: 820px;
+    table-layout: fixed;
+    margin-bottom: 0 !important;
+}
+
+.ui.table.router-channel-model-editor-pricing-table th,
+.ui.table.router-channel-model-editor-pricing-table td {
+    font-size: 12px !important;
+    vertical-align: middle !important;
+    word-break: break-word;
+}
+
+.ui.table.router-channel-model-editor-pricing-table .ui.input.router-modal-input,
+.ui.table.router-channel-model-editor-pricing-table .ui.selection.dropdown.router-modal-dropdown {
+    width: 100% !important;
+    min-width: 0 !important;
+}
+
+.ui.table.router-channel-model-editor-pricing-table .ui.selection.dropdown.router-modal-dropdown,
+.ui.table.router-channel-model-editor-pricing-table .ui.selection.dropdown.router-modal-dropdown > .text {
+    font-size: 12px !important;
 }
 
 .ui.form textarea.router-modal-textarea {

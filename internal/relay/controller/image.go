@@ -93,6 +93,9 @@ func normalizeTraditionalImageBillingQuality(raw string) string {
 }
 
 func resolveTraditionalImagePromptInputPrice(pricing adminmodel.ResolvedModelPricing) (float64, error) {
+	if pricing.HasChannelInputPriceOverride && pricing.InputPrice > 0 {
+		return pricing.InputPrice, nil
+	}
 	for _, component := range pricing.PriceComponents {
 		if strings.TrimSpace(strings.ToLower(component.Component)) != adminmodel.ProviderModelPriceComponentText {
 			continue

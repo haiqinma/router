@@ -637,6 +637,34 @@ const normalizeComplexPriceComponents = (components) => {
   });
 };
 
+const mergePriceComponentOverrides = (baseComponents, overrideComponents) => {
+  const merged = normalizeComplexPriceComponents(baseComponents);
+  const indexByKey = new Map(
+    merged.map((component, index) => [
+      `${component.component || ''}\u0000${component.condition || ''}`,
+      index,
+    ]),
+  );
+  normalizeComplexPriceComponents(overrideComponents).forEach((component) => {
+    const key = `${component.component || ''}\u0000${component.condition || ''}`;
+    const nextComponent = {
+      ...component,
+      source: component.source || 'channel_override',
+    };
+    if (indexByKey.has(key)) {
+      merged[indexByKey.get(key)] = nextComponent;
+      return;
+    }
+    indexByKey.set(key, merged.length);
+    merged.push(nextComponent);
+  });
+  return normalizeComplexPriceComponents(merged).filter(
+    (component) =>
+      Number(component.input_price || 0) > 0 ||
+      Number(component.output_price || 0) > 0,
+  );
+};
+
 const buildProviderCatalogIndex = (items) => {
   const providerOptions = [];
   const modelOwners = {};
@@ -932,6 +960,7 @@ const normalizeChannelModelConfigRow = (row, protocol) => {
     output_price: normalizePriceOverrideValue(row.output_price),
     price_unit: normalizePriceUnitValue(row.price_unit),
     currency: normalizeCurrencyValue(row.currency),
+    price_components: normalizeComplexPriceComponents(row.price_components),
   };
 };
 
@@ -1881,9 +1910,21 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
             return;
           }
           seen.add(uniqueKey);
+          const priceComponents = mergePriceComponentOverrides(
+            detail.price_components,
+            row?.price_components,
+          );
+          if (priceComponents.length === 0) {
+            return;
+          }
           details.push({
             provider: providerId,
             ...detail,
+            price_components: priceComponents,
+            source:
+              (row?.price_components || []).length > 0
+                ? 'channel_override'
+                : detail.source,
           });
         });
       });
@@ -3549,6 +3590,18 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
                 [field]: normalizePriceOverrideValue(value),
               };
             }
+            if (field === 'price_unit') {
+              return {
+                ...row,
+                price_unit: normalizePriceUnitValue(value),
+              };
+            }
+            if (field === 'price_components') {
+              return {
+                ...row,
+                price_components: normalizeComplexPriceComponents(value),
+              };
+            }
             if (field === 'provider') {
               return {
                 ...row,
@@ -4288,7 +4341,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
         canSelectChannelModel={canSelectChannelModel}
         toggleModelSelection={toggleModelSelection}
         getComplexPricingDetailsForModel={getComplexPricingDetailsForModel}
-        openComplexPricingModal={openComplexPricingModal}
         saveDetailModelsConfig={saveDetailModelsConfig}
       />
       <ChannelComplexPricingModal

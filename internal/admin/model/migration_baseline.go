@@ -15,6 +15,7 @@ func runMainBaselineMigrationWithDB(tx *gorm.DB) error {
 		&User{},
 		&Channel{},
 		&ChannelModel{},
+		&ChannelModelPriceComponent{},
 		&ChannelTest{},
 		&TopupOrder{},
 		&AsyncTask{},

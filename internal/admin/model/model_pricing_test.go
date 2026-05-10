@@ -70,11 +70,125 @@ func TestResolveChannelModelPricingUsesProviderDefaultAndChannelOverride(t *test
 	if pricing.InputPrice != overrideInputPrice {
 		t.Fatalf("expected input override %.6f, got %.6f", overrideInputPrice, pricing.InputPrice)
 	}
+	if !pricing.HasChannelInputPriceOverride {
+		t.Fatalf("expected HasChannelInputPriceOverride to be true")
+	}
 	if pricing.OutputPrice != 0.015 {
 		t.Fatalf("expected provider output price 0.015000, got %.6f", pricing.OutputPrice)
 	}
 	if pricing.Type != ProviderModelTypeText {
 		t.Fatalf("expected text type, got %q", pricing.Type)
+	}
+}
+
+func TestResolveImageRequestPricingKeepsChannelOverrideAboveProviderComponent(t *testing.T) {
+	overrideInputPrice := 0.02
+	overrideOutputPrice := 0.05
+	pricing := ResolveImageRequestPricing(ResolvedModelPricing{
+		Model:                         "gpt-image-2",
+		Provider:                      "openai",
+		Type:                          ProviderModelTypeImage,
+		InputPrice:                    overrideInputPrice,
+		OutputPrice:                   overrideOutputPrice,
+		PriceUnit:                     ProviderPriceUnitPer1KTokens,
+		Currency:                      ProviderPriceCurrencyUSD,
+		Source:                        "channel_override",
+		HasChannelOverride:            true,
+		HasChannelInputPriceOverride:  true,
+		HasChannelOutputPriceOverride: true,
+		PriceComponents: []ProviderModelPriceComponentDetail{
+			{
+				Component:   ProviderModelPriceComponentImageGeneration,
+				Condition:   "quality=high;size=1024x1024",
+				InputPrice:  0.008,
+				OutputPrice: 0.03,
+				PriceUnit:   ProviderPriceUnitPer1KTokens,
+				Currency:    ProviderPriceCurrencyUSD,
+			},
+		},
+	}, "1024x1024", "high")
+	if pricing.InputPrice != overrideInputPrice {
+		t.Fatalf("expected channel input override %.6f, got %.6f", overrideInputPrice, pricing.InputPrice)
+	}
+	if pricing.OutputPrice != overrideOutputPrice {
+		t.Fatalf("expected channel output override %.6f, got %.6f", overrideOutputPrice, pricing.OutputPrice)
+	}
+	if pricing.Source != "channel_override" {
+		t.Fatalf("expected channel_override source, got %q", pricing.Source)
+	}
+	if pricing.MatchedComponent != ProviderModelPriceComponentImageGeneration {
+		t.Fatalf("expected matched image component, got %q", pricing.MatchedComponent)
+	}
+}
+
+func TestResolveChannelModelPricingUsesChannelPriceComponents(t *testing.T) {
+	restore := setModelPricingIndexForTest(providerModelPricingIndex{
+		byProviderAndModel: map[string]providerModelPricingEntry{
+			"openai:gpt-image-2": {
+				Provider: "openai",
+				Detail: ProviderModelDetail{
+					Model:       "gpt-image-2",
+					Type:        ProviderModelTypeImage,
+					InputPrice:  0.008,
+					OutputPrice: 0.03,
+					PriceUnit:   ProviderPriceUnitPer1KTokens,
+					Currency:    ProviderPriceCurrencyUSD,
+					PriceComponents: []ProviderModelPriceComponentDetail{
+						{Component: ProviderModelPriceComponentText, InputPrice: 0.005, PriceUnit: ProviderPriceUnitPer1KTokens},
+						{Component: ProviderModelPriceComponentImageGeneration, OutputPrice: 0.03, PriceUnit: ProviderPriceUnitPer1KTokens},
+					},
+				},
+			},
+		},
+		byModel: map[string][]providerModelPricingEntry{
+			"gpt-image-2": {
+				{
+					Provider: "openai",
+					Detail: ProviderModelDetail{
+						Model:       "gpt-image-2",
+						Type:        ProviderModelTypeImage,
+						InputPrice:  0.008,
+						OutputPrice: 0.03,
+						PriceUnit:   ProviderPriceUnitPer1KTokens,
+						Currency:    ProviderPriceCurrencyUSD,
+						PriceComponents: []ProviderModelPriceComponentDetail{
+							{Component: ProviderModelPriceComponentText, InputPrice: 0.005, PriceUnit: ProviderPriceUnitPer1KTokens},
+							{Component: ProviderModelPriceComponentImageGeneration, OutputPrice: 0.03, PriceUnit: ProviderPriceUnitPer1KTokens},
+						},
+					},
+				},
+			},
+		},
+	})
+	defer restore()
+
+	pricing, err := ResolveChannelModelPricing(0, []ChannelModel{
+		{
+			Model:         "gpt-image-2",
+			UpstreamModel: "gpt-image-2",
+			Selected:      true,
+			PriceComponents: []ProviderModelPriceComponentDetail{
+				{Component: ProviderModelPriceComponentText, InputPrice: 0.006, PriceUnit: ProviderPriceUnitPer1KTokens},
+				{Component: ProviderModelPriceComponentImageGeneration, OutputPrice: 0.05, PriceUnit: ProviderPriceUnitPer1KTokens},
+			},
+		},
+	}, "gpt-image-2")
+	if err != nil {
+		t.Fatalf("ResolveChannelModelPricing returned error: %v", err)
+	}
+	if !pricing.HasChannelComponentOverride {
+		t.Fatal("expected channel component override")
+	}
+	text, ok := selectProviderPriceComponent(pricing.PriceComponents, ProviderModelPriceComponentText, nil)
+	if !ok || text.InputPrice != 0.006 {
+		t.Fatalf("expected text component input override 0.006, got %#v", text)
+	}
+	image, ok := selectProviderPriceComponent(pricing.PriceComponents, ProviderModelPriceComponentImageGeneration, nil)
+	if !ok || image.OutputPrice != 0.05 {
+		t.Fatalf("expected image component output override 0.05, got %#v", image)
+	}
+	if text.Source != "channel_override" || image.Source != "channel_override" {
+		t.Fatalf("expected channel_override sources, got text=%q image=%q", text.Source, image.Source)
 	}
 }
 

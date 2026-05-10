@@ -67,36 +67,6 @@ const ChannelComplexPricingModal = ({
                 <Table.Header>
                   <Table.Row>
                     <Table.HeaderCell>
-                      {t('channel.edit.model_selector.pricing_detail_table.input_price')}
-                    </Table.HeaderCell>
-                    <Table.HeaderCell>
-                      {t('channel.edit.model_selector.pricing_detail_table.output_price')}
-                    </Table.HeaderCell>
-                    <Table.HeaderCell>
-                      {t('channel.edit.model_selector.pricing_detail_table.price_unit')}
-                    </Table.HeaderCell>
-                    <Table.HeaderCell>
-                      {t('channel.edit.model_selector.pricing_detail_table.currency')}
-                    </Table.HeaderCell>
-                    <Table.HeaderCell>
-                      {t('channel.edit.model_selector.pricing_detail_table.source')}
-                    </Table.HeaderCell>
-                  </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                  <Table.Row>
-                    <Table.Cell>{detail.input_price || 0}</Table.Cell>
-                    <Table.Cell>{detail.output_price || 0}</Table.Cell>
-                    <Table.Cell>{detail.price_unit || '-'}</Table.Cell>
-                    <Table.Cell>{detail.currency || 'USD'}</Table.Cell>
-                    <Table.Cell>{detail.source || 'manual'}</Table.Cell>
-                  </Table.Row>
-                </Table.Body>
-              </Table>
-              <Table celled compact className='router-detail-subtable'>
-                <Table.Header>
-                  <Table.Row>
-                    <Table.HeaderCell>
                       {t('channel.edit.model_selector.pricing_detail_table.component')}
                     </Table.HeaderCell>
                     <Table.HeaderCell>

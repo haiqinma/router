@@ -621,6 +621,13 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 			},
 		},
 		{
+			Version:     "202605101650_channel_model_price_components",
+			Description: "add channel-level model price component overrides",
+			Up: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&ChannelModelPriceComponent{})
+			},
+		},
+		{
 			Version:     "202605041030_provider_model_supported_endpoints",
 			Description: "add provider model supported endpoints as channel endpoint candidates",
 			Up: func(tx *gorm.DB) error {
