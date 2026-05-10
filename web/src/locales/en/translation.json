@@ -582,7 +582,7 @@
         "table": {
           "model": "Model",
           "endpoint": "Endpoint",
-          "base_url": "Endpoint Address",
+          "base_url": "Access Address",
           "base_url_placeholder": "Leave empty to use API Base URL",
           "enabled": "Enabled",
           "latest_test": "Latest Test",

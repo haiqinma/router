@@ -582,7 +582,7 @@
         "table": {
           "model": "模型",
           "endpoint": "端点",
-          "base_url": "端点地址",
+          "base_url": "访问地址",
           "base_url_placeholder": "留空时使用模型访问地址",
           "enabled": "启用",
           "latest_test": "最近测试",
@@ -645,7 +645,7 @@
       "api_base_url_placeholder": "留空时使用协议默认地址；已有老渠道会继续兼容旧地址配置",
       "account_base_url": "账户地址",
       "account_base_url_placeholder": "用于余额、账单、续费等账户侧访问，留空时沿用模型访问地址或兼容旧配置",
-      "address_routing_hint": "请求转发默认使用模型访问地址；如某个渠道端点单独配置了地址，则优先使用端点地址。账户相关请求使用账户地址。",
+      "address_routing_hint": "请求转发默认使用模型访问地址；如某个渠道端点单独配置了访问地址，则优先使用该地址。账户相关请求使用账户地址。",
       "key": "密钥",
       "key_placeholder": "请输入密钥",
       "buttons": {
