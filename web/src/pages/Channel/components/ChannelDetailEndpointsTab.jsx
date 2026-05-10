@@ -34,6 +34,7 @@ const ChannelDetailEndpointsTab = ({
     ]),
   );
   const [testStatusFilter, setTestStatusFilter] = useState('all');
+  const [baseURLDrafts, setBaseURLDrafts] = useState({});
   const testStatusOptions = useMemo(
     () => [
       {
@@ -78,6 +79,12 @@ const ChannelDetailEndpointsTab = ({
     modelTestResultsByKey,
     testStatusFilter,
   ]);
+  const resolveBaseURLDraft = (row, endpointKey) => {
+    if (Object.prototype.hasOwnProperty.call(baseURLDrafts, endpointKey)) {
+      return baseURLDrafts[endpointKey];
+    }
+    return row.base_url || '';
+  };
   return (
     <section className='router-entity-detail-section'>
       <div className='router-entity-detail-section-header'>
@@ -129,6 +136,9 @@ const ChannelDetailEndpointsTab = ({
               <Table.HeaderCell>
                 {t('channel.edit.endpoint_capabilities.table.endpoint')}
               </Table.HeaderCell>
+              <Table.HeaderCell>
+                {t('channel.edit.endpoint_capabilities.table.base_url')}
+              </Table.HeaderCell>
               <Table.HeaderCell textAlign='center'>
                 {t('channel.edit.endpoint_capabilities.table.enabled')}
               </Table.HeaderCell>
@@ -146,7 +156,7 @@ const ChannelDetailEndpointsTab = ({
           <Table.Body>
             {filteredRows.length === 0 ? (
               <Table.Row>
-                <Table.Cell className='router-empty-cell' colSpan={6}>
+                <Table.Cell className='router-empty-cell' colSpan={7}>
                   {channelEndpointsLoading
                     ? t('channel.edit.endpoint_capabilities.loading')
                     : channelEndpoints.length === 0
@@ -169,6 +179,7 @@ const ChannelDetailEndpointsTab = ({
                     : latestResult.status || 'unsupported'
                   : 'untested';
                 const isMutating = endpointMutatingKey === endpointKey;
+                const draftBaseURL = resolveBaseURLDraft(row, endpointKey);
                 return (
                   <Table.Row key={endpointKey}>
                     <Table.Cell title={row.model}>
@@ -177,12 +188,43 @@ const ChannelDetailEndpointsTab = ({
                     <Table.Cell title={row.endpoint}>
                       <span className='router-cell-truncate'>{row.endpoint}</span>
                     </Table.Cell>
+                    <Table.Cell>
+                      <Form.Input
+                        className='router-section-input'
+                        placeholder={t(
+                          'channel.edit.endpoint_capabilities.table.base_url_placeholder',
+                        )}
+                        value={draftBaseURL}
+                        readOnly={endpointCapabilityReadonly || isMutating}
+                        onChange={(e, { value }) => {
+                          setBaseURLDrafts((prev) => ({
+                            ...prev,
+                            [endpointKey]: (value || '').toString(),
+                          }));
+                        }}
+                        onBlur={() => {
+                          const normalizedCurrent = (row.base_url || '').toString().trim();
+                          const normalizedNext = (draftBaseURL || '').toString().trim();
+                          if (normalizedCurrent === normalizedNext) {
+                            return;
+                          }
+                          updateChannelEndpointCapability(
+                            {
+                              ...row,
+                              base_url: normalizedNext,
+                            },
+                            { base_url: normalizedNext, enabled: row.enabled === true },
+                            { skipConfirm: true },
+                          );
+                        }}
+                      />
+                    </Table.Cell>
                     <Table.Cell textAlign='center'>
                       <Checkbox
                         checked={row.enabled === true}
                         disabled={endpointCapabilityReadonly || isMutating}
                         onChange={(e, { checked }) =>
-                          updateChannelEndpointCapability(row, !!checked)
+                          updateChannelEndpointCapability(row, { enabled: !!checked })
                         }
                       />
                     </Table.Cell>

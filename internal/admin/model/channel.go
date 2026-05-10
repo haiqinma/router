@@ -8,7 +8,6 @@ import (
 
 	"github.com/yeying-community/router/common/random"
 	relaychannel "github.com/yeying-community/router/internal/relay/channel"
-	"github.com/yeying-community/router/internal/relay/relaymode"
 	"gorm.io/gorm"
 )
 
@@ -56,18 +55,17 @@ type Channel struct {
 }
 
 type ChannelConfig struct {
-	Region            string            `json:"region,omitempty"`
-	SK                string            `json:"sk,omitempty"`
-	AK                string            `json:"ak,omitempty"`
-	UserID            string            `json:"user_id,omitempty"`
-	APIVersion        string            `json:"api_version,omitempty"`
-	LibraryID         string            `json:"library_id,omitempty"`
-	Plugin            string            `json:"plugin,omitempty"`
-	APIBaseURL        string            `json:"api_base_url,omitempty"`
-	AccountBaseURL    string            `json:"account_base_url,omitempty"`
-	EndpointBaseURLs  map[string]string `json:"endpoint_base_urls,omitempty"`
-	VertexAIProjectID string            `json:"vertex_ai_project_id,omitempty"`
-	VertexAIADC       string            `json:"vertex_ai_adc,omitempty"`
+	Region            string `json:"region,omitempty"`
+	SK                string `json:"sk,omitempty"`
+	AK                string `json:"ak,omitempty"`
+	UserID            string `json:"user_id,omitempty"`
+	APIVersion        string `json:"api_version,omitempty"`
+	LibraryID         string `json:"library_id,omitempty"`
+	Plugin            string `json:"plugin,omitempty"`
+	APIBaseURL        string `json:"api_base_url,omitempty"`
+	AccountBaseURL    string `json:"account_base_url,omitempty"`
+	VertexAIProjectID string `json:"vertex_ai_project_id,omitempty"`
+	VertexAIADC       string `json:"vertex_ai_adc,omitempty"`
 }
 
 func normalizeConfiguredBaseURL(raw string) string {
@@ -80,19 +78,6 @@ func (config ChannelConfig) GetAPIBaseURL() string {
 
 func (config ChannelConfig) GetAccountBaseURL() string {
 	return normalizeConfiguredBaseURL(config.AccountBaseURL)
-}
-
-func (config ChannelConfig) ResolveEndpointBaseURL(requestPath string) string {
-	if len(config.EndpointBaseURLs) == 0 {
-		return ""
-	}
-	normalizedPath := relaymode.NormalizePath(requestPath)
-	for endpoint, baseURL := range config.EndpointBaseURLs {
-		if strings.EqualFold(relaymode.NormalizePath(endpoint), normalizedPath) {
-			return normalizeConfiguredBaseURL(baseURL)
-		}
-	}
-	return ""
 }
 
 func (channel *Channel) NormalizeProtocol() {
@@ -201,13 +186,17 @@ func (channel *Channel) GetBaseURL() string {
 }
 
 func (channel *Channel) ResolveAPIBaseURL(requestPath string) string {
+	return channel.ResolveAPIBaseURLForModel(requestPath)
+}
+
+func (channel *Channel) ResolveAPIBaseURLForModel(requestPath string, modelCandidates ...string) string {
 	if channel == nil {
 		return ""
 	}
+	if endpointBaseURL := CacheGetChannelModelEndpointBaseURL(strings.TrimSpace(channel.Id), requestPath, modelCandidates...); endpointBaseURL != "" {
+		return endpointBaseURL
+	}
 	if cfg, err := channel.LoadConfig(); err == nil {
-		if endpointBaseURL := cfg.ResolveEndpointBaseURL(requestPath); endpointBaseURL != "" {
-			return endpointBaseURL
-		}
 		if apiBaseURL := cfg.GetAPIBaseURL(); apiBaseURL != "" {
 			return apiBaseURL
 		}

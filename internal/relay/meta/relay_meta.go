@@ -63,7 +63,11 @@ func GetByContext(c *gin.Context) *Meta {
 	if ok {
 		meta.Config = cfg.(model.ChannelConfig)
 	}
-	if endpointBaseURL := meta.Config.ResolveEndpointBaseURL(c.Request.URL.Path); endpointBaseURL != "" {
+	if endpointBaseURL := model.CacheGetChannelModelEndpointBaseURL(
+		meta.ChannelId,
+		c.Request.URL.Path,
+		meta.OriginModelName,
+	); endpointBaseURL != "" {
 		meta.BaseURL = endpointBaseURL
 		c.Set(ctxkey.BaseURL, endpointBaseURL)
 	} else if apiBaseURL := meta.Config.GetAPIBaseURL(); apiBaseURL != "" {

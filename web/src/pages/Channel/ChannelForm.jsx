@@ -87,62 +87,6 @@ const normalizeBaseURL = (baseURL) =>
 const resolveEffectiveAPIBaseURL = (inputs, config) =>
   normalizeBaseURL(config?.api_base_url || inputs?.base_url || '');
 
-const normalizeEndpointPath = (value) => {
-  const trimmed = (value || '').toString().trim();
-  if (trimmed === '') {
-    return '';
-  }
-  return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-};
-
-const normalizeEndpointBaseURLRows = (rows) => {
-  if (!Array.isArray(rows)) {
-    return [];
-  }
-  const seen = new Set();
-  const result = [];
-  rows.forEach((row) => {
-    const endpoint = normalizeEndpointPath(row?.endpoint);
-    const baseURL = normalizeBaseURL(row?.base_url);
-    if (endpoint === '' || baseURL === '') {
-      return;
-    }
-    const dedupeKey = `${endpoint}::${baseURL}`;
-    if (seen.has(dedupeKey)) {
-      return;
-    }
-    seen.add(dedupeKey);
-    result.push({
-      endpoint,
-      base_url: baseURL,
-    });
-  });
-  return result;
-};
-
-const buildEndpointBaseURLRowsFromConfig = (endpointBaseURLs) => {
-  if (!endpointBaseURLs || typeof endpointBaseURLs !== 'object') {
-    return [];
-  }
-  return normalizeEndpointBaseURLRows(
-    Object.entries(endpointBaseURLs).map(([endpoint, baseURL]) => ({
-      endpoint,
-      base_url: baseURL,
-    })),
-  );
-};
-
-const buildEndpointBaseURLMap = (rows) => {
-  const normalizedRows = normalizeEndpointBaseURLRows(rows);
-  if (normalizedRows.length === 0) {
-    return undefined;
-  }
-  return normalizedRows.reduce((acc, row) => {
-    acc[row.endpoint] = row.base_url;
-    return acc;
-  }, {});
-};
-
 const CHANNEL_IDENTIFIER_PATTERN = /^[a-z0-9-]+$/;
 const CHANNEL_IDENTIFIER_MAX_LENGTH = 64;
 const CHANNEL_DETAIL_MODEL_COLUMN_WIDTHS = [
@@ -156,12 +100,13 @@ const CHANNEL_DETAIL_MODEL_COLUMN_WIDTHS = [
   '8%',
 ];
 const CHANNEL_ENDPOINT_COLUMN_WIDTHS = [
-  '20%',
   '18%',
+  '16%',
+  '22%',
   '8%',
   '12%',
-  '28%',
   '14%',
+  '10%',
 ];
 const CHANNEL_MODEL_TEST_GROUP_COLUMN_WIDTHS = [
   '4%',
@@ -456,6 +401,7 @@ const normalizeChannelEndpointRows = (items) => {
       channel_id: (item.channel_id || '').toString().trim(),
       model,
       endpoint,
+      base_url: normalizeBaseURL(item.base_url),
       enabled: item.enabled === true,
       updated_at: Number(item.updated_at || 0),
     });
@@ -1611,7 +1557,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     useState(null);
   const [detailBasicSaving, setDetailBasicSaving] = useState(false);
   const [config, setConfig] = useState(CHANNEL_DEFAULT_CONFIG);
-  const [endpointBaseURLRows, setEndpointBaseURLRows] = useState([]);
   const [providerOptions, setProviderOptions] = useState([]);
   const [providerModelOwners, setProviderModelOwners] = useState({});
   const [providerModelDetailsIndex, setProviderModelDetailsIndex] = useState(
@@ -2253,35 +2198,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     setConfig((inputs) => ({ ...inputs, [name]: value }));
   };
 
-  const updateEndpointBaseURLRow = useCallback((index, field, value) => {
-    setEndpointBaseURLRows((rows) =>
-      rows.map((row, rowIndex) =>
-        rowIndex === index
-          ? {
-              ...row,
-              [field]: value || '',
-            }
-          : row,
-      ),
-    );
-  }, []);
-
-  const addEndpointBaseURLRow = useCallback(() => {
-    setEndpointBaseURLRows((rows) => [
-      ...rows,
-      {
-        endpoint: '',
-        base_url: '',
-      },
-    ]);
-  }, []);
-
-  const removeEndpointBaseURLRow = useCallback((index) => {
-    setEndpointBaseURLRows((rows) =>
-      rows.filter((_, rowIndex) => rowIndex !== index),
-    );
-  }, []);
-
   const keyField = useMemo(() => {
     if (inputs.protocol === 'awsclaude' || inputs.protocol === 'vertexai') {
       return null;
@@ -2345,16 +2261,10 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
         api_base_url: normalizeBaseURL(baseConfig.api_base_url),
         account_base_url: normalizeBaseURL(baseConfig.account_base_url),
       };
-      const endpointBaseURLMap = buildEndpointBaseURLMap(endpointBaseURLRows);
-      if (endpointBaseURLMap && Object.keys(endpointBaseURLMap).length > 0) {
-        submitConfig.endpoint_base_urls = endpointBaseURLMap;
-      } else {
-        delete submitConfig.endpoint_base_urls;
-      }
       localInputs.config = JSON.stringify(submitConfig);
       return localInputs;
     },
-    [buildEffectiveKey, endpointBaseURLRows],
+    [buildEffectiveKey],
   );
 
   const buildChannelPayload = useCallback(() => {
@@ -2726,9 +2636,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
             api_base_url: normalizeBaseURL(parsedConfig.api_base_url),
             account_base_url: normalizeBaseURL(parsedConfig.account_base_url),
           });
-          setEndpointBaseURLRows(
-            buildEndpointBaseURLRowsFromConfig(parsedConfig.endpoint_base_urls),
-          );
           if (hasChannelID) {
             setChannelKeySet(!!data.key_set);
           } else {
@@ -3314,7 +3221,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
   );
 
   const updateChannelEndpointCapability = useCallback(
-    async (row, enabled, options = {}) => {
+    async (row, nextValues = {}, options = {}) => {
       const { skipConfirm = false } = options;
       if (!isDetailMode || endpointCapabilityReadonly) {
         return;
@@ -3327,6 +3234,11 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
       if (targetChannelId === '' || modelName === '' || endpoint === '') {
         return;
       }
+      const enabled =
+        typeof nextValues.enabled === 'boolean'
+          ? nextValues.enabled
+          : row?.enabled === true;
+      const baseURL = normalizeBaseURL(nextValues.base_url ?? row?.base_url);
       const endpointKey = buildChannelEndpointKey(modelName, endpoint);
       const latestResult = modelTestResultsByKey.get(endpointKey) || null;
       const hasSuccessfulTest =
@@ -3343,6 +3255,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
           {
             model: modelName,
             endpoint,
+            base_url: baseURL,
             enabled: !!enabled,
           },
         );
@@ -3397,9 +3310,13 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     }
     setEndpointEnableConfirmLoading(true);
     try {
-      await updateChannelEndpointCapability(pendingEndpointEnableRow, true, {
-        skipConfirm: true,
-      });
+      await updateChannelEndpointCapability(
+        pendingEndpointEnableRow,
+        { enabled: true },
+        {
+          skipConfirm: true,
+        },
+      );
       setEndpointEnableConfirmOpen(false);
       setPendingEndpointEnableRow(null);
     } finally {
@@ -3785,7 +3702,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     }
     setChannelKeySet(false);
     setConfig(CHANNEL_DEFAULT_CONFIG);
-    setEndpointBaseURLRows([]);
     setLoading(false);
   }, [
     channelId,
@@ -4058,7 +3974,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
   };
 
   const renderAddressRoutingFields = () => {
-    const hasEndpointRows = endpointBaseURLRows.length > 0;
     return (
       <>
         <Form.Group widths='equal'>
@@ -4086,7 +4001,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
         <div
           style={{
             marginTop: '-6px',
-            marginBottom: hasEndpointRows ? '12px' : '0',
+            marginBottom: '0',
             color: 'var(--router-text-muted, rgba(0,0,0,0.45))',
             fontSize: '12px',
             lineHeight: 1.5,
@@ -4094,98 +4009,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
         >
           {t('channel.edit.address_routing_hint')}
         </div>
-        {(hasEndpointRows || !detailBasicReadonly) && (
-          <div className='router-block-gap-sm'>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px',
-                marginBottom: '8px',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: '13px',
-                  fontWeight: 500,
-                }}
-              >
-                {t('channel.edit.endpoint_base_urls')}
-              </div>
-              {!detailBasicReadonly && (
-                <Button
-                  type='button'
-                  basic
-                  size='small'
-                  icon='plus'
-                  content={t('channel.edit.endpoint_base_urls_add')}
-                  onClick={addEndpointBaseURLRow}
-                />
-              )}
-            </div>
-            {hasEndpointRows ? (
-              endpointBaseURLRows.map((row, index) => (
-                <Form.Group widths='equal' key={`endpoint-base-url-${index}`}>
-                  <Form.Input
-                    className='router-section-input'
-                    label={
-                      index === 0
-                        ? t('channel.edit.endpoint_base_urls_endpoint')
-                        : ' '
-                    }
-                    placeholder={t(
-                      'channel.edit.endpoint_base_urls_endpoint_placeholder',
-                    )}
-                    value={row.endpoint || ''}
-                    onChange={(e, data) =>
-                      updateEndpointBaseURLRow(index, 'endpoint', data.value)
-                    }
-                    autoComplete='off'
-                    readOnly={detailBasicReadonly}
-                  />
-                  <Form.Input
-                    className='router-section-input'
-                    label={
-                      index === 0
-                        ? t('channel.edit.endpoint_base_urls_url')
-                        : ' '
-                    }
-                    placeholder={t(
-                      'channel.edit.endpoint_base_urls_url_placeholder',
-                    )}
-                    value={row.base_url || ''}
-                    onChange={(e, data) =>
-                      updateEndpointBaseURLRow(index, 'base_url', data.value)
-                    }
-                    autoComplete='off'
-                    readOnly={detailBasicReadonly}
-                    action={
-                      detailBasicReadonly
-                        ? undefined
-                        : {
-                            icon: 'trash alternate outline',
-                            color: 'red',
-                            basic: true,
-                            onClick: () => removeEndpointBaseURLRow(index),
-                          }
-                    }
-                  />
-                </Form.Group>
-              ))
-            ) : (
-              <div
-                style={{
-                  color: 'var(--router-text-muted, rgba(0,0,0,0.45))',
-                  fontSize: '12px',
-                  lineHeight: 1.5,
-                }}
-              >
-                {t('channel.edit.endpoint_base_urls_empty')}
-              </div>
-            )}
-          </div>
-        )}
       </>
     );
   };

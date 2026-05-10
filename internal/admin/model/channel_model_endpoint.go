@@ -18,6 +18,7 @@ type ChannelModelEndpoint struct {
 	ChannelId string `json:"channel_id" gorm:"primaryKey;type:varchar(64);index"`
 	Model     string `json:"model" gorm:"primaryKey;type:varchar(255)"`
 	Endpoint  string `json:"endpoint" gorm:"primaryKey;type:varchar(255)"`
+	BaseURL   string `json:"base_url,omitempty" gorm:"column:base_url;type:text"`
 	Enabled   bool   `json:"enabled" gorm:"not null;default:true;index"`
 	UpdatedAt int64  `json:"updated_at" gorm:"bigint"`
 }
@@ -63,6 +64,7 @@ func BuildChannelModelEndpointRowsWithProviderEndpoints(existing []ChannelModelE
 			ChannelId: strings.TrimSpace(row.ChannelId),
 			Model:     strings.TrimSpace(row.Model),
 			Endpoint:  NormalizeRequestedChannelModelEndpoint(row.Endpoint),
+			BaseURL:   normalizeConfiguredBaseURL(row.BaseURL),
 			Enabled:   row.Enabled,
 			UpdatedAt: row.UpdatedAt,
 		}
@@ -98,9 +100,11 @@ func BuildChannelModelEndpointRowsWithProviderEndpoints(existing []ChannelModelE
 				ChannelId: channelID,
 				Model:     modelID,
 				Endpoint:  normalizedEndpoint,
+				BaseURL:   "",
 				Enabled:   false,
 			}
 			if existingRow, ok := existingByKey[key]; ok {
+				item.BaseURL = existingRow.BaseURL
 				item.Enabled = existingRow.Enabled && eligibleForEnable
 				item.UpdatedAt = existingRow.UpdatedAt
 			}
@@ -117,6 +121,7 @@ func MergeChannelModelEndpointListRows(snapshotRows []ChannelModelEndpoint, expl
 			ChannelId: strings.TrimSpace(row.ChannelId),
 			Model:     strings.TrimSpace(row.Model),
 			Endpoint:  NormalizeRequestedChannelModelEndpoint(row.Endpoint),
+			BaseURL:   normalizeConfiguredBaseURL(row.BaseURL),
 			Enabled:   row.Enabled,
 			UpdatedAt: row.UpdatedAt,
 		}
@@ -132,6 +137,7 @@ func MergeChannelModelEndpointListRows(snapshotRows []ChannelModelEndpoint, expl
 			ChannelId: strings.TrimSpace(row.ChannelId),
 			Model:     strings.TrimSpace(row.Model),
 			Endpoint:  NormalizeRequestedChannelModelEndpoint(row.Endpoint),
+			BaseURL:   normalizeConfiguredBaseURL(row.BaseURL),
 			Enabled:   row.Enabled,
 			UpdatedAt: row.UpdatedAt,
 		}
@@ -140,6 +146,7 @@ func MergeChannelModelEndpointListRows(snapshotRows []ChannelModelEndpoint, expl
 		}
 		key := normalized.ChannelId + "::" + normalized.Model + "::" + normalized.Endpoint
 		if explicitRow, ok := explicitByKey[key]; ok {
+			normalized.BaseURL = explicitRow.BaseURL
 			normalized.Enabled = explicitRow.Enabled
 			normalized.UpdatedAt = explicitRow.UpdatedAt
 		}
@@ -405,6 +412,7 @@ func replaceChannelModelEndpointRowsWithDB(db *gorm.DB, channelID string, rows [
 			ChannelId: normalizedChannelID,
 			Model:     strings.TrimSpace(row.Model),
 			Endpoint:  NormalizeRequestedChannelModelEndpoint(row.Endpoint),
+			BaseURL:   normalizeConfiguredBaseURL(row.BaseURL),
 			Enabled:   row.Enabled,
 			UpdatedAt: now,
 		}
@@ -434,6 +442,7 @@ func replaceChannelModelEndpointRowsWithDB(db *gorm.DB, channelID string, rows [
 				"channel_id": row.ChannelId,
 				"model":      row.Model,
 				"endpoint":   row.Endpoint,
+				"base_url":   row.BaseURL,
 				"enabled":    row.Enabled,
 				"updated_at": row.UpdatedAt,
 			})
@@ -457,6 +466,7 @@ func buildDisabledChannelModelEndpointRows(rows []ChannelModelEndpoint, channelI
 			ChannelId: strings.TrimSpace(row.ChannelId),
 			Model:     strings.TrimSpace(row.Model),
 			Endpoint:  NormalizeRequestedChannelModelEndpoint(row.Endpoint),
+			BaseURL:   normalizeConfiguredBaseURL(row.BaseURL),
 			Enabled:   row.Enabled,
 			UpdatedAt: row.UpdatedAt,
 		}
@@ -476,6 +486,7 @@ func buildDisabledChannelModelEndpointRows(rows []ChannelModelEndpoint, channelI
 			ChannelId: normalizedChannelID,
 			Model:     normalizedModelName,
 			Endpoint:  normalizedEndpoint,
+			BaseURL:   "",
 			Enabled:   false,
 		})
 		changed = true

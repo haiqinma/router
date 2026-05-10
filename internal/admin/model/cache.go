@@ -166,6 +166,7 @@ func CacheGetGroupModels(ctx context.Context, group string) ([]string, error) {
 var group2model2channels map[string]map[string][]*Channel
 var group2model2channel2upstream map[string]map[string]map[string]string
 var channel2model2endpointEnabled map[string]map[string]map[string]bool
+var channel2model2endpointBaseURL map[string]map[string]map[string]string
 var channel2model2endpointPolicy map[string]map[string]map[string]ChannelModelEndpointPolicy
 var channelSyncLock sync.RWMutex
 
@@ -196,6 +197,7 @@ func InitChannelCache() {
 	newGroup2model2channels := make(map[string]map[string][]*Channel)
 	newGroup2model2channel2upstream := make(map[string]map[string]map[string]string)
 	newChannel2model2endpointEnabled := buildChannelModelEndpointSupportCache(endpointRows)
+	newChannel2model2endpointBaseURL := buildChannelModelEndpointBaseURLCache(endpointRows)
 	newChannel2model2endpointPolicy := buildChannelModelEndpointPolicyCache(policyRows)
 	for group := range groups {
 		newGroup2model2channels[group] = make(map[string][]*Channel)
@@ -251,6 +253,7 @@ func InitChannelCache() {
 	group2model2channels = newGroup2model2channels
 	group2model2channel2upstream = newGroup2model2channel2upstream
 	channel2model2endpointEnabled = newChannel2model2endpointEnabled
+	channel2model2endpointBaseURL = newChannel2model2endpointBaseURL
 	channel2model2endpointPolicy = newChannel2model2endpointPolicy
 	channelSyncLock.Unlock()
 	logger.SysLog("channels synced from database")
@@ -317,6 +320,47 @@ func CacheGetChannelModelEndpointSupport(channelID string, modelCandidates ...st
 		return result
 	}
 	return nil
+}
+
+func CacheGetChannelModelEndpointBaseURL(channelID string, requestPath string, modelCandidates ...string) string {
+	normalizedChannelID := strings.TrimSpace(channelID)
+	normalizedEndpoint := NormalizeRequestedChannelModelEndpoint(requestPath)
+	normalizedCandidates := normalizeTrimmedValuesPreserveOrder(modelCandidates)
+	if normalizedChannelID == "" || normalizedEndpoint == "" || len(normalizedCandidates) == 0 {
+		return ""
+	}
+	if config.MemoryCacheEnabled {
+		channelSyncLock.RLock()
+		modelMap := channel2model2endpointBaseURL[normalizedChannelID]
+		for _, modelName := range normalizedCandidates {
+			if endpointMap, ok := modelMap[modelName]; ok {
+				if baseURL := normalizeConfiguredBaseURL(endpointMap[normalizedEndpoint]); baseURL != "" {
+					channelSyncLock.RUnlock()
+					return baseURL
+				}
+			}
+		}
+		channelSyncLock.RUnlock()
+	}
+	rows, err := listChannelModelEndpointRowsByChannelIDWithDB(DB, normalizedChannelID)
+	if err != nil {
+		logger.SysError("load channel model endpoint base url failed: " + err.Error())
+		return ""
+	}
+	for _, modelName := range normalizedCandidates {
+		for _, row := range rows {
+			if strings.TrimSpace(row.Model) != modelName {
+				continue
+			}
+			if NormalizeRequestedChannelModelEndpoint(row.Endpoint) != normalizedEndpoint {
+				continue
+			}
+			if baseURL := normalizeConfiguredBaseURL(row.BaseURL); baseURL != "" {
+				return baseURL
+			}
+		}
+	}
+	return ""
 }
 
 func CacheGetChannelModelEndpointPolicy(channelID string, endpoint string, modelCandidates ...string) *ChannelModelEndpointPolicy {
@@ -525,6 +569,27 @@ func buildChannelModelEndpointSupportCache(rows []ChannelModelEndpoint) map[stri
 			result[channelID][modelName] = make(map[string]bool)
 		}
 		result[channelID][modelName][endpoint] = row.Enabled
+	}
+	return result
+}
+
+func buildChannelModelEndpointBaseURLCache(rows []ChannelModelEndpoint) map[string]map[string]map[string]string {
+	result := make(map[string]map[string]map[string]string)
+	for _, row := range rows {
+		channelID := strings.TrimSpace(row.ChannelId)
+		modelName := strings.TrimSpace(row.Model)
+		endpoint := NormalizeRequestedChannelModelEndpoint(row.Endpoint)
+		baseURL := normalizeConfiguredBaseURL(row.BaseURL)
+		if channelID == "" || modelName == "" || endpoint == "" || baseURL == "" {
+			continue
+		}
+		if _, ok := result[channelID]; !ok {
+			result[channelID] = make(map[string]map[string]string)
+		}
+		if _, ok := result[channelID][modelName]; !ok {
+			result[channelID][modelName] = make(map[string]string)
+		}
+		result[channelID][modelName][endpoint] = baseURL
 	}
 	return result
 }

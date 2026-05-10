@@ -13,6 +13,7 @@ import (
 type updateChannelEndpointRequest struct {
 	Model    string `json:"model"`
 	Endpoint string `json:"endpoint"`
+	BaseURL  string `json:"base_url"`
 	Enabled  *bool  `json:"enabled"`
 }
 
@@ -20,6 +21,7 @@ type channelEndpointItem struct {
 	ChannelId string `json:"channel_id"`
 	Model     string `json:"model"`
 	Endpoint  string `json:"endpoint"`
+	BaseURL   string `json:"base_url,omitempty"`
 	Enabled   bool   `json:"enabled"`
 	UpdatedAt int64  `json:"updated_at"`
 }
@@ -71,6 +73,7 @@ func GetChannelEndpoints(c *gin.Context) {
 			ChannelId: row.ChannelId,
 			Model:     row.Model,
 			Endpoint:  row.Endpoint,
+			BaseURL:   row.BaseURL,
 			Enabled:   row.Enabled,
 			UpdatedAt: row.UpdatedAt,
 		})
@@ -174,6 +177,7 @@ func UpdateChannelEndpoint(c *gin.Context) {
 		ChannelId: channelRow.Id,
 		Model:     modelName,
 		Endpoint:  endpoint,
+		BaseURL:   strings.TrimSpace(req.BaseURL),
 		Enabled:   enabled,
 	}
 	if err := model.ReplaceChannelModelEndpointsWithDB(model.DB, channelID, mergeUpdatedChannelEndpointRows(explicitRows, row)); err != nil {
@@ -192,6 +196,7 @@ func UpdateChannelEndpoint(c *gin.Context) {
 			ChannelId: channelRow.Id,
 			Model:     modelName,
 			Endpoint:  endpoint,
+			BaseURL:   strings.TrimSpace(req.BaseURL),
 			Enabled:   enabled,
 		},
 	})
@@ -202,6 +207,7 @@ func mergeUpdatedChannelEndpointRows(rows []model.ChannelModelEndpoint, updated 
 		ChannelId: strings.TrimSpace(updated.ChannelId),
 		Model:     strings.TrimSpace(updated.Model),
 		Endpoint:  model.NormalizeRequestedChannelModelEndpoint(updated.Endpoint),
+		BaseURL:   strings.TrimSpace(updated.BaseURL),
 		Enabled:   updated.Enabled,
 		UpdatedAt: updated.UpdatedAt,
 	}
@@ -212,12 +218,14 @@ func mergeUpdatedChannelEndpointRows(rows []model.ChannelModelEndpoint, updated 
 			ChannelId: strings.TrimSpace(row.ChannelId),
 			Model:     strings.TrimSpace(row.Model),
 			Endpoint:  model.NormalizeRequestedChannelModelEndpoint(row.Endpoint),
+			BaseURL:   strings.TrimSpace(row.BaseURL),
 			Enabled:   row.Enabled,
 			UpdatedAt: row.UpdatedAt,
 		}
 		if normalizedRow.ChannelId == normalizedUpdated.ChannelId &&
 			normalizedRow.Model == normalizedUpdated.Model &&
 			normalizedRow.Endpoint == normalizedUpdated.Endpoint {
+			normalizedRow.BaseURL = normalizedUpdated.BaseURL
 			normalizedRow.Enabled = normalizedUpdated.Enabled
 			replaced = true
 		}
