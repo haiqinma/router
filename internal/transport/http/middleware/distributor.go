@@ -111,7 +111,7 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	c.Set(ctxkey.ModelMapping, mapping)
 	c.Set(ctxkey.OriginalModel, modelName) // for retry
 	c.Request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", channel.Key))
-	c.Set(ctxkey.BaseURL, channel.GetBaseURL())
+	c.Set(ctxkey.BaseURL, channel.ResolveAPIBaseURL(""))
 	cfg, _ := channel.LoadConfig()
 	// Some protocol-specific fields are still persisted in channel.other.
 	if channel.Other != nil {

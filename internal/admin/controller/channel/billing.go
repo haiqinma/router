@@ -178,7 +178,7 @@ func fetchChannelBillingResponseBody(method, url string, channel *model.Channel,
 }
 
 func updateChannelCloseAIBalance(channel *model.Channel) (float64, error) {
-	url := fmt.Sprintf("%s/dashboard/billing/credit_grants", channel.GetBaseURL())
+	url := fmt.Sprintf("%s/dashboard/billing/credit_grants", channel.ResolveAccountBaseURL())
 	body, err := fetchChannelBillingResponseBody("GET", url, channel, buildBearerAuthHeader(channel.Key))
 
 	if err != nil {
@@ -336,18 +336,18 @@ func updateChannelOpenRouterBalance(channel *model.Channel) (float64, error) {
 func updateChannelBalance(channel *model.Channel) (float64, error) {
 	channelProtocol := channel.GetChannelProtocol()
 	baseURL := relaychannel.BaseURLByProtocol(channel.GetProtocol())
-	if channel.GetBaseURL() == "" {
+	if channel.ResolveAPIBaseURL("") == "" {
 		channel.BaseURL = &baseURL
 	}
 	switch channelProtocol {
 	case relaychannel.OpenAI:
-		if channel.GetBaseURL() != "" {
-			baseURL = channel.GetBaseURL()
+		if channel.ResolveAccountBaseURL() != "" {
+			baseURL = channel.ResolveAccountBaseURL()
 		}
 	case relaychannel.Azure:
 		return 0, errors.New("尚未实现")
 	case relaychannel.Custom:
-		baseURL = channel.GetBaseURL()
+		baseURL = channel.ResolveAccountBaseURL()
 	case relaychannel.CloseAI:
 		return updateChannelCloseAIBalance(channel)
 	case relaychannel.OpenAISB:

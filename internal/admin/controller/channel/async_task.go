@@ -260,7 +260,7 @@ func executeChannelRefreshModelsTask(task *model.AsyncTask) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	baseURL := resolveChannelBaseURL(runtimeChannel.GetProtocol(), runtimeChannel.GetBaseURL())
+	baseURL := runtimeChannel.ResolveAPIBaseURL("")
 	fetchedRows, fetchTrace, err := fetchChannelModelsDetailed(runtimeChannel.GetProtocol(), runtimeChannel.Key, baseURL, "")
 	logChannelAsyncRefresh(task, keySource, fetchTrace, len(fetchedRows), err)
 	if err != nil {
