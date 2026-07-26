@@ -68,6 +68,7 @@ VITE_SERVER=http://localhost:3011 npm run dev
 - `redis.conn_string`：当 `cache.type: redis` 时必填，例如 `redis://:password@127.0.0.1:6379/0`。
 - `billing_service.base_url`：渠道账务自动刷新调用独立 Billing 服务的 `/api/v1/internal/billing:query`；Router 不再直接接入各渠道账务接口。
 - `ucan.aud`：对外部署或服务端口不是默认 `3011` 时，建议显式设置为 `did:web:<公网域名>`。
+- `ucan.trusted_issuer_dids`：使用 Node 中心化 TOTP/UCAN 登录访问 Router 时必须配置 Node 当前 issuer DID；每项必须是 `did:key:z...`，Router 启动时会做格式与验签公钥校验。
 - `bootstrap.root_wallet_address`：可选；用于开启“管理员管理管理员”的额外权限，多个地址使用英文逗号分隔。
 
 ## 本地验证方式
