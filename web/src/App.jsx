@@ -76,6 +76,7 @@ const PaymentRecordsPage = lazy(
 );
 const WorkspaceModels = lazy(() => import('./pages/WorkspaceModels'));
 const HelpDoc = lazy(() => import('./pages/HelpDoc'));
+const RouterGuideDoc = lazy(() => import('./pages/HelpDoc/RouterGuideDoc'));
 const WorkspaceStart = lazy(() => import('./pages/WorkspaceStart'));
 
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || '';
@@ -698,6 +699,18 @@ function App() {
         />
         <Route
           path='/workspace/service/help'
+          element={<Navigate to='/workspace/service/router-guide' replace />}
+        />
+        <Route
+          path='/workspace/service/router-guide'
+          element={
+            <Suspense fallback={<Loading />}>
+              <RouterGuideDoc />
+            </Suspense>
+          }
+        />
+        <Route
+          path='/workspace/service/cli-guide'
           element={
             <Suspense fallback={<Loading />}>
               <HelpDoc />

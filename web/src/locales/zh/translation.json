@@ -12,6 +12,8 @@
     "service": "服务",
     "help": "帮助",
     "usage_guide": "使用说明",
+    "router_guide": "使用指南",
+    "cli_guide": "客户端工具使用手册",
     "mine": "我的",
     "records": "记录",
     "user": "用户",

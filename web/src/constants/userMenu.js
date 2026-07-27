@@ -77,8 +77,13 @@ export const buildUserWorkspaceMenuItems = () => {
       icon: 'book',
       items: [
         {
-          name: 'header.usage_guide',
-          to: '/workspace/service/help',
+          name: 'header.router_guide',
+          to: '/workspace/service/router-guide',
+          icon: 'sitemap',
+        },
+        {
+          name: 'header.cli_guide',
+          to: '/workspace/service/cli-guide',
           icon: 'file alternate outline',
         },
       ],

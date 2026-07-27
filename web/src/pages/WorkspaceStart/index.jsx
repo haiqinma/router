@@ -91,7 +91,7 @@ const WorkspaceStart = () => {
               <AppButton
                 type='button'
                 className='router-inline-button'
-                onClick={() => navigate('/workspace/service/help')}
+                onClick={() => navigate('/workspace/service/cli-guide')}
               >
                 {t('workspace_start.actions.view_guide')}
               </AppButton>

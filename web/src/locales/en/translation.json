@@ -12,6 +12,8 @@
     "service": "Service",
     "help": "Help",
     "usage_guide": "Usage Guide",
+    "router_guide": "Router Guide",
+    "cli_guide": "CLI Tool Guide",
     "mine": "Mine",
     "records": "Records",
     "user": "User",

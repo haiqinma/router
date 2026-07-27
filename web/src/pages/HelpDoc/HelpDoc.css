@@ -206,6 +206,61 @@
   color: #1e3a8a;
 }
 
+.router-help-doc-page .router-guide-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0 22px;
+}
+
+.router-help-doc-page .router-guide-card {
+  border: 1px solid #dbeafe;
+  background: #f8fafc;
+  border-radius: 14px;
+  padding: 14px;
+  min-height: 112px;
+}
+
+.router-help-doc-page .router-guide-card strong {
+  display: block;
+  color: #0f172a;
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+
+.router-help-doc-page .router-guide-card span {
+  display: block;
+  color: #475569;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.router-help-doc-page .router-guide-endpoint-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 14px 0 18px;
+  font-size: 14px;
+}
+
+.router-help-doc-page .router-guide-endpoint-table th,
+.router-help-doc-page .router-guide-endpoint-table td {
+  border: 1px solid #e5e7eb;
+  padding: 10px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.router-help-doc-page .router-guide-endpoint-table th {
+  background: #f3f4f6;
+  color: #111827;
+  font-weight: 600;
+}
+
+.router-help-doc-page .router-guide-endpoint-table td {
+  background: #ffffff;
+  color: #374151;
+}
+
 .router-help-doc-page .router-help-doc-token-tip {
   margin: -2px 0 14px;
   font-size: 13px;
@@ -234,5 +289,20 @@
 
   .router-help-doc-page .hero-title {
     font-size: 28px;
+  }
+
+  .router-help-doc-page .router-guide-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .router-help-doc-page .router-guide-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .router-help-doc-page .router-guide-endpoint-table {
+    display: block;
+    overflow-x: auto;
   }
 }
