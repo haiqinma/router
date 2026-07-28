@@ -12,6 +12,7 @@ worktree_dir=""
 bin_src=""
 config_template=""
 starter_src=""
+health_check_src=""
 
 usage() {
   echo "Usage: $(basename "$0") [v<major>.<minor>.<patch>]" >&2
@@ -57,6 +58,7 @@ prepare_source_dir() {
   bin_src="$source_dir/build/router"
   config_template="$source_dir/config.yaml.template"
   starter_src="$source_dir/scripts/starter.sh"
+  health_check_src="$source_dir/scripts/health-check.sh"
 }
 
 verify_artifacts() {
@@ -77,6 +79,10 @@ verify_artifacts() {
   fi
   if [[ ! -f "$starter_src" ]]; then
     echo "Missing starter script: $starter_src" >&2
+    exit 1
+  fi
+  if [[ ! -x "$health_check_src" ]]; then
+    echo "Missing health check script or not executable: $health_check_src" >&2
     exit 1
   fi
 }
@@ -203,6 +209,7 @@ mkdir -p "$stage_dir/build" "$stage_dir/scripts" "$stage_dir/web"
 cp "$bin_src" "$stage_dir/build/"
 cp "$config_template" "$stage_dir/"
 cp "$starter_src" "$stage_dir/scripts/"
+cp "$health_check_src" "$stage_dir/scripts/"
 cp -R "$web_build_dir" "$stage_dir/web/"
 
 rm -f "$archive_path"
