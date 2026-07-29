@@ -22,6 +22,7 @@
     "model": "模型",
     "operation": "运营",
     "billing": "计费",
+    "finance": "财务",
     "config": "配置",
     "package": "订阅",
     "log": "日志",
@@ -756,7 +757,7 @@
         "endpoints": "配置",
         "tests": "测试",
         "publish": "发布",
-        "billing": "采购"
+        "billing": "账务"
       },
       "publish": {
         "title": "模型发布",
@@ -871,6 +872,7 @@
         "manual_valid_until": "有效期结束（留空永久有效）",
         "validity_immediate": "立即生效",
         "upstream_status_title": "上游状态",
+        "view_procurement": "查看采购成本",
         "procurement_title": "采购批次",
         "procurement_hint": "这里不是上游账务明细。采购批次来自采购记录，请求结算时会从这些批次里扣容量，并计算实际采购成本。",
         "procurement_edit_cost": "补成本",
@@ -1507,9 +1509,9 @@
       "enabled": "是否启用",
       "selected": "使用",
       "priority": "优先级",
-      "channel_billing_ratio": "渠道业务倍率",
-      "model_channel_billing_ratio": "模型渠道倍率",
-      "model_channel_billing_ratio_short": "模型倍率",
+      "channel_billing_ratio": "分组渠道售价倍率",
+      "model_channel_billing_ratio": "模型渠道售价倍率",
+      "model_channel_billing_ratio_short": "模型售价倍率",
       "channel_count": "渠道数",
       "model_channels": "渠道",
       "model_search_placeholder": "搜索模型或渠道",
@@ -1521,8 +1523,8 @@
       "edit_model_title": "编辑模型 {{model}}",
       "bound_channels": "渠道",
       "empty_channels": "暂无渠道",
-      "channels_hint": "这里维护分组渠道人工配置，包括该分组接入哪些渠道、渠道优先级，以及该渠道在当前分组内的业务倍率。",
-      "models_hint": "这里维护分组模型人工配置和渠道承载关系。分组层不会因为渠道临时异常、测试结果或上游波动自动改写这里的配置。"
+      "channels_hint": "这里维护分组可用渠道、渠道优先级，以及分组渠道售价倍率。该倍率会参与最终售价倍率，影响同一分组命中不同渠道时的实扣。",
+      "models_hint": "这里维护分组模型和渠道承载关系。模型渠道售价倍率会与分组渠道售价倍率合并，支持同一分组、同一模型、不同渠道命中时售价不同。"
     },
     "edit": {
       "models": "模型",
@@ -1542,7 +1544,7 @@
       "channel_required": "请选择渠道",
       "model_required": "请选择模型",
       "model_add_empty": "当前已绑定渠道没有可新增的模型",
-      "billing_ratio_invalid": "业务倍率必须大于或等于 0",
+      "billing_ratio_invalid": "售价倍率必须大于或等于 0",
       "daily_quota_limit_invalid": "每日限额必须大于或等于 0",
       "load_failed": "加载分组失败",
       "bind_load_failed": "加载分组渠道失败",
@@ -2036,6 +2038,26 @@
           "low": "低"
         }
       },
+      "billing_explanation": {
+        "title": "本次扣费公式",
+        "formula": "基础价格金额 x YYC 汇率 x 最终售价倍率 = 实扣 YYC",
+        "formula_note": "最终售价倍率由分组渠道售价倍率和模型渠道售价倍率合并得到；最终实扣按计费规则向上取整。",
+        "base_amount": "基础价格金额",
+        "charge_rate": "YYC 汇率",
+        "final_ratio": "最终售价倍率",
+        "charge_amount": "实扣 YYC",
+        "not_observed": "未观测",
+        "yes": "是",
+        "no": "否",
+        "groups": {
+          "source": "计价来源",
+          "usage": "用量口径",
+          "base_price": "基础价格",
+          "price_ratio": "售价倍率",
+          "settlement": "扣费结果",
+          "procurement": "采购成本"
+        }
+      },
       "fields": {
         "id": "日志 ID",
         "time": "时间",
@@ -2049,8 +2071,10 @@
         "trace_id": "Trace ID",
         "prompt_tokens": "提示词消耗",
         "completion_tokens": "补全消耗",
-        "quota": "结算金额",
+        "quota": "最终实扣",
         "billing_source": "扣费来源",
+        "billing_source_name": "扣费对象",
+        "billing_source_detail": "扣费说明",
         "user_daily_quota": "用户基础金额",
         "user_emergency_quota": "套餐应急金额",
         "billing_price_unit": "计价单位",
@@ -2063,10 +2087,10 @@
         "estimated_prompt_tokens": "预估提示词消耗",
         "estimated_output_tokens": "预估输出计费数量",
         "billing_settlement_mode": "结算模式",
-        "billing_effective_ratio": "生效业务倍率",
-        "billing_group_channel_ratio": "分组渠道倍率",
-        "billing_model_channel_ratio": "模型渠道倍率",
-        "billing_charge_rate": "折算比率",
+        "billing_effective_ratio": "最终售价倍率",
+        "billing_group_channel_ratio": "分组渠道售价倍率",
+        "billing_model_channel_ratio": "模型渠道售价倍率",
+        "billing_charge_rate": "YYC 汇率",
         "billing_input_quantity": "输入计费数量",
         "billing_output_quantity": "输出计费数量",
         "billing_cache_read_quantity": "缓存读取数量",
@@ -2075,20 +2099,26 @@
         "billing_output_amount": "输出金额",
         "billing_cache_read_amount": "缓存读取金额",
         "billing_cache_write_amount": "缓存写入金额",
-        "billing_amount": "计费金额",
-        "billing_charge_amount": "折算金额",
+        "billing_amount": "基础价格金额",
+        "billing_charge_amount": "实扣 YYC",
         "billing_procurement_cost": "本次采购成本 CNY",
         "billing_procurement_cost_source": "采购成本来源",
+        "billing_procurement_cost_confidence": "采购成本可信度",
+        "billing_sell_base_amount": "售价基准 CNY",
+        "billing_cost_floor_base_amount": "成本保护底价 CNY",
+        "billing_selected_sell_base_amount": "选用售价 CNY",
+        "billing_pricing_decision_reason": "计价决策",
+        "billing_cost_floor_triggered": "触发成本保护",
         "billing_gross_profit": "本次毛利 CNY",
         "billing_gross_margin": "本次毛利率",
-        "estimated_charge_amount": "预估折算金额",
-        "billing_charge_delta_amount": "实结-预估金额",
+        "estimated_charge_amount": "预估实扣",
+        "billing_charge_delta_amount": "实扣 - 预估",
         "billing_prompt_token_delta": "提示词偏差",
         "billing_output_token_delta": "输出偏差",
         "billing_image_tool_calls": "图片工具调用次数",
         "billing_image_tool_output_tokens": "图片工具输出词元",
         "billing_image_tool_amount": "图片工具金额",
-        "billing_image_tool_charge_amount": "图片工具折算金额",
+        "billing_image_tool_charge_amount": "图片工具实扣",
         "elapsed_time": "耗时",
         "is_stream": "流式输出",
         "system_prompt_reset": "重置系统提示词"
@@ -2778,7 +2808,7 @@
         }
       },
       "spending": {
-        "flow": { "title": "收支口径", "summary": "支付/充值是用户侧收入与现金流；请求消耗是用户权益的使用结果；渠道采购是上游成本，最终在计费经营总览中与收入匹配计算毛利。" },
+        "flow": { "title": "收支口径", "summary": "支付/充值是用户侧收入与现金流；请求消耗是用户权益的使用结果；渠道采购是上游成本，最终在财务总览中与收入匹配计算毛利。" },
         "insights": {
           "net_positive": "净流入为正",
           "net_positive_hint": "当前周期内充值大于消费，收支保持正向。",
@@ -3252,8 +3282,9 @@
       },
       "pricing": {
         "title": "计价规则",
-        "description": "配置对外计价和利润目标。",
-        "description_title": "扣费如何计算",
+        "description": "配置成本保护和利润目标，不直接替代分组/模型/渠道售价倍率。",
+        "description_title": "请求扣费公式",
+        "formula_hint": "用户实扣 = 基础价格金额 x YYC 汇率 x 最终售价倍率。最终售价倍率来自分组渠道售价倍率和模型渠道售价倍率；本页的目标毛利率和成本缓冲只用于采购成本保护与价格决策。",
         "target_margin": "目标毛利率",
         "target_margin_hint": "小数填写，0.2 表示目标毛利 20%；必须小于 0.95。",
         "risk_buffer": "成本缓冲比例",
@@ -3266,14 +3297,14 @@
       },
       "billing": {
         "title": "计费币种",
-        "subtitle": "维护上游计费币种与 YYC 的兑换比率。厂家价格会先按原币种计算，再折算为 YYC 入账。",
+        "subtitle": "维护上游计费币种与 YYC 的汇率。厂家价格会先按原币种计算，再按 YYC 汇率折算为实扣。",
         "empty": "暂无计费币种",
         "columns": {
           "code": "代码",
           "name": "名称",
           "symbol": "符号",
           "minor_unit": "精度",
-          "charge_rate": "每单位扣减额度",
+          "charge_rate": "YYC 汇率",
           "status": "状态",
           "source": "来源",
           "updated_at": "更新时间",
@@ -3312,7 +3343,7 @@
           "code_required": "币种代码不能为空",
           "name_required": "币种名称不能为空",
           "minor_unit_invalid": "精度必须大于或等于 0",
-          "charge_rate_invalid": "扣减比率必须大于 0"
+          "charge_rate_invalid": "YYC 汇率必须大于 0"
         }
       }
     },
@@ -3354,7 +3385,7 @@
           "code_required": "币种代码不能为空",
           "name_required": "币种名称不能为空",
           "minor_unit_invalid": "精度必须大于或等于 0",
-          "enabled_rate_required": "启用币种前，请先在汇率设置中配置大于 0 的 扣减汇率"
+          "enabled_rate_required": "启用币种前，请先在汇率管理中配置大于 0 的 YYC 汇率"
         }
       }
     },
@@ -3383,13 +3414,13 @@
       }
     },
     "exchange": {
-      "title": "汇率管理",
-      "description": "维护币种兑换关系与人工汇率，保证计费折算和结算展示一致。",
-      "subtitle": "统一展示手动维护的 */扣减汇率，以及同步得到的法币货币对汇率。",
+      "title": "YYC 汇率",
+      "description": "维护原币种到 YYC 的计费汇率，以及同步得到的法币货币对汇率。",
+      "subtitle": "手动行用于请求扣费：1 原币种 = N YYC。同步行只用于参考和自动维护汇率来源。",
       "empty": "暂无汇率数据",
       "columns": {
         "pair": "货币对",
-        "rate": "汇率",
+        "rate": "YYC 汇率",
         "provider": "来源",
         "rate_date": "汇率日期",
         "created_at": "创建时间",
@@ -3407,75 +3438,60 @@
       },
       "dialogs": {
         "edit_title": "编辑汇率",
-        "rate_label": "汇率"
+        "rate_label": "YYC 汇率"
       },
       "messages": {
         "load_failed": "加载汇率列表失败",
         "sync_failed": "同步汇率失败",
         "sync_success": "汇率同步完成，更新 {{count}} 项",
-        "rate_invalid": "汇率必须大于 0",
+        "rate_invalid": "YYC 汇率必须大于 0",
         "save_failed": "保存汇率失败",
         "save_success": "汇率已保存"
       }
     }
   },
   "billing": {
-    "channel_reconciliation": {
-      "nav": "渠道对账",
-      "title": "渠道对账",
-      "load_failed": "渠道对账加载失败",
-      "note": "默认展示最近 7 天的 Router 消费，并读取各渠道采购批次状态。批次明细可进入渠道账务查看。",
-      "empty": "暂无渠道对账数据",
-      "batch_summary": "{{count}} 个批次，{{active}} 个有效",
-      "incomplete": "成本未完整 {{count}}",
-      "load_error": "批次读取失败",
-      "columns": { "channel": "渠道", "requests": "请求数", "yyc": "消耗 YYC", "revenue": "收入 CNY", "cost": "采购成本 CNY", "profit": "毛利 CNY", "margin": "毛利率", "batches": "采购批次" }
-    },
     "pricing_analysis": {
-      "nav": "模型定价",
-      "title": "定价分析",
-      "load_failed": "定价分析加载失败",
+      "nav": "利润分析",
+      "title": "利润分析",
+      "load_failed": "利润分析加载失败",
       "group_placeholder": "筛选分组",
       "note": "默认展示最近 7 天有请求的模型。正式毛利只基于真实或明确零成本，成本覆盖不足的模型不会被判定为正常盈利。",
-      "empty": "暂无模型计费数据",
-      "mixed": "多渠道",
+      "empty": "暂无模型财务数据",
       "states": { "healthy": "正常", "low_margin": "低毛利", "loss": "低于成本", "unknown": "数据不足" },
-      "cost_states": { "actual_available": "真实成本可用", "estimated_only": "仅估算成本", "pending": "成本待归因", "none": "成本未配置", "unit_mismatch": "单位不匹配", "currency_mismatch": "币种不匹配" },
-      "decision": { "cost_floor": "成本底线触发", "current_price": "当前售价可用" },
-      "columns": { "model": "模型", "state": "价格状态", "requests": "请求数", "router_yyc": "消耗 YYC", "sell": "售价 CNY", "official_price": "官方价格", "current_price": "当前价格", "ratio": "生效倍率", "cost": "采购成本 CNY", "profit": "毛利 CNY", "margin": "毛利率", "cost_coverage": "成本覆盖", "cost_state": "成本状态", "cost_unit": "采购单位成本", "selected_price": "成本底线售价", "decision": "价格决策", "floor_impact": "底线影响", "details": "明细", "view": "查看" }
+      "columns": { "model": "模型", "state": "利润状态", "requests": "请求数", "sell": "计费收入 CNY", "cost": "采购成本 CNY", "profit": "毛利 CNY", "margin": "毛利率", "cost_coverage": "成本覆盖" }
     },
     "overview": {
-      "nav": "经营总览",
-      "title": "经营总览",
-      "structure": { "title": "计费结构", "summary": "总览看收入与成本结果；模型定价看售价是否覆盖成本；渠道采购看上游采购批次与成本归因。", "pricing": "查看模型定价", "procurement": "查看渠道采购" },
-      "load_failed": "经营数据加载失败",
-      "metrics": { "revenue": "收入 CNY", "cost": "采购成本 CNY", "profit": "毛利 CNY", "margin": "毛利率", "yyc": "Router 消耗 YYC", "requests": "请求数", "floor_triggered": "底线触发次数", "floor_amount": "底线影响 CNY" },
-      "tokens": { "title": "Token 消耗结构", "input": "输入 Token", "output": "输出 Token", "cache_read": "缓存读取 Token", "cache_write": "缓存写入 Token" },
-      "confidence": { "title": "成本数据可信度", "coverage": "真实成本覆盖 {{value}}", "detail": "估算 {{estimated}}，待归因 {{pending}}，未配置 {{unconfigured}}" },
-      "operating_risks": { "title": "当前范围经营异常", "view_details": "查看模型定价", "empty": "当前范围未发现经营异常", "unconfigured": "{{model}} 有 {{count}} 个请求未配置成本", "loss": "{{model}} 正式毛利为 {{amount}}", "low_margin": "{{model}} 正式毛利率仅 {{margin}}", "floor": "{{model}} 触发成本底线 {{count}} 次", "estimated": "{{model}} 有 {{count}} 个请求仅使用估算成本", "pending": "{{model}} 有 {{count}} 个请求成本待归因" },
-      "configuration_risks": { "title": "全局计费配置风险", "view_details": "查看渠道采购", "empty": "未发现全局计费配置风险" },
-      "channels": { "title": "渠道底线影响", "view_details": "查看渠道对账", "empty": "暂无渠道数据" },
-      "trend": { "title": "近 7 天消耗与毛利趋势", "tokens": "输入 {{input}} / 输出 {{output}}", "financials": "收入 {{revenue}} / 成本 {{cost}} / 毛利 {{profit}}", "coverage": "正式成本 {{configured}} / {{total}}" },
+      "nav": "财务总览",
+      "title": "财务总览",
+      "structure": { "title": "财务看板", "summary": "先看计费收入、采购成本、毛利和毛利率是否符合预期；异常时再下钻利润分析和采购成本。", "pricing": "查看利润分析", "procurement": "查看采购成本" },
+      "load_failed": "财务数据加载失败",
+      "metrics": { "revenue": "计费收入 CNY", "cost": "采购成本 CNY", "profit": "毛利 CNY", "margin": "毛利率", "coverage": "成本覆盖率", "anomalies": "异常项" },
+      "operating_risks": { "title": "当前范围财务异常", "view_details": "查看利润分析", "empty": "当前范围未发现财务异常", "unconfigured": "{{model}} 有 {{count}} 个请求未配置成本", "loss": "{{model}} 正式毛利为 {{amount}}", "low_margin": "{{model}} 正式毛利率仅 {{margin}}", "floor": "{{model}} 触发成本底线 {{count}} 次", "estimated": "{{model}} 有 {{count}} 个请求仅使用估算成本", "pending": "{{model}} 有 {{count}} 个请求成本待归因" },
+      "configuration_risks": { "title": "财务配置风险", "view_details": "查看采购成本", "empty": "未发现财务配置风险" },
+      "channels": { "title": "渠道毛利", "view_details": "查看采购成本", "empty": "暂无渠道数据" },
+      "trend": { "title": "近 7 天计费收支趋势", "financials": "计费收入 {{revenue}} / 成本 {{cost}} / 毛利 {{profit}}" },
       "channel_placeholder": "筛选渠道", "model_placeholder": "筛选模型"
     },
     "procurement_report": {
-      "nav": "渠道采购",
-      "title": "采购成本报表",
+      "nav": "采购成本",
+      "title": "采购成本",
       "empty": "暂无采购成本数据",
+      "management": { "title": "采购管理", "channel_placeholder": "选择采购渠道", "select_channel": "请选择渠道后维护采购记录和采购批次" },
       "health": {
         "status": {
-          "ok": "计费健康",
-          "warning": "计费存在风险",
-          "critical": "计费需要处理"
+          "ok": "财务健康",
+          "warning": "财务存在风险",
+          "critical": "财务需要处理"
         },
         "level": {
           "critical": "严重",
           "warning": "提醒"
         },
         "summary": "严重 {{critical}} 项，提醒 {{warning}} 项",
-        "no_issue": "未发现影响计费的配置风险",
-        "load_failed": "计费健康检查加载失败",
-        "load_failed_hint": "无法加载计费健康检查，请稍后刷新页面。"
+        "no_issue": "未发现影响财务判断的配置风险",
+        "load_failed": "财务健康检查加载失败",
+        "load_failed_hint": "无法加载财务健康检查，请稍后刷新页面。"
       },
       "group_by": {
         "channel": "按渠道",
@@ -3520,7 +3536,7 @@
         "gross_margin": "毛利率"
       },
       "actions": {
-        "configure_cost": "打开渠道账务页补采购成本"
+        "configure_cost": "打开采购配置"
       },
       "messages": {
         "invalid_time": "请选择有效的时间范围",

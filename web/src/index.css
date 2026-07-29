@@ -1886,6 +1886,92 @@ body,
     gap: 4px;
 }
 
+.router-billing-explain-stack {
+    display: grid;
+    gap: 14px;
+}
+
+.router-billing-explain-stack .router-detail-section-subtitle {
+    margin: 0 0 8px;
+    font-size: 13px;
+}
+
+.router-billing-formula-card {
+    display: grid;
+    gap: 12px;
+    border: 1px solid rgba(22, 119, 255, 0.18);
+    border-radius: 10px;
+    background: #f7fbff;
+    padding: 12px;
+}
+
+.router-billing-formula-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.router-billing-formula-text {
+    color: #111827;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.router-billing-formula-result {
+    flex: 0 0 auto;
+    color: #0958d9;
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.3;
+    text-align: right;
+}
+
+.router-billing-formula-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+}
+
+.router-billing-formula-step {
+    display: grid;
+    gap: 4px;
+    border: 1px solid rgba(34, 36, 38, 0.08);
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 9px 10px;
+}
+
+.router-billing-formula-step span {
+    color: rgba(0, 0, 0, 0.54);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.router-billing-formula-step strong {
+    color: #111827;
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.router-billing-formula-step-result strong {
+    color: #0958d9;
+}
+
+.router-billing-formula-note {
+    color: rgba(0, 0, 0, 0.58);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.router-billing-emphasis-item {
+    border-color: rgba(22, 119, 255, 0.2);
+    background: #f7fbff;
+}
+
 .router-route-attempt-empty {
     color: rgba(0, 0, 0, 0.45);
 }

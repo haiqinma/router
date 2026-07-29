@@ -55,7 +55,6 @@ import Providers from './pages/Providers';
 import BillingProcurementReport from './pages/BillingProcurementReport';
 import BillingOverview from './pages/BillingOverview';
 import BillingPricingAnalysis from './pages/BillingPricingAnalysis';
-import BillingChannelReconciliation from './pages/BillingChannelReconciliation';
 
 const RegisterForm = lazy(() => import('./components/RegisterForm'));
 const LoginForm = lazy(() => import('./components/LoginForm'));
@@ -853,19 +852,15 @@ function App() {
           element={<AdminAlerts />}
         />
         <Route
-          path='/admin/billing/channel-reconciliation'
-          element={<BillingChannelReconciliation />}
-        />
-        <Route
-          path='/admin/billing/pricing-analysis'
-          element={<BillingPricingAnalysis />}
-        />
-        <Route
-          path='/admin/billing/overview'
+          path='/admin/finance/overview'
           element={<BillingOverview />}
         />
         <Route
-          path='/admin/billing/procurement-report'
+          path='/admin/finance/profit-analysis'
+          element={<BillingPricingAnalysis />}
+        />
+        <Route
+          path='/admin/finance/procurement-cost'
           element={<BillingProcurementReport />}
         />
         <Route

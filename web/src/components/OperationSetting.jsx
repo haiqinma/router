@@ -868,6 +868,13 @@ const OperationSetting = ({ section = '', showSectionTitle = true }) => {
                 />
               ) : null}
               <div className='router-settings-section-body'>
+                <AppAlert
+                  type='info'
+                  showIcon
+                  className='router-section-message'
+                  title={t('setting.operation.pricing.description_title')}
+                  description={t('setting.operation.pricing.formula_hint')}
+                />
                 <AppFormRow>
                   <AppField
                     label={t('setting.operation.pricing.target_margin')}

@@ -124,72 +124,56 @@ function BillingOverview() {
     load().then();
   }, [load]);
 
+  const knownCostCount = report.configured_cost_request_count;
+  const knownRatio = report.request_count > 0 ? knownCostCount / report.request_count : 0;
+  const operatingRisks = buildOperatingRisks(modelReport.items, t);
+  const configurationRisks = (Array.isArray(health.issues) ? health.issues : []).slice(0, 5);
+  const anomalyCount = operatingRisks.length + Number(health.critical_count || 0) + Number(health.warning_count || 0);
   const metricCards = [
     [t('billing.overview.metrics.revenue'), formatCNY(report.sell_base_amount)],
     [t('billing.overview.metrics.cost'), formatCNY(report.procurement_cost_base_amount)],
     [t('billing.overview.metrics.profit'), formatCNY(report.gross_profit_base_amount)],
     [t('billing.overview.metrics.margin'), formatPercent(report.gross_margin)],
-    [t('billing.overview.metrics.yyc'), formatCount(report.router_consumed_yyc)],
-    [t('billing.overview.metrics.requests'), formatCount(report.request_count)],
-    [t('billing.overview.metrics.floor_triggered'), formatCount(report.cost_floor_triggered_count)],
-    [t('billing.overview.metrics.floor_amount'), formatCNY(report.cost_floor_triggered_amount)],
+    [t('billing.overview.metrics.coverage'), formatPercent(knownRatio)],
+    [t('billing.overview.metrics.anomalies'), formatCount(anomalyCount)],
   ];
-  const tokenCards = [
-    [t('billing.overview.tokens.input'), formatCount(report.input_quantity)],
-    [t('billing.overview.tokens.output'), formatCount(report.output_quantity)],
-    [t('billing.overview.tokens.cache_read'), formatCount(report.cache_read_quantity)],
-    [t('billing.overview.tokens.cache_write'), formatCount(report.cache_write_quantity)],
-  ];
-  const knownCostCount = report.configured_cost_request_count;
-  const knownRatio = report.request_count > 0 ? knownCostCount / report.request_count : 0;
-  const operatingRisks = buildOperatingRisks(modelReport.items, t);
-  const configurationRisks = (Array.isArray(health.issues) ? health.issues : []).slice(0, 5);
   const topChannels = report.items.slice(0, 5);
 
   return (
     <div className='dashboard-container billing-overview-page'>
       <AppFilterHeader
-        breadcrumbs={[{ key: 'billing', label: t('header.billing') }, { key: 'billing-overview', label: t('billing.overview.title'), active: true }]}
+        breadcrumbs={[{ key: 'finance', label: t('header.finance') }, { key: 'billing-overview', label: t('billing.overview.title'), active: true }]}
         actions={<><AppSelect className='billing-overview-channel-select' clearable search options={channelOptions} value={channelID} placeholder={t('billing.overview.channel_placeholder')} onChange={(e, { value }) => setChannelID((value || '').toString())} /><AppSelect className='billing-overview-model-select' clearable search options={modelOptions} value={modelName} placeholder={t('billing.overview.model_placeholder')} onChange={(e, { value }) => setModelName((value || '').toString())} /><AppButton className='router-page-button' color='blue' loading={loading} onClick={() => load().then()}>{t('common.refresh')}</AppButton></>}
       />
       <div className='billing-overview-map' role='note'>
         <strong>{t('billing.overview.structure.title')}</strong>
         <span>{t('billing.overview.structure.summary')}</span>
-        <Link to='/admin/billing/pricing-analysis'>{t('billing.overview.structure.pricing')}</Link>
-        <Link to='/admin/billing/procurement-report'>{t('billing.overview.structure.procurement')}</Link>
+        <Link to='/admin/finance/profit-analysis'>{t('billing.overview.structure.pricing')}</Link>
+        <Link to='/admin/finance/procurement-cost'>{t('billing.overview.structure.procurement')}</Link>
       </div>
       <AppSpin spinning={loading}>
         <AppSection className='billing-overview-section'>
           <div className='billing-overview-metric-grid'>
             {metricCards.map(([label, value]) => <div className='billing-overview-metric' key={label}><div className='billing-overview-label'>{label}</div><div className='billing-overview-value'>{value}</div></div>)}
           </div>
-          <div className='billing-overview-section-heading billing-overview-token-heading'><h2>{t('billing.overview.tokens.title')}</h2></div>
-          <div className='billing-overview-token-grid'>
-            {tokenCards.map(([label, value]) => <div className='billing-overview-token' key={label}><span>{label}</span><strong>{value}</strong></div>)}
-          </div>
-          <div className={`billing-overview-confidence is-${knownRatio >= 0.8 ? 'good' : 'warning'}`}>
-            <div><strong>{t('billing.overview.confidence.title')}</strong><span>{t('billing.overview.confidence.coverage', { value: formatPercent(knownRatio) })}</span></div>
-            <div className='billing-overview-confidence-bar'><span style={{ width: `${Math.min(100, knownRatio * 100)}%` }} /></div>
-            <div className='billing-overview-confidence-detail'>{t('billing.overview.confidence.detail', { estimated: formatCount(report.estimated_cost_request_count), pending: formatCount(report.pending_cost_request_count), unconfigured: formatCount(report.unconfigured_cost_request_count) })}</div>
-          </div>
         </AppSection>
         <div className='billing-overview-columns'>
           <AppSection className='billing-overview-section'>
-            <div className='billing-overview-section-heading'><h2>{t('billing.overview.operating_risks.title')}</h2><Link to='/admin/billing/pricing-analysis'>{t('billing.overview.operating_risks.view_details')}</Link></div>
+            <div className='billing-overview-section-heading'><h2>{t('billing.overview.operating_risks.title')}</h2><Link to='/admin/finance/profit-analysis'>{t('billing.overview.operating_risks.view_details')}</Link></div>
             {operatingRisks.length === 0 ? <div className='billing-overview-empty'>{t('billing.overview.operating_risks.empty')}</div> : operatingRisks.map((issue) => <div className='billing-overview-risk' key={issue.key}><AppTag color={issue.level === 'critical' ? 'red' : 'orange'}>{t(`billing.procurement_report.health.level.${issue.level}`)}</AppTag><span title={issue.text}>{issue.text}</span></div>)}
           </AppSection>
           <AppSection className='billing-overview-section'>
-            <div className='billing-overview-section-heading'><h2>{t('billing.overview.channels.title')}</h2><Link to='/admin/billing/procurement-report'>{t('billing.overview.channels.view_details')}</Link></div>
-            {topChannels.length === 0 ? <div className='billing-overview-empty'>{t('billing.overview.channels.empty')}</div> : topChannels.map((item) => <div className='billing-overview-channel' key={item.dimension_key}><span>{item.dimension_name || item.dimension_key}</span><strong>{item.cost_floor_triggered_count > 0 ? `${formatCount(item.cost_floor_triggered_count)} / ${formatCNY(item.cost_floor_triggered_amount)}` : formatCNY(item.gross_profit_base_amount)}</strong></div>)}
+            <div className='billing-overview-section-heading'><h2>{t('billing.overview.channels.title')}</h2><Link to='/admin/finance/procurement-cost'>{t('billing.overview.channels.view_details')}</Link></div>
+            {topChannels.length === 0 ? <div className='billing-overview-empty'>{t('billing.overview.channels.empty')}</div> : topChannels.map((item) => <div className='billing-overview-channel' key={item.dimension_key}><span>{item.dimension_name || item.dimension_key}</span><strong>{formatCNY(item.gross_profit_base_amount)} / {formatPercent(item.gross_margin)}</strong></div>)}
           </AppSection>
         </div>
         <AppSection className='billing-overview-section billing-overview-global-risks'>
-          <div className='billing-overview-section-heading'><h2>{t('billing.overview.configuration_risks.title')}</h2><Link to='/admin/billing/procurement-report'>{t('billing.overview.configuration_risks.view_details')}</Link></div>
+          <div className='billing-overview-section-heading'><h2>{t('billing.overview.configuration_risks.title')}</h2><Link to='/admin/finance/procurement-cost'>{t('billing.overview.configuration_risks.view_details')}</Link></div>
           {configurationRisks.length === 0 ? <div className='billing-overview-empty'>{t('billing.overview.configuration_risks.empty')}</div> : configurationRisks.map((issue) => <div className='billing-overview-risk' key={issue.key}><AppTag color={issue.level === 'critical' ? 'red' : 'orange'}>{t(`billing.procurement_report.health.level.${issue.level || 'warning'}`)}</AppTag><span title={issue.message}>{issue.title}{issue.count ? ` (${formatCount(issue.count)})` : ''}</span></div>)}
         </AppSection>
         <AppSection className='billing-overview-section'>
           <div className='billing-overview-section-heading'><h2>{t('billing.overview.trend.title')}</h2></div>
-          <div className='billing-overview-trend'>{trend.map((item) => <div className='billing-overview-trend-row' key={item.day}><span>{item.day}</span><span>{t('billing.overview.trend.tokens', { input: formatCount(item.input_quantity), output: formatCount(item.output_quantity) })}</span><span>{t('billing.overview.trend.financials', { revenue: formatCNY(item.sell_base_amount), cost: formatCNY(item.procurement_cost_base_amount), profit: formatCNY(item.gross_profit_base_amount) })}</span><strong>{t('billing.overview.trend.coverage', { configured: formatCount(item.configured_cost_request_count), total: formatCount(item.request_count) })}</strong></div>)}</div>
+          <div className='billing-overview-trend'>{trend.map((item) => <div className='billing-overview-trend-row' key={item.day}><span>{item.day}</span><span>{t('billing.overview.trend.financials', { revenue: formatCNY(item.sell_base_amount), cost: formatCNY(item.procurement_cost_base_amount), profit: formatCNY(item.gross_profit_base_amount) })}</span></div>)}</div>
         </AppSection>
       </AppSpin>
     </div>

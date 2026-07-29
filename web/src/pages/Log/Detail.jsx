@@ -199,6 +199,449 @@ function renderRate(rate, currency) {
     : `${formatNumber(rate, 6)} ${YYC_SYMBOL}/${suffix}`;
 }
 
+function hasFiniteNumber(value) {
+  return (
+    typeof value === 'number' &&
+    !Number.isNaN(value) &&
+    Number.isFinite(value)
+  );
+}
+
+function hasNonZeroNumber(value) {
+  return hasFiniteNumber(value) && Math.abs(value) > 0;
+}
+
+function hasText(value) {
+  return (value || '').toString().trim() !== '';
+}
+
+function renderRatio(value) {
+  return hasFiniteNumber(value) && value > 0
+    ? `${formatNumber(value, 6)}x`
+    : '-';
+}
+
+function renderYycAmount(value) {
+  return hasFiniteNumber(value) ? `${YYC_SYMBOL} ${formatNumber(value, 0)}` : '-';
+}
+
+function renderPercent(value) {
+  return hasFiniteNumber(value) ? `${(Number(value) * 100).toFixed(2)}%` : '-';
+}
+
+function renderBillingFallbackText(value, fallback) {
+  const normalized = renderText(value);
+  return normalized === '-' ? fallback : normalized;
+}
+
+function renderBillingDetailItem(item) {
+  if (item?.visible === false) {
+    return null;
+  }
+  const ValueTag = item?.pre ? 'pre' : 'div';
+  const className = [
+    'router-detail-item',
+    item?.span ? 'router-detail-item-span-2' : '',
+    item?.emphasis ? 'router-billing-emphasis-item' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+  return (
+    <div className={className} key={item.key}>
+      <div className='router-detail-label'>{item.label}</div>
+      <ValueTag className='router-detail-value'>{item.value}</ValueTag>
+    </div>
+  );
+}
+
+function renderBillingGroup(title, items) {
+  const visibleItems = items.filter((item) => item?.visible !== false);
+  if (visibleItems.length === 0) {
+    return null;
+  }
+  return (
+    <div className='router-billing-explain-group' key={title}>
+      <div className='router-detail-section-subtitle'>{title}</div>
+      <div className='router-detail-grid'>
+        {visibleItems.map(renderBillingDetailItem)}
+      </div>
+    </div>
+  );
+}
+
+function renderBillingFormulaCard(log, t) {
+  const steps = [
+    {
+      key: 'base',
+      label: t('log.detail.billing_explanation.base_amount'),
+      value: renderAmount(log?.billing_amount, log?.billing_currency),
+    },
+    {
+      key: 'rate',
+      label: t('log.detail.billing_explanation.charge_rate'),
+      value: renderRate(log?.billing_charge_rate, log?.billing_currency),
+    },
+    {
+      key: 'ratio',
+      label: t('log.detail.billing_explanation.final_ratio'),
+      value: renderRatio(log?.billing_effective_ratio),
+    },
+    {
+      key: 'charge',
+      label: t('log.detail.billing_explanation.charge_amount'),
+      value: renderYycAmount(log?.billingChargeAmount),
+      result: true,
+    },
+  ];
+  return (
+    <div className='router-billing-formula-card'>
+      <div className='router-billing-formula-header'>
+        <div>
+          <div className='router-detail-label'>
+            {t('log.detail.billing_explanation.title')}
+          </div>
+          <div className='router-billing-formula-text'>
+            {t('log.detail.billing_explanation.formula')}
+          </div>
+        </div>
+        <div className='router-billing-formula-result'>
+          {renderYycAmount(log?.billingChargeAmount)}
+        </div>
+      </div>
+      <div className='router-billing-formula-steps'>
+        {steps.map((step) => (
+          <div
+            className={`router-billing-formula-step${step.result ? ' router-billing-formula-step-result' : ''}`}
+            key={step.key}
+          >
+            <span>{step.label}</span>
+            <strong>{step.value}</strong>
+          </div>
+        ))}
+      </div>
+      <div className='router-billing-formula-note'>
+        {t('log.detail.billing_explanation.formula_note')}
+      </div>
+    </div>
+  );
+}
+
+function renderBillingSnapshot(log, t, isAdminPage) {
+  const notObserved = t('log.detail.billing_explanation.not_observed');
+  const groups = [
+    renderBillingGroup(t('log.detail.billing_explanation.groups.source'), [
+      {
+        key: 'price_unit',
+        label: t('log.detail.fields.billing_price_unit'),
+        value: renderText(log?.billing_price_unit),
+        pre: true,
+      },
+      {
+        key: 'currency',
+        label: t('log.detail.fields.billing_currency'),
+        value: renderText(log?.billing_currency),
+        pre: true,
+      },
+      {
+        key: 'pricing_source',
+        label: t('log.detail.fields.billing_pricing_source'),
+        value: renderText(log?.billing_pricing_source),
+        pre: true,
+      },
+      {
+        key: 'usage_source',
+        label: t('log.detail.fields.billing_usage_source'),
+        value: renderText(log?.billing_usage_source),
+        pre: true,
+      },
+      {
+        key: 'estimate_source',
+        label: t('log.detail.fields.billing_estimate_source'),
+        value: renderText(log?.billing_estimate_source),
+        pre: true,
+      },
+      {
+        key: 'estimate_estimator',
+        label: t('log.detail.fields.billing_estimate_estimator'),
+        value: renderText(log?.billing_estimate_estimator),
+        pre: true,
+      },
+      {
+        key: 'estimate_precision',
+        label: t('log.detail.fields.billing_estimate_precision'),
+        value: renderEstimatePrecision(log?.billing_estimate_precision, t),
+        pre: true,
+      },
+      {
+        key: 'settlement_mode',
+        label: t('log.detail.fields.billing_settlement_mode'),
+        value: renderText(log?.billing_settlement_mode),
+        pre: true,
+      },
+    ]),
+    renderBillingGroup(t('log.detail.billing_explanation.groups.usage'), [
+      {
+        key: 'input_quantity',
+        label: t('log.detail.fields.billing_input_quantity'),
+        value: formatNumber(log?.billing_input_quantity, 6),
+        pre: true,
+      },
+      {
+        key: 'output_quantity',
+        label: t('log.detail.fields.billing_output_quantity'),
+        value: formatNumber(log?.billing_output_quantity, 6),
+        pre: true,
+      },
+      {
+        key: 'cache_read_quantity',
+        label: t('log.detail.fields.billing_cache_read_quantity'),
+        value: formatNumber(log?.billing_cache_read_quantity, 6),
+        pre: true,
+      },
+      {
+        key: 'cache_write_quantity',
+        label: t('log.detail.fields.billing_cache_write_quantity'),
+        value: formatNumber(log?.billing_cache_write_quantity, 6),
+        pre: true,
+      },
+      {
+        key: 'estimated_prompt_tokens',
+        label: t('log.detail.fields.estimated_prompt_tokens'),
+        value: log?.estimated_prompt_tokens ?? '-',
+        pre: true,
+      },
+      {
+        key: 'estimated_output_tokens',
+        label: t('log.detail.fields.estimated_output_tokens'),
+        value: log?.estimated_output_tokens ?? '-',
+        pre: true,
+      },
+      {
+        key: 'image_tool_calls',
+        label: t('log.detail.fields.billing_image_tool_calls'),
+        value: log?.billingImageToolCalls,
+        pre: true,
+        visible: log?.billingImageToolCalls > 0,
+      },
+      {
+        key: 'image_tool_output_tokens',
+        label: t('log.detail.fields.billing_image_tool_output_tokens'),
+        value: formatNumber(log?.billingImageToolOutputTokens, 0),
+        pre: true,
+        visible: log?.billingImageToolOutputTokens > 0,
+      },
+    ]),
+    renderBillingGroup(t('log.detail.billing_explanation.groups.base_price'), [
+      {
+        key: 'input_amount',
+        label: t('log.detail.fields.billing_input_amount'),
+        value: renderAmount(log?.billing_input_amount, log?.billing_currency),
+        pre: true,
+      },
+      {
+        key: 'output_amount',
+        label: t('log.detail.fields.billing_output_amount'),
+        value: renderAmount(log?.billing_output_amount, log?.billing_currency),
+        pre: true,
+      },
+      {
+        key: 'cache_read_amount',
+        label: t('log.detail.fields.billing_cache_read_amount'),
+        value: renderAmount(log?.billing_cache_read_amount, log?.billing_currency),
+        pre: true,
+      },
+      {
+        key: 'cache_write_amount',
+        label: t('log.detail.fields.billing_cache_write_amount'),
+        value: renderAmount(log?.billing_cache_write_amount, log?.billing_currency),
+        pre: true,
+      },
+      {
+        key: 'image_tool_amount',
+        label: t('log.detail.fields.billing_image_tool_amount'),
+        value: renderAmount(log?.billingImageToolAmount, log?.billing_currency),
+        pre: true,
+        visible: log?.billingImageToolAmount > 0,
+      },
+      {
+        key: 'total_amount',
+        label: t('log.detail.fields.billing_amount'),
+        value: renderAmount(log?.billing_amount, log?.billing_currency),
+        pre: true,
+        emphasis: true,
+      },
+    ]),
+    renderBillingGroup(t('log.detail.billing_explanation.groups.price_ratio'), [
+      {
+        key: 'charge_rate',
+        label: t('log.detail.fields.billing_charge_rate'),
+        value: renderRate(log?.billing_charge_rate, log?.billing_currency),
+        pre: true,
+      },
+      {
+        key: 'group_channel_ratio',
+        label: t('log.detail.fields.billing_group_channel_ratio'),
+        value: renderRatio(log?.billing_group_channel_ratio),
+        pre: true,
+      },
+      {
+        key: 'model_channel_ratio',
+        label: t('log.detail.fields.billing_model_channel_ratio'),
+        value: renderRatio(log?.billing_model_channel_ratio),
+        pre: true,
+      },
+      {
+        key: 'effective_ratio',
+        label: t('log.detail.fields.billing_effective_ratio'),
+        value: renderRatio(log?.billing_effective_ratio),
+        pre: true,
+        emphasis: true,
+      },
+    ]),
+    renderBillingGroup(t('log.detail.billing_explanation.groups.settlement'), [
+      {
+        key: 'billing_source',
+        label: t('log.detail.fields.billing_source'),
+        value: renderBillingSource(log?.billing_source, t),
+        pre: true,
+      },
+      {
+        key: 'billing_source_name',
+        label: t('log.detail.fields.billing_source_name'),
+        value: renderText(log?.billing_source_name || log?.billing_source_id),
+        pre: true,
+        visible: hasText(log?.billing_source_name) || hasText(log?.billing_source_id),
+      },
+      {
+        key: 'billing_source_detail',
+        label: t('log.detail.fields.billing_source_detail'),
+        value: renderText(log?.billing_source_detail),
+        pre: true,
+        visible: hasText(log?.billing_source_detail),
+      },
+      {
+        key: 'charge_amount',
+        label: t('log.detail.fields.billing_charge_amount'),
+        value: renderYycAmount(log?.billingChargeAmount),
+        emphasis: true,
+      },
+      {
+        key: 'estimated_charge_amount',
+        label: t('log.detail.fields.estimated_charge_amount'),
+        value: renderYycAmount(log?.estimatedChargeAmount),
+      },
+      {
+        key: 'charge_delta',
+        label: t('log.detail.fields.billing_charge_delta_amount'),
+        value: renderYycAmount(log?.billingChargeDeltaAmount),
+        visible: hasNonZeroNumber(log?.billingChargeDeltaAmount),
+      },
+      {
+        key: 'prompt_token_delta',
+        label: t('log.detail.fields.billing_prompt_token_delta'),
+        value: formatNumber(log?.billingPromptTokenDelta, 0),
+        pre: true,
+        visible: hasNonZeroNumber(log?.billingPromptTokenDelta),
+      },
+      {
+        key: 'output_token_delta',
+        label: t('log.detail.fields.billing_output_token_delta'),
+        value: formatNumber(log?.billingOutputTokenDelta, 0),
+        pre: true,
+        visible: hasNonZeroNumber(log?.billingOutputTokenDelta),
+      },
+      {
+        key: 'image_tool_charge_amount',
+        label: t('log.detail.fields.billing_image_tool_charge_amount'),
+        value: renderYycAmount(log?.billingImageToolChargeAmount),
+        visible: log?.billingImageToolChargeAmount > 0,
+      },
+    ]),
+  ];
+
+  if (isAdminPage) {
+    groups.push(
+      renderBillingGroup(t('log.detail.billing_explanation.groups.procurement'), [
+        {
+          key: 'procurement_cost',
+          label: t('log.detail.fields.billing_procurement_cost'),
+          value: hasFiniteNumber(log?.billing_procurement_cost_base_amount)
+            ? renderAmount(log?.billing_procurement_cost_base_amount, 'CNY')
+            : notObserved,
+        },
+        {
+          key: 'procurement_cost_source',
+          label: t('log.detail.fields.billing_procurement_cost_source'),
+          value: renderBillingFallbackText(
+            log?.billing_procurement_cost_source,
+            notObserved,
+          ),
+          pre: true,
+        },
+        {
+          key: 'procurement_cost_confidence',
+          label: t('log.detail.fields.billing_procurement_cost_confidence'),
+          value: renderBillingFallbackText(
+            log?.billing_procurement_cost_confidence,
+            notObserved,
+          ),
+          pre: true,
+        },
+        {
+          key: 'gross_profit',
+          label: t('log.detail.fields.billing_gross_profit'),
+          value: renderAmount(log?.billing_gross_profit_base_amount, 'CNY'),
+        },
+        {
+          key: 'gross_margin',
+          label: t('log.detail.fields.billing_gross_margin'),
+          value: renderPercent(log?.billing_gross_margin),
+        },
+        {
+          key: 'sell_base',
+          label: t('log.detail.fields.billing_sell_base_amount'),
+          value: renderAmount(log?.billing_sell_base_amount, 'CNY'),
+          visible: hasNonZeroNumber(log?.billing_sell_base_amount),
+        },
+        {
+          key: 'cost_floor',
+          label: t('log.detail.fields.billing_cost_floor_base_amount'),
+          value: renderAmount(log?.billing_cost_floor_base_amount, 'CNY'),
+          visible: hasNonZeroNumber(log?.billing_cost_floor_base_amount),
+        },
+        {
+          key: 'selected_sell',
+          label: t('log.detail.fields.billing_selected_sell_base_amount'),
+          value: renderAmount(log?.billing_selected_sell_base_amount, 'CNY'),
+          visible: hasNonZeroNumber(log?.billing_selected_sell_base_amount),
+        },
+        {
+          key: 'cost_floor_triggered',
+          label: t('log.detail.fields.billing_cost_floor_triggered'),
+          value: log?.billing_cost_floor_triggered
+            ? t('log.detail.billing_explanation.yes')
+            : t('log.detail.billing_explanation.no'),
+          visible: log?.billing_cost_floor_triggered === true,
+        },
+        {
+          key: 'pricing_decision_reason',
+          label: t('log.detail.fields.billing_pricing_decision_reason'),
+          value: renderText(log?.billing_pricing_decision_reason),
+          pre: true,
+          visible: hasText(log?.billing_pricing_decision_reason),
+        },
+      ]),
+    );
+  }
+
+  return (
+    <div className='router-billing-explain-stack'>
+      {renderBillingFormulaCard(log, t)}
+      {groups}
+    </div>
+  );
+}
+
 function normalizeLogDetail(data) {
   return {
     ...(data || {}),
@@ -686,317 +1129,7 @@ const LogDetail = () => {
             </AppDetailSection>
 
             <AppDetailSection title={t('log.detail.sections.billing')} titleTag='div'>
-                  <div className='router-detail-grid'>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_price_unit')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {renderText(log?.billing_price_unit)}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_currency')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {renderText(log?.billing_currency)}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_pricing_source')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {renderText(log?.billing_pricing_source)}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_usage_source')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {renderText(log?.billing_usage_source)}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_estimate_source')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {renderText(log?.billing_estimate_source)}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_estimate_estimator')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {renderText(log?.billing_estimate_estimator)}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_estimate_precision')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {renderText(log?.billing_estimate_precision)}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.estimated_prompt_tokens')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {log?.estimated_prompt_tokens ?? '-'}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.estimated_output_tokens')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {log?.estimated_output_tokens ?? '-'}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_settlement_mode')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {renderText(log?.billing_settlement_mode)}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_effective_ratio')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {formatNumber(log?.billing_effective_ratio, 6)}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_group_channel_ratio')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {formatNumber(log?.billing_group_channel_ratio, 6)}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_model_channel_ratio')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {formatNumber(log?.billing_model_channel_ratio, 6)}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_charge_rate')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {renderRate(
-                          log?.billing_charge_rate,
-                          log?.billing_currency,
-                        )}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_input_quantity')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {formatNumber(log?.billing_input_quantity, 6)}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_output_quantity')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {formatNumber(log?.billing_output_quantity, 6)}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_cache_read_quantity')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {formatNumber(log?.billing_cache_read_quantity, 6)}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_cache_write_quantity')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {formatNumber(log?.billing_cache_write_quantity, 6)}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_input_amount')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {renderAmount(
-                          log?.billing_input_amount,
-                          log?.billing_currency,
-                        )}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_output_amount')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {renderAmount(
-                          log?.billing_output_amount,
-                          log?.billing_currency,
-                        )}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_cache_read_amount')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {renderAmount(
-                          log?.billing_cache_read_amount,
-                          log?.billing_currency,
-                        )}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_cache_write_amount')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {renderAmount(
-                          log?.billing_cache_write_amount,
-                          log?.billing_currency,
-                        )}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_amount')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {renderAmount(
-                          log?.billing_amount,
-                          log?.billing_currency,
-                        )}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_charge_amount')}
-                      </div>
-                      <div className='router-detail-value'>
-                        {typeof log?.billingChargeAmount === 'number'
-                          ? renderDisplayAmount(log.billingChargeAmount, t, 6)
-                          : '-'}
-                      </div>
-                    </div>
-                    <div className='router-detail-item'><div className='router-detail-label'>{t('log.detail.fields.billing_procurement_cost')}</div><div className='router-detail-value'>{renderAmount(log?.billing_procurement_cost_base_amount, 'CNY')}</div></div>
-                    <div className='router-detail-item'><div className='router-detail-label'>{t('log.detail.fields.billing_procurement_cost_source')}</div><pre className='router-detail-value'>{renderText(log?.billing_procurement_cost_source)}</pre></div>
-                    <div className='router-detail-item'><div className='router-detail-label'>{t('log.detail.fields.billing_gross_profit')}</div><div className='router-detail-value'>{renderAmount(log?.billing_gross_profit_base_amount, 'CNY')}</div></div>
-                    <div className='router-detail-item'><div className='router-detail-label'>{t('log.detail.fields.billing_gross_margin')}</div><div className='router-detail-value'>{typeof log?.billing_gross_margin === 'number' ? `${(Number(log.billing_gross_margin) * 100).toFixed(2)}%` : '-'}</div></div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.estimated_charge_amount')}
-                      </div>
-                      <div className='router-detail-value'>
-                        {typeof log?.estimatedChargeAmount === 'number'
-                          ? renderDisplayAmount(log.estimatedChargeAmount, t, 6)
-                          : '-'}
-                      </div>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_charge_delta_amount')}
-                      </div>
-                      <div className='router-detail-value'>
-                        {typeof log?.billingChargeDeltaAmount === 'number'
-                          ? renderDisplayAmount(
-                              log.billingChargeDeltaAmount,
-                              t,
-                              6,
-                            )
-                          : '-'}
-                      </div>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_prompt_token_delta')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {Number.isFinite(log?.billingPromptTokenDelta)
-                          ? formatNumber(log.billingPromptTokenDelta, 0)
-                          : '-'}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_output_token_delta')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {Number.isFinite(log?.billingOutputTokenDelta)
-                          ? formatNumber(log.billingOutputTokenDelta, 0)
-                          : '-'}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_image_tool_calls')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {log?.billingImageToolCalls > 0
-                          ? log.billingImageToolCalls
-                          : '-'}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t(
-                          'log.detail.fields.billing_image_tool_output_tokens',
-                        )}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {log?.billingImageToolOutputTokens > 0
-                          ? formatNumber(log.billingImageToolOutputTokens, 0)
-                          : '-'}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_image_tool_amount')}
-                      </div>
-                      <pre className='router-detail-value'>
-                        {log?.billingImageToolAmount > 0
-                          ? renderAmount(
-                              log.billingImageToolAmount,
-                              log?.billing_currency,
-                            )
-                          : '-'}
-                      </pre>
-                    </div>
-                    <div className='router-detail-item'>
-                      <div className='router-detail-label'>
-                        {t('log.detail.fields.billing_image_tool_charge_amount')}
-                      </div>
-                      <div className='router-detail-value'>
-                        {log?.billingImageToolChargeAmount > 0
-                          ? renderDisplayAmount(
-                              log.billingImageToolChargeAmount,
-                              t,
-                              6,
-                            )
-                          : '-'}
-                      </div>
-                    </div>
-                  </div>
+              {renderBillingSnapshot(log, t, isAdminPage)}
             </AppDetailSection>
 
             <AppDetailSection title={t('log.detail.sections.content')} titleTag='div'>

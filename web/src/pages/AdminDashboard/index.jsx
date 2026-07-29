@@ -56,9 +56,8 @@ const USER_GROWTH_GRANULARITY_OPTIONS = ['week', 'month'];
 const USER_GROWTH_LINE_KEYS = ['new_user_count', 'active_user_count', 'topup_user_count'];
 const USER_SEGMENT_FOCUS_LIMIT = 100;
 
-const DASHBOARD_SECTIONS = ['spending', 'channels', 'users'];
+const DASHBOARD_SECTIONS = ['channels', 'users'];
 const DASHBOARD_SECTION_TITLES = {
-  spending: 'dashboard.admin.nav.spending',
   channels: 'dashboard.admin.nav.channels',
   users: 'dashboard.admin.nav.users',
 };
@@ -456,12 +455,12 @@ const AdminDashboard = () => {
     const params = new URLSearchParams(location.search || '');
     const rawSection = (params.get('section') || '').trim().toLowerCase();
     if (rawSection === 'overview' || rawSection === 'trend') {
-      return 'spending';
+      return 'channels';
     }
     if (rawSection === 'health') {
       return 'channels';
     }
-    return DASHBOARD_SECTIONS.includes(rawSection) ? rawSection : 'spending';
+    return DASHBOARD_SECTIONS.includes(rawSection) ? rawSection : 'channels';
   }, [location.search]);
 
   const activeSectionTitle = t(DASHBOARD_SECTION_TITLES[activeSection]);
@@ -2159,7 +2158,6 @@ const AdminDashboard = () => {
   return (
     <div className='dashboard-container admin-dashboard-container'>
       {renderPageHeader()}
-      {activeSection === 'spending' ? renderSpendingSection() : null}
       {activeSection === 'channels' ? renderChannelsSection() : null}
       {activeSection === 'users' ? renderUsersSection() : null}
       {activeSection === 'models' ? renderModelsSection() : null}
