@@ -2211,16 +2211,16 @@
     }
   },
   "workspace_start": {
-    "title": "Activate Service",
+    "title": "Start Using",
     "actions": {
-      "view_pricing": "View subscriptions",
+      "view_pricing": "Buy a package / Add balance",
       "view_guide": "Usage guide",
       "create_token": "Create token",
       "open_chat": "Open Chat"
     },
     "steps": {
       "pricing": {
-        "title": "Get quota first",
+        "title": "Get quota",
         "description": "Packages fit stable usage, while balance fits trial-first usage. Package purchases and balance top-ups happen on the Subscriptions page."
       },
       "token": {

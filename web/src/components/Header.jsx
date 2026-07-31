@@ -250,10 +250,10 @@ const Header = ({ workspace = 'user', hideNavButtons = false }) => {
                 className='router-page-button router-header-mobile-actions'
                 onClick={() => {
                   setShowSidebar(false);
-                  navigate('/workspace/start');
+                  navigate('/workspace/service/pricing');
                 }}
               >
-                {t('workspace_start.title')}
+                {t('header.get_started')}
               </AppButton>
             )}
             <AppSelect
@@ -339,9 +339,9 @@ const Header = ({ workspace = 'user', hideNavButtons = false }) => {
             <AppButton
               type='button'
               className='router-header-quick-action'
-              onClick={() => navigate('/workspace/start')}
+              onClick={() => navigate('/workspace/service/pricing')}
             >
-              {t('workspace_start.title')}
+              {t('header.get_started')}
             </AppButton>
           ) : null}
           <HeaderMessageCenter />

@@ -679,7 +679,7 @@ const UserDetail = () => {
     }
     switch ((lot?.source_type || '').toString().trim()) {
 		case 'topup_order':
-			return `/admin/entitlement/topup/records/${encodeURIComponent(sourceID)}`;
+			return `/admin/entitlement/purchases/${encodeURIComponent(sourceID)}`;
 		case 'redemption':
 			return `/admin/redemption/records/${encodeURIComponent(sourceID)}`;
       default:

@@ -21,6 +21,61 @@ type entitlementProductListPageData struct {
 	PageSize int                        `json:"page_size"`
 }
 
+type entitlementPurchaseListPageData struct {
+	Items    []model.AdminPurchaseRecord `json:"items"`
+	Total    int64                       `json:"total"`
+	Page     int                         `json:"page"`
+	PageSize int                         `json:"page_size"`
+}
+
+func GetPurchases(c *gin.Context) {
+	_, page, pageSize, keyword := parseEntitlementProductListPageParams(c)
+	status := strings.TrimSpace(c.Query("status"))
+	userID := strings.TrimSpace(c.Query("user_id"))
+	rows, total, err := model.ListAdminPurchaseRecordsPageWithDB(model.DB, page, pageSize, keyword, status, userID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    entitlementPurchaseListPageData{Items: rows, Total: total, Page: page, PageSize: pageSize},
+	})
+}
+
+func GetPurchase(c *gin.Context) {
+	id := strings.TrimSpace(c.Param("id"))
+	purchase, err := model.GetAdminPurchaseRecordByIDWithDB(model.DB, id)
+	if err != nil {
+		message := err.Error()
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			message = "购买记录不存在"
+		}
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": message})
+		return
+	}
+	var record any
+	if purchase.RecordSource == "subscription" {
+		record, err = model.GetAdminUserPackageRecordByIDWithDB(model.DB, purchase.ID)
+	} else {
+		record, err = model.GetTopupOrderByIDForAdminWithDB(model.DB, purchase.ID)
+	}
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data": gin.H{
+			"product_kind": purchase.ProductKind,
+			"record_type":  purchase.RecordSource,
+			"record":       record,
+		},
+	})
+}
+
 func parseEntitlementProductListPageParams(c *gin.Context) (kind string, page int, pageSize int, keyword string) {
 	kind = strings.TrimSpace(c.Query("kind"))
 	page = 1

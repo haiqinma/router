@@ -83,17 +83,37 @@ type AdminTopupReconcileRecord struct {
 // subscription purchases. The original record remains the source of truth for
 // detail pages and payment actions.
 type AdminPurchaseRecord struct {
-	ID          string  `json:"id"`
-	UserID      string  `json:"user_id"`
-	Username    string  `json:"username"`
-	ProductKind string  `json:"product_kind"`
-	ProductID   string  `json:"product_id"`
-	ProductName string  `json:"product_name"`
-	Status      string  `json:"status"`
-	Amount      float64 `json:"amount"`
-	Currency    string  `json:"currency"`
-	CreatedAt   int64   `json:"created_at"`
-	UpdatedAt   int64   `json:"updated_at"`
+	ID           string  `json:"id"`
+	UserID       string  `json:"user_id"`
+	Username     string  `json:"username"`
+	ProductKind  string  `json:"product_kind"`
+	ProductID    string  `json:"product_id"`
+	ProductName  string  `json:"product_name"`
+	Status       string  `json:"status"`
+	Amount       float64 `json:"amount"`
+	Currency     string  `json:"currency"`
+	CreatedAt    int64   `json:"created_at"`
+	UpdatedAt    int64   `json:"updated_at"`
+	RecordSource string  `json:"-"`
+}
+
+func adminPurchaseRecordsBaseSQL() string {
+	return `(
+		SELECT o.id, o.user_id, COALESCE(NULLIF(o.username, ''), u.username, '') AS username,
+		       CASE WHEN COALESCE(o.package_id, '') <> '' THEN 'subscription' ELSE 'balance' END AS product_kind,
+		       COALESCE(NULLIF(o.package_id, ''), o.topup_plan_id, '') AS product_id,
+		       COALESCE(o.package_name, '') AS product_name, o.status, o.amount, o.currency,
+		       o.created_at, o.updated_at, 'topup_order' AS record_source
+		FROM ` + TopupOrdersTableName + ` o LEFT JOIN users u ON u.id = o.user_id
+		UNION ALL
+		SELECT s.id, s.user_id, COALESCE(u.username, ''), 'subscription', s.package_id,
+		       COALESCE(s.package_name, ''), CAST(s.status AS TEXT),
+		       COALESCE(p.sale_price, 0), COALESCE(p.sale_currency, ''), s.started_at, s.updated_at,
+		       'subscription' AS record_source
+		FROM ` + UserPackageSubscriptionsTableName + ` s
+		LEFT JOIN users u ON u.id = s.user_id
+		LEFT JOIN ` + ServicePackage{}.TableName() + ` p ON p.id = s.package_id
+	)`
 }
 
 func ListAdminPurchaseRecordsPageWithDB(db *gorm.DB, page int, pageSize int, keyword string, status string, userID string) ([]AdminPurchaseRecord, int64, error) {
@@ -104,22 +124,7 @@ func ListAdminPurchaseRecordsPageWithDB(db *gorm.DB, page int, pageSize int, key
 	keyword = strings.ToLower(strings.TrimSpace(keyword))
 	userID = strings.TrimSpace(userID)
 	status = strings.ToLower(strings.TrimSpace(status))
-	base := `(
-		SELECT o.id, o.user_id, COALESCE(NULLIF(o.username, ''), u.username, '') AS username,
-		       CASE WHEN COALESCE(o.package_id, '') <> '' THEN 'subscription' ELSE 'balance' END AS product_kind,
-		       COALESCE(NULLIF(o.package_id, ''), o.topup_plan_id, '') AS product_id,
-		       COALESCE(o.package_name, '') AS product_name, o.status, o.amount, o.currency,
-		       o.created_at, o.updated_at
-		FROM ` + TopupOrdersTableName + ` o LEFT JOIN users u ON u.id = o.user_id
-		UNION ALL
-		SELECT s.id, s.user_id, COALESCE(u.username, ''), 'subscription', s.package_id,
-		       COALESCE(s.package_name, ''), CAST(s.status AS TEXT),
-		       COALESCE(p.sale_price, 0), COALESCE(p.sale_currency, ''), s.started_at, s.updated_at
-		FROM ` + UserPackageSubscriptionsTableName + ` s
-		LEFT JOIN users u ON u.id = s.user_id
-		LEFT JOIN ` + ServicePackage{}.TableName() + ` p ON p.id = s.package_id
-	)`
-	query := db.Table(base + " AS purchase")
+	query := db.Table(adminPurchaseRecordsBaseSQL() + " AS purchase")
 	if userID != "" {
 		query = query.Where("purchase.user_id = ?", userID)
 	}
@@ -135,10 +140,26 @@ func ListAdminPurchaseRecordsPageWithDB(db *gorm.DB, page int, pageSize int, key
 		return nil, 0, err
 	}
 	rows := make([]AdminPurchaseRecord, 0, pageSize)
-	if err := query.Select("purchase.id, purchase.user_id, purchase.username, purchase.product_kind, purchase.product_id, purchase.product_name, purchase.status, purchase.amount, purchase.currency, purchase.created_at, purchase.updated_at").Order("purchase.created_at DESC, purchase.id DESC").Limit(pageSize).Offset((page - 1) * pageSize).Scan(&rows).Error; err != nil {
+	if err := query.Select("purchase.id, purchase.user_id, purchase.username, purchase.product_kind, purchase.product_id, purchase.product_name, purchase.status, purchase.amount, purchase.currency, purchase.created_at, purchase.updated_at, purchase.record_source").Order("purchase.created_at DESC, purchase.id DESC").Limit(pageSize).Offset((page - 1) * pageSize).Scan(&rows).Error; err != nil {
 		return nil, 0, err
 	}
 	return rows, total, nil
+}
+
+func GetAdminPurchaseRecordByIDWithDB(db *gorm.DB, id string) (AdminPurchaseRecord, error) {
+	if db == nil {
+		return AdminPurchaseRecord{}, fmt.Errorf("database handle is nil")
+	}
+	normalizedID := strings.TrimSpace(id)
+	if normalizedID == "" {
+		return AdminPurchaseRecord{}, gorm.ErrRecordNotFound
+	}
+	row := AdminPurchaseRecord{}
+	err := db.Table(adminPurchaseRecordsBaseSQL()+" AS purchase").
+		Where("purchase.id = ?", normalizedID).
+		Order("purchase.created_at DESC").
+		Take(&row).Error
+	return row, err
 }
 
 func normalizeBusinessFlowPage(page int, pageSize int) (int, int) {

@@ -47,7 +47,6 @@ import WorkspaceTaskPage from './pages/Task/WorkspaceTaskPage';
 import WorkspaceTaskDetailPage from './pages/Task/WorkspaceTaskDetailPage';
 import RecordListPage from './pages/Records/RecordListPage';
 import PaymentRecordDetail from './pages/Records/PaymentRecordDetail';
-import TopupRecordDetail from './pages/Records/TopupRecordDetail';
 import RedemptionRecordDetail from './pages/Records/RedemptionRecordDetail';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminAlerts from './pages/AdminAlerts';
@@ -130,12 +129,12 @@ function UserWorkspaceEntryRedirect() {
         if (!active) {
           return;
         }
-        setTargetPath(hasActivePackage || hasBalance ? '/workspace/topup?tab=quota' : '/workspace/start');
+        setTargetPath(hasActivePackage || hasBalance ? '/workspace/topup?tab=quota' : '/workspace/service/pricing');
       } catch (error) {
         if (!active) {
           return;
         }
-        setTargetPath('/workspace/start');
+        setTargetPath('/workspace/service/pricing');
       }
     };
 
@@ -776,7 +775,7 @@ function App() {
           element={<PackageDetail />}
         />
         <Route
-          path='/admin/entitlement/purchase-records'
+          path='/admin/entitlement/purchases'
           element={<RecordListPage kind='purchase' />}
         />
         <Route
@@ -784,15 +783,11 @@ function App() {
           element={<TopupPlanDetail />}
         />
         <Route
-          path='/admin/entitlement/topup/records/:id'
-          element={<TopupRecordDetail />}
-        />
-        <Route
           path='/admin/entitlement/topup/payment/:id'
           element={<PaymentRecordDetail />}
         />
         <Route
-          path='/admin/entitlement/purchase-records/:id'
+          path='/admin/entitlement/purchases/:id'
           element={<PaymentRecordDetail />}
         />
         <Route

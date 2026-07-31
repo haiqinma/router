@@ -152,21 +152,12 @@ body,
 
 .router-admin-sidebar-toolbar {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
     margin-bottom: 10px;
     padding: 0 6px;
     min-height: 36px;
     flex: 0 0 auto;
-}
-
-.router-admin-sidebar-heading {
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1;
-    color: rgba(34, 36, 38, 0.58);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
 }
 
 .router-admin-sidebar.compact {

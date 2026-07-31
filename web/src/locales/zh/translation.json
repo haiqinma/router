@@ -2211,16 +2211,16 @@
     }
   },
   "workspace_start": {
-    "title": "开通服务",
+    "title": "开始使用",
     "actions": {
-      "view_pricing": "查看订阅",
+      "view_pricing": "购买套餐 / 充值",
       "view_guide": "使用说明",
       "create_token": "创建令牌",
       "open_chat": "打开 Chat"
     },
     "steps": {
       "pricing": {
-        "title": "先获取额度",
+        "title": "获取额度",
         "description": "套餐适合稳定使用，余额适合先试后扩。套餐购买和余额充值统一在订阅页面完成。"
       },
       "token": {

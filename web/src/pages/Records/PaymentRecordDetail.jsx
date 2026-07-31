@@ -148,8 +148,8 @@ const renderSubscriptionStatus = (status) => {
 const resolveListPath = (stateFrom, currentPath = '') => {
   const normalizedCurrentPath = (currentPath || '').toString().trim();
   if (typeof stateFrom !== 'string') {
-    if (normalizedCurrentPath.startsWith('/admin/entitlement/purchase-records/')) {
-      return '/admin/entitlement/purchase-records';
+    if (normalizedCurrentPath.startsWith('/admin/entitlement/purchases/')) {
+      return '/admin/entitlement/purchases';
     }
     return '/admin/user';
   }
@@ -164,13 +164,13 @@ const resolveListPath = (stateFrom, currentPath = '') => {
       return `/admin/user/detail/${segments[3]}`;
     }
   }
-  if (normalized.startsWith('/admin/entitlement/purchase-records/')) {
-    return '/admin/entitlement/purchase-records';
+  if (normalized.startsWith('/admin/entitlement/purchases/')) {
+    return '/admin/entitlement/purchases';
   }
   if (normalized.startsWith('/admin/entitlement/topup/payment/')) {
     return '/admin/user';
   }
-  if (normalized === '/admin/entitlement/purchase-records') {
+  if (normalized === '/admin/entitlement/purchases') {
     return normalized;
   }
   return normalized || '/admin/user';
@@ -182,7 +182,9 @@ const PaymentRecordDetail = () => {
   const location = useLocation();
   const { id, paymentId } = useParams();
   const orderID = (paymentId || id || '').toString().trim();
-  const isSubscriptionDetail = location.pathname.startsWith('/admin/entitlement/purchase-records/');
+  const isPurchaseDetail = location.pathname.startsWith('/admin/entitlement/purchases/');
+  const [productKind, setProductKind] = useState('');
+  const [recordType, setRecordType] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [order, setOrder] = useState(null);
@@ -196,7 +198,7 @@ const PaymentRecordDetail = () => {
     if (fromUserDetail) {
       return t('topup.payment_history.title');
     }
-    if (listPath.startsWith('/admin/entitlement/purchase-records')) {
+    if (listPath.startsWith('/admin/entitlement/purchases')) {
       return '购买记录';
     }
     return t('flow.topup_reconcile.title');
@@ -250,13 +252,14 @@ const PaymentRecordDetail = () => {
   }, [fromUserDetail, id, listLabel, listPath, navigate, order?.id, order?.user_id, order?.username, t]);
   const canSyncPaymentStatus = SYNCABLE_TOPUP_RECONCILE_STATUSES.has(
     normalizeTopupStatus(order?.status),
-  ) && !isSubscriptionDetail;
+  ) && !isPurchaseDetail;
+  const isSubscriptionDetail = recordType === 'subscription';
 
   const loadDetail = useCallback(async () => {
     setLoading(true);
     try {
-      const endpoint = isSubscriptionDetail
-        ? `/api/v1/admin/flow/package-records/${encodeURIComponent(orderID)}`
+      const endpoint = isPurchaseDetail
+        ? `/api/v1/admin/entitlement/purchases/${encodeURIComponent(orderID)}`
         : `/api/v1/admin/flow/topup-reconcile-records/${encodeURIComponent(orderID)}`;
       const res = await API.get(endpoint);
       const { success, message, data } = res.data || {};
@@ -264,13 +267,21 @@ const PaymentRecordDetail = () => {
         showError(message || t('flow.topup_reconcile.detail.messages.load_failed'));
         return;
       }
-      setOrder(data || null);
+      if (isPurchaseDetail) {
+        setProductKind((data?.product_kind || '').toString());
+        setRecordType((data?.record_type || '').toString());
+        setOrder(data?.record || null);
+      } else {
+        setProductKind('');
+        setRecordType('');
+        setOrder(data || null);
+      }
     } catch (error) {
       showError(error?.message || t('flow.topup_reconcile.detail.messages.load_failed'));
     } finally {
       setLoading(false);
     }
-  }, [isSubscriptionDetail, orderID, t]);
+  }, [isPurchaseDetail, orderID, t]);
 
   const handleRefresh = useCallback(async () => {
     if (!orderID) {
@@ -345,7 +356,7 @@ const PaymentRecordDetail = () => {
                       {t('flow.topup_reconcile.detail.fields.business_type')}
                     </div>
                     <pre className='router-detail-value'>
-                      {isSubscriptionDetail ? '订阅' : formatTopupBusinessType(order?.business_type, t)}
+                      {productKind === 'subscription' ? '订阅' : formatTopupBusinessType(order?.business_type, t)}
                     </pre>
                   </div>
                   <div className='router-detail-item'>

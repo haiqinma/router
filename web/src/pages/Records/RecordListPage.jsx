@@ -7,7 +7,6 @@ const RECORD_CONFIG = {
   purchase: {
     title: '购买记录',
     parentPath: '/admin/entitlement',
-    detailBasePath: '/admin/entitlement/purchase-records',
     tableKind: 'purchase',
     scope: 'entitlement',
     hideParentBreadcrumb: true,

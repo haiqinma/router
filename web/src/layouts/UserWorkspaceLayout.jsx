@@ -43,11 +43,6 @@ const UserWorkspaceLayout = () => {
           collapsed={sidebarCompact}
         >
           <div className='router-admin-sidebar-toolbar'>
-            {!sidebarCompact ? (
-              <div className='router-admin-sidebar-heading'>
-                {t('header.workspace')}
-              </div>
-            ) : null}
             <AppButton
               type='button'
               basic

@@ -866,7 +866,7 @@ const Entitlement = () => {
           <button
             type='button'
             className='router-breadcrumb-link router-page-header-link'
-            onClick={() => navigate('/admin/entitlement/purchase-records')}
+            onClick={() => navigate('/admin/entitlement/purchases')}
           >
             购买记录
           </button>

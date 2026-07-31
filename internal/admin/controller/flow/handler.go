@@ -73,16 +73,6 @@ func GetTopupOrderRecords(c *gin.Context) {
 	writeFlowList(c, rows, total, page, pageSize)
 }
 
-func GetPurchaseRecords(c *gin.Context) {
-	page, pageSize, keyword, status, userID := parseFlowPageParams(c)
-	rows, total, err := model.ListAdminPurchaseRecordsPageWithDB(model.DB, page, pageSize, keyword, status, userID)
-	if err != nil {
-		writeFlowError(c, err)
-		return
-	}
-	writeFlowList(c, rows, total, page, pageSize)
-}
-
 func GetTopupOrderRecord(c *gin.Context) {
 	id := strings.TrimSpace(c.Param("id"))
 	row, err := model.GetAdminTopupOrderRecordByIDWithDB(model.DB, id)
@@ -172,36 +162,6 @@ func FulfillTopupReconcileRecord(c *gin.Context) {
 		"success": true,
 		"message": "",
 		"data":    fulfilledOrder,
-	})
-}
-
-func GetPackageRecords(c *gin.Context) {
-	page, pageSize, keyword, status, userID := parseFlowPageParams(c)
-	statusCode := 0
-	if status != "" {
-		if parsed, err := strconv.Atoi(status); err == nil && parsed > 0 {
-			statusCode = parsed
-		}
-	}
-	rows, total, err := model.ListAdminUserPackageRecordsPageWithDB(model.DB, page, pageSize, keyword, statusCode, userID)
-	if err != nil {
-		writeFlowError(c, err)
-		return
-	}
-	writeFlowList(c, rows, total, page, pageSize)
-}
-
-func GetPackageRecord(c *gin.Context) {
-	id := strings.TrimSpace(c.Param("id"))
-	row, err := model.GetAdminUserPackageRecordByIDWithDB(model.DB, id)
-	if err != nil {
-		writeFlowError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-		"data":    row,
 	})
 }
 
