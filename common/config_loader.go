@@ -429,7 +429,11 @@ func ApplyAppConfig(cfg *AppConfig, portFlagSet bool, logDirFlagSet bool) error 
 	if action := strings.TrimSpace(cfg.UCAN.Action); action != "" {
 		config.UcanAction = action
 	}
-	config.UcanTrustedIssuerDIDs = normalizeStringSlice(cfg.UCAN.TrustedIssuerDIDs)
+	trustedIssuerDIDs, err := normalizeTrustedIssuerDIDs(cfg.UCAN.TrustedIssuerDIDs)
+	if err != nil {
+		return err
+	}
+	config.UcanTrustedIssuerDIDs = trustedIssuerDIDs
 
 	config.DebugEnabled = cfg.Feature.Debug
 	config.DebugSQLEnabled = cfg.Feature.DebugSQL
@@ -630,6 +634,26 @@ func normalizeStringSlice(values []string) []string {
 		}
 	}
 	return result
+}
+
+func normalizeTrustedIssuerDIDs(values []string) ([]string, error) {
+	result := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
+			continue
+		}
+		if _, err := didKeyToPublicKey(trimmed); err != nil {
+			return nil, fmt.Errorf("ucan.trusted_issuer_dids contains invalid issuer DID %q: %w", trimmed, err)
+		}
+		if _, ok := seen[trimmed]; ok {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		result = append(result, trimmed)
+	}
+	return result, nil
 }
 
 func normalizeRelayHostAllowlist(values []string) []string {

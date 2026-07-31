@@ -1,4 +1,5 @@
 import { resolveAdminSettingLocation } from '../helpers/adminSetting';
+import { buildUserWorkspaceMenuItems } from './userMenu';
 
 export const ADMIN_MENU_GROUPS = [
   {
@@ -6,11 +7,6 @@ export const ADMIN_MENU_GROUPS = [
     name: 'header.system_overview',
     icon: 'chart bar',
     items: [
-      {
-        name: 'dashboard.admin.nav.spending',
-        to: '/admin/dashboard?section=spending',
-        icon: 'chart pie',
-      },
       {
         name: 'dashboard.admin.nav.channels',
         to: '/admin/dashboard?section=channels',
@@ -83,24 +79,24 @@ export const ADMIN_MENU_GROUPS = [
     ],
   },
   {
-    key: 'billing',
-    name: 'header.billing',
-    icon: 'calculator',
+    key: 'finance',
+    name: 'header.finance',
+    icon: 'money bill alternate outline',
     items: [
       {
         name: 'billing.overview.nav',
-        to: '/admin/billing/overview',
-        icon: 'dashboard',
+        to: '/admin/finance/overview',
+        icon: 'chart pie',
       },
       {
         name: 'billing.pricing_analysis.nav',
-        to: '/admin/billing/pricing-analysis',
+        to: '/admin/finance/profit-analysis',
         icon: 'line chart',
       },
       {
         name: 'billing.procurement_report.nav',
-        to: '/admin/billing/procurement-report',
-        icon: 'exchange alternate',
+        to: '/admin/finance/procurement-cost',
+        icon: 'exchange',
       },
     ],
   },
@@ -129,14 +125,35 @@ export const ADMIN_MENU_GROUPS = [
         to: '/admin/setting?tab=content&section=notice',
         icon: 'file alternate outline',
       },
-      {
-        name: 'setting.groups.runtime',
-        to: '/admin/setting?tab=runtime&section=monitor',
-        icon: 'heartbeat',
-      },
     ],
   },
 ];
+
+export const buildUnifiedWorkspaceMenuGroups = (hasAdminAccess) => {
+  const userGroups = buildUserWorkspaceMenuItems();
+  if (!hasAdminAccess) {
+    return userGroups;
+  }
+  const adminGroups = ADMIN_MENU_GROUPS.map((group) => ({
+    ...group,
+    type: 'group',
+    items: group.items.map((item) => ({ ...item })),
+  }));
+  const overview = adminGroups.find((group) => group.key === 'dashboard');
+  const userOverview = userGroups.find((group) => group.key === 'overview');
+  if (overview && userOverview) {
+    overview.items.push(...userOverview.items.map((item) => ({ ...item })));
+  }
+  return [
+    ...adminGroups,
+    ...userGroups
+      .filter((group) => group.key === 'mine' || group.key === 'help')
+      .map((group) => ({
+        ...group,
+        items: group.items.map((item) => ({ ...item })),
+      })),
+  ];
+};
 
 export const isAdminRouteActive = (location, to) => {
   if (!location) {
@@ -176,7 +193,7 @@ export const isAdminRouteActive = (location, to) => {
   }
   const targetSection = (targetParams.get('section') || '').trim().toLowerCase();
   if (path === '/admin/dashboard' && targetSection !== '') {
-    const currentSection = (currentParams.get('section') || 'spending')
+    const currentSection = (currentParams.get('section') || 'channels')
       .trim()
       .toLowerCase();
     if (currentSection !== targetSection) {

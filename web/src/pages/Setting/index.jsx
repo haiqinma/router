@@ -61,10 +61,6 @@ const Setting = () => {
       key: 'content',
       label: t('setting.groups.content'),
     });
-    menuGroups.push({
-      key: 'runtime',
-      label: t('setting.groups.runtime'),
-    });
   }
 
   const rawRequestedTab = (searchParams.get('tab') || '').trim().toLowerCase();
@@ -104,6 +100,24 @@ const Setting = () => {
             description={t('setting.system.login.description')}
           >
             <SystemSetting section='login' showSectionTitle={false} />
+          </SettingCard>
+          <SettingCard
+            title={t('setting.operation.monitor.title')}
+            description={t('setting.operation.monitor.description')}
+          >
+            <OperationSetting section='monitor' showSectionTitle={false} />
+          </SettingCard>
+          <SettingCard
+            title={t('setting.operation.retry.title')}
+            description={t('setting.operation.retry.description')}
+          >
+            <OperationSetting section='retry' showSectionTitle={false} />
+          </SettingCard>
+          <SettingCard
+            title={t('setting.operation.log.title')}
+            description={t('setting.operation.log.description')}
+          >
+            <OperationSetting section='log' showSectionTitle={false} />
           </SettingCard>
         </div>
       );
@@ -169,30 +183,6 @@ const Setting = () => {
             description={t('setting.other.content.description')}
           >
             <OtherSetting section='content' showSectionTitle={false} />
-          </SettingCard>
-        </div>
-      );
-    }
-    if (activeTab === 'runtime') {
-      return (
-        <div className='router-settings-page-content'>
-          <SettingCard
-            title={t('setting.operation.monitor.title')}
-            description={t('setting.operation.monitor.description')}
-          >
-            <OperationSetting section='monitor' showSectionTitle={false} />
-          </SettingCard>
-          <SettingCard
-            title={t('setting.operation.retry.title')}
-            description={t('setting.operation.retry.description')}
-          >
-            <OperationSetting section='retry' showSectionTitle={false} />
-          </SettingCard>
-          <SettingCard
-            title={t('setting.operation.log.title')}
-            description={t('setting.operation.log.description')}
-          >
-            <OperationSetting section='log' showSectionTitle={false} />
           </SettingCard>
         </div>
       );

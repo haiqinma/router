@@ -33,15 +33,18 @@ import { normalizeSupportedModels } from '../TopUp/shared.jsx';
 
 const PRODUCT_KIND_BALANCE = 'balance';
 const PRODUCT_KIND_SUBSCRIPTION = 'subscription';
+const PRODUCT_KIND_ALL = '__all_kinds__';
 
 const PRODUCT_KIND_OPTIONS = [
-  { key: 'all', value: '', text: '全部类型' },
+  { key: 'all', value: PRODUCT_KIND_ALL, text: '全部类型' },
   { key: PRODUCT_KIND_BALANCE, value: PRODUCT_KIND_BALANCE, text: '充值' },
   { key: PRODUCT_KIND_SUBSCRIPTION, value: PRODUCT_KIND_SUBSCRIPTION, text: '订阅' },
 ];
 
 const PRODUCT_LIST_TABLE_MIN_WIDTH = 1000;
-const PRODUCT_FORM_KIND_OPTIONS = PRODUCT_KIND_OPTIONS.filter((item) => item.value);
+const PRODUCT_FORM_KIND_OPTIONS = PRODUCT_KIND_OPTIONS.filter(
+  (item) => item.value !== PRODUCT_KIND_ALL,
+);
 const QUOTA_METRIC_OPTIONS = [
   { key: SERVICE_PACKAGE_QUOTA_METRIC_YYC, value: SERVICE_PACKAGE_QUOTA_METRIC_YYC, text: 'YYC 额度' },
   { key: SERVICE_PACKAGE_QUOTA_METRIC_REQUEST_COUNT, value: SERVICE_PACKAGE_QUOTA_METRIC_REQUEST_COUNT, text: '请求次数' },
@@ -217,7 +220,7 @@ const Entitlement = () => {
   const [loading, setLoading] = useState(false);
   const [activePage, setActivePage] = useState(1);
   const [total, setTotal] = useState(0);
-  const [kind, setKind] = useState('');
+  const [kind, setKind] = useState(PRODUCT_KIND_ALL);
   const [searchKeyword, setSearchKeyword] = useState('');
   const [groupOptions, setGroupOptions] = useState([]);
   const [groupLoading, setGroupLoading] = useState(false);
@@ -247,7 +250,7 @@ const Entitlement = () => {
         params: {
           page: activePage,
           page_size: ITEMS_PER_PAGE,
-          kind,
+          kind: kind === PRODUCT_KIND_ALL ? '' : kind,
           keyword: normalizedKeyword,
         },
       });
@@ -866,20 +869,20 @@ const Entitlement = () => {
           <button
             type='button'
             className='router-breadcrumb-link router-page-header-link'
-            onClick={() => navigate('/admin/entitlement/purchase-records')}
+            onClick={() => navigate('/admin/entitlement/payments')}
           >
-            购买记录
+            支付记录
           </button>
         }
         metaClassName='router-page-header-meta-links'
         query={
-          <>
+          <div className='router-list-toolbar-query router-list-toolbar-query-compact'>
             <AppSelect
               className='router-search-form-xs'
               options={PRODUCT_KIND_OPTIONS}
               value={kind}
               onChange={(_, { value }) => {
-                setKind((value || '').toString());
+                setKind((value || PRODUCT_KIND_ALL).toString());
                 setActivePage(1);
               }}
             />
@@ -892,7 +895,7 @@ const Entitlement = () => {
                 setActivePage(1);
               }}
             />
-          </>
+          </div>
         }
         actions={
           <div className='router-list-toolbar-actions'>

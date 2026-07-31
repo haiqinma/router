@@ -181,7 +181,7 @@ func TestBuildAdminTopUpBalanceLotListItemsWithSources(t *testing.T) {
 	if items[0].SourceDetail == nil {
 		t.Fatalf("topup source detail missing")
 	}
-	if items[0].SourceDetail.DetailPath != "/admin/entitlement/topup/records/order-1" {
+	if items[0].SourceDetail.DetailPath != "/admin/entitlement/payments/order-1" {
 		t.Fatalf("topup detail path=%q", items[0].SourceDetail.DetailPath)
 	}
 	if items[0].SourceDetail.Title != "Starter credits" {

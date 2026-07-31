@@ -3493,22 +3493,16 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
       }
       setChannelBillingLoading(true);
       try {
-        const [summary, profile, snapshots, actions, procurementBatches, adapters] =
+        const [summary, profile, adapters] =
           await Promise.all([
             loadChannelBillingSummaryFromServer(normalizedChannelId),
             loadChannelBillingProfileFromServer(normalizedChannelId),
-            loadChannelBillingSnapshotsFromServer(normalizedChannelId),
-            loadChannelBillingActionsFromServer(normalizedChannelId),
-            loadChannelProcurementBatchesFromServer(normalizedChannelId),
             loadChannelBillingAdaptersFromServer(),
           ]);
         setChannelBillingAdapters(adapters);
         setChannelBillingSummary(summary);
         setChannelBillingProfile(profile);
         setDetailBillingDraft(profile);
-        setChannelBillingSnapshots(snapshots);
-        setChannelBillingActions(actions);
-        setChannelProcurementBatches(procurementBatches);
         setChannelBillingError('');
       } catch (error) {
         setChannelBillingError(
@@ -3519,12 +3513,9 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
       }
     },
     [
-      loadChannelBillingActionsFromServer,
       loadChannelBillingAdaptersFromServer,
       loadChannelBillingProfileFromServer,
-      loadChannelBillingSnapshotsFromServer,
       loadChannelBillingSummaryFromServer,
-      loadChannelProcurementBatchesFromServer,
       t,
     ]
   );
@@ -3543,9 +3534,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
         nextPolicies,
         nextBillingSummary,
         nextBillingProfile,
-        nextBillingSnapshots,
-        nextBillingActions,
-        nextProcurementBatches,
       ] = await Promise.all([
         loadChannelModelsFromServer(normalizedChannelId, inputs.protocol),
         loadChannelTestsFromServer(normalizedChannelId),
@@ -3554,9 +3542,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
         loadChannelEndpointPoliciesFromServer(normalizedChannelId),
         loadChannelBillingSummaryFromServer(normalizedChannelId),
         loadChannelBillingProfileFromServer(normalizedChannelId),
-        loadChannelBillingSnapshotsFromServer(normalizedChannelId),
-        loadChannelBillingActionsFromServer(normalizedChannelId),
-        loadChannelProcurementBatchesFromServer(normalizedChannelId),
       ]);
       const nextInputs = buildNextInputsWithChannelModels(
         inputs,
@@ -3592,9 +3577,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
       setChannelBillingSummary(nextBillingSummary);
       setChannelBillingProfile(nextBillingProfile);
       setDetailBillingDraft(nextBillingProfile);
-      setChannelBillingSnapshots(nextBillingSnapshots);
-      setChannelBillingActions(nextBillingActions);
-      setChannelProcurementBatches(nextProcurementBatches);
       setChannelBillingError('');
     },
     [
@@ -3602,11 +3584,8 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
       effectivePreviewKey,
       inputs,
       inputs.protocol,
-      loadChannelBillingActionsFromServer,
       loadChannelBillingProfileFromServer,
-      loadChannelBillingSnapshotsFromServer,
       loadChannelBillingSummaryFromServer,
-      loadChannelProcurementBatchesFromServer,
       loadChannelEndpointPoliciesFromServer,
       loadChannelEndpointsFromServer,
       loadChannelModelsFromServer,
@@ -4115,9 +4094,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
             activeTasks,
             billingSummaryData,
             billingProfileData,
-            billingSnapshotsData,
-            billingActionsData,
-            procurementBatchesData,
             billingAdaptersData,
           ] = await Promise.all([
             loadChannelModelsFromServer(
@@ -4128,9 +4104,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
             loadChannelTasksFromServer(data.id || targetId),
             loadChannelBillingSummaryFromServer(data.id || targetId),
             loadChannelBillingProfileFromServer(data.id || targetId),
-            loadChannelBillingSnapshotsFromServer(data.id || targetId),
-            loadChannelBillingActionsFromServer(data.id || targetId),
-            loadChannelProcurementBatchesFromServer(data.id || targetId),
             loadChannelBillingAdaptersFromServer(),
           ]);
           const storedModelTestResults = normalizeModelTestResults(
@@ -4190,9 +4163,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
           setChannelBillingSummary(billingSummaryData);
           setChannelBillingProfile(billingProfileData);
           setDetailBillingDraft(billingProfileData);
-          setChannelBillingSnapshots(billingSnapshotsData);
-          setChannelBillingActions(billingActionsData);
-          setChannelProcurementBatches(procurementBatchesData);
           setChannelBillingAdapters(billingAdaptersData);
           setChannelBillingError('');
           setConfig({
@@ -4227,10 +4197,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     [
       navigate,
       hasChannelID,
-      loadChannelBillingActionsFromServer,
       loadChannelBillingProfileFromServer,
-      loadChannelProcurementBatchesFromServer,
-      loadChannelBillingSnapshotsFromServer,
       loadChannelBillingSummaryFromServer,
       loadChannelModelsFromServer,
       loadChannelTasksFromServer,
@@ -6300,22 +6267,12 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
                 billingSummary={channelBillingSummary}
                 billingLoading={channelBillingLoading}
                 billingError={channelBillingError}
-                billingSnapshots={channelBillingSnapshots}
-                billingActions={channelBillingActions}
-                procurementBatches={channelProcurementBatches}
                 billingReadonly={detailBillingReadonly}
                 billingSubmitting={channelBillingSubmitting}
                 onRefreshBilling={refreshChannelBillingNow}
-                onManualSnapshotUpdate={updateChannelManualBillingSnapshot}
-                onManualSnapshotDelete={deleteChannelManualBillingSnapshot}
-                onProcurementBatchCostUpdate={updateChannelProcurementBatchCost}
-                onProcurementBatchStatusUpdate={
-                  updateChannelProcurementBatchStatus
-                }
-                onProcurementBatchConsumptionsLoad={
-                  loadChannelProcurementBatchConsumptions
-                }
                 timestamp2string={timestamp2string}
+                viewMode='account'
+                channelID={channelId}
               />
             )}
           </div>

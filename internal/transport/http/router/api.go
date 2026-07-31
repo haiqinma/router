@@ -336,14 +336,11 @@ func SetApiRouter(engine *gin.Engine) {
 		adminFlowRoute.Use(middleware.AdminAuth())
 		{
 			adminFlowRoute.GET("/topup-orders", flow.GetTopupOrderRecords)
-			adminFlowRoute.GET("/purchase-records", flow.GetPurchaseRecords)
 			adminFlowRoute.GET("/topup-orders/:id", flow.GetTopupOrderRecord)
 			adminFlowRoute.GET("/topup-reconcile-records", flow.GetTopupReconcileRecords)
 			adminFlowRoute.GET("/topup-reconcile-records/:id", flow.GetTopupReconcileRecord)
 			adminFlowRoute.POST("/topup-reconcile-records/:id/refresh", flow.RefreshTopupReconcileRecord)
 			adminFlowRoute.POST("/topup-reconcile-records/:id/fulfill", flow.FulfillTopupReconcileRecord)
-			adminFlowRoute.GET("/package-records", flow.GetPackageRecords)
-			adminFlowRoute.GET("/package-records/:id", flow.GetPackageRecord)
 			adminFlowRoute.GET("/redemption-records", flow.GetRedemptionRecords)
 			adminFlowRoute.GET("/redemption-records/:id", flow.GetRedemptionRecord)
 		}
@@ -360,6 +357,8 @@ func SetApiRouter(engine *gin.Engine) {
 		adminEntitlementRoute := adminRouter.Group("/entitlement")
 		adminEntitlementRoute.Use(middleware.AdminAuth())
 		{
+			adminEntitlementRoute.GET("/payments", entitlement.GetPurchases)
+			adminEntitlementRoute.GET("/payments/:id", entitlement.GetPurchase)
 			adminEntitlementRoute.GET("/products", entitlement.GetProducts)
 			adminEntitlementRoute.GET("/products/:id", entitlement.GetProduct)
 			adminEntitlementRoute.POST("/products", entitlement.CreateProduct)

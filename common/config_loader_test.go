@@ -76,3 +76,23 @@ func TestApplyAppConfigRequiresRedisConnStringForRedisCache(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
+func TestNormalizeTrustedIssuerDIDsRequiresDidKey(t *testing.T) {
+	const validIssuer = "did:key:z6MknfU5M7AQe5P27LTneQDa8WuTQKsMADeFBrn8RKG4DqGu"
+
+	got, err := normalizeTrustedIssuerDIDs([]string{"", " " + validIssuer + " ", validIssuer})
+	if err != nil {
+		t.Fatalf("normalizeTrustedIssuerDIDs returned error: %v", err)
+	}
+	if len(got) != 1 || got[0] != validIssuer {
+		t.Fatalf("normalizeTrustedIssuerDIDs = %#v, want single valid issuer", got)
+	}
+
+	_, err = normalizeTrustedIssuerDIDs([]string{"did:web:127.0.0.1:8100"})
+	if err == nil {
+		t.Fatal("normalizeTrustedIssuerDIDs returned nil error, want invalid did:key error")
+	}
+	if !strings.Contains(err.Error(), "ucan.trusted_issuer_dids contains invalid issuer DID") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}

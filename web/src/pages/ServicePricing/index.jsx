@@ -14,7 +14,7 @@ const ServicePricing = () => {
       <div className='dashboard-container router-service-pricing-page'>
         <AppFilterHeader
           breadcrumbs={[
-            { key: 'workspace', label: t('header.user_workspace') },
+            { key: 'workspace', label: t('header.workspace') },
             { key: 'service', label: t('header.service') },
             { key: 'pricing', label: t('topup.pricing.title'), active: true },
           ]}

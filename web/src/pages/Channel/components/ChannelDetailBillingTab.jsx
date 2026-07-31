@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import UnitDropdown from '../../../components/UnitDropdown';
 import {
   AppAlert,
@@ -613,6 +614,8 @@ const ChannelDetailBillingTab = ({
   onProcurementBatchStatusUpdate,
   onProcurementBatchConsumptionsLoad,
   timestamp2string,
+  viewMode = 'account',
+  channelID,
 }) => {
   const [manualPurchaseRecord, setManualPurchaseRecord] = useState(
     buildManualPurchaseRecord()
@@ -632,7 +635,9 @@ const ChannelDetailBillingTab = ({
     valid_from_input: false,
     valid_until_input: false,
   });
-  const [billingView, setBillingView] = useState('records');
+  const [billingView, setBillingView] = useState(
+    viewMode === 'procurement' ? 'records' : 'upstream'
+  );
 
   const purchaseRecords = useMemo(
     () =>
@@ -1275,18 +1280,24 @@ const ChannelDetailBillingTab = ({
 
   return (
     <AppDetailSection
-      title={t('channel.edit.billing.title')}
+      title={t(viewMode === 'procurement' ? 'channel.edit.billing.procurement_title' : 'channel.edit.billing.title')}
       titleTag='span'
       bodyClassName='router-billing-page'
     >
-      <div className='router-billing-workspace-toolbar'>
+      {viewMode === 'account' ? (
+        <div className='router-billing-workspace-toolbar'>
+          <strong>{t('channel.edit.billing.upstream_status_title')}</strong>
+          <Link to={`/admin/finance/procurement-cost${channelID ? `?channel_id=${encodeURIComponent(channelID)}` : ''}`}>
+            {t('channel.edit.billing.view_procurement')}
+          </Link>
+        </div>
+      ) : <div className='router-billing-workspace-toolbar'>
         <AppSegmented
           value={billingView}
           onChange={(e, { value }) => setBillingView(value)}
           options={[
             { value: 'records', label: t('channel.edit.billing.snapshots_title') },
             { value: 'batches', label: t('channel.edit.billing.procurement_title') },
-            { value: 'upstream', label: t('channel.edit.billing.upstream_status_title') },
           ]}
         />
         {billingView === 'records' || billingView === 'batches' ? (
@@ -1296,8 +1307,8 @@ const ChannelDetailBillingTab = ({
             {t('channel.edit.billing.add_purchase_record')}
           </AppButton>
         ) : null}
-      </div>
-      <AppAlert type='info' showIcon className='router-section-message' title={t('channel.edit.billing.structure_hint')} />
+      </div>}
+      {viewMode === 'procurement' ? <AppAlert type='info' showIcon className='router-section-message' title={t('channel.edit.billing.structure_hint')} /> : null}
       {billingView === 'upstream' && <div className='router-billing-upstream-view'>
       <div className='router-billing-overview-strip'>
         <div className='router-billing-overview-main'>

@@ -8,6 +8,7 @@ const HelpDoc = () => {
   const { t } = useTranslation();
   const html = useMemo(() => {
     return usageDocHtml
+      .replaceAll('CLI 工具使用文档', t('header.cli_guide'))
       .replaceAll('https://api.hanbbq.top', 'https://router.yeying.pub')
       .replace(
         /<p class="hero-subtitle"[^>]*>\s*API BaseURL（CF节点）：[^<]*<\/p>/g,
@@ -31,7 +32,7 @@ const HelpDoc = () => {
           return `${block}<div class="router-help-doc-token-tip">需要令牌？<a href="/workspace/token">获取</a></div>`;
         },
       );
-  }, []);
+  }, [t]);
 
   return (
     <div className='dashboard-container'>
@@ -39,9 +40,9 @@ const HelpDoc = () => {
         breadcrumbs={[
           { key: 'workspace', label: t('header.user_workspace') },
           { key: 'help', label: t('header.help') },
-          { key: 'usage-guide', label: t('header.usage_guide'), active: true },
+          { key: 'cli-guide', label: t('header.cli_guide'), active: true },
         ]}
-        title={t('header.usage_guide')}
+        title={t('header.cli_guide')}
       />
       <div
         className='router-help-doc-page'

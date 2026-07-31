@@ -9,6 +9,7 @@ import {
   showInfo,
   showSuccess,
   timestamp2string,
+  hasLoadedPagedRows,
   writePagedRows,
 } from '../helpers';
 import { useTranslation } from 'react-i18next';
@@ -299,9 +300,7 @@ const UsersTable = () => {
   const onPaginationChange = (e, { activePage }) => {
     (async () => {
       const nextPage = Number(activePage) > 0 ? Number(activePage) : 1;
-      const hasLoadedPageRows = users
-        .slice((nextPage - 1) * ITEMS_PER_PAGE, nextPage * ITEMS_PER_PAGE)
-        .some(Boolean);
+      const hasLoadedPageRows = hasLoadedPagedRows(users, nextPage, ITEMS_PER_PAGE);
       if (!isSearchMode && !hasLoadedPageRows) {
         await loadUsers(nextPage);
       }
@@ -355,26 +354,37 @@ const UsersTable = () => {
     };
   }, []);
 
-  const manageUser = async (username, action, idx) => {
+  const manageUser = async (targetUser, action) => {
+    const targetID = (targetUser?.id || '').toString();
+    const targetUsername = (targetUser?.username || '').toString();
+    const isTargetUser = (item) =>
+      (Boolean(targetID) && item?.id === targetID) ||
+      (Boolean(targetUsername) && item?.username === targetUsername);
     const res = await API.post('/api/v1/admin/user/manage', {
-      username,
+      username: targetUsername,
       action,
     });
     const { success, message } = res.data;
     if (success) {
       showSuccess(t('user.messages.operation_success'));
       let user = res.data.data;
-      let newUsers = [...users];
-      let realIdx = (activePage - 1) * ITEMS_PER_PAGE + idx;
       if (action === 'delete') {
-        newUsers[realIdx].deleted = true;
+        setUsers((currentUsers) =>
+          currentUsers.map((item) =>
+            isTargetUser(item) ? { ...item, deleted: true } : item,
+          ),
+        );
         setTotalCount((prev) => Math.max(prev - 1, 0));
-        setSelectedRowKeys((prev) => prev.filter((key) => key !== user.id));
+        setSelectedRowKeys((prev) => prev.filter((key) => key !== targetID));
       } else {
-        newUsers[realIdx].status = user.status;
-        newUsers[realIdx].role = user.role;
+        setUsers((currentUsers) =>
+          currentUsers.map((item) =>
+            isTargetUser(item)
+              ? { ...item, status: user.status, role: user.role }
+              : item,
+          ),
+        );
       }
-      setUsers(newUsers);
       return user;
     }
     showError(message);
@@ -970,7 +980,7 @@ const UsersTable = () => {
             key: 'actions',
             className: 'router-table-col-actions-icon',
             width: 84,
-            render: (_, user, idx) => {
+            render: (_, user) => {
               const isAdminUser = Number(user.role) >= 10;
               const canManageAdminUser = !isAdminUser || isRoot();
               return (
@@ -988,9 +998,8 @@ const UsersTable = () => {
                     color={user.status === 1 ? undefined : 'blue'}
                     onClick={() => {
                       manageUser(
-                        user.username,
+                        user,
                         user.status === 1 ? 'disable' : 'enable',
-                        idx,
                       );
                     }}
                     disabled={!canManageAdminUser}
@@ -1001,7 +1010,7 @@ const UsersTable = () => {
                     color='red'
                     disabled={!canManageAdminUser}
                     onClick={() => {
-                      manageUser(user.username, 'delete', idx);
+                      manageUser(user, 'delete');
                     }}
                   />
                 </div>

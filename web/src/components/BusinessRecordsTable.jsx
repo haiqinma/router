@@ -259,7 +259,7 @@ const BusinessRecordsTable = ({
           }
           navigateToDetail(
             row,
-            `/admin/entitlement/topup/records/${encodeURIComponent(rowID)}`,
+            `/admin/entitlement/payments/${encodeURIComponent(rowID)}`,
           );
         },
         statusOptions: [
@@ -363,15 +363,13 @@ const BusinessRecordsTable = ({
 
     if (kind === 'purchase') {
       return {
-        endpoint: '/api/v1/admin/flow/purchase-records',
+        endpoint: '/api/v1/admin/entitlement/payments',
         searchPlaceholder: searchPlaceholder || '搜索用户、商品或记录 ID',
-        emptyText: emptyText || '暂无购买记录',
+        emptyText: emptyText || '暂无支付记录',
         onRowClick: (row) => {
           const rowID = readOnlyText(row?.id);
           if (rowID === '-') return;
-          const detailPath = row?.product_kind === 'subscription'
-            ? `/admin/entitlement/purchase-records/${encodeURIComponent(rowID)}`
-            : `/admin/entitlement/topup/records/${encodeURIComponent(rowID)}`;
+          const detailPath = `/admin/entitlement/payments/${encodeURIComponent(rowID)}`;
           navigateToDetail(row, detailPath);
         },
         columns: [
@@ -861,7 +859,7 @@ const BusinessRecordsTable = ({
             active: true,
           },
         ]}
-        title={title || t(BUSINESS_FLOW_HEADER_KEY[kind] || 'common.records')}
+        title={embedded ? title : (title || t(BUSINESS_FLOW_HEADER_KEY[kind] || 'common.records'))}
         actions={
           <div className='router-list-toolbar-actions'>
             <AppButton

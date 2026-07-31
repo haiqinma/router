@@ -1927,8 +1927,34 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return nil
 			},
 		},
+		{
+			Version:     "202607311000_user_package_subscription_created_at",
+			Description: "add and backfill package subscription creation time",
+			Up: func(tx *gorm.DB) error {
+				return migrateUserPackageSubscriptionCreatedAtWithDB(tx)
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
+}
+
+func migrateUserPackageSubscriptionCreatedAtWithDB(db *gorm.DB) error {
+	if db == nil {
+		return fmt.Errorf("database handle is nil")
+	}
+	if err := db.AutoMigrate(&UserPackageSubscription{}); err != nil {
+		return err
+	}
+	return db.Exec(`
+		UPDATE user_package_subscriptions
+		SET created_at = CASE
+			WHEN updated_at > 0 AND started_at > 0 AND updated_at < started_at THEN updated_at
+			WHEN started_at > 0 THEN started_at
+			WHEN updated_at > 0 THEN updated_at
+			ELSE started_at
+		END
+		WHERE created_at <= 0
+	`).Error
 }
 
 func migrateModelChannelBillingRatioWithDB(db *gorm.DB) error {

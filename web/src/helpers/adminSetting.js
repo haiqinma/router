@@ -18,7 +18,7 @@ export const resolveAdminSettingLocation = (rawTab, rawSection) => {
 
   if (normalizedTab === 'operation') {
     if (['monitor', 'retry', 'log'].includes(normalizedSection)) {
-      return { tab: 'runtime', section: normalizedSection };
+      return { tab: 'basic', section: normalizedSection };
     }
     if (
       ['general', 'payment', 'automation', 'pricing', 'balance'].includes(
@@ -37,7 +37,7 @@ export const resolveAdminSettingLocation = (rawTab, rawSection) => {
     normalizedTab === 'runtime'
   ) {
     return {
-      tab: 'runtime',
+      tab: 'basic',
       section:
         normalizedTab === 'log_setting'
           ? 'log'

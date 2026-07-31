@@ -47,7 +47,6 @@ import WorkspaceTaskPage from './pages/Task/WorkspaceTaskPage';
 import WorkspaceTaskDetailPage from './pages/Task/WorkspaceTaskDetailPage';
 import RecordListPage from './pages/Records/RecordListPage';
 import PaymentRecordDetail from './pages/Records/PaymentRecordDetail';
-import TopupRecordDetail from './pages/Records/TopupRecordDetail';
 import RedemptionRecordDetail from './pages/Records/RedemptionRecordDetail';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminAlerts from './pages/AdminAlerts';
@@ -55,7 +54,6 @@ import Providers from './pages/Providers';
 import BillingProcurementReport from './pages/BillingProcurementReport';
 import BillingOverview from './pages/BillingOverview';
 import BillingPricingAnalysis from './pages/BillingPricingAnalysis';
-import BillingChannelReconciliation from './pages/BillingChannelReconciliation';
 
 const RegisterForm = lazy(() => import('./components/RegisterForm'));
 const LoginForm = lazy(() => import('./components/LoginForm'));
@@ -76,6 +74,7 @@ const PaymentRecordsPage = lazy(
 );
 const WorkspaceModels = lazy(() => import('./pages/WorkspaceModels'));
 const HelpDoc = lazy(() => import('./pages/HelpDoc'));
+const RouterGuideDoc = lazy(() => import('./pages/HelpDoc/RouterGuideDoc'));
 const WorkspaceStart = lazy(() => import('./pages/WorkspaceStart'));
 
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || '';
@@ -130,12 +129,12 @@ function UserWorkspaceEntryRedirect() {
         if (!active) {
           return;
         }
-        setTargetPath(hasActivePackage || hasBalance ? '/workspace/topup?tab=quota' : '/workspace/start');
+        setTargetPath(hasActivePackage || hasBalance ? '/workspace/topup?tab=quota' : '/workspace/service/pricing');
       } catch (error) {
         if (!active) {
           return;
         }
-        setTargetPath('/workspace/start');
+        setTargetPath('/workspace/service/pricing');
       }
     };
 
@@ -698,6 +697,18 @@ function App() {
         />
         <Route
           path='/workspace/service/help'
+          element={<Navigate to='/workspace/service/router-guide' replace />}
+        />
+        <Route
+          path='/workspace/service/router-guide'
+          element={
+            <Suspense fallback={<Loading />}>
+              <RouterGuideDoc />
+            </Suspense>
+          }
+        />
+        <Route
+          path='/workspace/service/cli-guide'
           element={
             <Suspense fallback={<Loading />}>
               <HelpDoc />
@@ -764,7 +775,7 @@ function App() {
           element={<PackageDetail />}
         />
         <Route
-          path='/admin/entitlement/purchase-records'
+          path='/admin/entitlement/payments'
           element={<RecordListPage kind='purchase' />}
         />
         <Route
@@ -772,15 +783,11 @@ function App() {
           element={<TopupPlanDetail />}
         />
         <Route
-          path='/admin/entitlement/topup/records/:id'
-          element={<TopupRecordDetail />}
-        />
-        <Route
           path='/admin/entitlement/topup/payment/:id'
           element={<PaymentRecordDetail />}
         />
         <Route
-          path='/admin/entitlement/purchase-records/:id'
+          path='/admin/entitlement/payments/:id'
           element={<PaymentRecordDetail />}
         />
         <Route
@@ -840,19 +847,15 @@ function App() {
           element={<AdminAlerts />}
         />
         <Route
-          path='/admin/billing/channel-reconciliation'
-          element={<BillingChannelReconciliation />}
-        />
-        <Route
-          path='/admin/billing/pricing-analysis'
-          element={<BillingPricingAnalysis />}
-        />
-        <Route
-          path='/admin/billing/overview'
+          path='/admin/finance/overview'
           element={<BillingOverview />}
         />
         <Route
-          path='/admin/billing/procurement-report'
+          path='/admin/finance/profit-analysis'
+          element={<BillingPricingAnalysis />}
+        />
+        <Route
+          path='/admin/finance/procurement-cost'
           element={<BillingProcurementReport />}
         />
         <Route

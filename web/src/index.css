@@ -152,21 +152,12 @@ body,
 
 .router-admin-sidebar-toolbar {
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-end;
     align-items: center;
     margin-bottom: 10px;
     padding: 0 6px;
     min-height: 36px;
     flex: 0 0 auto;
-}
-
-.router-admin-sidebar-heading {
-    font-size: 12px;
-    font-weight: 700;
-    line-height: 1;
-    color: rgba(34, 36, 38, 0.58);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
 }
 
 .router-admin-sidebar.compact {
@@ -783,7 +774,6 @@ body,
     color: #666666 !important;
 }
 
-.router-header-mobile-workspace-switch,
 .router-header-mobile-auth {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -1884,6 +1874,92 @@ body,
     justify-content: flex-end;
     flex-wrap: wrap;
     gap: 4px;
+}
+
+.router-billing-explain-stack {
+    display: grid;
+    gap: 14px;
+}
+
+.router-billing-explain-stack .router-detail-section-subtitle {
+    margin: 0 0 8px;
+    font-size: 13px;
+}
+
+.router-billing-formula-card {
+    display: grid;
+    gap: 12px;
+    border: 1px solid rgba(22, 119, 255, 0.18);
+    border-radius: 10px;
+    background: #f7fbff;
+    padding: 12px;
+}
+
+.router-billing-formula-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.router-billing-formula-text {
+    color: #111827;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.45;
+}
+
+.router-billing-formula-result {
+    flex: 0 0 auto;
+    color: #0958d9;
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.3;
+    text-align: right;
+}
+
+.router-billing-formula-steps {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+}
+
+.router-billing-formula-step {
+    display: grid;
+    gap: 4px;
+    border: 1px solid rgba(34, 36, 38, 0.08);
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 9px 10px;
+}
+
+.router-billing-formula-step span {
+    color: rgba(0, 0, 0, 0.54);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.router-billing-formula-step strong {
+    color: #111827;
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.router-billing-formula-step-result strong {
+    color: #0958d9;
+}
+
+.router-billing-formula-note {
+    color: rgba(0, 0, 0, 0.58);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.router-billing-emphasis-item {
+    border-color: rgba(22, 119, 255, 0.2);
+    background: #f7fbff;
 }
 
 .router-route-attempt-empty {
@@ -4331,6 +4407,8 @@ body,
 .router-log-column-title-content {
     flex: 1 1 auto;
     min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .router-log-column-drag-handle {
@@ -4353,6 +4431,29 @@ body,
     cursor: grabbing;
 }
 
+.router-log-column-resize-handle {
+    align-self: stretch;
+    flex: 0 0 8px;
+    margin: -10px -8px -10px 0;
+    cursor: col-resize;
+    position: relative;
+}
+
+.router-log-column-resize-handle::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 3px;
+    bottom: 8px;
+    width: 2px;
+    border-radius: 999px;
+    background: transparent;
+}
+
+.router-log-column-resize-handle:hover::after {
+    background: #1677ff;
+}
+
 .router-ui-table.router-log-table .ant-table-thead > tr > th.router-log-column-dragging {
     opacity: 0.58;
 }
@@ -4360,6 +4461,11 @@ body,
 .router-ui-table.router-log-table .ant-table-thead > tr > th.router-log-column-drag-target {
     background: #edf5ff !important;
     box-shadow: inset 2px 0 0 #1677ff, inset -2px 0 0 #1677ff;
+}
+
+.router-ui-table.router-log-table .ant-table-thead > tr > th.router-log-column-resizing {
+    background: #edf5ff !important;
+    box-shadow: inset -2px 0 0 #1677ff;
 }
 
 .router-log-filter-editor {

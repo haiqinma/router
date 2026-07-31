@@ -12,6 +12,8 @@
     "service": "Service",
     "help": "Help",
     "usage_guide": "Usage Guide",
+    "router_guide": "Router Guide",
+    "cli_guide": "CLI Tool Guide",
     "mine": "Mine",
     "records": "Records",
     "user": "User",
@@ -20,6 +22,7 @@
     "model": "Models",
     "operation": "Operations",
     "billing": "Billing",
+    "finance": "Finance",
     "config": "Config",
     "package": "Subscription",
     "log": "Log",
@@ -29,8 +32,9 @@
     "sidebar_expand": "Expand Sidebar",
     "sidebar_compact": "Collapse Sidebar",
     "chat": "Chat",
-    "admin_workspace": "Admin Workspace",
-    "user_workspace": "User Workspace",
+    "admin_workspace": "Workspace",
+    "user_workspace": "Workspace",
+    "workspace": "Workspace",
     "messages": {
       "title": "Messages",
       "empty": "No messages",
@@ -754,7 +758,7 @@
         "endpoints": "Configuration",
         "tests": "Tests",
         "publish": "Publish",
-        "billing": "Procurement"
+        "billing": "Billing"
       },
       "publish": {
         "title": "Model Publishing",
@@ -869,6 +873,7 @@
         "manual_valid_until": "Valid Until (blank means no expiry)",
         "validity_immediate": "Immediately",
         "upstream_status_title": "Upstream Status",
+        "view_procurement": "View procurement cost",
         "procurement_title": "Procurement Batches",
         "procurement_hint": "These are not upstream billing records. Procurement batches come from purchase records. Request settlement consumes capacity from these batches to calculate actual procurement cost.",
         "procurement_edit_cost": "Edit Cost",
@@ -1505,9 +1510,9 @@
       "enabled": "Enabled",
       "selected": "Use",
       "priority": "Priority",
-      "channel_billing_ratio": "Channel Ratio",
-      "model_channel_billing_ratio": "Model Channel Ratio",
-      "model_channel_billing_ratio_short": "Model Ratio",
+      "channel_billing_ratio": "Group Channel Sell Ratio",
+      "model_channel_billing_ratio": "Model Channel Sell Ratio",
+      "model_channel_billing_ratio_short": "Model Sell Ratio",
       "channel_count": "Channel Count",
       "model_channels": "Channels",
       "model_search_placeholder": "Search model or channel",
@@ -1519,8 +1524,8 @@
       "edit_model_title": "Edit Model {{model}}",
       "bound_channels": "Channels",
       "empty_channels": "No channels",
-      "channels_hint": "This section maintains the group channel configuration: attached channels, channel priorities, and the business ratio of each channel in this group.",
-      "models_hint": "This section maintains the group model configuration and channel assignments. The group layer does not rewrite this configuration because of temporary channel failures, test results, or upstream fluctuations."
+      "channels_hint": "This section maintains available channels, priorities, and group-channel sell ratios. This ratio contributes to the final sell ratio and changes the charge when the same group hits different channels.",
+      "models_hint": "This section maintains group models and channel assignments. The model-channel sell ratio combines with the group-channel sell ratio, so the same group and model can charge differently across channels."
     },
     "edit": {
       "models": "Models",
@@ -1540,7 +1545,7 @@
       "channel_required": "Please select a channel",
       "model_required": "Please select a model",
       "model_add_empty": "There are no addable models on the currently bound channels",
-      "billing_ratio_invalid": "Billing ratio must be greater than or equal to 0",
+      "billing_ratio_invalid": "Sell ratio must be greater than or equal to 0",
       "daily_quota_limit_invalid": "Daily limit must be greater than or equal to 0",
       "load_failed": "Failed to load groups",
       "bind_load_failed": "Failed to load group channels",
@@ -1967,7 +1972,8 @@
       "quota": "Amount",
       "billing_source": "Billing Source",
       "detail": "Detail",
-      "drag_column": "Drag to reorder columns"
+      "drag_column": "Drag to reorder columns",
+      "resize_column": "Drag to resize column"
     },
     "buttons": {
       "query": "Action",
@@ -2034,6 +2040,26 @@
           "low": "Low"
         }
       },
+      "billing_explanation": {
+        "title": "Billing Formula",
+        "formula": "Base price amount x YYC rate x final sell ratio = charged YYC",
+        "formula_note": "The final sell ratio combines the group-channel sell ratio and model-channel sell ratio; the final charge is rounded up by the billing rule.",
+        "base_amount": "Base Price Amount",
+        "charge_rate": "YYC Rate",
+        "final_ratio": "Final Sell Ratio",
+        "charge_amount": "Charged YYC",
+        "not_observed": "Not observed",
+        "yes": "Yes",
+        "no": "No",
+        "groups": {
+          "source": "Pricing Source",
+          "usage": "Usage Basis",
+          "base_price": "Base Price",
+          "price_ratio": "Sell Ratios",
+          "settlement": "Settlement Result",
+          "procurement": "Procurement Cost"
+        }
+      },
       "fields": {
         "id": "Log ID",
         "time": "Time",
@@ -2047,8 +2073,10 @@
         "trace_id": "Trace ID",
         "prompt_tokens": "Prompt Tokens",
         "completion_tokens": "Completion Tokens",
-        "quota": "Settled Amount",
+        "quota": "Final Charge",
         "billing_source": "Billing Source",
+        "billing_source_name": "Charged Object",
+        "billing_source_detail": "Charge Detail",
         "user_daily_quota": "User Base Amount",
         "user_emergency_quota": "Package Emergency Amount",
         "billing_price_unit": "Price Unit",
@@ -2061,10 +2089,10 @@
         "estimated_prompt_tokens": "Estimated Prompt Tokens",
         "estimated_output_tokens": "Estimated Output Quantity",
         "billing_settlement_mode": "Settlement Mode",
-        "billing_effective_ratio": "Effective Business Ratio",
-        "billing_group_channel_ratio": "Group Channel Ratio",
-        "billing_model_channel_ratio": "Model Channel Ratio",
-        "billing_charge_rate": "Conversion Rate",
+        "billing_effective_ratio": "Final Sell Ratio",
+        "billing_group_channel_ratio": "Group Channel Sell Ratio",
+        "billing_model_channel_ratio": "Model Channel Sell Ratio",
+        "billing_charge_rate": "YYC Rate",
         "billing_input_quantity": "Input Quantity",
         "billing_output_quantity": "Output Quantity",
         "billing_cache_read_quantity": "Cache Read Quantity",
@@ -2073,20 +2101,26 @@
         "billing_output_amount": "Output Amount",
         "billing_cache_read_amount": "Cache Read Amount",
         "billing_cache_write_amount": "Cache Write Amount",
-        "billing_amount": "Billing Amount",
-        "billing_charge_amount": "Converted Amount",
+        "billing_amount": "Base Price Amount",
+        "billing_charge_amount": "Charged YYC",
         "billing_procurement_cost": "Procurement Cost CNY",
         "billing_procurement_cost_source": "Procurement Cost Source",
+        "billing_procurement_cost_confidence": "Procurement Cost Confidence",
+        "billing_sell_base_amount": "Sell Base CNY",
+        "billing_cost_floor_base_amount": "Cost Floor CNY",
+        "billing_selected_sell_base_amount": "Selected Sell CNY",
+        "billing_pricing_decision_reason": "Pricing Decision",
+        "billing_cost_floor_triggered": "Cost Floor Triggered",
         "billing_gross_profit": "Gross Profit CNY",
         "billing_gross_margin": "Gross Margin",
-        "estimated_charge_amount": "Estimated Converted Amount",
-        "billing_charge_delta_amount": "Actual - Estimated Amount",
+        "estimated_charge_amount": "Estimated Charge",
+        "billing_charge_delta_amount": "Charge - Estimate",
         "billing_prompt_token_delta": "Prompt Token Delta",
         "billing_output_token_delta": "Output Token Delta",
         "billing_image_tool_calls": "Image Tool Calls",
         "billing_image_tool_output_tokens": "Image Tool Output Tokens",
         "billing_image_tool_amount": "Image Tool Amount",
-        "billing_image_tool_charge_amount": "Image Tool Converted Amount",
+        "billing_image_tool_charge_amount": "Image Tool Charge",
         "elapsed_time": "Elapsed Time",
         "is_stream": "Stream Output",
         "system_prompt_reset": "System Prompt Reset"
@@ -2178,16 +2212,16 @@
     }
   },
   "workspace_start": {
-    "title": "Activate Service",
+    "title": "Start Using",
     "actions": {
-      "view_pricing": "View subscriptions",
+      "view_pricing": "Buy a package / Add balance",
       "view_guide": "Usage guide",
       "create_token": "Create token",
       "open_chat": "Open Chat"
     },
     "steps": {
       "pricing": {
-        "title": "Get quota first",
+        "title": "Get quota",
         "description": "Packages fit stable usage, while balance fits trial-first usage. Package purchases and balance top-ups happen on the Subscriptions page."
       },
       "token": {
@@ -2986,11 +3020,10 @@
     "empty_admin": "No configurable items",
     "title": "Settings",
     "groups": {
-      "basic": "Basic Info",
+      "basic": "System Settings",
       "payment": "Payment Settings",
       "billing": "Billing Settings",
-      "content": "Content Settings",
-      "runtime": "System Runtime"
+      "content": "Page Settings"
     },
     "personal": {
       "tokens": {
@@ -3252,8 +3285,9 @@
       },
       "pricing": {
         "title": "Pricing Rules",
-        "description": "Configure selling-price rules and profit targets.",
-        "description_title": "How charges are calculated",
+        "description": "Configure cost protection and profit targets; this does not replace group/model/channel sell ratios.",
+        "description_title": "Request charge formula",
+        "formula_hint": "User charge = base price amount x YYC rate x final sell ratio. The final sell ratio comes from the group-channel sell ratio and model-channel sell ratio; target margin and cost buffer here are only used for procurement cost protection and pricing decisions.",
         "target_margin": "Target margin",
         "target_margin_hint": "Use decimals. 0.2 means 20% target margin; must be lower than 0.95.",
         "risk_buffer": "Cost Buffer Ratio",
@@ -3266,14 +3300,14 @@
       },
       "billing": {
         "title": "Billing Currencies",
-        "subtitle": "Maintain upstream billing currencies and their YYC conversion rates. Provider prices are calculated in the original currency first, then converted to YYC for settlement.",
+        "subtitle": "Maintain upstream billing currencies and their YYC rates. Provider prices are calculated in the original currency first, then converted to the final YYC charge.",
         "empty": "No billing currencies",
         "columns": {
           "code": "Code",
           "name": "Name",
           "symbol": "Symbol",
           "minor_unit": "Minor Unit",
-          "charge_rate": "Charge rate",
+          "charge_rate": "YYC Rate",
           "status": "Status",
           "source": "Source",
           "updated_at": "Updated At",
@@ -3312,7 +3346,7 @@
           "code_required": "Currency code is required",
           "name_required": "Currency name is required",
           "minor_unit_invalid": "Minor unit must be greater than or equal to 0",
-          "charge_rate_invalid": "charge rate must be greater than 0"
+          "charge_rate_invalid": "YYC rate must be greater than 0"
         }
       }
     },
@@ -3354,13 +3388,13 @@
           "code_required": "Currency code is required",
           "name_required": "Currency name is required",
           "minor_unit_invalid": "Minor unit must be greater than or equal to 0",
-          "enabled_rate_required": "Configure a positive charge rate in exchange settings before enabling this currency"
+          "enabled_rate_required": "Configure a positive YYC rate in exchange management before enabling this currency"
         }
       }
     },
     "other": {
       "content": {
-        "title": "Content Settings",
+        "title": "Page Settings",
         "description": "Maintain homepage, about page, and footer content for consistent site messaging.",
         "homepage": {
           "title": "Homepage Content",
@@ -3386,13 +3420,13 @@
       }
     },
     "exchange": {
-      "title": "Exchange Management",
-      "description": "Maintain currency conversion relationships and manual rates for consistent billing settlement.",
-      "subtitle": "Show both manually maintained */charge rates and synced fiat currency-pair rates.",
+      "title": "YYC Rates",
+      "description": "Maintain original-currency to YYC billing rates and synced fiat currency-pair rates.",
+      "subtitle": "Manual rows are used for request charging: 1 original currency unit = N YYC. Synced rows are references and sources for automatic rate maintenance.",
       "empty": "No rates",
       "columns": {
         "pair": "Pair",
-        "rate": "Rate",
+        "rate": "YYC Rate",
         "provider": "Provider",
         "rate_date": "Rate Date",
         "created_at": "Created At",
@@ -3410,75 +3444,60 @@
       },
       "dialogs": {
         "edit_title": "Edit Rate",
-        "rate_label": "Rate"
+        "rate_label": "YYC Rate"
       },
       "messages": {
         "load_failed": "Failed to load rates",
         "sync_failed": "Failed to sync rates",
         "sync_success": "Rates synced, updated {{count}} items",
-        "rate_invalid": "Rate must be greater than 0",
+        "rate_invalid": "YYC rate must be greater than 0",
         "save_failed": "Failed to save rate",
         "save_success": "Rate saved"
       }
     }
   },
   "billing": {
-    "channel_reconciliation": {
-      "nav": "Channel Reconciliation",
-      "title": "Channel Reconciliation",
-      "load_failed": "Failed to load channel reconciliation",
-      "note": "Shows Router consumption from the last 7 days and the procurement batch status for each channel. Open channel billing for batch details.",
-      "empty": "No channel reconciliation data",
-      "batch_summary": "{{count}} batches, {{active}} active",
-      "incomplete": "Incomplete cost {{count}}",
-      "load_error": "Batch load failed",
-      "columns": { "channel": "Channel", "requests": "Requests", "yyc": "YYC consumed", "revenue": "Revenue CNY", "cost": "Procurement CNY", "profit": "Profit CNY", "margin": "Margin", "batches": "Procurement batches" }
-    },
     "pricing_analysis": {
-      "nav": "Model Pricing",
-      "title": "Pricing Analysis",
-      "load_failed": "Failed to load pricing analysis",
+      "nav": "Profit Analysis",
+      "title": "Profit Analysis",
+      "load_failed": "Failed to load profit analysis",
       "group_placeholder": "Filter group",
       "note": "Showing models with requests in the last 7 days. Formal margin uses actual or explicitly zero cost only; models with incomplete cost coverage are not treated as healthy.",
-      "empty": "No model billing data",
-      "mixed": "Multiple channels",
+      "empty": "No model finance data",
       "states": { "healthy": "Healthy", "low_margin": "Low margin", "loss": "Below cost", "unknown": "Insufficient data" },
-      "cost_states": { "actual_available": "Actual cost available", "estimated_only": "Estimated only", "pending": "Cost pending", "none": "Cost not configured", "unit_mismatch": "Unit mismatch", "currency_mismatch": "Currency mismatch" },
-      "decision": { "cost_floor": "Cost floor triggered", "current_price": "Current price usable" },
-      "columns": { "model": "Model", "state": "Pricing state", "requests": "Requests", "router_yyc": "YYC consumed", "sell": "Sell CNY", "official_price": "Official price", "current_price": "Current price", "ratio": "Effective ratio", "cost": "Cost CNY", "profit": "Profit CNY", "margin": "Margin", "cost_coverage": "Cost coverage", "cost_state": "Cost state", "cost_unit": "Procurement unit cost", "selected_price": "Cost-floor sell", "decision": "Price decision", "floor_impact": "Floor impact", "details": "Details", "view": "View" }
+      "columns": { "model": "Model", "state": "Profit state", "requests": "Requests", "sell": "Billed Revenue CNY", "cost": "Procurement cost CNY", "profit": "Gross profit CNY", "margin": "Gross margin", "cost_coverage": "Cost coverage" }
     },
     "overview": {
-      "nav": "Business Overview",
-      "title": "Billing Business Overview",
-      "structure": { "title": "Billing structure", "summary": "Overview shows revenue and cost results. Model Pricing checks price coverage. Channel Procurement tracks upstream batches and cost attribution.", "pricing": "View model pricing", "procurement": "View channel procurement" },
-      "load_failed": "Failed to load business data",
-      "metrics": { "revenue": "Revenue CNY", "cost": "Procurement Cost CNY", "profit": "Gross Profit CNY", "margin": "Gross Margin", "yyc": "Router YYC Consumed", "requests": "Requests", "floor_triggered": "Floor triggers", "floor_amount": "Floor impact CNY" },
-      "tokens": { "title": "Token consumption", "input": "Input tokens", "output": "Output tokens", "cache_read": "Cache-read tokens", "cache_write": "Cache-write tokens" },
-      "confidence": { "title": "Cost data confidence", "coverage": "Actual cost coverage {{value}}", "detail": "Estimated {{estimated}}, pending {{pending}}, unconfigured {{unconfigured}}" },
-      "operating_risks": { "title": "Operating exceptions in scope", "view_details": "View model pricing", "empty": "No operating exception in the current scope", "unconfigured": "{{model}} has {{count}} requests without cost", "loss": "{{model}} has formal profit of {{amount}}", "low_margin": "{{model}} has only {{margin}} formal margin", "floor": "{{model}} triggered the cost floor {{count}} times", "estimated": "{{model}} has {{count}} requests using estimated cost only", "pending": "{{model}} has {{count}} requests pending cost attribution" },
-      "configuration_risks": { "title": "Global billing configuration risks", "view_details": "View channel procurement", "empty": "No global billing configuration risk" },
-      "channels": { "title": "Channel floor impact", "view_details": "View reconciliation", "empty": "No channel data" },
-      "trend": { "title": "7-day consumption and margin trend", "tokens": "Input {{input}} / Output {{output}}", "financials": "Revenue {{revenue}} / Cost {{cost}} / Profit {{profit}}", "coverage": "Formal cost {{configured}} / {{total}}" },
+      "nav": "Finance Overview",
+      "title": "Finance Overview",
+      "structure": { "title": "Finance board", "summary": "Start with billed revenue, procurement cost, gross profit, and margin. Drill into Profit Analysis and Procurement Cost only when something is off.", "pricing": "View profit analysis", "procurement": "View procurement cost" },
+      "load_failed": "Failed to load finance data",
+      "metrics": { "revenue": "Billed Revenue CNY", "cost": "Procurement Cost CNY", "profit": "Gross Profit CNY", "margin": "Gross Margin", "coverage": "Cost Coverage", "anomalies": "Issues" },
+      "operating_risks": { "title": "Finance exceptions in scope", "view_details": "View profit analysis", "empty": "No finance exception in the current scope", "unconfigured": "{{model}} has {{count}} requests without cost", "loss": "{{model}} has formal profit of {{amount}}", "low_margin": "{{model}} has only {{margin}} formal margin", "floor": "{{model}} triggered the cost floor {{count}} times", "estimated": "{{model}} has {{count}} requests using estimated cost only", "pending": "{{model}} has {{count}} requests pending cost attribution" },
+      "configuration_risks": { "title": "Finance configuration risks", "view_details": "View procurement cost", "empty": "No finance configuration risk" },
+      "channels": { "title": "Channel gross profit", "view_details": "View procurement cost", "empty": "No channel data" },
+      "trend": { "title": "7-day billed revenue and cost trend", "financials": "Billed revenue {{revenue}} / Cost {{cost}} / Profit {{profit}}" },
       "channel_placeholder": "Filter channel", "model_placeholder": "Filter model"
     },
     "procurement_report": {
-      "nav": "Channel Procurement",
-      "title": "Procurement Cost Report",
+      "nav": "Procurement Cost",
+      "title": "Procurement Cost",
       "empty": "No procurement cost data",
+      "management": { "title": "Procurement management", "channel_placeholder": "Select channel", "select_channel": "Select a channel to manage purchase records and procurement batches" },
       "health": {
         "status": {
-          "ok": "Billing healthy",
-          "warning": "Billing has risks",
-          "critical": "Billing needs action"
+          "ok": "Finance healthy",
+          "warning": "Finance has risks",
+          "critical": "Finance needs action"
         },
         "level": {
           "critical": "Critical",
           "warning": "Warning"
         },
         "summary": "{{critical}} critical, {{warning}} warning",
-        "no_issue": "No billing configuration risk detected",
-        "load_failed": "Failed to load billing health",
-        "load_failed_hint": "Unable to load billing health check. Refresh later."
+        "no_issue": "No finance configuration risk detected",
+        "load_failed": "Failed to load finance health",
+        "load_failed_hint": "Unable to load finance health check. Refresh later."
       },
       "group_by": {
         "channel": "By channel",
@@ -3523,7 +3542,7 @@
         "gross_margin": "Margin"
       },
       "actions": {
-        "configure_cost": "Open channel billing page to configure procurement cost"
+        "configure_cost": "Open procurement config"
       },
       "messages": {
         "invalid_time": "Select a valid time range",

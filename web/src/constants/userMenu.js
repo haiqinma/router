@@ -22,16 +22,11 @@ export const isUserRouteActive = (location, to) => {
 export const buildUserWorkspaceMenuItems = () => {
   const items = [
     {
-      key: 'service',
+      key: 'overview',
       type: 'group',
-      name: 'header.service',
-      icon: 'grid layout',
+      name: 'header.system_overview',
+      icon: 'chart bar',
       items: [
-        {
-          name: 'topup.pricing.title',
-          to: '/workspace/service/pricing',
-          icon: 'tags',
-        },
         {
           name: 'workspace_models.title',
           to: '/workspace/service/models',
@@ -77,8 +72,13 @@ export const buildUserWorkspaceMenuItems = () => {
       icon: 'book',
       items: [
         {
-          name: 'header.usage_guide',
-          to: '/workspace/service/help',
+          name: 'header.router_guide',
+          to: '/workspace/service/router-guide',
+          icon: 'sitemap',
+        },
+        {
+          name: 'header.cli_guide',
+          to: '/workspace/service/cli-guide',
           icon: 'file alternate outline',
         },
       ],

@@ -120,11 +120,13 @@ ucan:
   resource: ""
   # 动作声明：invoke / read / write。
   action: invoke
-  # 受信任的中心化 UCAN issuer DID 列表（可选）。
-  # 配置后，当 token.iss 命中该列表时，Router 将允许无 prf 的中心化 UCAN（subject 仍要求 0x 地址）。
+  # 受信任的中心化 UCAN issuer DID 列表。
+  # 如果 Chat/Node 使用中心化 TOTP/UCAN 登录访问 Router，必须显式填入 Node 当前 issuer DID。
+  # 该值可通过 Node 的 /api/v1/public/auth/central/issuer 返回 data.issuerDid 获取。
+  # Router 启动时会校验每一项必须是可验签的 did:key:z...，配置错误会直接启动失败。
   # 示例：
   # trusted_issuer_dids:
-  #   - "did:key:z6Mkgwdj3oxDdLFXMsGpM8ZkF6MY3sVNGHhAebfPn3HuHBtT"
+  #   - "did:key:<node-current-issuer-did>"
   trusted_issuer_dids: []
 
 feature:

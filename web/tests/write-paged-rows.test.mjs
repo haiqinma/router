@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { writePagedRows } from '../src/helpers/pagination.mjs';
+import { hasLoadedPagedRows, writePagedRows } from '../src/helpers/pagination.mjs';
 
 const ITEMS_PER_PAGE = 10;
 
@@ -18,6 +18,16 @@ function testJumpToFarPageWritesAtAbsoluteOffset() {
     merged.slice(990, 1000),
     hundredthPageRows,
     'expected far page rows to land at the correct absolute offset'
+  );
+  assert.equal(
+    hasLoadedPagedRows(merged, 100, ITEMS_PER_PAGE),
+    true,
+    'expected explicitly written far page to be treated as loaded'
+  );
+  assert.equal(
+    hasLoadedPagedRows(merged, 50, ITEMS_PER_PAGE),
+    false,
+    'expected sparse empty page before the far page to be treated as not loaded'
   );
 }
 
