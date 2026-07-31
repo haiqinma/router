@@ -2,17 +2,17 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
-  ADMIN_MENU_GROUPS,
+  buildUnifiedWorkspaceMenuGroups,
   isAdminRouteActive,
 } from '../constants/adminMenu';
+import { isUserRouteActive } from '../constants/userMenu';
+import { isAdmin } from '../helpers';
 import { AppIcon, AppNavMenu } from '../router-ui';
 
 const SIDEBAR_GROUP_OPEN_STORAGE_KEY = 'router_admin_sidebar_group_open_v2';
 
-const buildDefaultOpenKeys = () => ADMIN_MENU_GROUPS.map((group) => group.key);
-
-const buildInitialOpenKeys = () => {
-  const defaults = buildDefaultOpenKeys();
+const buildInitialOpenKeys = (menuItems) => {
+  const defaults = menuItems.map((group) => group.key);
   if (typeof window === 'undefined') {
     return defaults;
   }
@@ -36,19 +36,25 @@ const AdminSidebar = ({ compact = false }) => {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
-  const [openKeys, setOpenKeys] = useState(buildInitialOpenKeys);
+  const menuItems = useMemo(() => buildUnifiedWorkspaceMenuGroups(isAdmin()), []);
+  const [openKeys, setOpenKeys] = useState(() => buildInitialOpenKeys(menuItems));
+
+  const isRouteActive = (to) =>
+    String(to || '').startsWith('/admin/')
+      ? isAdminRouteActive(location, to)
+      : isUserRouteActive(location, to);
 
   const selectedKeys = useMemo(() => {
     const active = [];
-    ADMIN_MENU_GROUPS.forEach((group) => {
+    menuItems.forEach((group) => {
       group.items.forEach((item) => {
-        if (isAdminRouteActive(location, item.to)) {
+        if (isRouteActive(item.to)) {
           active.push(item.to);
         }
       });
     });
     return active;
-  }, [location]);
+  }, [location, menuItems]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -61,7 +67,7 @@ const AdminSidebar = ({ compact = false }) => {
     if (compact || selectedKeys.length === 0) {
       return;
     }
-    const activeGroupKeys = ADMIN_MENU_GROUPS.filter((group) =>
+    const activeGroupKeys = menuItems.filter((group) =>
       group.items.some((item) => selectedKeys.includes(item.to)),
     ).map((group) => group.key);
     if (activeGroupKeys.length === 0) {
@@ -74,11 +80,11 @@ const AdminSidebar = ({ compact = false }) => {
         ? previous
         : next;
     });
-  }, [compact, selectedKeys]);
+  }, [compact, menuItems, selectedKeys]);
 
   const items = useMemo(
     () =>
-      ADMIN_MENU_GROUPS.map((group) => ({
+      menuItems.map((group) => ({
         key: group.key,
         icon: <AppIcon name={group.icon} />,
         label: t(group.name),
@@ -88,7 +94,7 @@ const AdminSidebar = ({ compact = false }) => {
           label: t(item.name),
         })),
       })),
-    [t],
+    [menuItems, t],
   );
 
   return (

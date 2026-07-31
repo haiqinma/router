@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { DoubleLeftOutlined, DoubleRightOutlined } from '@ant-design/icons';
 import Footer from '../components/Footer';
 import Header from '../components/Header';
-import UserSidebar from '../components/UserSidebar';
+import AdminSidebar from '../components/AdminSidebar';
 import { AppButton, AppSider } from '../router-ui';
 
 const USER_SIDEBAR_COMPACT_STORAGE_KEY = 'router_user_sidebar_compact_v1';
@@ -45,7 +45,7 @@ const UserWorkspaceLayout = () => {
           <div className='router-admin-sidebar-toolbar'>
             {!sidebarCompact ? (
               <div className='router-admin-sidebar-heading'>
-                {t('header.user_workspace')}
+                {t('header.workspace')}
               </div>
             ) : null}
             <AppButton
@@ -74,7 +74,7 @@ const UserWorkspaceLayout = () => {
             />
           </div>
           <div className='router-admin-sidebar-scroll'>
-            <UserSidebar compact={sidebarCompact} />
+            <AdminSidebar compact={sidebarCompact} />
           </div>
         </AppSider>
         <div className='main-content router-admin-main'>

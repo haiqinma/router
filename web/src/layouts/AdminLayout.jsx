@@ -45,7 +45,7 @@ const AdminLayout = () => {
           <div className='router-admin-sidebar-toolbar'>
             {!sidebarCompact ? (
               <div className='router-admin-sidebar-heading'>
-                {t('header.admin_workspace')}
+                {t('header.workspace')}
               </div>
             ) : null}
             <AppButton

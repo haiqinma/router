@@ -9,6 +9,7 @@ import { WEB3_TOKEN_STORAGE_KEY } from '../helpers/web3';
 import { logoutWallet } from '../services/web3Auth';
 import {
   ADMIN_MENU_GROUPS,
+  buildUnifiedWorkspaceMenuGroups,
   isAdminRouteActive,
 } from '../constants/adminMenu';
 import {
@@ -45,11 +46,16 @@ const Header = ({ workspace = 'user', hideNavButtons = false }) => {
   const shouldFixHeader = Boolean(userState?.user);
   const currentWorkspace = workspace === 'admin' ? 'admin' : 'user';
   const hasAdminAccess = isAdmin();
-  const adminFlatButtons = useMemo(
-    () => ADMIN_MENU_GROUPS.flatMap((group) => group.items),
-    [],
-  );
   const userButtons = useMemo(() => buildUserWorkspaceMenuItems(), []);
+  const unifiedButtons = useMemo(
+    () => buildUnifiedWorkspaceMenuGroups(hasAdminAccess),
+    [hasAdminAccess],
+  );
+  const navigationButtons = userState.user
+    ? unifiedButtons
+    : currentWorkspace === 'admin'
+      ? ADMIN_MENU_GROUPS
+      : userButtons;
   const headerContainerClass = [
     'router-header-container',
     hideNavButtons ? 'router-header-container-full' : '',
@@ -67,19 +73,10 @@ const Header = ({ workspace = 'user', hideNavButtons = false }) => {
   }, [shouldFixHeader]);
 
   const isRouteActive = (to) => {
-    if (currentWorkspace === 'admin') {
+    if (String(to || '').startsWith('/admin/')) {
       return isAdminRouteActive(location, to);
     }
     return isUserWorkspaceRouteActive(location, to);
-  };
-
-  const goToWorkspace = (targetWorkspace) => {
-    if (targetWorkspace === 'admin') {
-      navigate('/admin/dashboard');
-    } else {
-      navigate('/workspace/entry');
-    }
-    setShowSidebar(false);
   };
 
   async function logout() {
@@ -127,18 +124,7 @@ const Header = ({ workspace = 'user', hideNavButtons = false }) => {
     formatHeaderWalletAddress(userWalletAddress) || userState?.user?.username || '';
 
   const desktopNavItems = useMemo(() => {
-    if (currentWorkspace === 'admin') {
-      return ADMIN_MENU_GROUPS.map((group) => ({
-        key: group.key,
-        label: t(group.name),
-        children: group.items.map((item) => ({
-          key: item.to,
-          icon: <AppIcon name={item.icon} />,
-          label: t(item.name),
-        })),
-      }));
-    }
-    return userButtons.map((button) => {
+    return navigationButtons.map((button) => {
       if (button.type === 'group' && Array.isArray(button.items)) {
         return {
           key: button.key || button.name,
@@ -155,29 +141,23 @@ const Header = ({ workspace = 'user', hideNavButtons = false }) => {
         label: t(button.name),
       };
     });
-  }, [currentWorkspace, t, userButtons]);
+  }, [navigationButtons, t]);
 
   const desktopSelectedKeys = useMemo(() => {
-    if (currentWorkspace === 'admin') {
-      return adminFlatButtons
-        .filter((item) => isAdminRouteActive(location, item.to))
-        .map((item) => item.to);
-    }
-    return userButtons.flatMap((button) => {
+    return navigationButtons.flatMap((button) => {
       if (button.type === 'group' && Array.isArray(button.items)) {
         return button.items
-          .filter((item) => isUserWorkspaceRouteActive(location, item.to))
+          .filter((item) => isRouteActive(item.to))
           .map((item) => item.to);
       }
-      return button.to && isUserWorkspaceRouteActive(location, button.to)
+      return button.to && isRouteActive(button.to)
         ? [button.to]
         : [];
     });
-  }, [adminFlatButtons, currentWorkspace, location, userButtons]);
+  }, [location, navigationButtons]);
 
   const renderMobileButtons = () => {
-    const buttons = currentWorkspace === 'admin' ? adminFlatButtons : userButtons;
-    return buttons.map((button) => {
+    return navigationButtons.map((button) => {
       if (button.type === 'group' && Array.isArray(button.items)) {
         return (
           <React.Fragment key={button.key || button.name}>
@@ -259,15 +239,13 @@ const Header = ({ workspace = 'user', hideNavButtons = false }) => {
           placement='right'
           size='default'
           title={
-            currentWorkspace === 'admin'
-              ? t('header.admin_workspace')
-              : t('header.user_workspace')
+            t('header.workspace')
           }
           className='router-header-mobile-drawer'
         >
           <div className='router-header-mobile-list'>
             {renderMobileButtons()}
-            {currentWorkspace === 'user' && userState.user && (
+            {userState.user && (
               <AppButton
                 className='router-page-button router-header-mobile-actions'
                 onClick={() => {
@@ -277,28 +255,6 @@ const Header = ({ workspace = 'user', hideNavButtons = false }) => {
               >
                 {t('workspace_start.title')}
               </AppButton>
-            )}
-            {hasAdminAccess && (
-              <div className='router-header-mobile-workspace-switch'>
-                <AppButton
-                  className='router-page-button'
-                  color={currentWorkspace === 'admin' ? 'blue' : undefined}
-                  basic={currentWorkspace !== 'admin'}
-                  fluid
-                  onClick={() => goToWorkspace('admin')}
-                >
-                  {t('header.admin_workspace')}
-                </AppButton>
-                <AppButton
-                  className='router-page-button'
-                  color={currentWorkspace === 'user' ? 'blue' : undefined}
-                  basic={currentWorkspace !== 'user'}
-                  fluid
-                  onClick={() => goToWorkspace('user')}
-                >
-                  {t('header.user_workspace')}
-                </AppButton>
-              </div>
             )}
             <AppSelect
               className='router-header-mobile-language router-section-dropdown'
@@ -379,7 +335,7 @@ const Header = ({ workspace = 'user', hideNavButtons = false }) => {
           </div>
         ) : null}
         <div className='router-header-actions'>
-          {currentWorkspace === 'user' && userState.user ? (
+          {userState.user ? (
             <AppButton
               type='button'
               className='router-header-quick-action'
@@ -388,32 +344,6 @@ const Header = ({ workspace = 'user', hideNavButtons = false }) => {
               {t('workspace_start.title')}
             </AppButton>
           ) : null}
-          {hasAdminAccess && (
-            <div className='router-header-dropdown router-header-trigger'>
-              <AppMenuDropdown
-                items={[
-                  {
-                    key: 'admin',
-                    active: currentWorkspace === 'admin',
-                    label: t('header.admin_workspace'),
-                    onClick: () => goToWorkspace('admin'),
-                  },
-                  {
-                    key: 'user',
-                    active: currentWorkspace === 'user',
-                    label: t('header.user_workspace'),
-                    onClick: () => goToWorkspace('user'),
-                  },
-                ]}
-              >
-                <span className='router-header-toolbar-chip'>
-                  {currentWorkspace === 'admin'
-                    ? t('header.admin_workspace')
-                    : t('header.user_workspace')}
-                </span>
-              </AppMenuDropdown>
-            </div>
-          )}
           <HeaderMessageCenter />
           <div className='router-header-dropdown router-header-trigger'>
             <AppMenuDropdown

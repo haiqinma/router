@@ -32,8 +32,9 @@
     "sidebar_expand": "Expand Sidebar",
     "sidebar_compact": "Collapse Sidebar",
     "chat": "Chat",
-    "admin_workspace": "Admin Workspace",
-    "user_workspace": "User Workspace",
+    "admin_workspace": "Workspace",
+    "user_workspace": "Workspace",
+    "workspace": "Workspace",
     "messages": {
       "title": "Messages",
       "empty": "No messages",

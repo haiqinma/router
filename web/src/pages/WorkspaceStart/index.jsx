@@ -12,8 +12,7 @@ const WorkspaceStart = () => {
     <div className='dashboard-container router-workspace-start-page'>
       <AppFilterHeader
         breadcrumbs={[
-          { key: 'workspace', label: t('header.user_workspace') },
-          { key: 'service', label: t('header.service') },
+          { key: 'workspace', label: t('header.workspace') },
           { key: 'start', label: t('workspace_start.title'), active: true },
         ]}
         title={t('workspace_start.title')}

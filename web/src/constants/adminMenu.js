@@ -1,4 +1,5 @@
 import { resolveAdminSettingLocation } from '../helpers/adminSetting';
+import { buildUserWorkspaceMenuItems } from './userMenu';
 
 export const ADMIN_MENU_GROUPS = [
   {
@@ -132,6 +133,32 @@ export const ADMIN_MENU_GROUPS = [
     ],
   },
 ];
+
+export const buildUnifiedWorkspaceMenuGroups = (hasAdminAccess) => {
+  const userGroups = buildUserWorkspaceMenuItems();
+  if (!hasAdminAccess) {
+    return userGroups;
+  }
+  const adminGroups = ADMIN_MENU_GROUPS.map((group) => ({
+    ...group,
+    type: 'group',
+    items: group.items.map((item) => ({ ...item })),
+  }));
+  const overview = adminGroups.find((group) => group.key === 'dashboard');
+  const userOverview = userGroups.find((group) => group.key === 'overview');
+  if (overview && userOverview) {
+    overview.items.push(...userOverview.items.map((item) => ({ ...item })));
+  }
+  return [
+    ...adminGroups,
+    ...userGroups
+      .filter((group) => group.key === 'mine' || group.key === 'help')
+      .map((group) => ({
+        ...group,
+        items: group.items.map((item) => ({ ...item })),
+      })),
+  ];
+};
 
 export const isAdminRouteActive = (location, to) => {
   if (!location) {

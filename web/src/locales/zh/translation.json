@@ -32,8 +32,9 @@
     "sidebar_expand": "展开侧栏",
     "sidebar_compact": "收起侧栏",
     "chat": "聊天",
-    "admin_workspace": "管理工作区",
-    "user_workspace": "用户工作区",
+    "admin_workspace": "工作区",
+    "user_workspace": "工作区",
+    "workspace": "工作区",
     "messages": {
       "title": "消息",
       "empty": "暂无消息",
