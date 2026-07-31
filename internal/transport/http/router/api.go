@@ -357,8 +357,8 @@ func SetApiRouter(engine *gin.Engine) {
 		adminEntitlementRoute := adminRouter.Group("/entitlement")
 		adminEntitlementRoute.Use(middleware.AdminAuth())
 		{
-			adminEntitlementRoute.GET("/purchases", entitlement.GetPurchases)
-			adminEntitlementRoute.GET("/purchases/:id", entitlement.GetPurchase)
+			adminEntitlementRoute.GET("/payments", entitlement.GetPurchases)
+			adminEntitlementRoute.GET("/payments/:id", entitlement.GetPurchase)
 			adminEntitlementRoute.GET("/products", entitlement.GetProducts)
 			adminEntitlementRoute.GET("/products/:id", entitlement.GetProduct)
 			adminEntitlementRoute.POST("/products", entitlement.CreateProduct)

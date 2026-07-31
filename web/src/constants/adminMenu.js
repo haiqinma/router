@@ -125,11 +125,6 @@ export const ADMIN_MENU_GROUPS = [
         to: '/admin/setting?tab=content&section=notice',
         icon: 'file alternate outline',
       },
-      {
-        name: 'setting.groups.runtime',
-        to: '/admin/setting?tab=runtime&section=monitor',
-        icon: 'heartbeat',
-      },
     ],
   },
 ];

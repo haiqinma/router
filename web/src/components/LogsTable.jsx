@@ -4,6 +4,7 @@ import {
   showError,
   showSuccess,
   timestamp2string,
+  hasLoadedPagedRows,
   writePagedRows,
 } from '../helpers';
 import { useTranslation } from 'react-i18next';
@@ -44,6 +45,11 @@ import {
 } from '../router-ui';
 
 const USER_LOG_COLUMN_ORDER_STORAGE_KEY = 'router_user_log_column_order_v1';
+const ADMIN_LOG_COLUMN_ORDER_STORAGE_KEY = 'router_admin_log_column_order_v1';
+const USER_LOG_COLUMN_WIDTH_STORAGE_KEY = 'router_user_log_column_width_v1';
+const ADMIN_LOG_COLUMN_WIDTH_STORAGE_KEY = 'router_admin_log_column_width_v1';
+const LOG_COLUMN_MIN_WIDTH = 72;
+const LOG_COLUMN_MAX_WIDTH = 420;
 const DEFAULT_USER_LOG_COLUMN_ORDER = [
   'created_at',
   'billingSource',
@@ -54,14 +60,60 @@ const DEFAULT_USER_LOG_COLUMN_ORDER = [
   'cacheQuantity',
   'chargeAmount',
 ];
+const DEFAULT_ADMIN_LOG_COLUMN_ORDER = [
+  'created_at',
+  'channel',
+  'group_id',
+  'type',
+  'model_name',
+  'username',
+  'token_name',
+  'prompt_tokens',
+  'completion_tokens',
+  'cacheQuantity',
+  'chargeAmount',
+];
+const DEFAULT_LOG_COLUMN_WIDTHS = {
+  created_at: LOG_LIST_COLUMN_WIDTHS.time,
+  channel: LOG_LIST_COLUMN_WIDTHS.channel,
+  group_id: LOG_LIST_COLUMN_WIDTHS.group,
+  type: LOG_LIST_COLUMN_WIDTHS.type,
+  billingSource: LOG_LIST_COLUMN_WIDTHS.billingSource,
+  model_name: LOG_LIST_COLUMN_WIDTHS.model,
+  username: LOG_LIST_COLUMN_WIDTHS.username,
+  token_name: LOG_LIST_COLUMN_WIDTHS.tokenName,
+  prompt_tokens: LOG_LIST_COLUMN_WIDTHS.promptTokens,
+  completion_tokens: LOG_LIST_COLUMN_WIDTHS.completionTokens,
+  cacheQuantity: LOG_LIST_COLUMN_WIDTHS.cacheTokens,
+  chargeAmount: LOG_LIST_COLUMN_WIDTHS.quota,
+};
 
-function normalizeUserLogColumnOrder(rawOrder) {
+function getLogColumnOrderStorageKey(isAdminScope) {
+  return isAdminScope
+    ? ADMIN_LOG_COLUMN_ORDER_STORAGE_KEY
+    : USER_LOG_COLUMN_ORDER_STORAGE_KEY;
+}
+
+function getLogColumnWidthStorageKey(isAdminScope) {
+  return isAdminScope
+    ? ADMIN_LOG_COLUMN_WIDTH_STORAGE_KEY
+    : USER_LOG_COLUMN_WIDTH_STORAGE_KEY;
+}
+
+function getDefaultLogColumnOrder(isAdminScope) {
+  return isAdminScope
+    ? DEFAULT_ADMIN_LOG_COLUMN_ORDER
+    : DEFAULT_USER_LOG_COLUMN_ORDER;
+}
+
+function normalizeLogColumnOrder(rawOrder, isAdminScope) {
+  const defaultOrder = getDefaultLogColumnOrder(isAdminScope);
   const nextOrder = [];
   const seen = new Set();
   const append = (key) => {
-    const normalizedKey = key === 'type' ? 'billingSource' : key;
+    const normalizedKey = !isAdminScope && key === 'type' ? 'billingSource' : key;
     if (
-      !DEFAULT_USER_LOG_COLUMN_ORDER.includes(normalizedKey) ||
+      !defaultOrder.includes(normalizedKey) ||
       seen.has(normalizedKey)
     ) {
       return;
@@ -72,21 +124,52 @@ function normalizeUserLogColumnOrder(rawOrder) {
   if (Array.isArray(rawOrder)) {
     rawOrder.forEach((key) => append(String(key || '').trim()));
   }
-  DEFAULT_USER_LOG_COLUMN_ORDER.forEach(append);
+  defaultOrder.forEach(append);
   return nextOrder;
 }
 
-function loadUserLogColumnOrder() {
+function loadLogColumnOrder(isAdminScope) {
   if (typeof window === 'undefined') {
-    return [...DEFAULT_USER_LOG_COLUMN_ORDER];
+    return [...getDefaultLogColumnOrder(isAdminScope)];
   }
   try {
     const stored = JSON.parse(
-      window.localStorage.getItem(USER_LOG_COLUMN_ORDER_STORAGE_KEY) || '[]',
+      window.localStorage.getItem(getLogColumnOrderStorageKey(isAdminScope)) || '[]',
     );
-    return normalizeUserLogColumnOrder(stored);
+    return normalizeLogColumnOrder(stored, isAdminScope);
   } catch (error) {
-    return [...DEFAULT_USER_LOG_COLUMN_ORDER];
+    return [...getDefaultLogColumnOrder(isAdminScope)];
+  }
+}
+
+function normalizeLogColumnWidths(rawWidths) {
+  const nextWidths = {};
+  Object.entries(DEFAULT_LOG_COLUMN_WIDTHS).forEach(([key, defaultWidth]) => {
+    const storedWidth = Number(rawWidths?.[key]);
+    nextWidths[key] = Math.min(
+      LOG_COLUMN_MAX_WIDTH,
+      Math.max(
+        LOG_COLUMN_MIN_WIDTH,
+        Number.isFinite(storedWidth) && storedWidth > 0
+          ? storedWidth
+          : defaultWidth,
+      ),
+    );
+  });
+  return nextWidths;
+}
+
+function loadLogColumnWidths(isAdminScope) {
+  if (typeof window === 'undefined') {
+    return normalizeLogColumnWidths({});
+  }
+  try {
+    const stored = JSON.parse(
+      window.localStorage.getItem(getLogColumnWidthStorageKey(isAdminScope)) || '{}',
+    );
+    return normalizeLogColumnWidths(stored);
+  } catch (error) {
+    return normalizeLogColumnWidths({});
   }
 }
 
@@ -518,17 +601,22 @@ const LogsTable = () => {
   const [currencyIndex, setCurrencyIndex] = useState(() =>
     buildPublicDisplayCurrencyIndex([])
   );
-  const [userLogColumnOrder, setUserLogColumnOrder] = useState(
-    loadUserLogColumnOrder,
+  const [logColumnOrder, setLogColumnOrder] = useState(() =>
+    loadLogColumnOrder(isAdminScope),
+  );
+  const [logColumnWidths, setLogColumnWidths] = useState(() =>
+    loadLogColumnWidths(isAdminScope),
   );
   const [draggingColumnKey, setDraggingColumnKey] = useState('');
   const [dragOverColumnKey, setDragOverColumnKey] = useState('');
+  const [resizingColumnKey, setResizingColumnKey] = useState('');
   const [cleanupTimestamp, setCleanupTimestamp] = useState(
     cleanupDatetimeLocalValue(),
   );
   const [cleanupModalOpen, setCleanupModalOpen] = useState(false);
   const [cleaningLogs, setCleaningLogs] = useState(false);
   const draggingColumnKeyRef = useRef('');
+  const resizingColumnRef = useRef(null);
 
   const LOG_OPTIONS = [
     { key: '0', text: t('log.type.all'), value: 0 },
@@ -1028,9 +1116,7 @@ const LogsTable = () => {
   const onPaginationChange = (e, { activePage }) => {
     (async () => {
       const nextPage = Number(activePage) > 0 ? Number(activePage) : 1;
-      const hasLoadedPageRows = logs
-        .slice((nextPage - 1) * ITEMS_PER_PAGE, nextPage * ITEMS_PER_PAGE)
-        .some(Boolean);
+      const hasLoadedPageRows = hasLoadedPagedRows(logs, nextPage, ITEMS_PER_PAGE);
       if (searchKeyword.trim() === '' && !hasLoadedPageRows) {
         await loadLogs(nextPage);
       }
@@ -1078,18 +1164,41 @@ const LogsTable = () => {
   }, [loadDisplayUnits]);
 
   useEffect(() => {
-    if (isAdminScope || typeof window === 'undefined') {
+    setLogColumnOrder(loadLogColumnOrder(isAdminScope));
+    setLogColumnWidths(loadLogColumnWidths(isAdminScope));
+    draggingColumnKeyRef.current = '';
+    setDraggingColumnKey('');
+    setDragOverColumnKey('');
+    setResizingColumnKey('');
+  }, [isAdminScope]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
       return;
     }
     try {
       window.localStorage.setItem(
-        USER_LOG_COLUMN_ORDER_STORAGE_KEY,
-        JSON.stringify(userLogColumnOrder),
+        getLogColumnOrderStorageKey(isAdminScope),
+        JSON.stringify(logColumnOrder),
       );
     } catch (error) {
-      console.warn('Failed to persist user log column order:', error);
+      console.warn('Failed to persist log column order:', error);
     }
-  }, [isAdminScope, userLogColumnOrder]);
+  }, [isAdminScope, logColumnOrder]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    try {
+      window.localStorage.setItem(
+        getLogColumnWidthStorageKey(isAdminScope),
+        JSON.stringify(logColumnWidths),
+      );
+    } catch (error) {
+      console.warn('Failed to persist log column widths:', error);
+    }
+  }, [isAdminScope, logColumnWidths]);
 
   useEffect(() => {
     setActivePage(1);
@@ -1220,20 +1329,17 @@ const LogsTable = () => {
   );
 
   const detailBasePath = isAdminScope ? '/admin/log' : '/workspace/log';
-  const tableColSpan = isAdminScope
-    ? showAmountColumns()
-      ? 10
-      : 5
-    : showAmountColumns()
-      ? 7
-      : 3;
+  const logTableScrollWidth = Math.max(
+    LOG_LIST_TABLE_MIN_WIDTH,
+    Object.values(logColumnWidths).reduce((total, width) => total + Number(width || 0), 0),
+  );
 
-  const moveUserLogColumn = useCallback((sourceKey, targetKey, placeAfter) => {
+  const moveLogColumn = useCallback((sourceKey, targetKey, placeAfter) => {
     if (!sourceKey || !targetKey || sourceKey === targetKey) {
       return;
     }
-    setUserLogColumnOrder((currentOrder) => {
-      const normalizedOrder = normalizeUserLogColumnOrder(currentOrder);
+    setLogColumnOrder((currentOrder) => {
+      const normalizedOrder = normalizeLogColumnOrder(currentOrder, isAdminScope);
       if (
         !normalizedOrder.includes(sourceKey) ||
         !normalizedOrder.includes(targetKey)
@@ -1245,7 +1351,7 @@ const LogsTable = () => {
       nextOrder.splice(targetIndex + (placeAfter ? 1 : 0), 0, sourceKey);
       return nextOrder;
     });
-  }, []);
+  }, [isAdminScope]);
 
   const clearColumnDragState = useCallback(() => {
     draggingColumnKeyRef.current = '';
@@ -1253,24 +1359,68 @@ const LogsTable = () => {
     setDragOverColumnKey('');
   }, []);
 
-  const resolveLogColumns = (columns) => {
-    if (isAdminScope) {
-      return columns;
+  const handleColumnResizeStart = useCallback((event, columnKey) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const startWidth = Number(logColumnWidths[columnKey] || DEFAULT_LOG_COLUMN_WIDTHS[columnKey]);
+    resizingColumnRef.current = {
+      key: columnKey,
+      startX: event.clientX,
+      startWidth: Number.isFinite(startWidth) ? startWidth : LOG_COLUMN_MIN_WIDTH,
+    };
+    setResizingColumnKey(columnKey);
+  }, [logColumnWidths]);
+
+  useEffect(() => {
+    if (!resizingColumnKey) {
+      return undefined;
     }
+    const handleMouseMove = (event) => {
+      const resizingColumn = resizingColumnRef.current;
+      if (!resizingColumn?.key) {
+        return;
+      }
+      const nextWidth = Math.min(
+        LOG_COLUMN_MAX_WIDTH,
+        Math.max(
+          LOG_COLUMN_MIN_WIDTH,
+          resizingColumn.startWidth + event.clientX - resizingColumn.startX,
+        ),
+      );
+      setLogColumnWidths((currentWidths) => ({
+        ...currentWidths,
+        [resizingColumn.key]: nextWidth,
+      }));
+    };
+    const handleMouseUp = () => {
+      resizingColumnRef.current = null;
+      setResizingColumnKey('');
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [resizingColumnKey]);
+
+  const resolveLogColumns = (columns) => {
     const columnsByKey = new Map(
       columns.map((column) => [String(column.key || column.dataIndex), column]),
     );
     const visibleOrder = [
-      ...userLogColumnOrder.filter((key) => columnsByKey.has(key)),
+      ...logColumnOrder.filter((key) => columnsByKey.has(key)),
       ...columns
         .map((column) => String(column.key || column.dataIndex))
-        .filter((key) => !userLogColumnOrder.includes(key)),
+        .filter((key) => !logColumnOrder.includes(key)),
     ];
     return visibleOrder.map((columnKey) => {
       const column = columnsByKey.get(columnKey);
       const originalTitle = column.title;
+      const columnWidth = logColumnWidths[columnKey] || column.width || DEFAULT_LOG_COLUMN_WIDTHS[columnKey];
       return {
         ...column,
+        width: columnWidth,
         title: (
           <div className='router-log-column-title'>
             <span
@@ -1292,6 +1442,14 @@ const LogsTable = () => {
             <span className='router-log-column-title-content'>
               {originalTitle}
             </span>
+            <span
+              className='router-log-column-resize-handle'
+              role='separator'
+              aria-label={t('log.table.resize_column')}
+              title={t('log.table.resize_column')}
+              onMouseDown={(event) => handleColumnResizeStart(event, columnKey)}
+              onClick={(event) => event.stopPropagation()}
+            />
           </div>
         ),
         onHeaderCell: () => ({
@@ -1303,9 +1461,13 @@ const LogsTable = () => {
             dragOverColumnKey === columnKey
               ? 'router-log-column-drag-target'
               : '',
+            resizingColumnKey === columnKey
+              ? 'router-log-column-resizing'
+              : '',
           ]
             .filter(Boolean)
             .join(' '),
+          style: { width: columnWidth, minWidth: columnWidth },
           onDragOver: (event) => {
             const sourceKey = draggingColumnKeyRef.current;
             if (!sourceKey || sourceKey === columnKey) {
@@ -1331,7 +1493,7 @@ const LogsTable = () => {
             const targetRect = event.currentTarget.getBoundingClientRect();
             const placeAfter =
               event.clientX >= targetRect.left + targetRect.width / 2;
-            moveUserLogColumn(sourceKey, columnKey, placeAfter);
+            moveLogColumn(sourceKey, columnKey, placeAfter);
             clearColumnDragState();
           },
         }),
@@ -1605,7 +1767,7 @@ const LogsTable = () => {
         <AppTable
           className='router-list-table router-table-fit-page router-log-table'
           pagination={false}
-          scroll={{ x: LOG_LIST_TABLE_MIN_WIDTH }}
+          scroll={{ x: logTableScrollWidth }}
           onChange={handleTableChange}
           rowKey={(log) =>
             log.id ||
@@ -1628,7 +1790,6 @@ const LogsTable = () => {
             title: t('log.table.time'),
             dataIndex: 'created_at',
             key: 'created_at',
-            className: 'router-table-col-datetime',
             width: LOG_LIST_COLUMN_WIDTHS.time,
             sorter: true,
             sortDirections: ['ascend', 'descend'],
@@ -1694,7 +1855,6 @@ const LogsTable = () => {
                   title: t('log.table.type'),
                   dataIndex: 'type',
                   key: 'type',
-                  className: 'router-table-col-type-narrow',
                   width: LOG_LIST_COLUMN_WIDTHS.type,
                   sorter: true,
                   sortDirections: ['ascend', 'descend'],
@@ -1777,7 +1937,6 @@ const LogsTable = () => {
                   title: t('log.table.prompt_tokens'),
                   dataIndex: 'prompt_tokens',
                   key: 'prompt_tokens',
-                  className: 'router-table-col-status-narrow',
                   width: LOG_LIST_COLUMN_WIDTHS.promptTokens,
                   sorter: true,
                   sortDirections: ['ascend', 'descend'],
@@ -1791,7 +1950,6 @@ const LogsTable = () => {
                   title: t('log.table.completion_tokens'),
                   dataIndex: 'completion_tokens',
                   key: 'completion_tokens',
-                  className: 'router-table-col-status-narrow',
                   width: LOG_LIST_COLUMN_WIDTHS.completionTokens,
                   sorter: true,
                   sortDirections: ['ascend', 'descend'],
@@ -1804,7 +1962,6 @@ const LogsTable = () => {
                 {
                   title: t('log.table.cache_tokens'),
                   key: 'cacheQuantity',
-                  className: 'router-table-col-status-narrow',
                   width: LOG_LIST_COLUMN_WIDTHS.cacheTokens,
                   sorter: true,
                   sortDirections: ['ascend', 'descend'],

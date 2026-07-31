@@ -775,7 +775,7 @@ function App() {
           element={<PackageDetail />}
         />
         <Route
-          path='/admin/entitlement/purchases'
+          path='/admin/entitlement/payments'
           element={<RecordListPage kind='purchase' />}
         />
         <Route
@@ -787,7 +787,7 @@ function App() {
           element={<PaymentRecordDetail />}
         />
         <Route
-          path='/admin/entitlement/purchases/:id'
+          path='/admin/entitlement/payments/:id'
           element={<PaymentRecordDetail />}
         />
         <Route

@@ -338,6 +338,12 @@ const UserDetail = () => {
   const [activePackageLoading, setActivePackageLoading] = useState(false);
   const [balanceLots, setBalanceLots] = useState([]);
   const [balanceLotsLoading, setBalanceLotsLoading] = useState(false);
+
+  useEffect(() => {
+    if (location.state?.activeDetailTab === 'records') {
+      setActiveDetailTab('records');
+    }
+  }, [location.state]);
   const [balanceLotsPage, setBalanceLotsPage] = useState(1);
   const [balanceLotsPageSize, setBalanceLotsPageSize] = useState(BALANCE_LOT_PAGE_SIZE);
   const [balanceLotsTotal, setBalanceLotsTotal] = useState(0);
@@ -679,7 +685,7 @@ const UserDetail = () => {
     }
     switch ((lot?.source_type || '').toString().trim()) {
 		case 'topup_order':
-			return `/admin/entitlement/purchases/${encodeURIComponent(sourceID)}`;
+			return `/admin/entitlement/payments/${encodeURIComponent(sourceID)}`;
 		case 'redemption':
 			return `/admin/redemption/records/${encodeURIComponent(sourceID)}`;
       default:

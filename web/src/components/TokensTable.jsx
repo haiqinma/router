@@ -8,6 +8,7 @@ import {
   showError,
   showSuccess,
   timestamp2string,
+  hasLoadedPagedRows,
   writePagedRows,
 } from '../helpers';
 
@@ -182,9 +183,7 @@ const TokensTable = () => {
   const onPaginationChange = (e, { activePage }) => {
     (async () => {
       const nextPage = Number(activePage) > 0 ? Number(activePage) : 1;
-      const hasLoadedPageRows = tokens
-        .slice((nextPage - 1) * ITEMS_PER_PAGE, nextPage * ITEMS_PER_PAGE)
-        .some(Boolean);
+      const hasLoadedPageRows = hasLoadedPagedRows(tokens, nextPage, ITEMS_PER_PAGE);
       if (!isSearchMode && !hasLoadedPageRows) {
         await loadTokens(nextPage);
       }

@@ -5,7 +5,7 @@ import BusinessRecordsTable from '../../components/BusinessRecordsTable';
 
 const RECORD_CONFIG = {
   purchase: {
-    title: '购买记录',
+    title: '支付记录',
     parentPath: '/admin/entitlement',
     tableKind: 'purchase',
     scope: 'entitlement',

@@ -1972,7 +1972,8 @@
       "quota": "Amount",
       "billing_source": "Billing Source",
       "detail": "Detail",
-      "drag_column": "Drag to reorder columns"
+      "drag_column": "Drag to reorder columns",
+      "resize_column": "Drag to resize column"
     },
     "buttons": {
       "query": "Action",
@@ -3019,11 +3020,10 @@
     "empty_admin": "No configurable items",
     "title": "Settings",
     "groups": {
-      "basic": "Basic Info",
+      "basic": "System Settings",
       "payment": "Payment Settings",
       "billing": "Billing Settings",
-      "content": "Content Settings",
-      "runtime": "System Runtime"
+      "content": "Page Settings"
     },
     "personal": {
       "tokens": {
@@ -3394,7 +3394,7 @@
     },
     "other": {
       "content": {
-        "title": "Content Settings",
+        "title": "Page Settings",
         "description": "Maintain homepage, about page, and footer content for consistent site messaging.",
         "homepage": {
           "title": "Homepage Content",

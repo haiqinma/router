@@ -1972,7 +1972,8 @@
       "quota": "金额",
       "billing_source": "扣费来源",
       "detail": "详情",
-      "drag_column": "拖拽调整列顺序"
+      "drag_column": "拖拽调整列顺序",
+      "resize_column": "拖拽调整列宽"
     },
     "buttons": {
       "query": "操作",
@@ -3019,11 +3020,10 @@
     "empty_admin": "暂无可配置项",
     "title": "设置",
     "groups": {
-      "basic": "基础信息",
+      "basic": "系统设置",
       "payment": "支付设置",
       "billing": "计费设置",
-      "content": "内容设置",
-      "runtime": "系统运行"
+      "content": "页面设置"
     },
     "personal": {
       "tokens": {
@@ -3392,7 +3392,7 @@
     },
     "other": {
       "content": {
-        "title": "内容设置",
+        "title": "页面设置",
         "description": "维护首页内容、关于页面与页脚文案，便于运营统一管理展示信息。",
         "homepage": {
           "title": "首页内容",

@@ -50,17 +50,12 @@ func GetPurchase(c *gin.Context) {
 	if err != nil {
 		message := err.Error()
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			message = "购买记录不存在"
+			message = "支付记录不存在"
 		}
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": message})
 		return
 	}
-	var record any
-	if purchase.RecordSource == "subscription" {
-		record, err = model.GetAdminUserPackageRecordByIDWithDB(model.DB, purchase.ID)
-	} else {
-		record, err = model.GetTopupOrderByIDForAdminWithDB(model.DB, purchase.ID)
-	}
+	record, err := model.GetTopupOrderByIDForAdminWithDB(model.DB, purchase.ID)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
 		return
@@ -70,7 +65,6 @@ func GetPurchase(c *gin.Context) {
 		"message": "",
 		"data": gin.H{
 			"product_kind": purchase.ProductKind,
-			"record_type":  purchase.RecordSource,
 			"record":       record,
 		},
 	})

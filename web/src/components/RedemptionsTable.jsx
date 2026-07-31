@@ -7,7 +7,7 @@ import {
   showError,
   showSuccess,
   showWarning,
-  timestamp2string,
+  hasLoadedPagedRows,
   writePagedRows,
 } from '../helpers';
 
@@ -208,9 +208,7 @@ const RedemptionsTable = ({ headerMeta = null }) => {
   const onPaginationChange = (e, { activePage }) => {
     (async () => {
       const nextPage = Number(activePage) > 0 ? Number(activePage) : 1;
-      const hasLoadedPageRows = redemptions
-        .slice((nextPage - 1) * ITEMS_PER_PAGE, nextPage * ITEMS_PER_PAGE)
-        .some(Boolean);
+      const hasLoadedPageRows = hasLoadedPagedRows(redemptions, nextPage, ITEMS_PER_PAGE);
       if (!isSearchMode && !hasLoadedPageRows) {
         await loadRedemptions(nextPage);
       }

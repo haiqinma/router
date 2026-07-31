@@ -42,6 +42,7 @@ type UserPackageSubscription struct {
 	StartedAt                  int64  `json:"started_at" gorm:"bigint;not null;index"`
 	ExpiresAt                  int64  `json:"expires_at" gorm:"bigint;not null;default:0;index"`
 	Status                     int    `json:"status" gorm:"type:int;not null;default:1;index"`
+	CreatedAt                  int64  `json:"created_at" gorm:"bigint;not null;default:0;index"`
 	UpdatedAt                  int64  `json:"updated_at" gorm:"bigint;index"`
 }
 
@@ -263,6 +264,7 @@ func assignServicePackageToUserWithExpiresAtDB(db *gorm.DB, packageID string, us
 		StartedAt:                  effectiveStartAt,
 		ExpiresAt:                  expiresAt,
 		Status:                     UserPackageSubscriptionStatusActive,
+		CreatedAt:                  now,
 		UpdatedAt:                  now,
 	}
 	subscription.EnsureID()
