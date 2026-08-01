@@ -17,7 +17,7 @@ server:
   # - 密码重置链接
   # - 支付回调与跳转 URL 组装
   # 例： https://router.example.com
-  address: ""
+  public_url: ""
 
 database:
   # 主业务数据库 DSN（仅支持 PostgreSQL）。
@@ -235,10 +235,6 @@ metrics:
   queue_size: 10
   # 成功率阈值（0~1）。
   success_rate_threshold: 0.8
-  # 成功事件缓冲通道大小。
-  success_chan_size: 1024
-  # 失败事件缓冲通道大小。
-  fail_chan_size: 128
   # 低成功率自动禁用后的恢复等待时间（秒）；设置为 0 或负数时使用默认 300 秒。
   auto_recover_after_seconds: 300
 

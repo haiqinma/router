@@ -336,13 +336,19 @@ const ChannelsTable = () => {
   const searchChannels = async () => {
     setSearching(true);
     setLoading(true);
-    await loadChannels({ page: 1, keyword: searchKeyword });
-    setActivePage(1);
-    setSearching(false);
+    try {
+      await loadChannels({ page: 1, keyword: searchKeyword });
+      setActivePage(1);
+    } catch (error) {
+      showError(error?.message || String(error));
+      setLoading(false);
+    } finally {
+      setSearching(false);
+    }
   };
 
-  const handleKeywordChange = async (e, { value }) => {
-    setSearchKeyword(value.trim());
+  const handleKeywordChange = (e, { value }) => {
+    setSearchKeyword(value);
   };
 
   const handleTableChange = (_, __, sorter) => {
@@ -614,6 +620,7 @@ const ChannelsTable = () => {
               value={searchKeyword}
               loading={searching}
               onChange={handleKeywordChange}
+              onPressEnter={searchChannels}
             />
           </div>
         }

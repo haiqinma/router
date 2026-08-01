@@ -127,21 +127,16 @@ func TestBuildBillingServiceQueryUsesAdapterProtocol(t *testing.T) {
 		BillingSource: "vendor-a",
 		BillingConfig: `{"billing_credentials":{"key":"billing-secret"}}`,
 	}
-	baseURL := "https://vendor.example.com"
 	query, err := buildBillingServiceQuery(context.Background(), &model.Channel{
 		Id:       "channel-1",
 		Protocol: "vendor-protocol",
 		Key:      "model-secret-must-not-be-used",
-		BaseURL:  &baseURL,
 	}, profile)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if query.Adapter != "vendor-a" {
 		t.Fatalf("adapter = %q", query.Adapter)
-	}
-	if query.BaseURL != baseURL {
-		t.Fatalf("base_url = %q", query.BaseURL)
 	}
 	if query.Credentials["key"] != "billing-secret" {
 		t.Fatalf("credentials = %+v", query.Credentials)
@@ -158,6 +153,9 @@ func TestBuildBillingServiceQueryUsesAdapterProtocol(t *testing.T) {
 	}
 	if strings.Contains(string(body), "credential\"") {
 		t.Fatalf("query must not use legacy credential field: %s", body)
+	}
+	if strings.Contains(string(body), "base_url") {
+		t.Fatalf("billing query must not expose upstream address: %s", body)
 	}
 }
 

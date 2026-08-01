@@ -788,7 +788,7 @@
         }
       },
       "billing": {
-        "structure_hint": "This page records upstream procurement for the channel. Purchase records create batches; request consumption turns batches into unit cost. It is separate from user payment records.",
+        "structure_hint": "This page records channel procurement facts. Purchase records create batches; request consumption turns batches into unit cost. It is separate from user payment records.",
         "title": "Billing",
         "hint": "This section shows standardized channel billing entitlements, not upstream-specific raw fields. The system tracks quotas, balances, credits, and plan validity as structured entitlement items, and uses those normalized fields for refresh, alerts, and future automation.",
         "load_failed": "Failed to load channel billing data",
@@ -799,13 +799,16 @@
         "profile_update_failed": "Failed to update billing profile",
         "refresh_now": "Refresh",
         "latest_refresh_failed": "Latest billing refresh failed: {{message}}",
-        "latest_refresh_failed_unknown": "Upstream billing API returned an error",
+        "latest_refresh_failed_unknown": "Billing service returned an error",
         "latest_snapshot_at": "Latest Refresh",
         "current_quotas_title": "Entitlement Status",
         "billing_source": "Billing Source",
         "updated_at": "Updated At",
         "manual_update_title": "Add Purchase Record",
         "manual_purchase_title": "Purchase Info",
+        "manual_channel": "Procurement Channel",
+        "manual_channel_placeholder": "Select procurement channel",
+        "manual_channel_required": "Please select a procurement channel",
         "manual_purchase_at": "Purchase Time",
         "manual_purchase_currency": "Purchase Currency",
         "manual_purchase_amount": "Paid Amount",
@@ -838,11 +841,11 @@
         "manual_resource_hints": {
           "default": "Items jointly constrain current usage. Periodic quotas reset daily, weekly, or monthly, while total quota keeps decreasing. If any applicable item is insufficient, the entitlement group cannot provide that usage.",
           "balance": "Balance: directly consumable account balance. Fill total, used, and remaining amount.",
-          "credit": "Credit: granted or promotional upstream credit. It is consumable like balance, but has a different source.",
+          "credit": "Credit: granted or promotional provider credit. It is consumable like balance, but has a different source.",
           "quota": "Quota: consumable usage capacity. Daily, weekly, and monthly quotas are package periodic quota rules; total quota is cumulative and decreases as it is used.",
           "periodic": "Periodic quota: enter the amount available in each period. It resets automatically, and unused quota does not carry over.",
           "total": "Total quota: cumulative consumable quota. It decreases as it is used and does not reset daily, weekly, or monthly.",
-          "source_ref": "Use the upstream original name as source reference for traceability."
+          "source_ref": "Use the provider original name as source reference for traceability."
         },
         "manual_plan_name": "Plan Name",
         "manual_plan_name_placeholder": "e.g. Monthly Plan / Quarterly Plan",
@@ -872,10 +875,9 @@
         "manual_valid_from": "Valid From (blank means immediately)",
         "manual_valid_until": "Valid Until (blank means no expiry)",
         "validity_immediate": "Immediately",
-        "upstream_status_title": "Upstream Status",
         "view_procurement": "View procurement cost",
         "procurement_title": "Procurement Batches",
-        "procurement_hint": "These are not upstream billing records. Procurement batches come from purchase records. Request settlement consumes capacity from these batches to calculate actual procurement cost.",
+        "procurement_hint": "These are not raw billing service records. Procurement batches come from purchase records. Request settlement consumes capacity from these batches to calculate actual procurement cost.",
         "procurement_edit_cost": "Edit Cost",
         "procurement_disable": "Disable",
         "procurement_restore": "Restore",
@@ -967,14 +969,6 @@
           "package": "Package",
           "plan": "Plan Validity",
           "custom": "Custom"
-        },
-        "mode_summary": {
-          "package_title": "Package Channel",
-          "package_description": "This channel has plan validity or periodic quota. Check expiration, daily/weekly/monthly remaining quota, and reset time before judging availability.",
-          "metered_title": "Metered Channel",
-          "metered_description": "This channel mainly deducts from balance or total credit. Exhausted credit can affect auto-disable decisions.",
-          "unknown_title": "Unknown",
-          "unknown_description": "The current snapshot has no recognizable metered or package entitlement items."
         },
         "quota_table": {
           "entitlement_kind": "Billing Type",
@@ -3483,7 +3477,7 @@
       "nav": "Procurement Cost",
       "title": "Procurement Cost",
       "empty": "No procurement cost data",
-      "management": { "title": "Procurement management", "channel_placeholder": "Select channel", "select_channel": "Select a channel to manage purchase records and procurement batches" },
+      "management": { "title": "Procurement management", "channel_placeholder": "All channels", "select_channel": "Select a channel to manage purchase records" },
       "health": {
         "status": {
           "ok": "Finance healthy",

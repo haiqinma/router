@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import UnitDropdown from '../../../components/UnitDropdown';
+import { showInfo } from '../../../helpers';
 import {
   AppAlert,
   AppButton,
@@ -50,6 +51,7 @@ const toDateTimeLocalValue = (date) => {
 };
 
 const buildManualPurchaseRecord = () => ({
+  channel_id: '',
   purchase_at_input: toDateTimeLocalValue(new Date()),
   purchase_currency: 'CNY',
   purchase_amount: null,
@@ -245,45 +247,6 @@ const classifyEntitlementItem = (item, t) => {
   };
 };
 
-const summarizeEntitlementMode = (items, t) => {
-  const rows = Array.isArray(items) ? items : [];
-  const hasPlan = rows.some(
-    (row) => normalizeBillingValue(row?.resource_type) === 'plan'
-  );
-  const hasPeriodic = rows.some((row) => isPeriodicQuotaType(row?.quota_type));
-  const hasMetered = rows.some((row) => {
-    const resourceType = normalizeBillingValue(row?.resource_type);
-    const quotaType = normalizeBillingValue(row?.quota_type);
-    return (
-      resourceType === 'balance' ||
-      resourceType === 'credit' ||
-      quotaType === 'total'
-    );
-  });
-  if (hasPlan || hasPeriodic) {
-    return {
-      kind: 'package',
-      color: 'blue',
-      label: t('channel.edit.billing.mode_summary.package_title'),
-      description: t('channel.edit.billing.mode_summary.package_description'),
-    };
-  }
-  if (hasMetered) {
-    return {
-      kind: 'metered',
-      color: 'cyan',
-      label: t('channel.edit.billing.mode_summary.metered_title'),
-      description: t('channel.edit.billing.mode_summary.metered_description'),
-    };
-  }
-  return {
-    kind: 'unknown',
-    color: 'default',
-    label: t('channel.edit.billing.mode_summary.unknown_title'),
-    description: t('channel.edit.billing.mode_summary.unknown_description'),
-  };
-};
-
 const formatExpiresAtText = (item, timestamp2string, t) => {
   const expiresAt = Number(item?.expires_at || 0);
   if (expiresAt <= 0) {
@@ -403,9 +366,13 @@ const renderQuotaLabel = (value, row, t) => {
   );
 };
 
-const renderStatus = (row, t) => (
-  <AppTag color={statusColor(row)}>{formatItemStatusText(row, t)}</AppTag>
-);
+const renderStatus = (row, t) => {
+  const status = normalizeBillingValue(row?.status);
+  if (!status || status === 'depleted') {
+    return '-';
+  }
+  return <AppTag color={statusColor(row)}>{formatItemStatusText(row, t)}</AppTag>;
+};
 
 const formatNumberText = (value, digits = 6) => {
   const amount = Number(value || 0);
@@ -567,6 +534,7 @@ const normalizeManualValidityInput = (value, defaultTime, forceDefaultTime = fal
 };
 
 const buildManualPurchaseRecordFromSnapshot = (row) => ({
+  channel_id: (row?.channel_id || '').toString().trim(),
   purchase_at_input:
     toDateTimeLocalValueFromTimestamp(row?.purchase_at) ||
     buildManualPurchaseRecord().purchase_at_input,
@@ -616,6 +584,9 @@ const ChannelDetailBillingTab = ({
   timestamp2string,
   viewMode = 'account',
   channelID,
+  manualChannelOptions = [],
+  requireManualChannelSelect = false,
+  showProcurementBatches = true,
 }) => {
   const [manualPurchaseRecord, setManualPurchaseRecord] = useState(
     buildManualPurchaseRecord()
@@ -636,7 +607,7 @@ const ChannelDetailBillingTab = ({
     valid_until_input: false,
   });
   const [billingView, setBillingView] = useState(
-    viewMode === 'procurement' ? 'records' : 'upstream'
+    viewMode === 'procurement' ? 'records' : 'overview'
   );
 
   const purchaseRecords = useMemo(
@@ -659,7 +630,6 @@ const ChannelDetailBillingTab = ({
   const latestSnapshotMessage = (billingSummary?.latest_snapshot_message || '')
     .toString()
     .trim();
-  const entitlementModeSummary = summarizeEntitlementMode(quotaItems, t);
 
   const appendManualItem = () => {
     setManualItems((prev) => [...prev, buildManualQuotaItem()]);
@@ -716,7 +686,10 @@ const ChannelDetailBillingTab = ({
 
   const openCreateManualModal = () => {
     setEditingPurchaseRecord(null);
-    setManualPurchaseRecord(buildManualPurchaseRecord());
+    setManualPurchaseRecord({
+      ...buildManualPurchaseRecord(),
+      channel_id: (channelID || '').toString().trim(),
+    });
     setManualValidityTouched({
       valid_from_input: false,
       valid_until_input: false,
@@ -728,7 +701,11 @@ const ChannelDetailBillingTab = ({
 
   const openEditManualModal = (row) => {
     setEditingPurchaseRecord(row);
-    setManualPurchaseRecord(buildManualPurchaseRecordFromSnapshot(row));
+    setManualPurchaseRecord({
+      ...buildManualPurchaseRecordFromSnapshot(row),
+      channel_id:
+        (row?.channel_id || channelID || '').toString().trim(),
+    });
     setManualValidityTouched({
       valid_from_input: true,
       valid_until_input: true,
@@ -785,6 +762,13 @@ const ChannelDetailBillingTab = ({
   };
 
   const submitManualSnapshot = async () => {
+    const targetChannelID = (manualPurchaseRecord.channel_id || channelID || '')
+      .toString()
+      .trim();
+    if (requireManualChannelSelect && !targetChannelID) {
+      showInfo(t('channel.edit.billing.manual_channel_required'));
+      return;
+    }
     const purchaseAmount = Number(manualPurchaseRecord.purchase_amount || 0);
     const purchaseCurrency = (manualPurchaseRecord.purchase_currency || 'CNY')
       .toString()
@@ -797,6 +781,7 @@ const ChannelDetailBillingTab = ({
       ? purchaseAmount
       : Number(manualPurchaseRecord.purchase_cost_amount || 0);
     const saved = await onManualSnapshotUpdate({
+      channel_id: targetChannelID,
       id: editingPurchaseRecord?.id || '',
       purchase_at: toUnixTimestamp(manualPurchaseRecord.purchase_at_input),
       purchase_currency: purchaseCurrency,
@@ -870,6 +855,27 @@ const ChannelDetailBillingTab = ({
           </div>
         </div>
         <AppFormRow>
+          {requireManualChannelSelect ? (
+            <AppField label={t('channel.edit.billing.manual_channel')} required>
+              <AppSelect
+                className='router-section-input'
+                search
+                options={manualChannelOptions}
+                value={manualPurchaseRecord.channel_id}
+                placeholder={t('channel.edit.billing.manual_channel_placeholder')}
+                onChange={(e, { value }) =>
+                  updateManualPurchaseRecord({
+                    channel_id: (value || '').toString().trim(),
+                  })
+                }
+                disabled={
+                  billingReadonly ||
+                  billingSubmitting ||
+                  Boolean(editingPurchaseRecord?.id)
+                }
+              />
+            </AppField>
+          ) : null}
           <AppField label={t('channel.edit.billing.manual_purchase_at')} required>
             <AppInput
               className='router-section-input'
@@ -1279,59 +1285,36 @@ const ChannelDetailBillingTab = ({
   );
 
   return (
-    <AppDetailSection
-      title={t(viewMode === 'procurement' ? 'channel.edit.billing.procurement_title' : 'channel.edit.billing.title')}
-      titleTag='span'
-      bodyClassName='router-billing-page'
-    >
-      {viewMode === 'account' ? (
-        <div className='router-billing-workspace-toolbar'>
-          <strong>{t('channel.edit.billing.upstream_status_title')}</strong>
-          <Link to={`/admin/finance/procurement-cost${channelID ? `?channel_id=${encodeURIComponent(channelID)}` : ''}`}>
-            {t('channel.edit.billing.view_procurement')}
-          </Link>
-        </div>
-      ) : <div className='router-billing-workspace-toolbar'>
-        <AppSegmented
-          value={billingView}
-          onChange={(e, { value }) => setBillingView(value)}
-          options={[
-            { value: 'records', label: t('channel.edit.billing.snapshots_title') },
-            { value: 'batches', label: t('channel.edit.billing.procurement_title') },
-          ]}
-        />
-        {billingView === 'records' || billingView === 'batches' ? (
+    <div className='router-billing-page'>
+      {viewMode === 'procurement' ? <div className='router-billing-workspace-toolbar'>
+        {showProcurementBatches ? (
+          <AppSegmented
+            value={billingView}
+            onChange={(e, { value }) => setBillingView(value)}
+            options={[
+              { value: 'records', label: t('channel.edit.billing.snapshots_title') },
+              { value: 'batches', label: t('channel.edit.billing.procurement_title') },
+            ]}
+          />
+        ) : null}
+        {billingView === 'records' || (showProcurementBatches && billingView === 'batches') ? (
           <AppButton type='button' className='router-page-button' color='blue'
             disabled={billingReadonly || billingSubmitting}
             onClick={openCreateManualModal}>
             {t('channel.edit.billing.add_purchase_record')}
           </AppButton>
         ) : null}
-      </div>}
+      </div> : null}
       {viewMode === 'procurement' ? <AppAlert type='info' showIcon className='router-section-message' title={t('channel.edit.billing.structure_hint')} /> : null}
-      {billingView === 'upstream' && <div className='router-billing-upstream-view'>
-      <div className='router-billing-overview-strip'>
-        <div className='router-billing-overview-main'>
-          <AppTag color={entitlementModeSummary.color}>
-            {entitlementModeSummary.label}
-          </AppTag>
-          <span>{entitlementModeSummary.description}</span>
-        </div>
-        <div className='router-billing-overview-meta'>
-          <span>{t('channel.edit.billing.latest_snapshot_at')}</span>
-          <strong>
-            {billingSummary?.latest_snapshot_at
-              ? timestamp2string(billingSummary.latest_snapshot_at)
-              : '-'}
-          </strong>
-        </div>
-      </div>
-      <div>
+      {billingView === 'overview' && (
         <AppDetailSection
           title={t('channel.edit.billing.current_quotas_title')}
           titleTag='span'
           headerEnd={
             <div className='router-billing-quota-status-actions'>
+              <Link to={`/admin/finance/procurement-cost${channelID ? `?channel_id=${encodeURIComponent(channelID)}` : ''}`}>
+                {t('channel.edit.billing.view_procurement')}
+              </Link>
               <span className='router-billing-snapshot-time'>
                 {billingSummary?.latest_snapshot_at
                   ? timestamp2string(billingSummary.latest_snapshot_at)
@@ -1427,8 +1410,7 @@ const ChannelDetailBillingTab = ({
             }}
           />
         </AppDetailSection>
-      </div>
-      </div>}
+      )}
       {billingView === 'records' && (
         <AppDetailSection
           className='router-billing-management-section'
@@ -1558,7 +1540,7 @@ const ChannelDetailBillingTab = ({
           />
         </AppDetailSection>
       )}
-      {billingView === 'batches' && (
+      {showProcurementBatches && billingView === 'batches' && (
         <AppDetailSection className='router-billing-management-section'
           title={t('channel.edit.billing.procurement_title')} titleTag='span'>
           <div className='router-billing-subsection-header'>
@@ -1856,7 +1838,7 @@ const ChannelDetailBillingTab = ({
           </div>
         )}
       </div>
-    </AppDetailSection>
+    </div>
   );
 };
 

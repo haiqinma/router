@@ -42,35 +42,29 @@ const UserWorkspaceLayout = () => {
           collapsedWidth={84}
           collapsed={sidebarCompact}
         >
-          <div className='router-admin-sidebar-toolbar'>
-            <AppButton
-              type='button'
-              basic
-              size='small'
-              className='router-admin-sidebar-toggle'
-              title={
-                sidebarCompact
-                  ? t('header.sidebar_expand')
-                  : t('header.sidebar_compact')
-              }
-              aria-label={
-                sidebarCompact
-                  ? t('header.sidebar_expand')
-                  : t('header.sidebar_compact')
-              }
-              onClick={() => setSidebarCompact((previous) => !previous)}
-              icon={
-                sidebarCompact ? (
-                  <DoubleRightOutlined />
-                ) : (
-                  <DoubleLeftOutlined />
-                )
-              }
-            />
-          </div>
           <div className='router-admin-sidebar-scroll'>
             <AdminSidebar compact={sidebarCompact} />
           </div>
+          <AppButton
+            type='button'
+            basic
+            size='small'
+            className='router-admin-divider-toggle'
+            title={
+              sidebarCompact
+                ? t('header.sidebar_expand')
+                : t('header.sidebar_compact')
+            }
+            aria-label={
+              sidebarCompact
+                ? t('header.sidebar_expand')
+                : t('header.sidebar_compact')
+            }
+            onClick={() => setSidebarCompact((previous) => !previous)}
+            icon={
+              sidebarCompact ? <DoubleRightOutlined /> : <DoubleLeftOutlined />
+            }
+          />
         </AppSider>
         <div className='main-content router-admin-main'>
           <Outlet />

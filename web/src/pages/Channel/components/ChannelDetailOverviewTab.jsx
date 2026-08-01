@@ -7,6 +7,7 @@ import {
   AppInput,
   AppSelect,
 } from '../../../router-ui';
+import ChannelDetailBillingTab from './ChannelDetailBillingTab';
 
 const normalizeBillingSourceValue = (source) => {
   const normalizedSource = (source || '').toString().trim().toLowerCase();
@@ -148,6 +149,9 @@ const ChannelDetailOverviewTab = ({
   timestamp2string,
   billingProfile,
   billingAdapters,
+  billingSummary,
+  billingLoading,
+  billingError,
   detailBillingEditing,
   detailBillingDraft,
   billingSubmitting,
@@ -156,6 +160,8 @@ const ChannelDetailOverviewTab = ({
   onUpdateBillingProfileDraft,
   onCancelBillingProfileEdit,
   onSaveBillingProfile,
+  onRefreshBilling,
+  channelID,
 }) => {
   const billingReadonly = !detailBillingEditing || billingSubmitting;
   const selectedBillingSource = detailBillingEditing
@@ -402,6 +408,18 @@ const ChannelDetailOverviewTab = ({
           {t('channel.edit.billing.credential_hint')}
         </div>
       </AppDetailSection>
+      <ChannelDetailBillingTab
+        t={t}
+        billingSummary={billingSummary}
+        billingLoading={billingLoading}
+        billingError={billingError}
+        billingReadonly={!detailBillingEditing}
+        billingSubmitting={billingSubmitting}
+        onRefreshBilling={onRefreshBilling}
+        timestamp2string={timestamp2string}
+        viewMode='account'
+        channelID={channelID}
+      />
     </>
   );
 };
