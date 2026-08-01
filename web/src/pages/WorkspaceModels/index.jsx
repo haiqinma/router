@@ -320,7 +320,6 @@ const WorkspaceModels = () => {
     <div className='dashboard-container workspace-models-page'>
       <AppFilterHeader
         breadcrumbs={[
-          { key: 'workspace', label: t('header.user_workspace') },
           { key: 'service', label: t('header.service') },
           { key: 'models', label: t('workspace_models.title'), active: true },
         ]}
