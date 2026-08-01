@@ -111,40 +111,71 @@ func listUserEntitlementSourcesWithDB(db *gorm.DB, userID string, now int64) ([]
 		}))
 	}
 
-	topupRows := make([]struct {
-		LotID       string
-		OrderID     string
-		TopupPlanID string
-		GroupID     string
-		Title       string
+	topupLots := make([]struct {
+		LotID    string
+		SourceID string
 	}, 0)
 	if err := db.Table(UserBalanceLotsTableName+" AS l").
-		Select("l.id AS lot_id", "o.id AS order_id", "o.topup_plan_id", "o.group_id", "o.title").
-		Joins("JOIN "+TopupOrdersTableName+" AS o ON o.id = l.source_id").
-		Joins("JOIN groups g ON g.id = o.group_id AND g.enabled = ?", true).
+		Select("l.id AS lot_id", "l.source_id").
 		Where("l.user_id = ? AND l.source_type = ? AND l.status = ? AND l.remaining_amount > 0 AND (l.expires_at = 0 OR l.expires_at > ?)",
 			normalizedUserID,
 			UserBalanceLotSourceTopup,
 			UserBalanceLotStatusActive,
 			effectiveNow,
 		).
-		Where("o.business_type = ? AND COALESCE(TRIM(o.group_id), '') <> ?", TopupOrderBusinessBalance, "").
 		Order("l.granted_at desc, l.created_at desc, l.id desc").
-		Scan(&topupRows).Error; err != nil {
+		Scan(&topupLots).Error; err != nil {
 		return nil, err
 	}
-	for _, item := range topupRows {
-		sourceID := strings.TrimSpace(item.TopupPlanID)
-		if sourceID == "" {
-			sourceID = strings.TrimSpace(item.OrderID)
+	if len(topupLots) > 0 {
+		orderIDs := make([]string, 0, len(topupLots))
+		for _, lot := range topupLots {
+			orderID := strings.TrimSpace(lot.SourceID)
+			if orderID != "" {
+				orderIDs = append(orderIDs, orderID)
+			}
 		}
-		sources = append(sources, normalizeEntitlementSource(UserEntitlementSource{
-			SourceType: UserEntitlementSourceTopup,
-			SourceID:   sourceID,
-			SourceName: item.Title,
-			GroupID:    item.GroupID,
-			Priority:   20,
-		}))
+		if len(orderIDs) > 0 {
+			topupRows := make([]struct {
+				OrderID     string
+				TopupPlanID string
+				GroupID     string
+				Title       string
+			}, 0)
+			if err := db.Table(TopupOrdersTableName+" AS o").
+				Select("o.id AS order_id", "o.topup_plan_id", "o.group_id", "o.title").
+				Joins("JOIN groups g ON g.id = o.group_id AND g.enabled = ?", true).
+				Where("o.id IN ? AND o.business_type = ? AND o.group_id <> ?", orderIDs, TopupOrderBusinessBalance, "").
+				Scan(&topupRows).Error; err != nil {
+				return nil, err
+			}
+			topupByOrderID := make(map[string]struct {
+				OrderID     string
+				TopupPlanID string
+				GroupID     string
+				Title       string
+			}, len(topupRows))
+			for _, item := range topupRows {
+				topupByOrderID[strings.TrimSpace(item.OrderID)] = item
+			}
+			for _, lot := range topupLots {
+				item, ok := topupByOrderID[strings.TrimSpace(lot.SourceID)]
+				if !ok {
+					continue
+				}
+				sourceID := strings.TrimSpace(item.TopupPlanID)
+				if sourceID == "" {
+					sourceID = strings.TrimSpace(item.OrderID)
+				}
+				sources = append(sources, normalizeEntitlementSource(UserEntitlementSource{
+					SourceType: UserEntitlementSourceTopup,
+					SourceID:   sourceID,
+					SourceName: item.Title,
+					GroupID:    item.GroupID,
+					Priority:   20,
+				}))
+			}
+		}
 	}
 
 	redemptionRows := make([]struct {
@@ -163,7 +194,7 @@ func listUserEntitlementSourcesWithDB(db *gorm.DB, userID string, now int64) ([]
 			UserBalanceLotStatusActive,
 			effectiveNow,
 		).
-		Where("COALESCE(TRIM(r.group_id), '') <> ?", "").
+		Where("r.group_id <> ?", "").
 		Order("l.granted_at desc, l.created_at desc, l.id desc").
 		Scan(&redemptionRows).Error; err != nil {
 		return nil, err

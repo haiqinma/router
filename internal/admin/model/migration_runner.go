@@ -1934,6 +1934,13 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return migrateUserPackageSubscriptionCreatedAtWithDB(tx)
 			},
 		},
+		{
+			Version:     "202608012210_user_balance_lot_entitlement_source_index",
+			Description: "add index for active user balance entitlement source lookup",
+			Up: func(tx *gorm.DB) error {
+				return ensureUserBalanceLotEntitlementSourceIndexWithDB(tx)
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }
