@@ -164,7 +164,11 @@ function BillingProcurementReport() {
   }, [managedChannelID, t]);
 
   const savePurchaseRecord = useCallback(async (payload) => {
-    if (!managedChannelID) return false;
+    const targetChannelID = String(payload?.channel_id || managedChannelID || '').trim();
+    if (!targetChannelID) {
+      showInfo(t('channel.edit.billing.manual_channel_required'));
+      return false;
+    }
     const items = (Array.isArray(payload?.items) ? payload.items : []).map((item) => ({
       id: String(item?.id || '').trim(),
       resource_type: String(item?.resource_type || '').trim(),
@@ -186,7 +190,7 @@ function BillingProcurementReport() {
     setProcurementSubmitting(true);
     try {
       const recordID = String(payload?.id || '').trim();
-      const path = `/api/v1/admin/channel/${encodeURIComponent(managedChannelID)}/billing/snapshots${recordID ? `/${encodeURIComponent(recordID)}` : ''}`;
+      const path = `/api/v1/admin/channel/${encodeURIComponent(targetChannelID)}/billing/snapshots${recordID ? `/${encodeURIComponent(recordID)}` : ''}`;
       const requestPayload = {
         id: recordID,
         purchase_at: Number(payload?.purchase_at || 0),
@@ -202,7 +206,7 @@ function BillingProcurementReport() {
       };
       const response = recordID ? await API.put(path, requestPayload) : await API.post(path, requestPayload);
       if (!response.data?.success) throw new Error(response.data?.message);
-      await loadProcurementManagement();
+      await loadProcurementManagement(managedChannelID);
       showSuccess(t('channel.edit.billing.manual_snapshot_success'));
       return true;
     } catch (error) {
@@ -726,25 +730,26 @@ function BillingProcurementReport() {
               onChange={(e, { value }) => setManagedChannelID(String(value || ''))}
             />
           </div>
-          {managedChannelID ? (
-            <ChannelDetailBillingTab
-              t={t}
-              billingSummary={null}
-              billingLoading={procurementLoading}
-              billingSnapshots={purchaseRecords}
-              procurementBatches={procurementBatches}
-              billingReadonly={false}
-              billingSubmitting={procurementSubmitting}
-              onManualSnapshotUpdate={savePurchaseRecord}
-              onManualSnapshotDelete={deletePurchaseRecord}
-              onProcurementBatchCostUpdate={(id, payload) => updateBatch(id, 'cost', payload, 'channel.edit.billing.procurement_update_success', 'channel.edit.billing.procurement_update_failed')}
-              onProcurementBatchStatusUpdate={(id, status) => updateBatch(id, 'status', { cost_status: status }, 'channel.edit.billing.procurement_status_update_success', 'channel.edit.billing.procurement_status_update_failed')}
-              onProcurementBatchConsumptionsLoad={loadBatchConsumptions}
-              timestamp2string={timestamp2string}
-              viewMode='procurement'
-              channelID={managedChannelID}
-            />
-          ) : <div className='billing-overview-empty'>{t('billing.procurement_report.management.select_channel')}</div>}
+          <ChannelDetailBillingTab
+            t={t}
+            billingSummary={null}
+            billingLoading={procurementLoading}
+            billingSnapshots={purchaseRecords}
+            procurementBatches={procurementBatches}
+            billingReadonly={false}
+            billingSubmitting={procurementSubmitting}
+            onManualSnapshotUpdate={savePurchaseRecord}
+            onManualSnapshotDelete={deletePurchaseRecord}
+            onProcurementBatchCostUpdate={(id, payload) => updateBatch(id, 'cost', payload, 'channel.edit.billing.procurement_update_success', 'channel.edit.billing.procurement_update_failed')}
+            onProcurementBatchStatusUpdate={(id, status) => updateBatch(id, 'status', { cost_status: status }, 'channel.edit.billing.procurement_status_update_success', 'channel.edit.billing.procurement_status_update_failed')}
+            onProcurementBatchConsumptionsLoad={loadBatchConsumptions}
+            timestamp2string={timestamp2string}
+            viewMode='procurement'
+            channelID={managedChannelID}
+            manualChannelOptions={channelOptions}
+            requireManualChannelSelect
+            showProcurementBatches={false}
+          />
         </AppSection>
       </AppSpin>
     </div>

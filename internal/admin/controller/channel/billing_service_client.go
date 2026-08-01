@@ -23,7 +23,6 @@ const (
 type billingServiceQueryRequest struct {
 	ChannelID   string            `json:"channel_id,omitempty"`
 	Adapter     string            `json:"adapter"`
-	BaseURL     string            `json:"base_url,omitempty"`
 	Credentials map[string]string `json:"credentials,omitempty"`
 	Config      map[string]any    `json:"config,omitempty"`
 }
@@ -257,17 +256,6 @@ func missingRequiredBillingCredentialField(fields []billingServiceCredentialFiel
 	return ""
 }
 
-func resolveChannelBillingBaseURL(channel *model.Channel) string {
-	if channel == nil {
-		return ""
-	}
-	cfg, err := channel.LoadConfig()
-	if err != nil {
-		return ""
-	}
-	return strings.TrimRight(strings.TrimSpace(cfg.AccountBaseURL), "/")
-}
-
 func buildBillingServiceQuery(ctx context.Context, channel *model.Channel, profile model.ChannelBillingProfile) (billingServiceQueryRequest, error) {
 	if channel == nil {
 		return billingServiceQueryRequest{}, fmt.Errorf("渠道不存在")
@@ -290,7 +278,6 @@ func buildBillingServiceQuery(ctx context.Context, channel *model.Channel, profi
 	request := billingServiceQueryRequest{
 		ChannelID:   strings.TrimSpace(channel.Id),
 		Adapter:     adapter,
-		BaseURL:     resolveChannelBillingBaseURL(channel),
 		Credentials: credentials,
 	}
 	return request, nil

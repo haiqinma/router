@@ -20,7 +20,6 @@ import {
   loadChannelProtocolOptions,
 } from '../../helpers/helper';
 import ChannelDetailEndpointsTab from './components/ChannelDetailEndpointsTab';
-import ChannelDetailBillingTab from './components/ChannelDetailBillingTab';
 import ChannelDetailModelsTab from './components/ChannelDetailModelsTab';
 import ChannelDetailOverviewTab from './components/ChannelDetailOverviewTab';
 import ChannelDetailPublishTab from './components/ChannelDetailPublishTab';
@@ -502,7 +501,6 @@ const DETAIL_TAB_KEYS = [
   'endpoints',
   'tests',
   'publish',
-  'billing',
 ];
 
 const normalizeDetailTab = (value) => {
@@ -2465,7 +2463,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     isDetailMode && activeDetailTab === 'endpoints';
   const showDetailTestsTab = isDetailMode && activeDetailTab === 'tests';
   const showDetailPublishTab = isDetailMode && activeDetailTab === 'publish';
-  const showDetailBillingTab = isDetailMode && activeDetailTab === 'billing';
   const detailBasicReadonly = isDetailMode && !detailBasicEditing;
   const detailModelsEditing =
     isDetailMode && detailEditingModelKey.toString().trim() !== '';
@@ -2497,11 +2494,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
       label: t('channel.edit.detail_tabs.publish'),
       disabled: isAnyDetailSectionEditing && activeDetailTab !== 'publish',
     },
-    {
-      key: 'billing',
-      label: t('channel.edit.detail_tabs.billing'),
-      disabled: isAnyDetailSectionEditing && activeDetailTab !== 'billing',
-    },
   ];
   const detailBasicEditLocked =
     isDetailMode &&
@@ -2515,7 +2507,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     isDetailMode && (detailBasicEditing || detailBillingEditing);
   const detailTestingReadonly = isDetailMode && isAnyDetailSectionEditing;
   const detailPublishReadonly = isDetailMode && isAnyDetailSectionEditing;
-  const detailBillingReadonly = isDetailMode && isAnyDetailSectionEditing;
   const inputReadonlyProps = detailBasicReadonly ? { readOnly: true } : {};
   const visibleChannelModels = useMemo(
     () => normalizeChannelModels(inputs.channel_models, inputs.protocol),
@@ -5336,17 +5327,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
   }, [channelId, hasChannelID, loadChannelById]);
 
   useEffect(() => {
-    if (!showDetailBillingTab) {
-      return;
-    }
-    const normalizedChannelId = (channelId || '').toString().trim();
-    if (normalizedChannelId === '') {
-      return;
-    }
-    refreshChannelBillingState(normalizedChannelId).then();
-  }, [channelId, refreshChannelBillingState, showDetailBillingTab]);
-
-  useEffect(() => {
     if (!isDetailMode || !channelId) {
       setChannelEndpoints([]);
       setChannelEndpointsError('');
@@ -6123,6 +6103,9 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
                 timestamp2string={timestamp2string}
                 billingProfile={channelBillingProfile}
                 billingAdapters={channelBillingAdapters}
+                billingSummary={channelBillingSummary}
+                billingLoading={channelBillingLoading}
+                billingError={channelBillingError}
                 detailBillingEditing={detailBillingEditing}
                 detailBillingDraft={detailBillingDraft}
                 billingSubmitting={channelBillingSubmitting}
@@ -6131,6 +6114,8 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
                 onUpdateBillingProfileDraft={updateBillingProfileDraft}
                 onCancelBillingProfileEdit={cancelDetailBillingEdit}
                 onSaveBillingProfile={saveDetailBillingProfile}
+                onRefreshBilling={refreshChannelBillingNow}
+                channelID={channelId}
               />
             )}
             {showStepTwo && inputs.protocol !== 'proxy' && (
@@ -6259,20 +6244,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
                 onUpdatePublish={updateChannelModelPublish}
                 publishMutatingModel={publishMutatingModel}
                 publishReadonly={detailPublishReadonly}
-              />
-            )}
-            {showDetailBillingTab && (
-              <ChannelDetailBillingTab
-                t={t}
-                billingSummary={channelBillingSummary}
-                billingLoading={channelBillingLoading}
-                billingError={channelBillingError}
-                billingReadonly={detailBillingReadonly}
-                billingSubmitting={channelBillingSubmitting}
-                onRefreshBilling={refreshChannelBillingNow}
-                timestamp2string={timestamp2string}
-                viewMode='account'
-                channelID={channelId}
               />
             )}
           </div>
