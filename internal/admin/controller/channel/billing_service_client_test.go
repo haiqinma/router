@@ -133,6 +133,7 @@ func TestBuildBillingServiceQueryUsesAdapterProtocol(t *testing.T) {
 		Protocol: "vendor-protocol",
 		Key:      "model-secret-must-not-be-used",
 		BaseURL:  &baseURL,
+		Config:   `{"account_base_url":"https://billing.vendor.example.com/"}`,
 	}, profile)
 	if err != nil {
 		t.Fatal(err)
@@ -140,7 +141,7 @@ func TestBuildBillingServiceQueryUsesAdapterProtocol(t *testing.T) {
 	if query.Adapter != "vendor-a" {
 		t.Fatalf("adapter = %q", query.Adapter)
 	}
-	if query.BaseURL != baseURL {
+	if query.BaseURL != "https://billing.vendor.example.com" {
 		t.Fatalf("base_url = %q", query.BaseURL)
 	}
 	if query.Credentials["key"] != "billing-secret" {
@@ -158,6 +159,34 @@ func TestBuildBillingServiceQueryUsesAdapterProtocol(t *testing.T) {
 	}
 	if strings.Contains(string(body), "credential\"") {
 		t.Fatalf("query must not use legacy credential field: %s", body)
+	}
+}
+
+func TestBuildBillingServiceQueryUsesAccountBaseURL(t *testing.T) {
+	configureBillingServiceForTest(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != billingServiceAdaptersPath {
+			http.Error(w, "unexpected path", http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":[{"name":"aixhan","credential_fields":[{"name":"cdk","required":true}]}]}`))
+	}, "")
+
+	baseURL := "https://api.aixhan.com"
+	channel := &model.Channel{
+		Id:      "channel-aixhan",
+		BaseURL: &baseURL,
+		Config:  `{"api_base_url":"https://api.aixhan.com","account_base_url":"https://cdk.aixhan.com/"}`,
+	}
+	query, err := buildBillingServiceQuery(context.Background(), channel, model.ChannelBillingProfile{
+		BillingSource: "aixhan",
+		BillingConfig: `{"billing_credentials":{"cdk":"test-cdk"}}`,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if query.BaseURL != "https://cdk.aixhan.com" {
+		t.Fatalf("base_url = %q", query.BaseURL)
 	}
 }
 

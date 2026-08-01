@@ -135,7 +135,7 @@ func TopUpModeIssues() []string {
 func TopUpCreateIssues() []string {
 	issues := append(make([]string, 0, 3), TopUpModeIssues()...)
 	if strings.TrimSpace(ServerAddress) == "" {
-		issues = append(issues, "server.address is empty")
+		issues = append(issues, "server.public_url is empty")
 	}
 	if strings.TrimSpace(TopUpSignSecret) == "" {
 		issues = append(issues, "operation.top_up_sign_secret is empty")

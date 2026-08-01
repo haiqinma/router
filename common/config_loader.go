@@ -51,10 +51,10 @@ type AppConfig struct {
 }
 
 type ServerConfig struct {
-	Port    int    `yaml:"port"`
-	GinMode string `yaml:"gin_mode"`
-	LogDir  string `yaml:"log_dir"`
-	Address string `yaml:"address"`
+	Port      int    `yaml:"port"`
+	GinMode   string `yaml:"gin_mode"`
+	LogDir    string `yaml:"log_dir"`
+	PublicURL string `yaml:"public_url"`
 }
 
 type DatabaseConfig struct {
@@ -187,10 +187,10 @@ type LoggingConfig struct {
 func defaultAppConfig() AppConfig {
 	return AppConfig{
 		Server: ServerConfig{
-			Port:    3011,
-			GinMode: "release",
-			LogDir:  "./logs",
-			Address: "",
+			Port:      3011,
+			GinMode:   "release",
+			LogDir:    "./logs",
+			PublicURL: "",
 		},
 		Database: DatabaseConfig{
 			SQLDSN:             "postgres://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable",
@@ -345,8 +345,8 @@ func ApplyAppConfig(cfg *AppConfig, portFlagSet bool, logDirFlagSet bool) error 
 	}
 
 	GinMode = normalizeGinMode(cfg.Server.GinMode)
-	if serverAddress := strings.TrimSpace(cfg.Server.Address); serverAddress != "" {
-		config.ServerAddress = serverAddress
+	if publicURL := strings.TrimSpace(cfg.Server.PublicURL); publicURL != "" {
+		config.ServerAddress = publicURL
 	}
 	DisableOpenAICompat = cfg.Feature.DisableOpenAICompat
 	FrontendBaseURL = strings.TrimSpace(cfg.Feature.FrontendBaseURL)

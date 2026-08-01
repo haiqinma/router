@@ -261,7 +261,11 @@ func resolveChannelBillingBaseURL(channel *model.Channel) string {
 	if channel == nil {
 		return ""
 	}
-	return strings.TrimSpace(channel.ResolveAPIBaseURL(""))
+	cfg, err := channel.LoadConfig()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimRight(strings.TrimSpace(cfg.AccountBaseURL), "/")
 }
 
 func buildBillingServiceQuery(ctx context.Context, channel *model.Channel, profile model.ChannelBillingProfile) (billingServiceQueryRequest, error) {

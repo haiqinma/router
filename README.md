@@ -63,7 +63,7 @@ VITE_SERVER=http://localhost:3011 npm run dev
 - `database.sql_dsn`：必填，且只支持 PostgreSQL DSN。
 - `auth.cookie_secret`：不要保留模板中的示例值 `random_string`。
 - `auth.jwt_secret`：钱包登录的 access/refresh token 签发与校验依赖该字段；留空会导致相关流程不可用。
-- `server.address`：用于密码重置链接、支付回调与跳转 URL 组装；对外部署时应填写可访问地址。
+- `server.public_url`：用于密码重置链接、支付回调与跳转 URL 组装；对外部署时应填写包含协议的可访问 URL。
 - `cache.type`：缓存后端类型，只支持 `local` 或 `redis`；留空时按旧配置兼容推断。
 - `redis.conn_string`：当 `cache.type: redis` 时必填，例如 `redis://:password@127.0.0.1:6379/0`。
 - `billing_service.base_url`：渠道账务自动刷新调用独立 Billing 服务的 `/api/v1/internal/billing:query`；Router 不再直接接入各渠道账务接口。
@@ -168,7 +168,7 @@ cp config.yaml.template config.yaml
 - `database.sql_dsn`：必填，且只支持 PostgreSQL DSN。
 - `auth.cookie_secret`：必须替换模板示例值。
 - `auth.jwt_secret`：如需钱包登录与 refresh token，必须配置。
-- `server.address`：如需密码重置链接、支付回调或跳转链接，必须配置为对外可访问地址。
+- `server.public_url`：如需密码重置链接、支付回调或跳转链接，必须配置为包含协议的对外可访问 URL。
 - `cache.type`：缓存后端类型，只支持 `local` 或 `redis`；使用 Redis 时必须同时配置 `redis.conn_string`。
 - `ucan.aud`：公网部署或域名/端口非默认值时，建议显式配置。
 - `bootstrap.root_wallet_address`：按需配置系统级用户管理钱包地址。

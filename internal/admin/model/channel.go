@@ -66,6 +66,7 @@ type ChannelConfig struct {
 	LibraryID         string `json:"library_id,omitempty"`
 	Plugin            string `json:"plugin,omitempty"`
 	APIBaseURL        string `json:"api_base_url,omitempty"`
+	AccountBaseURL    string `json:"account_base_url,omitempty"`
 	VertexAIProjectID string `json:"vertex_ai_project_id,omitempty"`
 	VertexAIADC       string `json:"vertex_ai_adc,omitempty"`
 }
