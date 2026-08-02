@@ -1,0 +1,2337 @@
+openapi: 3.1.0
+info:
+  title: Router API
+  version: 1.0.0
+  description: |
+    Router HTTP API specification.
+
+    This file is the source of truth for API paths, authentication schemes,
+    high-level request bodies, and response envelopes. Business semantics are
+    documented in the themed documents under docs/.
+servers:
+  - url: http://localhost:3000
+    description: Local Router server
+tags:
+  - name: Public Auth
+  - name: Public User
+  - name: Public Token
+  - name: Public Logs
+  - name: Relay
+  - name: Admin Users
+  - name: Admin Billing
+  - name: Admin Channels
+  - name: Admin Tasks
+  - name: Admin Groups
+  - name: Admin Entitlement
+  - name: Admin Packages
+  - name: Admin Providers
+  - name: Admin Logs
+  - name: Internal
+security:
+  - BearerAuth: []
+paths:
+  /api/v1/public/common/auth/challenge:
+    post:
+      tags: [Public Auth]
+      summary: Create wallet auth challenge, proto style
+      security: []
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/common/auth/verify:
+    post:
+      tags: [Public Auth]
+      summary: Verify wallet signature, proto style
+      security: []
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/common/auth/refreshToken:
+    post:
+      tags: [Public Auth]
+      summary: Refresh wallet JWT, proto style
+      security: []
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/auth/challenge:
+    post:
+      tags: [Public Auth]
+      summary: Create wallet auth challenge, web3 style
+      security: []
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/auth/verify:
+    post:
+      tags: [Public Auth]
+      summary: Verify wallet signature, web3 style
+      security: []
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/auth/refresh:
+    post:
+      tags: [Public Auth]
+      summary: Refresh wallet JWT, web3 style
+      security: []
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/auth/logout:
+    post:
+      tags: [Public Auth]
+      summary: Logout wallet session
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/profile:
+    get:
+      tags: [Public User]
+      summary: Get public profile from JWT or UCAN
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/status:
+    get:
+      tags: [Public User]
+      summary: Get service status
+      security: []
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/billing/currencies:
+    get:
+      tags: [Public User]
+      summary: List public billing currencies
+      security: []
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/topup/plans:
+    get:
+      tags: [Public User]
+      summary: List public top-up plans
+      security: []
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/notice:
+    get:
+      tags: [Public User]
+      summary: Get public notice
+      security: []
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/about:
+    get:
+      tags: [Public User]
+      summary: Get about content
+      security: []
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/home_page_content:
+    get:
+      tags: [Public User]
+      summary: Get home page content
+      security: []
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/topup/callback:
+    post:
+      tags: [Public User]
+      summary: Receive external payment callback
+      security:
+        - BearerAuth: []
+        - TopupCallbackToken: []
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/reset_password:
+    get:
+      tags: [Public User]
+      summary: Send password reset email
+      security: []
+      parameters:
+        - $ref: "#/components/parameters/Email"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/reset:
+    post:
+      tags: [Public User]
+      summary: Reset user password
+      security: []
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/oauth/wallet/nonce:
+    get:
+      tags: [Public Auth]
+      summary: Get wallet OAuth nonce
+      security: []
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/oauth/wallet/login:
+    post:
+      tags: [Public Auth]
+      summary: Login with wallet OAuth signature
+      security: []
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/oauth/wallet/bind:
+    post:
+      tags: [Public Auth]
+      summary: Bind wallet to current user
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/oauth/state:
+    get:
+      tags: [Public Auth]
+      summary: Generate third-party OAuth state
+      security: []
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/oauth/github:
+    get:
+      tags: [Public Auth]
+      summary: GitHub OAuth callback
+      security: []
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/oauth/lark:
+    get:
+      tags: [Public Auth]
+      summary: Lark OAuth callback
+      security: []
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/register:
+    post:
+      tags: [Public User]
+      summary: Register user with password flow
+      security: []
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/login:
+    post:
+      tags: [Public User]
+      summary: Login user with password flow
+      security: []
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/logout:
+    get:
+      tags: [Public User]
+      summary: Logout password session
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/self:
+    get:
+      tags: [Public User]
+      summary: Get current user
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    put:
+      tags: [Public User]
+      summary: Update current user
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    delete:
+      tags: [Public User]
+      summary: Delete current user
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/self/password:
+    post:
+      tags: [Public User]
+      summary: Update current user password
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/dashboard:
+    get:
+      tags: [Public User]
+      summary: Get current user dashboard
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/spend/overview:
+    get:
+      tags: [Public User]
+      summary: Get current user spend overview
+      parameters:
+        - $ref: "#/components/parameters/Period"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/package/subscription:
+    get:
+      tags: [Public User]
+      summary: Get current user active package subscriptions
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/quota/daily:
+    get:
+      tags: [Public User]
+      summary: Get current user daily quota
+      parameters:
+        - $ref: "#/components/parameters/GroupIDQuery"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/quota/summary:
+    get:
+      tags: [Public User]
+      summary: Get current user quota summary
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/quota/overview:
+    get:
+      tags: [Public User]
+      summary: Get current user quota overview
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/quota/cards:
+    get:
+      tags: [Public User]
+      summary: List current user quota cards
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/quota/cards/{kind}/{id}:
+    get:
+      tags: [Public User]
+      summary: Get current user quota card detail
+      parameters:
+        - $ref: "#/components/parameters/KindPath"
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/available_models:
+    get:
+      tags: [Public User]
+      summary: List models available to current user
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/model_status:
+    get:
+      tags: [Public User]
+      summary: List platform model service status
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/tasks/options:
+    get:
+      tags: [Public User]
+      summary: Get current user task filters
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/tasks:
+    get:
+      tags: [Public User]
+      summary: List current user tasks
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/public/user/tasks/{id}:
+    get:
+      tags: [Public User]
+      summary: Get current user task detail
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/token:
+    get:
+      tags: [Public User]
+      summary: Generate current user access token
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/aff:
+    get:
+      tags: [Public User]
+      summary: Get current user affiliate code
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/packages:
+    get:
+      tags: [Public User]
+      summary: List purchasable packages for current user
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/topup/orders:
+    get:
+      tags: [Public User]
+      summary: List current user payment orders
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/BusinessType"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+    post:
+      tags: [Public User]
+      summary: Create current user payment order
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/topup/orders/{id}:
+    get:
+      tags: [Public User]
+      summary: Get current user payment order detail
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/topup/orders/{id}/refresh:
+    post:
+      tags: [Public User]
+      summary: Refresh current user payment order
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/topup/orders/{id}/cancel:
+    post:
+      tags: [Public User]
+      summary: Cancel current user payment order
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/topup/redemptions:
+    get:
+      tags: [Public User]
+      summary: List current user redemption records
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/public/user/topup/balance/summary:
+    get:
+      tags: [Public User]
+      summary: Get current user balance summary
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/topup/balance/lots:
+    get:
+      tags: [Public User]
+      summary: List current user balance lots
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/public/user/topup/balance/transactions:
+    get:
+      tags: [Public User]
+      summary: List current user balance lot transactions
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/SourceType"
+        - $ref: "#/components/parameters/TxType"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/public/user/topup/package/preview:
+    post:
+      tags: [Public User]
+      summary: Preview package purchase
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/user/topup:
+    post:
+      tags: [Public User]
+      summary: Redeem top-up code
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/token/status:
+    get:
+      tags: [Public Token]
+      summary: Get current API token status
+      security:
+        - BearerAuth: []
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/token:
+    get:
+      tags: [Public Token]
+      summary: List current user API tokens
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    post:
+      tags: [Public Token]
+      summary: Create API token
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    put:
+      tags: [Public Token]
+      summary: Update API token
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/token/search:
+    get:
+      tags: [Public Token]
+      summary: Search current user API tokens
+      parameters:
+        - $ref: "#/components/parameters/Keyword"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/token/{id}:
+    get:
+      tags: [Public Token]
+      summary: Get API token detail
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    delete:
+      tags: [Public Token]
+      summary: Delete API token
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/log:
+    get:
+      tags: [Public Logs]
+      summary: List current user logs
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/public/log/stat:
+    get:
+      tags: [Public Logs]
+      summary: Get current user log statistics
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/log/options:
+    get:
+      tags: [Public Logs]
+      summary: Get current user log filters
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/log/search:
+    get:
+      tags: [Public Logs]
+      summary: Search current user logs
+      parameters:
+        - $ref: "#/components/parameters/Keyword"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/public/log/{id}:
+    get:
+      tags: [Public Logs]
+      summary: Get current user log detail
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/channel/models:
+    get:
+      tags: [Public User]
+      summary: List channel/provider/model data for display
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/providers/models:
+    get:
+      tags: [Public User]
+      summary: List public provider models for token callers
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /v1/models:
+    get:
+      tags: [Relay]
+      summary: List OpenAI-compatible models available to the token
+      security:
+        - BearerAuth: []
+      responses:
+        "200": { $ref: "#/components/responses/OpenAIModelList" }
+  /v1/models/{model}:
+    get:
+      tags: [Relay]
+      summary: Retrieve one OpenAI-compatible model
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ModelPath"
+      responses:
+        "200": { $ref: "#/components/responses/OpenAIModel" }
+    delete:
+      tags: [Relay]
+      summary: Delete model; currently not implemented
+      security:
+        - BearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/ModelPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /v1/chat/completions:
+    post:
+      tags: [Relay]
+      summary: OpenAI-compatible chat completions
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/responses:
+    post:
+      tags: [Relay]
+      summary: OpenAI-compatible responses API
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/messages:
+    post:
+      tags: [Relay]
+      summary: Anthropic-compatible messages API
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/completions:
+    post:
+      tags: [Relay]
+      summary: OpenAI-compatible completions
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/edits:
+    post:
+      tags: [Relay]
+      summary: OpenAI-compatible edits
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/embeddings:
+    post:
+      tags: [Relay]
+      summary: OpenAI-compatible embeddings
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/engines/{model}/embeddings:
+    post:
+      tags: [Relay]
+      summary: Legacy OpenAI-compatible embeddings
+      parameters:
+        - $ref: "#/components/parameters/ModelPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/moderations:
+    post:
+      tags: [Relay]
+      summary: OpenAI-compatible moderations
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/images/generations:
+    post:
+      tags: [Relay]
+      summary: OpenAI-compatible image generation
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/images/edits:
+    post:
+      tags: [Relay]
+      summary: OpenAI-compatible image edits
+      requestBody: { $ref: "#/components/requestBodies/FormOrJSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/images/variations:
+    post:
+      tags: [Relay]
+      summary: Image variations; currently not implemented
+      requestBody: { $ref: "#/components/requestBodies/FormOrJSONBody" }
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /v1/audio/transcriptions:
+    post:
+      tags: [Relay]
+      summary: OpenAI-compatible audio transcription
+      requestBody: { $ref: "#/components/requestBodies/FormOrJSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/audio/translations:
+    post:
+      tags: [Relay]
+      summary: OpenAI-compatible audio translation
+      requestBody: { $ref: "#/components/requestBodies/FormOrJSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/audio/speech:
+    post:
+      tags: [Relay]
+      summary: OpenAI-compatible text to speech
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/realtime:
+    get:
+      tags: [Relay]
+      summary: Realtime connection endpoint
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/realtime/client_secrets:
+    post:
+      tags: [Relay]
+      summary: Create realtime client secret
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/realtime/sessions:
+    post:
+      tags: [Relay]
+      summary: Create realtime session
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/realtime/transcription_sessions:
+    post:
+      tags: [Relay]
+      summary: Create realtime transcription session
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/realtime/calls:
+    post:
+      tags: [Relay]
+      summary: Create realtime call
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/videos:
+    post:
+      tags: [Relay]
+      summary: Create video generation task
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/videos/{id}:
+    get:
+      tags: [Relay]
+      summary: Get video task
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /v1/files:
+    get:
+      tags: [Relay]
+      summary: Files API; currently not implemented
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+    post:
+      tags: [Relay]
+      summary: Files API; currently not implemented
+      requestBody: { $ref: "#/components/requestBodies/FormOrJSONBody" }
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /v1/files/{id}:
+    get:
+      tags: [Relay]
+      summary: Files API; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+    delete:
+      tags: [Relay]
+      summary: Files API; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /v1/files/{id}/content:
+    get:
+      tags: [Relay]
+      summary: Files API; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /v1/fine_tuning/jobs:
+    get:
+      tags: [Relay]
+      summary: Fine tuning API; currently not implemented
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+    post:
+      tags: [Relay]
+      summary: Fine tuning API; currently not implemented
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /v1/fine_tuning/jobs/{id}:
+    get:
+      tags: [Relay]
+      summary: Fine tuning API; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /v1/fine_tuning/jobs/{id}/cancel:
+    post:
+      tags: [Relay]
+      summary: Fine tuning API; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /v1/fine_tuning/jobs/{id}/events:
+    get:
+      tags: [Relay]
+      summary: Fine tuning API; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /v1/assistants:
+    get:
+      tags: [Relay]
+      summary: Assistants API; currently not implemented
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+    post:
+      tags: [Relay]
+      summary: Assistants API; currently not implemented
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /v1/assistants/{id}:
+    get:
+      tags: [Relay]
+      summary: Assistants API; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+    post:
+      tags: [Relay]
+      summary: Assistants API; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+    delete:
+      tags: [Relay]
+      summary: Assistants API; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /v1/threads:
+    get:
+      tags: [Relay]
+      summary: Threads API; currently not implemented
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+    post:
+      tags: [Relay]
+      summary: Threads API; currently not implemented
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /v1/threads/{id}:
+    get:
+      tags: [Relay]
+      summary: Threads API; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+    post:
+      tags: [Relay]
+      summary: Threads API; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+    delete:
+      tags: [Relay]
+      summary: Threads API; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /api/v1/public/models:
+    get:
+      tags: [Relay]
+      summary: List models through public API prefix
+      responses:
+        "200": { $ref: "#/components/responses/OpenAIModelList" }
+  /api/v1/public/models/{model}:
+    get:
+      tags: [Relay]
+      summary: Retrieve model through public API prefix
+      parameters:
+        - $ref: "#/components/parameters/ModelPath"
+      responses:
+        "200": { $ref: "#/components/responses/OpenAIModel" }
+  /api/v1/public/chat/completions:
+    post:
+      tags: [Relay]
+      summary: Chat completions through public API prefix
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/responses:
+    post:
+      tags: [Relay]
+      summary: Responses through public API prefix
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/messages:
+    post:
+      tags: [Relay]
+      summary: Messages through public API prefix
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/completions:
+    post:
+      tags: [Relay]
+      summary: Completions through public API prefix
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/edits:
+    post:
+      tags: [Relay]
+      summary: Edits through public API prefix
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/embeddings:
+    post:
+      tags: [Relay]
+      summary: Embeddings through public API prefix
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/engines/{model}/embeddings:
+    post:
+      tags: [Relay]
+      summary: Legacy embeddings through public API prefix
+      parameters:
+        - $ref: "#/components/parameters/ModelPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/moderations:
+    post:
+      tags: [Relay]
+      summary: Moderations through public API prefix
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/images/generations:
+    post:
+      tags: [Relay]
+      summary: Image generation through public API prefix
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/images/edits:
+    post:
+      tags: [Relay]
+      summary: Image edits through public API prefix
+      requestBody: { $ref: "#/components/requestBodies/FormOrJSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/images/variations:
+    post:
+      tags: [Relay]
+      summary: Image variations through public API prefix; currently not implemented
+      requestBody: { $ref: "#/components/requestBodies/FormOrJSONBody" }
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /api/v1/public/audio/transcriptions:
+    post:
+      tags: [Relay]
+      summary: Audio transcription through public API prefix
+      requestBody: { $ref: "#/components/requestBodies/FormOrJSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/audio/translations:
+    post:
+      tags: [Relay]
+      summary: Audio translation through public API prefix
+      requestBody: { $ref: "#/components/requestBodies/FormOrJSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/audio/speech:
+    post:
+      tags: [Relay]
+      summary: Text to speech through public API prefix
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/realtime:
+    get:
+      tags: [Relay]
+      summary: Realtime endpoint through public API prefix
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/realtime/client_secrets:
+    post:
+      tags: [Relay]
+      summary: Realtime client secret through public API prefix
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/realtime/sessions:
+    post:
+      tags: [Relay]
+      summary: Realtime session through public API prefix
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/realtime/transcription_sessions:
+    post:
+      tags: [Relay]
+      summary: Realtime transcription session through public API prefix
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/realtime/calls:
+    post:
+      tags: [Relay]
+      summary: Realtime calls through public API prefix
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/videos:
+    post:
+      tags: [Relay]
+      summary: Video generation through public API prefix
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/videos/{id}:
+    get:
+      tags: [Relay]
+      summary: Get video task through public API prefix
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/RelayResponse" }
+  /api/v1/public/files:
+    get:
+      tags: [Relay]
+      summary: Files through public API prefix; currently not implemented
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+    post:
+      tags: [Relay]
+      summary: Files through public API prefix; currently not implemented
+      requestBody: { $ref: "#/components/requestBodies/FormOrJSONBody" }
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /api/v1/public/files/{id}:
+    get:
+      tags: [Relay]
+      summary: Files through public API prefix; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+    delete:
+      tags: [Relay]
+      summary: Files through public API prefix; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /api/v1/public/files/{id}/content:
+    get:
+      tags: [Relay]
+      summary: File content through public API prefix; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /api/v1/public/fine_tuning/jobs:
+    get:
+      tags: [Relay]
+      summary: Fine tuning through public API prefix; currently not implemented
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+    post:
+      tags: [Relay]
+      summary: Fine tuning through public API prefix; currently not implemented
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /api/v1/public/fine_tuning/jobs/{id}:
+    get:
+      tags: [Relay]
+      summary: Fine tuning through public API prefix; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /api/v1/public/fine_tuning/jobs/{id}/cancel:
+    post:
+      tags: [Relay]
+      summary: Fine tuning cancel through public API prefix; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /api/v1/public/fine_tuning/jobs/{id}/events:
+    get:
+      tags: [Relay]
+      summary: Fine tuning events through public API prefix; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /api/v1/public/assistants:
+    get:
+      tags: [Relay]
+      summary: Assistants through public API prefix; currently not implemented
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+    post:
+      tags: [Relay]
+      summary: Assistants through public API prefix; currently not implemented
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /api/v1/public/assistants/{id}:
+    get:
+      tags: [Relay]
+      summary: Assistants through public API prefix; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+    post:
+      tags: [Relay]
+      summary: Assistants through public API prefix; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+    delete:
+      tags: [Relay]
+      summary: Assistants through public API prefix; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /api/v1/public/threads:
+    get:
+      tags: [Relay]
+      summary: Threads through public API prefix; currently not implemented
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+    post:
+      tags: [Relay]
+      summary: Threads through public API prefix; currently not implemented
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /api/v1/public/threads/{id}:
+    get:
+      tags: [Relay]
+      summary: Threads through public API prefix; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+    post:
+      tags: [Relay]
+      summary: Threads through public API prefix; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+    delete:
+      tags: [Relay]
+      summary: Threads through public API prefix; currently not implemented
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "501": { $ref: "#/components/responses/ErrorResponse" }
+  /api/v1/admin/user:
+    get:
+      tags: [Admin Users]
+      summary: List users
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/Keyword"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+    post:
+      tags: [Admin Users]
+      summary: Create user
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    put:
+      tags: [Admin Users]
+      summary: Update user
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/user/search:
+    get:
+      tags: [Admin Users]
+      summary: Search users
+      parameters:
+        - $ref: "#/components/parameters/Keyword"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/user/manage:
+    post:
+      tags: [Admin Users]
+      summary: Manage user state
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/user/batch/topup/grant:
+    post:
+      tags: [Admin Users]
+      summary: Batch grant balance to users
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/user/{id}:
+    get:
+      tags: [Admin Users]
+      summary: Get user detail
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    delete:
+      tags: [Admin Users]
+      summary: Delete user
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/user/{id}/package/subscription:
+    get:
+      tags: [Admin Users]
+      summary: Get user active package subscriptions
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/user/{id}/redemptions:
+    get:
+      tags: [Admin Users]
+      summary: Get user recent redemptions
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/user/{id}/quota/summary:
+    get:
+      tags: [Admin Users]
+      summary: Get user quota summary
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/user/{id}/topup/balance/lots:
+    get:
+      tags: [Admin Users]
+      summary: List user balance lots
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/admin/user/{id}/topup/balance/transactions:
+    get:
+      tags: [Admin Users]
+      summary: List user balance lot transactions
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/admin/user/{id}/topup/grant:
+    post:
+      tags: [Admin Users]
+      summary: Grant balance to user
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/user/tasks:
+    get:
+      tags: [Admin Users]
+      summary: List user tasks for admin
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/admin/user/tasks/options:
+    get:
+      tags: [Admin Users]
+      summary: Get admin user task filters
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/user/tasks/{id}:
+    get:
+      tags: [Admin Users]
+      summary: Get admin user task detail
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/dashboard:
+    get:
+      tags: [Admin Billing]
+      summary: Get admin dashboard
+      parameters:
+        - $ref: "#/components/parameters/Period"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/billing/currencies:
+    get:
+      tags: [Admin Billing]
+      summary: List billing currencies
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    post:
+      tags: [Admin Billing]
+      summary: Create billing currency
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/billing/currencies/{code}:
+    put:
+      tags: [Admin Billing]
+      summary: Update billing currency
+      parameters:
+        - $ref: "#/components/parameters/CodePath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    delete:
+      tags: [Admin Billing]
+      summary: Delete billing currency
+      parameters:
+        - $ref: "#/components/parameters/CodePath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/billing/health:
+    get:
+      tags: [Admin Billing]
+      summary: Get billing service health
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/billing/procurement-report:
+    get:
+      tags: [Admin Billing]
+      summary: Get procurement report
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/billing/procurement-trend:
+    get:
+      tags: [Admin Billing]
+      summary: Get procurement trend
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/billing/procurement-batches:
+    get:
+      tags: [Admin Billing]
+      summary: List procurement batches
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/admin/billing/pricing-matrix:
+    get:
+      tags: [Admin Billing]
+      summary: Get pricing matrix
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/billing/fx/status:
+    get:
+      tags: [Admin Billing]
+      summary: Get FX sync status
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/billing/fx/rates:
+    get:
+      tags: [Admin Billing]
+      summary: List FX market rates
+      parameters:
+        - name: currencies
+          in: query
+          schema: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/billing/fx/sync:
+    post:
+      tags: [Admin Billing]
+      summary: Sync FX market rates
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channels:
+    get:
+      tags: [Admin Channels]
+      summary: List channels
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/Keyword"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/admin/channel/protocols:
+    get:
+      tags: [Admin Channels]
+      summary: List channel protocols
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channel/alerts:
+    get:
+      tags: [Admin Channels]
+      summary: List recent channel alerts
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channel/alerts/acknowledge:
+    post:
+      tags: [Admin Channels]
+      summary: Acknowledge channel alert
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channel/alerts/resolve:
+    post:
+      tags: [Admin Channels]
+      summary: Resolve channel alert
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channel/billing/adapters:
+    get:
+      tags: [Admin Channels]
+      summary: List channel billing adapters from Billing service
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channel/{id}:
+    get:
+      tags: [Admin Channels]
+      summary: Get channel detail
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    delete:
+      tags: [Admin Channels]
+      summary: Delete channel
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channel:
+    post:
+      tags: [Admin Channels]
+      summary: Create channel
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    put:
+      tags: [Admin Channels]
+      summary: Update channel
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channel/disabled:
+    delete:
+      tags: [Admin Channels]
+      summary: Delete disabled channels
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channel/{id}/billing:
+    get:
+      tags: [Admin Channels]
+      summary: Get channel billing summary
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channel/{id}/billing/profile:
+    get:
+      tags: [Admin Channels]
+      summary: Get channel billing profile
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    put:
+      tags: [Admin Channels]
+      summary: Update channel billing profile
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channel/{id}/billing/snapshots:
+    get:
+      tags: [Admin Channels]
+      summary: List channel billing snapshots
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+    post:
+      tags: [Admin Channels]
+      summary: Create channel billing snapshot
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channel/{id}/billing/snapshots/{snapshot_id}:
+    put:
+      tags: [Admin Channels]
+      summary: Update channel billing snapshot
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+        - $ref: "#/components/parameters/SnapshotIDPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    delete:
+      tags: [Admin Channels]
+      summary: Delete channel billing snapshot
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+        - $ref: "#/components/parameters/SnapshotIDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channel/{id}/billing/procurement-batches:
+    get:
+      tags: [Admin Channels]
+      summary: List channel procurement batches
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/admin/channel/{id}/billing/actions:
+    get:
+      tags: [Admin Channels]
+      summary: List channel billing actions
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channel/{id}/models:
+    get:
+      tags: [Admin Channels]
+      summary: List channel models
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+    put:
+      tags: [Admin Channels]
+      summary: Update channel models
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    delete:
+      tags: [Admin Channels]
+      summary: Delete channel model
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+        - name: model
+          in: query
+          schema: { type: string }
+        - name: upstream_model
+          in: query
+          schema: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channel/{id}/models/publish:
+    put:
+      tags: [Admin Channels]
+      summary: Update channel model publish settings
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channel/{id}/endpoints:
+    get:
+      tags: [Admin Channels]
+      summary: List channel endpoint capabilities
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    put:
+      tags: [Admin Channels]
+      summary: Update channel endpoint capability
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channel/{id}/policies:
+    get:
+      tags: [Admin Channels]
+      summary: List channel endpoint policies
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    put:
+      tags: [Admin Channels]
+      summary: Update channel endpoint policy
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channel/{id}/policies/{policy_id}:
+    delete:
+      tags: [Admin Channels]
+      summary: Delete channel endpoint policy
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+        - $ref: "#/components/parameters/PolicyIDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channel/{id}/tests:
+    get:
+      tags: [Admin Channels]
+      summary: List channel tests
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+    post:
+      tags: [Admin Channels]
+      summary: Run channel model tests
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/channel/{id}/tests/artifact:
+    get:
+      tags: [Admin Channels]
+      summary: Download latest channel test artifact
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+        - name: model
+          in: query
+          schema: { type: string }
+        - name: endpoint
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Artifact binary
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+  /api/v1/admin/channel/{id}/refresh:
+    post:
+      tags: [Admin Channels]
+      summary: Submit channel refresh task
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [models, billing]
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/tasks:
+    get:
+      tags: [Admin Tasks]
+      summary: List system tasks
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/admin/tasks/options:
+    get:
+      tags: [Admin Tasks]
+      summary: Get system task filters
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/tasks/{id}:
+    get:
+      tags: [Admin Tasks]
+      summary: Get system task detail
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/tasks/{id}/cancel:
+    post:
+      tags: [Admin Tasks]
+      summary: Cancel task
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/tasks/{id}/retry:
+    post:
+      tags: [Admin Tasks]
+      summary: Retry task
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/groups:
+    get:
+      tags: [Admin Groups]
+      summary: List groups
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/Keyword"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/admin/group:
+    post:
+      tags: [Admin Groups]
+      summary: Create group
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    put:
+      tags: [Admin Groups]
+      summary: Update group
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/group/{id}:
+    get:
+      tags: [Admin Groups]
+      summary: Get group detail
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    delete:
+      tags: [Admin Groups]
+      summary: Delete group
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/group/{id}/quota/daily:
+    get:
+      tags: [Admin Groups]
+      summary: Get group daily quota for one user
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+        - name: user_id
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/group/{id}/channels:
+    get:
+      tags: [Admin Groups]
+      summary: List group channels
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    put:
+      tags: [Admin Groups]
+      summary: Update group channels
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/group/{id}/models:
+    get:
+      tags: [Admin Groups]
+      summary: List group models
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    put:
+      tags: [Admin Groups]
+      summary: Update group models
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/group/{id}/models/{model}:
+    put:
+      tags: [Admin Groups]
+      summary: Update one group model
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+        - $ref: "#/components/parameters/ModelPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    delete:
+      tags: [Admin Groups]
+      summary: Delete one group model
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+        - $ref: "#/components/parameters/ModelPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/entitlement/payments:
+    get:
+      tags: [Admin Entitlement]
+      summary: List payment records
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/admin/entitlement/payments/{id}:
+    get:
+      tags: [Admin Entitlement]
+      summary: Get payment record detail
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/entitlement/products:
+    get:
+      tags: [Admin Entitlement]
+      summary: List entitlement products
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+    post:
+      tags: [Admin Entitlement]
+      summary: Create entitlement product
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/entitlement/products/{id}:
+    get:
+      tags: [Admin Entitlement]
+      summary: Get entitlement product
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    put:
+      tags: [Admin Entitlement]
+      summary: Update entitlement product
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    delete:
+      tags: [Admin Entitlement]
+      summary: Delete entitlement product
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/packages:
+    get:
+      tags: [Admin Packages]
+      summary: List packages
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+        - $ref: "#/components/parameters/Keyword"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/admin/package:
+    post:
+      tags: [Admin Packages]
+      summary: Create package
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    put:
+      tags: [Admin Packages]
+      summary: Update package
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/package/{id}:
+    get:
+      tags: [Admin Packages]
+      summary: Get package
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    delete:
+      tags: [Admin Packages]
+      summary: Delete package
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/package/{id}/assign:
+    post:
+      tags: [Admin Packages]
+      summary: Assign package to user
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/topup/plans:
+    get:
+      tags: [Admin Packages]
+      summary: List admin top-up plans
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/topup/plan:
+    post:
+      tags: [Admin Packages]
+      summary: Create top-up plan
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    put:
+      tags: [Admin Packages]
+      summary: Update top-up plan
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/topup/plan/{id}:
+    delete:
+      tags: [Admin Packages]
+      summary: Delete top-up plan
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/providers:
+    get:
+      tags: [Admin Providers]
+      summary: List providers
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+    post:
+      tags: [Admin Providers]
+      summary: Create provider
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/providers/{id}:
+    get:
+      tags: [Admin Providers]
+      summary: Get provider
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    put:
+      tags: [Admin Providers]
+      summary: Update provider
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    delete:
+      tags: [Admin Providers]
+      summary: Delete provider
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/providers/{id}/model:
+    post:
+      tags: [Admin Providers]
+      summary: Append provider model
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/flow/topup-orders:
+    get:
+      tags: [Admin Billing]
+      summary: List top-up order records
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/admin/flow/topup-orders/{id}:
+    get:
+      tags: [Admin Billing]
+      summary: Get top-up order record
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/flow/topup-reconcile-records:
+    get:
+      tags: [Admin Billing]
+      summary: List top-up reconcile records
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/admin/flow/topup-reconcile-records/{id}:
+    get:
+      tags: [Admin Billing]
+      summary: Get top-up reconcile record
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/flow/topup-reconcile-records/{id}/refresh:
+    post:
+      tags: [Admin Billing]
+      summary: Refresh top-up reconcile record
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/flow/topup-reconcile-records/{id}/fulfill:
+    post:
+      tags: [Admin Billing]
+      summary: Fulfill top-up reconcile record
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/flow/redemption-records:
+    get:
+      tags: [Admin Billing]
+      summary: List redemption records
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/admin/flow/redemption-records/{id}:
+    get:
+      tags: [Admin Billing]
+      summary: Get redemption record
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/log:
+    get:
+      tags: [Admin Logs]
+      summary: List all logs
+      parameters:
+        - $ref: "#/components/parameters/Page"
+        - $ref: "#/components/parameters/PageSize"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+    delete:
+      tags: [Admin Logs]
+      summary: Delete historical logs
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/log/stat:
+    get:
+      tags: [Admin Logs]
+      summary: Get all log statistics
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/log/options:
+    get:
+      tags: [Admin Logs]
+      summary: Get all log filters
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/log/search:
+    get:
+      tags: [Admin Logs]
+      summary: Search all logs
+      parameters:
+        - $ref: "#/components/parameters/Keyword"
+      responses:
+        "200": { $ref: "#/components/responses/PaginatedAPIResponse" }
+  /api/v1/admin/log/{id}:
+    get:
+      tags: [Admin Logs]
+      summary: Get log detail
+      parameters:
+        - $ref: "#/components/parameters/IDPath"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/option:
+    get:
+      tags: [Admin Billing]
+      summary: Get system settings
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+    put:
+      tags: [Admin Billing]
+      summary: Update system settings
+      requestBody: { $ref: "#/components/requestBodies/JSONBody" }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /dashboard/billing/subscription:
+    get:
+      tags: [Public User]
+      summary: Get dashboard billing subscription
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /dashboard/billing/usage:
+    get:
+      tags: [Public User]
+      summary: Get dashboard billing usage
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/internal:
+    get:
+      tags: [Internal]
+      summary: Internal API namespace is reserved
+      responses:
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT or API token
+    CookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+    TopupCallbackToken:
+      type: apiKey
+      in: header
+      name: X-Topup-Callback-Token
+  parameters:
+    IDPath:
+      name: id
+      in: path
+      required: true
+      schema: { type: string }
+    SnapshotIDPath:
+      name: snapshot_id
+      in: path
+      required: true
+      schema: { type: string }
+    PolicyIDPath:
+      name: policy_id
+      in: path
+      required: true
+      schema: { type: string }
+    CodePath:
+      name: code
+      in: path
+      required: true
+      schema: { type: string }
+    ModelPath:
+      name: model
+      in: path
+      required: true
+      schema: { type: string }
+    KindPath:
+      name: kind
+      in: path
+      required: true
+      schema: { type: string }
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PageSize:
+      name: page_size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 200, default: 20 }
+    Keyword:
+      name: keyword
+      in: query
+      schema: { type: string }
+    Period:
+      name: period
+      in: query
+      schema:
+        type: string
+        enum: [today, 7d, 30d, current_month]
+    GroupIDQuery:
+      name: group_id
+      in: query
+      schema: { type: string }
+    Email:
+      name: email
+      in: query
+      schema: { type: string, format: email }
+    BusinessType:
+      name: business_type
+      in: query
+      schema:
+        type: string
+        enum: [balance_topup, package_purchase]
+    SourceType:
+      name: source_type
+      in: query
+      schema: { type: string }
+    TxType:
+      name: tx_type
+      in: query
+      schema:
+        type: string
+        enum: [credit, consume, expire]
+  requestBodies:
+    JSONBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+    FormOrJSONBody:
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+        multipart/form-data:
+          schema:
+            type: object
+            additionalProperties: true
+  responses:
+    APIResponse:
+      description: Router standard response envelope
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/APIResponse"
+    PaginatedAPIResponse:
+      description: Router standard paginated response envelope
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: "#/components/schemas/APIResponse"
+              - type: object
+                properties:
+                  data:
+                    $ref: "#/components/schemas/PaginatedData"
+    ErrorResponse:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - $ref: "#/components/schemas/APIResponse"
+              - $ref: "#/components/schemas/OpenAIError"
+    RelayResponse:
+      description: Upstream-compatible relay response
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: true
+        text/event-stream:
+          schema:
+            type: string
+    OpenAIModelList:
+      description: OpenAI-compatible model list response
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              object:
+                type: string
+                const: list
+              data:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OpenAIModel"
+    OpenAIModel:
+      description: OpenAI-compatible model response
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/OpenAIModel"
+  schemas:
+    APIResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          nullable: true
+        error:
+          nullable: true
+      additionalProperties: true
+    PaginatedData:
+      type: object
+      properties:
+        items:
+          type: array
+          items: {}
+        total:
+          type: integer
+        page:
+          type: integer
+        page_size:
+          type: integer
+      additionalProperties: true
+    OpenAIModel:
+      type: object
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+          default: model
+        created:
+          type: integer
+        owned_by:
+          type: string
+        supported_endpoints:
+          type: array
+          items:
+            type: string
+      additionalProperties: true
+    OpenAIError:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            message:
+              type: string
+            type:
+              type: string
+            code:
+              type: string
+              nullable: true
+          additionalProperties: true
+      additionalProperties: true
