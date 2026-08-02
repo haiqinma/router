@@ -416,6 +416,77 @@ func resolveRequestAvailableModels(c *gin.Context) (requestAvailableModels, erro
 	return buildEntitlementAvailableModels(payload, requestedModels), nil
 }
 
+func buildPublishedModelStatusAvailableModels(ctx context.Context) (requestAvailableModels, error) {
+	resolved := requestAvailableModels{
+		ModelNames:          []string{},
+		ProviderByModel:     make(map[string]string),
+		SourceGroupsByModel: make(map[string][]string),
+	}
+	if model.DB == nil {
+		return resolved, nil
+	}
+	groupRows := make([]model.GroupCatalog, 0)
+	if err := model.DB.WithContext(ctx).
+		Select("id", "enabled").
+		Where("enabled = ?", true).
+		Find(&groupRows).Error; err != nil {
+		return requestAvailableModels{}, err
+	}
+	enabledGroups := make(map[string]struct{}, len(groupRows))
+	for _, group := range groupRows {
+		groupID := strings.TrimSpace(group.Id)
+		if groupID != "" {
+			enabledGroups[groupID] = struct{}{}
+		}
+	}
+	if len(enabledGroups) == 0 {
+		return resolved, nil
+	}
+
+	rows := make([]model.GroupModelChannel, 0)
+	if err := model.DB.WithContext(ctx).
+		Order(`"group" asc, model asc, channel_id asc`).
+		Find(&rows).Error; err != nil {
+		return requestAvailableModels{}, err
+	}
+	seenModels := make(map[string]struct{})
+	seenSourceGroups := make(map[string]map[string]struct{})
+	for _, row := range rows {
+		groupID := strings.TrimSpace(row.Group)
+		modelName := strings.TrimSpace(row.Model)
+		if groupID == "" || modelName == "" {
+			continue
+		}
+		if _, ok := enabledGroups[groupID]; !ok {
+			continue
+		}
+		channels, err := loadSatisfiedChannelsFn(groupID, modelName)
+		if err != nil || len(channels) == 0 {
+			continue
+		}
+		if _, ok := seenModels[modelName]; !ok {
+			seenModels[modelName] = struct{}{}
+			resolved.ModelNames = append(resolved.ModelNames, modelName)
+		}
+		if resolved.PrimaryGroup == "" {
+			resolved.PrimaryGroup = groupID
+		}
+		if _, ok := seenSourceGroups[modelName]; !ok {
+			seenSourceGroups[modelName] = make(map[string]struct{})
+		}
+		if _, ok := seenSourceGroups[modelName][groupID]; !ok {
+			seenSourceGroups[modelName][groupID] = struct{}{}
+			resolved.SourceGroupsByModel[modelName] = append(resolved.SourceGroupsByModel[modelName], groupID)
+		}
+		if provider := model.NormalizeGroupModelChannelProvider(row.Provider); provider != "" {
+			if _, ok := resolved.ProviderByModel[modelName]; !ok {
+				resolved.ProviderByModel[modelName] = provider
+			}
+		}
+	}
+	return resolved, nil
+}
+
 func loadRequestProviderMap(resolved requestAvailableModels) (map[string]string, error) {
 	if len(resolved.ProviderByModel) == 0 {
 		return loadGroupModelProvidersFn(resolved.PrimaryGroup, resolved.ModelNames)
@@ -747,7 +818,7 @@ func buildUserModelStatusTestHealthAggregates(nowTs int64, rows []model.ChannelT
 }
 
 func buildUserModelStatusPayload(c *gin.Context) (UserModelStatusPayload, error) {
-	resolved, err := resolveRequestAvailableModels(c)
+	resolved, err := buildPublishedModelStatusAvailableModels(ginRequestContext(c))
 	if err != nil {
 		return UserModelStatusPayload{}, err
 	}

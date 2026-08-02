@@ -644,8 +644,22 @@ func TestBuildUserModelStatusPayloadAggregatesGroupModels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
-	if err := db.AutoMigrate(&model.ChannelTest{}); err != nil {
-		t.Fatalf("auto migrate channel tests: %v", err)
+	if err := db.AutoMigrate(&model.GroupCatalog{}, &model.GroupModelChannel{}, &model.ChannelTest{}); err != nil {
+		t.Fatalf("auto migrate model status tables: %v", err)
+	}
+	if err := db.Create(&model.GroupCatalog{
+		Id:      "group-1",
+		Name:    "Group 1",
+		Enabled: true,
+	}).Error; err != nil {
+		t.Fatalf("create group: %v", err)
+	}
+	if err := db.Create(&[]model.GroupModelChannel{
+		{Group: "group-1", Model: "gpt-5.4", ChannelId: "channel-1", Provider: "openai"},
+		{Group: "group-1", Model: "gpt-5.4", ChannelId: "channel-2", Provider: "openai"},
+		{Group: "group-1", Model: "claude-sonnet-4-6", ChannelId: "channel-3", Provider: "anthropic"},
+	}).Error; err != nil {
+		t.Fatalf("create group model channels: %v", err)
 	}
 	if err := db.Create(&[]model.ChannelTest{
 		{

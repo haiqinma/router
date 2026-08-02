@@ -51,6 +51,31 @@ func ensureUserBalanceLotAmountColumnsWithDB(tx *gorm.DB) error {
 	return nil
 }
 
+func ensureUserBalanceLotEntitlementSourceIndexWithDB(tx *gorm.DB) error {
+	if tx == nil {
+		return fmt.Errorf("database handle is nil")
+	}
+	if !tx.Migrator().HasTable(UserBalanceLotsTableName) {
+		return tx.AutoMigrate(&UserBalanceLot{})
+	}
+	if err := ensureUserBalanceLotAmountColumnsWithDB(tx); err != nil {
+		return err
+	}
+	if tx.Dialector != nil && tx.Dialector.Name() == "postgres" {
+		return tx.Exec(`
+			CREATE INDEX IF NOT EXISTS idx_user_balance_lots_active_source_order
+			ON user_balance_lots (user_id, source_type, granted_at DESC, created_at DESC, id DESC)
+			INCLUDE (source_id, expires_at)
+			WHERE status = 'active' AND remaining_amount > 0
+		`).Error
+	}
+	return tx.Exec(`
+		CREATE INDEX IF NOT EXISTS idx_user_balance_lots_active_source_order
+		ON user_balance_lots (user_id, source_type, granted_at DESC, created_at DESC, id DESC, source_id, expires_at)
+		WHERE status = 'active' AND remaining_amount > 0
+	`).Error
+}
+
 func ensureUserBalanceLotTransactionAmountColumnsWithDB(tx *gorm.DB) error {
 	if tx == nil {
 		return fmt.Errorf("database handle is nil")
