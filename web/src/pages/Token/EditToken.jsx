@@ -506,7 +506,7 @@ const EditToken = () => {
 
   const loadAvailableModels = useCallback(async () => {
     try {
-      let res = await API.get(`/api/v1/public/user/available_models`);
+      let res = await API.get(`/api/v1/public/user/models/available`);
       const { success, message, data } = res.data || {};
       if (success && data) {
         const itemByModel = new Map(
