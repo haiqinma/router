@@ -9,6 +9,9 @@ import (
 )
 
 func ShouldDisableChannel(err *model.Error, statusCode int) bool {
+	if statusCode == http.StatusUnauthorized {
+		return false
+	}
 	return IsHardChannelFailure(err, statusCode)
 }
 

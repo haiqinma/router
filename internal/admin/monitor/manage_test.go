@@ -25,11 +25,28 @@ func TestShouldDisableChannelForHardFailure(t *testing.T) {
 		Code:    "upstream_account_disabled",
 	}
 
-	if !ShouldDisableChannel(err, http.StatusUnauthorized) {
-		t.Fatalf("ShouldDisableChannel = false, want true for upstream account disabled")
+	if ShouldDisableChannel(err, http.StatusUnauthorized) {
+		t.Fatalf("ShouldDisableChannel = true, want false for a single unauthorized response")
 	}
 	if !IsHardChannelFailure(err, http.StatusUnauthorized) {
 		t.Fatalf("IsHardChannelFailure = false, want true")
+	}
+}
+
+func TestShouldDisableChannelSkipsTransientUnauthorized(t *testing.T) {
+	err := &relaymodel.Error{Message: "Invalid client API key", Type: "authentication_error"}
+	if ShouldDisableChannel(err, http.StatusUnauthorized) {
+		t.Fatal("generic unauthorized response should not disable the whole channel")
+	}
+	if !IsHardChannelFailure(err, http.StatusUnauthorized) {
+		t.Fatal("unauthorized response should remain retryable")
+	}
+}
+
+func TestShouldDisableChannelSkipsAllUnauthorized(t *testing.T) {
+	err := &relaymodel.Error{Message: "account has been disabled", Code: "upstream_account_disabled"}
+	if ShouldDisableChannel(err, http.StatusUnauthorized) {
+		t.Fatal("a single unauthorized response should not disable the whole channel")
 	}
 }
 

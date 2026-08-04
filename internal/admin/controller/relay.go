@@ -429,7 +429,7 @@ func isTransientUpstreamRelayError(err *model.ErrorWithStatusCode) bool {
 	if err == nil {
 		return false
 	}
-	if err.StatusCode == http.StatusTooManyRequests {
+	if err.StatusCode == http.StatusUnauthorized || err.StatusCode == http.StatusTooManyRequests {
 		return true
 	}
 	if err.StatusCode >= http.StatusInternalServerError {
