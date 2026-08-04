@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -8,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/yeying-community/router/common/ctxkey"
 	relaymodel "github.com/yeying-community/router/internal/relay/model"
+	"github.com/yeying-community/router/internal/relay/routeobs"
 )
 
 func TestRelayNotFoundDisablesCaching(t *testing.T) {
@@ -64,6 +66,16 @@ func TestBuildRelayFailureLogCapturesRouteFields(t *testing.T) {
 	c.Set(ctxkey.OriginalModel, "gpt-5")
 	c.Set(ctxkey.TokenName, "prod-token")
 	c.Set(ctxkey.RelayFallbackAttempts, `[{"attempt":1,"channel_id":"channel-1"}]`)
+	routeobs.SetRouteDecision(c, routeobs.RouteDecision{
+		Source:              "automatic",
+		GroupID:             "default",
+		Model:               "gpt-5",
+		Endpoint:            "/v1/chat/completions",
+		CandidateChannelIDs: []string{"channel-1", "channel-2"},
+		SelectedPriority:    10,
+		SelectionMode:       "priority_random",
+		InitialChannelID:    "channel-1",
+	})
 
 	got := buildRelayFailureLog(c, &relaymodel.ErrorWithStatusCode{
 		StatusCode: http.StatusServiceUnavailable,
@@ -91,6 +103,13 @@ func TestBuildRelayFailureLogCapturesRouteFields(t *testing.T) {
 	}
 	if got.FallbackAttempts == "" {
 		t.Fatalf("FallbackAttempts empty")
+	}
+	var decision routeobs.RouteDecision
+	if err := json.Unmarshal([]byte(got.RouteDecision), &decision); err != nil {
+		t.Fatalf("unmarshal RouteDecision: %v", err)
+	}
+	if decision.InitialChannelID != "channel-1" || decision.FinalChannelID != "channel-1" || decision.CandidateCount != 2 {
+		t.Fatalf("unexpected RouteDecision: %+v", decision)
 	}
 	if got.RelayErrorCode != "upstream_unavailable" || got.RelayErrorMessage != "upstream unavailable" {
 		t.Fatalf("unexpected relay error fields: %+v", got)

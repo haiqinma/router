@@ -99,6 +99,7 @@ type UserModelStatusItem struct {
 	Status              string                 `json:"status"`
 	HealthLevel         string                 `json:"health_level"`
 	HealthScore         int                    `json:"health_score"`
+	HealthSource        string                 `json:"health_source"`
 	ChannelCount        int                    `json:"channel_count"`
 	TestedChannelCount  int                    `json:"tested_channel_count"`
 	TestedEndpointCount int                    `json:"tested_endpoint_count"`
@@ -904,6 +905,7 @@ func buildUserModelStatusPayload(c *gin.Context) (UserModelStatusPayload, error)
 			SupportedEndpoints: sortModelEndpoints(endpointsByModel[modelName]),
 			ChannelCount:       len(model.NormalizeChannelModelIDsPreserveOrder(channelIDsByModel[modelName])),
 			HealthLevel:        userModelHealthLevelUnknown,
+			HealthSource:       "none",
 			Status:             userModelStatusUnknown,
 			HealthPoints:       []UserModelStatusPoint{},
 		}
@@ -935,6 +937,7 @@ func buildUserModelStatusPayload(c *gin.Context) (UserModelStatusPayload, error)
 		item.HealthPoints = healthtrend.BuildPoints(nowTs, trafficAggregates)
 		trafficSummary := healthtrend.Summarize(item.HealthPoints)
 		if trafficSummary.TotalCount > 0 {
+			item.HealthSource = "traffic"
 			item.SupportedCount = int(trafficSummary.SuccessCount)
 			item.UnsupportedCount = int(trafficSummary.FailureCount)
 			item.AvgLatencyMs = trafficSummary.AvgLatencyMs
@@ -952,6 +955,7 @@ func buildUserModelStatusPayload(c *gin.Context) (UserModelStatusPayload, error)
 		if trafficSummary.TotalCount == 0 {
 			testAggregates := buildUserModelStatusTestHealthAggregates(nowTs, modelTestRows)
 			if len(testAggregates) > 0 {
+				item.HealthSource = "probe"
 				item.HealthPoints = healthtrend.BuildPoints(nowTs, testAggregates)
 			}
 		}

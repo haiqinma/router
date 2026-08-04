@@ -24,6 +24,7 @@ const normalize = (payload) => ({
     configured_cost_request_count: Number(item?.configured_cost_request_count || 0),
     estimated_cost_request_count: Number(item?.estimated_cost_request_count || 0),
     pending_cost_request_count: Number(item?.pending_cost_request_count || 0),
+    retry_cost_request_count: Number(item?.retry_cost_request_count || 0),
     unconfigured_cost_request_count: Number(item?.unconfigured_cost_request_count || 0),
     router_consumed_yyc: Number(item?.router_consumed_yyc || 0),
     sell_base_amount: Number(item?.sell_base_amount || 0),
@@ -42,7 +43,7 @@ const recentRange = () => {
 };
 
 const pricingState = (row) => {
-  if (row.unconfigured_cost_request_count > 0 || row.pending_cost_request_count > 0 || row.estimated_cost_request_count > 0) return 'unknown';
+  if (row.unconfigured_cost_request_count > 0 || row.pending_cost_request_count > 0 || row.retry_cost_request_count > 0 || row.estimated_cost_request_count > 0) return 'unknown';
   if (row.configured_cost_request_count <= 0) return 'unknown';
   if (row.gross_margin < 0) return 'loss';
   if (row.gross_margin < 0.1) return 'low_margin';

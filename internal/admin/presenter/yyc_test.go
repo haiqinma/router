@@ -141,6 +141,24 @@ func TestNewLogAddsAmountFields(t *testing.T) {
 	}
 }
 
+func TestNewPublicLogOmitsRoutingTopology(t *testing.T) {
+	row := &model.Log{
+		Id:               "l1",
+		RouteDecision:    `{"candidate_channel_ids":["channel-1"]}`,
+		FallbackAttempts: `[{"channel_id":"channel-1"}]`,
+	}
+	view := NewPublicLog(row)
+	if view == nil {
+		t.Fatal("NewPublicLog returned nil")
+	}
+	if view.RouteDecision != "" || view.FallbackAttempts != "" {
+		t.Fatalf("public log exposed routing topology: %+v", view.Log)
+	}
+	if row.RouteDecision == "" || row.FallbackAttempts == "" {
+		t.Fatalf("NewPublicLog mutated source row: %+v", row)
+	}
+}
+
 func TestNewChannelAddsAmountField(t *testing.T) {
 	row := &model.Channel{
 		Id:        "c1",

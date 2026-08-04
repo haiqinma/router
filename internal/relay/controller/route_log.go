@@ -31,6 +31,7 @@ func applyRouteObservabilityToLog(entry *adminmodel.Log, meta *relaymeta.Meta, a
 	entry.ActualModelName = finalModel
 	entry.UpstreamEndpoint = upstreamEndpoint
 	entry.UpstreamProtocol = relaychannel.ProtocolByType(meta.ChannelProtocol)
+	entry.RouteDecision = strings.TrimSpace(meta.RouteDecision)
 	entry.FallbackCount = meta.FallbackCount
 	entry.FallbackAttempts = strings.TrimSpace(meta.FallbackAttempts)
 	entry.RelayErrorType = strings.TrimSpace(meta.RelayErrorType)

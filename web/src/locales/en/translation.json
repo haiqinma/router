@@ -2024,9 +2024,35 @@
           "estimate_precision": "Estimate Precision",
           "settlement_mode": "Settlement Mode",
           "trace_id": "Trace ID",
+          "route_decision": "Initial Route Selection",
           "fallback_count": "Fallback Count",
           "relay_error": "Final Error",
           "fallback_attempts": "Fallback Attempts"
+        },
+        "decision": {
+          "source": {
+            "automatic": "Automatic selection",
+            "specific_channel": "Explicit channel",
+            "responses_pin": "Pinned response channel",
+            "unknown": "Unknown source"
+          },
+          "mode": {
+            "priority_random": "Random within priority",
+            "explicit": "Explicit selection",
+            "pinned": "Pinned selection",
+            "unknown": "Unknown mode"
+          },
+          "fields": {
+            "candidates": "Candidate channels",
+            "filtered_candidates": "Filtered channels",
+            "initial_channel": "Initial channel",
+            "final_channel": "Final channel",
+            "priority": "Selected priority"
+          },
+          "reasons": {
+            "endpoint_unsupported": "Request endpoint unsupported",
+            "unknown": "Unknown reason"
+          }
         },
         "precision": {
           "high": "High",
@@ -2100,6 +2126,7 @@
         "billing_procurement_cost": "Procurement Cost CNY",
         "billing_procurement_cost_source": "Procurement Cost Source",
         "billing_procurement_cost_confidence": "Procurement Cost Confidence",
+        "billing_procurement_cost_status": "Cost Attribution Status",
         "billing_sell_base_amount": "Sell Base CNY",
         "billing_cost_floor_base_amount": "Cost Floor CNY",
         "billing_selected_sell_base_amount": "Selected Sell CNY",
@@ -2118,6 +2145,14 @@
         "elapsed_time": "Elapsed Time",
         "is_stream": "Stream Output",
         "system_prompt_reset": "System Prompt Reset"
+      },
+      "procurement_cost_status": {
+        "actual": "Actual cost",
+        "estimated": "Estimated cost",
+        "pending": "Pending attribution",
+        "retry": "Retry required",
+        "unconfigured": "Cost unconfigured",
+        "none": "Explicit zero cost"
       },
       "billing_sources": {
         "package": "Package",
@@ -3467,7 +3502,7 @@
       "structure": { "title": "Finance board", "summary": "Start with billed revenue, procurement cost, gross profit, and margin. Drill into Profit Analysis and Procurement Cost only when something is off.", "pricing": "View profit analysis", "procurement": "View procurement cost" },
       "load_failed": "Failed to load finance data",
       "metrics": { "revenue": "Billed Revenue CNY", "cost": "Procurement Cost CNY", "profit": "Gross Profit CNY", "margin": "Gross Margin", "coverage": "Cost Coverage", "anomalies": "Issues" },
-      "operating_risks": { "title": "Finance exceptions in scope", "view_details": "View profit analysis", "empty": "No finance exception in the current scope", "unconfigured": "{{model}} has {{count}} requests without cost", "loss": "{{model}} has formal profit of {{amount}}", "low_margin": "{{model}} has only {{margin}} formal margin", "floor": "{{model}} triggered the cost floor {{count}} times", "estimated": "{{model}} has {{count}} requests using estimated cost only", "pending": "{{model}} has {{count}} requests pending cost attribution" },
+      "operating_risks": { "title": "Finance exceptions in scope", "view_details": "View profit analysis", "empty": "No finance exception in the current scope", "unconfigured": "{{model}} has {{count}} requests without cost", "loss": "{{model}} has formal profit of {{amount}}", "low_margin": "{{model}} has only {{margin}} formal margin", "floor": "{{model}} triggered the cost floor {{count}} times", "estimated": "{{model}} has {{count}} requests using estimated cost only", "pending": "{{model}} has {{count}} requests pending cost attribution", "retry": "{{model}} has {{count}} failed cost attributions requiring retry" },
       "configuration_risks": { "title": "Finance configuration risks", "view_details": "View procurement cost", "empty": "No finance configuration risk" },
       "channels": { "title": "Channel gross profit", "view_details": "View procurement cost", "empty": "No channel data" },
       "trend": { "title": "7-day billed revenue and cost trend", "financials": "Billed revenue {{revenue}} / Cost {{cost}} / Profit {{profit}}" },
@@ -3518,7 +3553,9 @@
         "gross_profit_hint": "Unconfigured cost requests are excluded",
         "gross_margin": "Gross margin",
         "gross_margin_hint": "Gross profit / configured-cost sell amount",
-        "unconfigured": "Unconfigured cost requests"
+        "unconfigured": "Unconfigured cost requests",
+        "attribution_processing": "Attribution processing",
+        "attribution_processing_hint": "Pending {{pending}} / Retry {{retry}}"
       },
       "columns": {
         "channel": "Channel",
@@ -3528,12 +3565,17 @@
         "router_consumed_yyc": "YYC consumed",
         "configured_count": "Configured cost",
         "unconfigured_count": "Unconfigured cost",
+        "attribution_processing": "Attribution status",
         "related_channels": "Related channels",
         "more_channels": "+{{count}} more",
         "sell_amount": "Sell CNY",
         "procurement_cost": "Cost CNY",
         "gross_profit": "Profit CNY",
         "gross_margin": "Margin"
+      },
+      "status": {
+        "pending": "Pending {{count}}",
+        "retry": "Failed {{count}}"
       },
       "actions": {
         "configure_cost": "Open procurement config"
@@ -3586,6 +3628,11 @@
       "critical": "Critical",
       "unknown": "Unknown"
     },
+    "source": {
+      "traffic": "Live traffic",
+      "probe": "Channel probe",
+      "none": "No signal"
+    },
     "history": {
       "success": "Success",
       "warning": "Skipped",
@@ -3611,7 +3658,11 @@
       "pass_rate": "Pass rate",
       "latency": "Latency",
       "channels": "Observed channels",
-      "last_tested": "Latest signal: {{time}}",
+      "last_signal": {
+        "traffic": "Latest call: {{time}}",
+        "probe": "Latest probe: {{time}}",
+        "none": "Latest signal: {{time}}"
+      },
       "no_endpoints": "No available endpoints"
     }
   },

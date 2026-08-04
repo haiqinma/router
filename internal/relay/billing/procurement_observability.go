@@ -51,6 +51,14 @@ func ApplyProcurementCostObservation(logRow *model.Log) {
 	if strings.TrimSpace(logRow.BillingProcurementCostSource) == "" {
 		logRow.BillingProcurementCostSource = model.ProcurementCostSourceNone
 	}
+	if strings.TrimSpace(logRow.BillingProcurementCostStatus) == "" {
+		switch logRow.BillingProcurementCostSource {
+		case model.ProcurementCostSourceActual, model.ProcurementCostSourceEstimated, model.ProcurementCostSourceZeroCost:
+			logRow.BillingProcurementCostStatus = model.ProcurementCostAttributionStatusFromSource(logRow.BillingProcurementCostSource)
+		default:
+			logRow.BillingProcurementCostStatus = model.ProcurementCostAttributionStatusPending
+		}
+	}
 	if strings.TrimSpace(logRow.BillingPricingRuleVersion) == "" {
 		logRow.BillingPricingRuleVersion = PricingRuleVersionOfficialAnchorV1
 	}
@@ -77,6 +85,7 @@ func RecordProcurementConsumptionObservation(ctx context.Context, logRow *model.
 	}
 	candidates := procurementConsumptionCandidates(logRow)
 	if len(candidates) == 0 {
+		markProcurementCostAttributionStatus(ctx, logRow, model.ProcurementCostAttributionStatusUnconfigured)
 		return
 	}
 	for _, candidate := range candidates {
@@ -90,6 +99,7 @@ func RecordProcurementConsumptionObservation(ctx context.Context, logRow *model.
 			SettlementTruthMode: strings.TrimSpace(logRow.BillingSettlementTruthMode),
 		})
 		if err != nil {
+			markProcurementCostAttributionStatus(ctx, logRow, model.ProcurementCostAttributionStatusRetry)
 			logger.Errorf(ctx, "procurement consumption observation failed log_id=%s channel_id=%s model=%s capacity_unit=%s quantity=%f err=%q", strings.TrimSpace(logRow.Id), strings.TrimSpace(logRow.ChannelId), strings.TrimSpace(logRow.ModelName), strings.TrimSpace(candidate.CapacityUnit), candidate.Quantity, err.Error())
 			return
 		}
@@ -99,7 +109,41 @@ func RecordProcurementConsumptionObservation(ctx context.Context, logRow *model.
 		if err := model.UpdateLogProcurementCostObservation(logRow.Id, result.TotalCostAmount, result.CostSource, logRow.BillingSellBaseAmount); err != nil {
 			logger.Errorf(ctx, "procurement cost log update failed log_id=%s channel_id=%s model=%s err=%q", strings.TrimSpace(logRow.Id), strings.TrimSpace(logRow.ChannelId), strings.TrimSpace(logRow.ModelName), err.Error())
 		}
+		attributionStatus := procurementCostAttributionStatus(result)
+		if attributionStatus == model.ProcurementCostAttributionStatusUnconfigured {
+			markProcurementCostAttributionStatus(ctx, logRow, attributionStatus)
+		} else {
+			logRow.BillingProcurementCostStatus = attributionStatus
+		}
 		return
+	}
+	markProcurementCostAttributionStatus(ctx, logRow, model.ProcurementCostAttributionStatusUnconfigured)
+}
+
+// RetryProcurementCostAttribution retries only an attribution whose previous
+// consumption transaction failed. The transaction is rolled back on failure,
+// so re-running this operation cannot duplicate a prior consumption.
+func RetryProcurementCostAttribution(ctx context.Context, logRow *model.Log) {
+	if logRow == nil || strings.TrimSpace(logRow.BillingProcurementCostStatus) != model.ProcurementCostAttributionStatusRetry {
+		return
+	}
+	RecordProcurementConsumptionObservation(ctx, logRow)
+}
+
+func procurementCostAttributionStatus(result model.ProcurementConsumeResult) string {
+	if result.MissingQuantity > 0 {
+		return model.ProcurementCostAttributionStatusUnconfigured
+	}
+	return model.ProcurementCostAttributionStatusFromSource(result.CostSource)
+}
+
+func markProcurementCostAttributionStatus(ctx context.Context, logRow *model.Log, status string) {
+	if logRow == nil {
+		return
+	}
+	logRow.BillingProcurementCostStatus = status
+	if err := model.UpdateLogProcurementCostAttributionStatus(logRow.Id, status); err != nil {
+		logger.Errorf(ctx, "procurement cost status update failed log_id=%s status=%s err=%q", strings.TrimSpace(logRow.Id), status, err.Error())
 	}
 }
 

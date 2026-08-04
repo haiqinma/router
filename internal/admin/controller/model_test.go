@@ -753,6 +753,9 @@ func TestBuildUserModelStatusPayloadAggregatesGroupModels(t *testing.T) {
 		byModel[item.Model] = item
 	}
 	gpt := byModel["gpt-5.4"]
+	if gpt.HealthSource != "probe" {
+		t.Fatalf("gpt health source = %q, want probe", gpt.HealthSource)
+	}
 	if gpt.Provider != "openai" {
 		t.Fatalf("gpt provider = %q, want openai", gpt.Provider)
 	}
@@ -775,6 +778,9 @@ func TestBuildUserModelStatusPayloadAggregatesGroupModels(t *testing.T) {
 		t.Fatalf("gpt test point = %+v, want warning with 1 success and 1 failure", gptObserved[0])
 	}
 	claude := byModel["claude-sonnet-4-6"]
+	if claude.HealthSource != "probe" {
+		t.Fatalf("claude health source = %q, want probe", claude.HealthSource)
+	}
 	if len(claude.HealthPoints) != healthtrend.BucketCount {
 		t.Fatalf("claude health points = %d, want %d", len(claude.HealthPoints), healthtrend.BucketCount)
 	}

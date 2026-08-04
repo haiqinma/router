@@ -480,7 +480,7 @@ func GetUserLogs(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    presenter.NewLogs(logs),
+		"data":    presenter.NewPublicLogs(logs),
 		"meta": gin.H{
 			"total":     total,
 			"page":      page,
@@ -522,7 +522,7 @@ func GetCurrentUserLog(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    presenter.NewLog(logRow),
+		"data":    presenter.NewPublicLog(logRow),
 	})
 	return
 }
@@ -559,7 +559,7 @@ func SearchUserLogs(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    presenter.NewLogs(logs),
+		"data":    presenter.NewPublicLogs(logs),
 	})
 	return
 }

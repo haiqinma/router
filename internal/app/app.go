@@ -88,6 +88,7 @@ func Run() {
 		billingsvc.StartFXAutoSyncWorker()
 		billingsvc.StartChannelBillingAutoRefreshWorker()
 		topupsvc.StartTopupReconcileWorker()
+		billingsvc.StartProcurementRetryWorker()
 	}
 
 	// Initialize i18n

@@ -70,6 +70,8 @@ const normalizeReport = (payload) => {
     router_consumed_yyc: Number(payload?.router_consumed_yyc || 0),
     configured_cost_request_count: Number(payload?.configured_cost_request_count || 0),
     unconfigured_cost_request_count: Number(payload?.unconfigured_cost_request_count || 0),
+    pending_cost_request_count: Number(payload?.pending_cost_request_count || 0),
+    retry_cost_request_count: Number(payload?.retry_cost_request_count || 0),
     sell_base_amount: Number(payload?.sell_base_amount || 0),
     configured_sell_base_amount: Number(payload?.configured_sell_base_amount || 0),
     unconfigured_sell_base_amount: Number(payload?.unconfigured_sell_base_amount || 0),
@@ -90,6 +92,8 @@ const normalizeReport = (payload) => {
       router_consumed_yyc: Number(item?.router_consumed_yyc || 0),
       configured_cost_request_count: Number(item?.configured_cost_request_count || 0),
       unconfigured_cost_request_count: Number(item?.unconfigured_cost_request_count || 0),
+      pending_cost_request_count: Number(item?.pending_cost_request_count || 0),
+      retry_cost_request_count: Number(item?.retry_cost_request_count || 0),
       sell_base_amount: Number(item?.sell_base_amount || 0),
       configured_sell_base_amount: Number(item?.configured_sell_base_amount || 0),
       unconfigured_sell_base_amount: Number(item?.unconfigured_sell_base_amount || 0),
@@ -414,6 +418,18 @@ function BillingProcurementReport() {
       hint: formatCNY(report.unconfigured_sell_base_amount),
       danger: report.unconfigured_cost_request_count > 0,
     },
+    {
+      key: 'attribution_processing',
+      label: t('billing.procurement_report.summary.attribution_processing'),
+      value: formatCount(
+        report.pending_cost_request_count + report.retry_cost_request_count,
+      ),
+      hint: t('billing.procurement_report.summary.attribution_processing_hint', {
+        pending: formatCount(report.pending_cost_request_count),
+        retry: formatCount(report.retry_cost_request_count),
+      }),
+      danger: report.retry_cost_request_count > 0,
+    },
   ];
 
   const renderUnconfiguredChannels = (row) => {
@@ -522,6 +538,22 @@ function BillingProcurementReport() {
         ) : (
           '-'
         ),
+    },
+    {
+      title: t('billing.procurement_report.columns.attribution_processing'),
+      key: 'attribution_processing',
+      width: 150,
+      render: (_, row) => {
+        const pending = Number(row.pending_cost_request_count || 0);
+        const retry = Number(row.retry_cost_request_count || 0);
+        if (pending <= 0 && retry <= 0) return '-';
+        return (
+          <div className='billing-procurement-report-channel-links'>
+            {pending > 0 ? <AppTag>{t('billing.procurement_report.status.pending', { count: formatCount(pending) })}</AppTag> : null}
+            {retry > 0 ? <AppTag color='red'>{t('billing.procurement_report.status.retry', { count: formatCount(retry) })}</AppTag> : null}
+          </div>
+        );
+      },
     },
     {
       title: t('billing.procurement_report.columns.sell_amount'),
@@ -709,7 +741,7 @@ function BillingProcurementReport() {
             dataSource={report.items}
             columns={columns}
             pagination={false}
-            scroll={{ x: groupBy === 'model' ? 1320 : 1100 }}
+            scroll={{ x: groupBy === 'model' ? 1470 : 1250 }}
             locale={{
               emptyText: loading
                 ? t('common.loading')

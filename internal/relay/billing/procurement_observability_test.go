@@ -100,6 +100,9 @@ func TestApplyProcurementCostObservationDoesNotInventGrossProfitWithoutCost(t *t
 	if logRow.BillingProcurementCostSource != adminmodel.ProcurementCostSourceNone {
 		t.Fatalf("BillingProcurementCostSource=%q, want %q", logRow.BillingProcurementCostSource, adminmodel.ProcurementCostSourceNone)
 	}
+	if logRow.BillingProcurementCostStatus != adminmodel.ProcurementCostAttributionStatusPending {
+		t.Fatalf("BillingProcurementCostStatus=%q, want pending", logRow.BillingProcurementCostStatus)
+	}
 	if logRow.BillingGrossProfitBaseAmount != 0 {
 		t.Fatalf("BillingGrossProfitBaseAmount=%v, want 0 without procurement cost", logRow.BillingGrossProfitBaseAmount)
 	}
@@ -187,5 +190,16 @@ func TestProcurementConsumptionCandidatesFallbackToUsageUnit(t *testing.T) {
 	}
 	if got[0].CapacityUnit != "image" || got[0].Quantity != 2 {
 		t.Fatalf("candidate=%+v, want image/2", got[0])
+	}
+}
+
+func TestProcurementCostAttributionStatusRejectsPartialCoverage(t *testing.T) {
+	got := procurementCostAttributionStatus(adminmodel.ProcurementConsumeResult{
+		CostSource:      adminmodel.ProcurementCostSourceActual,
+		CoveredQuantity: 20,
+		MissingQuantity: 30,
+	})
+	if got != adminmodel.ProcurementCostAttributionStatusUnconfigured {
+		t.Fatalf("status=%q, want unconfigured", got)
 	}
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/yeying-community/router/internal/admin/model"
 	relaychannel "github.com/yeying-community/router/internal/relay/channel"
 	"github.com/yeying-community/router/internal/relay/responsestate"
+	"github.com/yeying-community/router/internal/relay/routeobs"
 )
 
 type ModelRequest struct {
@@ -60,6 +61,39 @@ func channelIDInList(channels []*model.Channel, channelID string) bool {
 	return false
 }
 
+func channelIDs(channels []*model.Channel) []string {
+	result := make([]string, 0, len(channels))
+	for _, channel := range channels {
+		if channel == nil || strings.TrimSpace(channel.Id) == "" {
+			continue
+		}
+		result = append(result, channel.Id)
+	}
+	return result
+}
+
+func recordRouteDecision(c *gin.Context, source string, groupID string, requestModel string, requestPath string, candidates []*model.Channel, filteredCandidates []model.ChannelCandidateFilter, selected *model.Channel, selectionMode string) {
+	if selected == nil {
+		return
+	}
+	filtered := make([]routeobs.FilteredCandidate, 0, len(filteredCandidates))
+	for _, candidate := range filteredCandidates {
+		filtered = append(filtered, routeobs.FilteredCandidate{ChannelID: candidate.ChannelID, Reason: candidate.Reason})
+	}
+	routeobs.SetRouteDecision(c, routeobs.RouteDecision{
+		Source:              source,
+		GroupID:             groupID,
+		Model:               requestModel,
+		Endpoint:            requestPath,
+		CandidateChannelIDs: channelIDs(candidates),
+		FilteredCandidates:  filtered,
+		SelectedPriority:    selected.GetPriority(),
+		SelectionMode:       selectionMode,
+		InitialChannelID:    selected.Id,
+		InitialChannelName:  selected.DisplayName(),
+	})
+}
+
 func selectPinnedResponsesChannel(c *gin.Context, userGroup string, requestModel string, requestPath string) (*model.Channel, bool) {
 	previousResponseID := strings.TrimSpace(c.GetString(ctxkey.ResponsesPreviousResponseID))
 	if previousResponseID == "" {
@@ -91,6 +125,7 @@ func selectPinnedResponsesChannel(c *gin.Context, userGroup string, requestModel
 		}
 	}
 	logger.RelayInfof(c.Request.Context(), "DISTRIBUTE decision=pin reason=responses_route_match user_id=%s group=%s response_id=%s channel_id=%s model=%s endpoint=%s", c.GetString(ctxkey.Id), userGroup, previousResponseID, channelID, requestModel, requestPath)
+	recordRouteDecision(c, "responses_pin", userGroup, requestModel, requestPath, []*model.Channel{channel}, nil, channel, "pinned")
 	return channel, true
 }
 
@@ -143,6 +178,7 @@ func selectEntitlementChannelForRequest(ctx context.Context, c *gin.Context, use
 			logger.RelayWarnf(ctx, "DISTRIBUTE decision=skip reason=no_available_channel user_id=%s group=%s model=%s endpoint=%s listed_candidates=%d endpoint_filtered_candidates=%d", userID, groupID, requestModel, requestPath, stats.ListedCount, stats.EndpointFilteredCount)
 			continue
 		}
+		recordRouteDecision(c, "automatic", groupID, requestModel, requestPath, candidates, stats.FilteredCandidates, channel, "priority_random")
 		return channel, groupID, candidate.source, nil
 	}
 	message := fmt.Sprintf("当前权益下对于模型 %s 无可用渠道", requestModel)
@@ -190,6 +226,7 @@ func Distribute() func(c *gin.Context) {
 				abortWithMessage(c, http.StatusForbidden, "该渠道已被禁用")
 				return
 			}
+			recordRouteDecision(c, "specific_channel", userGroup, requestModel, c.Request.URL.Path, []*model.Channel{channel}, nil, channel, "explicit")
 		} else {
 			if channel, userGroup, entitlementSource, err = selectEntitlementChannelForRequest(ctx, c, userId, userGroup, entitlementSource, requestModel); err != nil {
 				abortWithMessage(c, http.StatusServiceUnavailable, err.Error())

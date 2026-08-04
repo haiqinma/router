@@ -264,3 +264,22 @@ func NewLogs(rows []*model.Log) []*Log {
 	}
 	return items
 }
+
+// NewPublicLog omits operational routing topology from a user's own request log.
+func NewPublicLog(row *model.Log) *Log {
+	if row == nil {
+		return nil
+	}
+	copy := *row
+	copy.RouteDecision = ""
+	copy.FallbackAttempts = ""
+	return NewLog(&copy)
+}
+
+func NewPublicLogs(rows []*model.Log) []*Log {
+	items := make([]*Log, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, NewPublicLog(row))
+	}
+	return items
+}
