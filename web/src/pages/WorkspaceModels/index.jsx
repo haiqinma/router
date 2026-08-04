@@ -114,6 +114,9 @@ const normalizePayload = (payload) => {
       status: String(item?.status || 'unknown').trim().toLowerCase(),
       health_level: String(item?.health_level || 'unknown').trim().toLowerCase(),
       health_score: toNumber(item?.health_score),
+      health_source: ['traffic', 'probe', 'none'].includes(item?.health_source)
+        ? item.health_source
+        : 'none',
       channel_count: toNumber(item?.channel_count),
       tested_channel_count: toNumber(item?.tested_channel_count),
       tested_endpoint_count: toNumber(item?.tested_endpoint_count),
@@ -314,6 +317,12 @@ const WorkspaceModels = () => {
     );
   };
 
+  const renderHealthSource = (source) => (
+    <AppTag className='router-tag workspace-model-source-tag'>
+      {t(`workspace_models.source.${source || 'none'}`)}
+    </AppTag>
+  );
+
   const summary = payload.summary || EMPTY_PAYLOAD.summary;
 
   return (
@@ -448,6 +457,7 @@ const WorkspaceModels = () => {
                     </div>
                     <div className='workspace-model-card-status'>
                       {renderHealthTag(item.health_level)}
+                      {renderHealthSource(item.health_source)}
                     </div>
                   </div>
                   <div className='workspace-model-health-row'>
@@ -534,7 +544,7 @@ const WorkspaceModels = () => {
                         : t('workspace_models.card.no_endpoints')}
                     </div>
                     <div className='workspace-model-last-tested'>
-                      {t('workspace_models.card.last_tested', {
+                      {t(`workspace_models.card.last_signal.${item.health_source}`, {
                         time: formatUpdatedAt(item.last_tested_at),
                       })}
                     </div>

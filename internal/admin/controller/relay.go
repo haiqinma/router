@@ -229,6 +229,7 @@ func buildRelayFailureLog(c *gin.Context, bizErr *model.ErrorWithStatusCode, ret
 		ActualModelName:   requestModel,
 		UpstreamEndpoint:  c.Request.URL.Path,
 		UpstreamProtocol:  relayProtocolName(c),
+		RouteDecision:     routeobs.FinalizedRouteDecisionJSON(c),
 		FallbackCount:     retryCount,
 		FallbackAttempts:  strings.TrimSpace(c.GetString(ctxkey.RelayFallbackAttempts)),
 		RelayErrorType:    strings.TrimSpace(bizErr.Error.Type),
@@ -428,7 +429,7 @@ func isTransientUpstreamRelayError(err *model.ErrorWithStatusCode) bool {
 	if err == nil {
 		return false
 	}
-	if err.StatusCode == http.StatusTooManyRequests {
+	if err.StatusCode == http.StatusUnauthorized || err.StatusCode == http.StatusTooManyRequests {
 		return true
 	}
 	if err.StatusCode >= http.StatusInternalServerError {

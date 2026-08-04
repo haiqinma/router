@@ -151,6 +151,45 @@ func TestBackfillLogRouteModelNamesWithDB(t *testing.T) {
 	}
 }
 
+func TestBackfillLogProcurementCostStatusWithDB(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=private"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	if err := db.AutoMigrate(&Log{}); err != nil {
+		t.Fatalf("AutoMigrate: %v", err)
+	}
+	rows := []Log{
+		{Id: "actual", BillingProcurementCostSource: ProcurementCostSourceActual},
+		{Id: "estimated", BillingProcurementCostSource: ProcurementCostSourceEstimated},
+		{Id: "zero", BillingProcurementCostSource: ProcurementCostSourceZeroCost},
+		{Id: "missing", BillingProcurementCostSource: ProcurementCostSourceNone},
+		{Id: "keep", BillingProcurementCostSource: ProcurementCostSourceActual, BillingProcurementCostStatus: ProcurementCostAttributionStatusRetry},
+	}
+	if err := db.Create(&rows).Error; err != nil {
+		t.Fatalf("create logs: %v", err)
+	}
+	if err := backfillLogProcurementCostStatusWithDB(db); err != nil {
+		t.Fatalf("backfill procurement cost status: %v", err)
+	}
+	wants := map[string]string{
+		"actual":    ProcurementCostAttributionStatusActual,
+		"estimated": ProcurementCostAttributionStatusEstimated,
+		"zero":      ProcurementCostAttributionStatusNone,
+		"missing":   ProcurementCostAttributionStatusUnconfigured,
+		"keep":      ProcurementCostAttributionStatusRetry,
+	}
+	for id, want := range wants {
+		var row Log
+		if err := db.First(&row, "id = ?", id).Error; err != nil {
+			t.Fatalf("load %s: %v", id, err)
+		}
+		if row.BillingProcurementCostStatus != want {
+			t.Fatalf("%s status=%q, want %q", id, row.BillingProcurementCostStatus, want)
+		}
+	}
+}
+
 func TestEnsureUserWalletAddressCaseInsensitiveUniqueCleansDuplicates(t *testing.T) {
 	db, err := gorm.Open(sqlite.Open(":memory:"), &gorm.Config{})
 	if err != nil {

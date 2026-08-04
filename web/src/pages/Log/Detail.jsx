@@ -104,6 +104,23 @@ function renderEstimatePrecision(value, t) {
   return renderText(value);
 }
 
+function renderProcurementCostStatus(value, t) {
+  const status = (value || 'unconfigured').toString().trim().toLowerCase();
+  const colors = {
+    actual: 'green',
+    estimated: 'orange',
+    pending: 'grey',
+    retry: 'red',
+    unconfigured: 'red',
+    none: 'blue',
+  };
+  return (
+    <AppTag color={colors[status] || 'grey'} className='router-tag'>
+      {t(`log.detail.procurement_cost_status.${status}`)}
+    </AppTag>
+  );
+}
+
 function renderRouteExplanationSummary(log, t, isAdminPage) {
   if (!log) return '-';
   const channel = isAdminPage ? renderText(log.channel_name || log.channel) : '-';
@@ -142,6 +159,30 @@ function parseFallbackAttempts(value) {
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
+  }
+}
+
+function parseRouteDecision(value) {
+  const raw = (value || '').toString().trim();
+  if (!raw) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || !parsed.initial_channel_id) {
+      return null;
+    }
+    return {
+      ...parsed,
+      candidate_channel_ids: Array.isArray(parsed.candidate_channel_ids)
+        ? parsed.candidate_channel_ids
+        : [],
+      filtered_candidates: Array.isArray(parsed.filtered_candidates)
+        ? parsed.filtered_candidates
+        : [],
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -563,6 +604,11 @@ function renderBillingSnapshot(log, t, isAdminPage) {
     groups.push(
       renderBillingGroup(t('log.detail.billing_explanation.groups.procurement'), [
         {
+          key: 'procurement_cost_status',
+          label: t('log.detail.fields.billing_procurement_cost_status'),
+          value: renderProcurementCostStatus(log?.billing_procurement_cost_status, t),
+        },
+        {
           key: 'procurement_cost',
           label: t('log.detail.fields.billing_procurement_cost'),
           value: hasFiniteNumber(log?.billing_procurement_cost_base_amount)
@@ -731,6 +777,71 @@ function renderFallbackAttemptCards(attempts, t) {
   );
 }
 
+function renderRouteDecisionCard(decision, currentPagePath, t) {
+  if (!decision) {
+    return <div className='router-route-attempt-empty'>-</div>;
+  }
+  const renderChannel = (channelID, channelName = '') => {
+    const id = renderText(channelID);
+    if (id === '-') {
+      return '-';
+    }
+    return (
+      <AppTag
+        className='router-tag'
+        as={Link}
+        to={`/admin/channel/detail/${id}`}
+        state={{ from: currentPagePath }}
+      >
+        {renderText(channelName) === '-' ? id : channelName}
+      </AppTag>
+    );
+  };
+  return (
+    <div className='router-route-decision-card'>
+      <div className='router-route-decision-head'>
+        <AppTag color='blue' className='router-tag'>
+          {t(`log.detail.route.decision.source.${decision.source || 'unknown'}`)}
+        </AppTag>
+        <span>{t(`log.detail.route.decision.mode.${decision.selection_mode || 'unknown'}`)}</span>
+      </div>
+      <div className='router-route-decision-grid'>
+        <span>{t('log.detail.route.decision.fields.candidates')}</span>
+        <div className='router-route-decision-candidates'>
+          {decision.candidate_channel_ids.length > 0
+            ? decision.candidate_channel_ids.map((channelID) => (
+                <React.Fragment key={channelID}>
+                  {renderChannel(channelID)}
+                </React.Fragment>
+              ))
+            : '-'}
+        </div>
+        {decision.filtered_candidates.length > 0 && (
+          <>
+            <span>{t('log.detail.route.decision.fields.filtered_candidates')}</span>
+            <div className='router-route-decision-candidates'>
+              {decision.filtered_candidates.map((candidate, index) => (
+                <span key={`${candidate?.channel_id || 'unknown'}-${candidate?.reason || index}`}>
+                  {renderChannel(candidate?.channel_id)}{' '}
+                  <AppTag color='grey' className='router-tag'>
+                    {t(`log.detail.route.decision.reasons.${candidate?.reason || 'unknown'}`)}
+                  </AppTag>
+                </span>
+              ))}
+            </div>
+          </>
+        )}
+        <span>{t('log.detail.route.decision.fields.initial_channel')}</span>
+        <strong>{renderChannel(decision.initial_channel_id, decision.initial_channel_name)}</strong>
+        <span>{t('log.detail.route.decision.fields.final_channel')}</span>
+        <strong>{renderChannel(decision.final_channel_id, decision.final_channel_name)}</strong>
+        <span>{t('log.detail.route.decision.fields.priority')}</span>
+        <strong>{Number(decision.selected_priority || 0)}</strong>
+      </div>
+    </div>
+  );
+}
+
 const LogDetail = () => {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -750,6 +861,10 @@ const LogDetail = () => {
   const fallbackAttempts = useMemo(
     () => parseFallbackAttempts(log?.fallback_attempts),
     [log?.fallback_attempts],
+  );
+  const routeDecision = useMemo(
+    () => parseRouteDecision(log?.route_decision),
+    [log?.route_decision],
   );
 
   const publicModelName = getLogPublicModelName(log);
@@ -786,6 +901,13 @@ const LogDetail = () => {
       ];
       if (isAdminPage) {
         items.push(
+          {
+            key: 'route_decision',
+            label: t('log.detail.route.fields.route_decision'),
+            value: renderRouteDecisionCard(routeDecision, currentPagePath, t),
+            span: true,
+            visible: Boolean(routeDecision),
+          },
           {
             key: 'actual_model',
             label: t('log.detail.route.fields.channel_model'),
@@ -859,9 +981,9 @@ const LogDetail = () => {
           span: true,
         });
       }
-      return items;
+      return items.filter((item) => item.visible !== false);
     },
-    [actualModelName, currentPagePath, fallbackAttempts, isAdminPage, log, publicModelName, t],
+    [actualModelName, currentPagePath, fallbackAttempts, isAdminPage, log, publicModelName, routeDecision, t],
   );
 
   const loadDetail = useCallback(async () => {

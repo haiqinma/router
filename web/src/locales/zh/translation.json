@@ -2024,9 +2024,35 @@
           "estimate_precision": "估算精度",
           "settlement_mode": "结算模式",
           "trace_id": "Trace ID",
+          "route_decision": "初始选路",
           "fallback_count": "Fallback 次数",
           "relay_error": "最终错误",
           "fallback_attempts": "Fallback 尝试"
+        },
+        "decision": {
+          "source": {
+            "automatic": "自动选路",
+            "specific_channel": "指定渠道",
+            "responses_pin": "会话固定渠道",
+            "unknown": "未知来源"
+          },
+          "mode": {
+            "priority_random": "同优先级随机选择",
+            "explicit": "显式指定",
+            "pinned": "固定命中",
+            "unknown": "未知方式"
+          },
+          "fields": {
+            "candidates": "候选渠道",
+            "filtered_candidates": "已过滤渠道",
+            "initial_channel": "初始渠道",
+            "final_channel": "最终渠道",
+            "priority": "命中优先级"
+          },
+          "reasons": {
+            "endpoint_unsupported": "不支持请求端点",
+            "unknown": "未知原因"
+          }
         },
         "precision": {
           "high": "高",
@@ -2100,6 +2126,7 @@
         "billing_procurement_cost": "本次采购成本 CNY",
         "billing_procurement_cost_source": "采购成本来源",
         "billing_procurement_cost_confidence": "采购成本可信度",
+        "billing_procurement_cost_status": "成本归因状态",
         "billing_sell_base_amount": "售价基准 CNY",
         "billing_cost_floor_base_amount": "成本保护底价 CNY",
         "billing_selected_sell_base_amount": "选用售价 CNY",
@@ -2118,6 +2145,14 @@
         "elapsed_time": "耗时",
         "is_stream": "流式输出",
         "system_prompt_reset": "重置系统提示词"
+      },
+      "procurement_cost_status": {
+        "actual": "实际成本",
+        "estimated": "估算成本",
+        "pending": "待归因",
+        "retry": "待重试",
+        "unconfigured": "成本未配置",
+        "none": "明确零成本"
       },
       "billing_sources": {
         "package": "套餐",
@@ -3462,7 +3497,7 @@
       "structure": { "title": "财务看板", "summary": "先看计费收入、采购成本、毛利和毛利率是否符合预期；异常时再下钻利润分析和采购成本。", "pricing": "查看利润分析", "procurement": "查看采购成本" },
       "load_failed": "财务数据加载失败",
       "metrics": { "revenue": "计费收入 CNY", "cost": "采购成本 CNY", "profit": "毛利 CNY", "margin": "毛利率", "coverage": "成本覆盖率", "anomalies": "异常项" },
-      "operating_risks": { "title": "当前范围财务异常", "view_details": "查看利润分析", "empty": "当前范围未发现财务异常", "unconfigured": "{{model}} 有 {{count}} 个请求未配置成本", "loss": "{{model}} 正式毛利为 {{amount}}", "low_margin": "{{model}} 正式毛利率仅 {{margin}}", "floor": "{{model}} 触发成本底线 {{count}} 次", "estimated": "{{model}} 有 {{count}} 个请求仅使用估算成本", "pending": "{{model}} 有 {{count}} 个请求成本待归因" },
+      "operating_risks": { "title": "当前范围财务异常", "view_details": "查看利润分析", "empty": "当前范围未发现财务异常", "unconfigured": "{{model}} 有 {{count}} 个请求未配置成本", "loss": "{{model}} 正式毛利为 {{amount}}", "low_margin": "{{model}} 正式毛利率仅 {{margin}}", "floor": "{{model}} 触发成本底线 {{count}} 次", "estimated": "{{model}} 有 {{count}} 个请求仅使用估算成本", "pending": "{{model}} 有 {{count}} 个请求成本待归因", "retry": "{{model}} 有 {{count}} 个请求成本归因失败，需要重试" },
       "configuration_risks": { "title": "财务配置风险", "view_details": "查看采购成本", "empty": "未发现财务配置风险" },
       "channels": { "title": "渠道毛利", "view_details": "查看采购成本", "empty": "暂无渠道数据" },
       "trend": { "title": "近 7 天计费收支趋势", "financials": "计费收入 {{revenue}} / 成本 {{cost}} / 毛利 {{profit}}" },
@@ -3513,7 +3548,9 @@
         "gross_profit_hint": "未配置成本请求不参与计算",
         "gross_margin": "毛利率",
         "gross_margin_hint": "毛利 / 已配置成本请求售价",
-        "unconfigured": "未配置成本请求"
+        "unconfigured": "未配置成本请求",
+        "attribution_processing": "归因处理中",
+        "attribution_processing_hint": "待归因 {{pending}} / 待重试 {{retry}}"
       },
       "columns": {
         "channel": "渠道",
@@ -3523,12 +3560,17 @@
         "router_consumed_yyc": "消耗 YYC",
         "configured_count": "已配置成本",
         "unconfigured_count": "未配置成本",
+        "attribution_processing": "归因状态",
         "related_channels": "关联渠道",
         "more_channels": "+{{count}} 个",
         "sell_amount": "售价 CNY",
         "procurement_cost": "采购成本 CNY",
         "gross_profit": "毛利 CNY",
         "gross_margin": "毛利率"
+      },
+      "status": {
+        "pending": "待归因 {{count}}",
+        "retry": "归因失败 {{count}}"
       },
       "actions": {
         "configure_cost": "打开采购配置"
@@ -3581,6 +3623,11 @@
       "critical": "异常",
       "unknown": "未知"
     },
+    "source": {
+      "traffic": "真实调用",
+      "probe": "渠道检测",
+      "none": "暂无信号"
+    },
     "history": {
       "success": "成功",
       "warning": "跳过",
@@ -3606,7 +3653,11 @@
       "pass_rate": "通过率",
       "latency": "延迟",
       "channels": "观测渠道",
-      "last_tested": "最近信号：{{time}}",
+      "last_signal": {
+        "traffic": "最近调用：{{time}}",
+        "probe": "最近检测：{{time}}",
+        "none": "最近信号：{{time}}"
+      },
       "no_endpoints": "暂无可用端点"
     }
   },

@@ -115,7 +115,7 @@ func loadProcurementReportChannelNames(channelIDs []string) map[string]string {
 }
 
 func procurementReportUnconfiguredCostCondition() string {
-	return "billing_procurement_cost_source NOT IN ? OR COALESCE(NULLIF(TRIM(billing_procurement_cost_source), ''), '') = ''"
+	return "billing_procurement_cost_status = ?"
 }
 
 func loadProcurementReportUnconfiguredModelChannels(summary model.ProcurementReportSummary) map[string][]procurementReportRelatedChannel {
@@ -130,12 +130,6 @@ func loadProcurementReportUnconfiguredModelChannels(summary model.ProcurementRep
 		LastRequestAt int64  `gorm:"column:last_request_at"`
 	}
 	rows := make([]modelChannelRow, 0)
-	configuredSources := []string{
-		model.ProcurementCostSourceActual,
-		model.ProcurementCostSourceEstimated,
-		model.ProcurementCostSourceZeroCost,
-		"pending",
-	}
 	query := model.LOG_DB.Table(model.EventLogsTableName).
 		Select(`
 			COALESCE(NULLIF(TRIM(model_name), ''), '-') AS model_key,
@@ -144,7 +138,7 @@ func loadProcurementReportUnconfiguredModelChannels(summary model.ProcurementRep
 			COALESCE(MAX(created_at), 0) AS last_request_at
 		`).
 		Where("type = ? AND created_at BETWEEN ? AND ?", model.LogTypeConsume, summary.StartAt, summary.EndAt).
-		Where(procurementReportUnconfiguredCostCondition(), configuredSources)
+		Where(procurementReportUnconfiguredCostCondition(), model.ProcurementCostAttributionStatusUnconfigured)
 	if summary.GroupID != "" {
 		query = query.Where("group_id = ?", summary.GroupID)
 	}

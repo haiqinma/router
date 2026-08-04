@@ -1,6 +1,11 @@
 package model
 
-import "context"
+import (
+	"context"
+	"fmt"
+
+	"gorm.io/gorm"
+)
 
 const EventLogsTableName = "event_logs"
 
@@ -55,6 +60,7 @@ type Log struct {
 	BillingProcurementCostBaseAmount float64 `json:"billing_procurement_cost_base_amount" gorm:"type:double precision;default:0"`
 	BillingProcurementCostSource     string  `json:"billing_procurement_cost_source" gorm:"type:varchar(32);default:''"`
 	BillingProcurementCostConfidence string  `json:"billing_procurement_cost_confidence" gorm:"type:varchar(64);default:''"`
+	BillingProcurementCostStatus     string  `json:"billing_procurement_cost_status" gorm:"type:varchar(32);index;default:''"`
 	BillingSellBaseAmount            float64 `json:"billing_sell_base_amount" gorm:"type:double precision;default:0"`
 	BillingCostFloorBaseAmount       float64 `json:"billing_cost_floor_base_amount" gorm:"type:double precision;default:0"`
 	BillingSelectedSellBaseAmount    float64 `json:"billing_selected_sell_base_amount" gorm:"type:double precision;default:0"`
@@ -64,6 +70,7 @@ type Log struct {
 	BillingGrossMargin               float64 `json:"billing_gross_margin" gorm:"type:double precision;default:0"`
 	BillingPricingRuleVersion        string  `json:"billing_pricing_rule_version" gorm:"type:varchar(64);default:''"`
 	BillingCostRuleVersion           string  `json:"billing_cost_rule_version" gorm:"type:varchar(64);default:''"`
+	BillingDecision                  string  `json:"billing_decision" gorm:"type:text"`
 	EstimatedPromptTokens            int     `json:"estimated_prompt_tokens" gorm:"default:0"`
 	EstimatedOutputTokens            int     `json:"estimated_output_tokens" gorm:"default:0"`
 	EstimatedChargeAmount            int64   `json:"estimated_charge_amount" gorm:"bigint;default:0"`
@@ -78,6 +85,7 @@ type Log struct {
 	ActualModelName                  string  `json:"actual_model_name" gorm:"type:varchar(191);index;default:''"`
 	UpstreamEndpoint                 string  `json:"upstream_endpoint" gorm:"type:varchar(191);index;default:''"`
 	UpstreamProtocol                 string  `json:"upstream_protocol" gorm:"type:varchar(64);index;default:''"`
+	RouteDecision                    string  `json:"route_decision" gorm:"type:text"`
 	FallbackCount                    int     `json:"fallback_count" gorm:"default:0"`
 	FallbackAttempts                 string  `json:"fallback_attempts" gorm:"type:text"`
 	RelayErrorType                   string  `json:"relay_error_type" gorm:"type:varchar(64);default:''"`
@@ -90,6 +98,28 @@ type Log struct {
 
 func (Log) TableName() string {
 	return EventLogsTableName
+}
+
+func ListProcurementCostRetryLogsWithDB(db *gorm.DB, limit int, maxCreatedAt int64) ([]Log, error) {
+	if db == nil {
+		return nil, fmt.Errorf("database handle is nil")
+	}
+	if limit <= 0 {
+		limit = 20
+	}
+	query := db.Where("type = ? AND billing_procurement_cost_status = ?", LogTypeConsume, ProcurementCostAttributionStatusRetry)
+	if maxCreatedAt > 0 {
+		query = query.Where("created_at <= ?", maxCreatedAt)
+	}
+	rows := make([]Log, 0, limit)
+	if err := query.Order("created_at ASC, id ASC").Limit(limit).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+func ListProcurementCostRetryLogs(limit int, maxCreatedAt int64) ([]Log, error) {
+	return ListProcurementCostRetryLogsWithDB(LOG_DB, limit, maxCreatedAt)
 }
 
 const (

@@ -10,6 +10,7 @@ import (
 	"github.com/yeying-community/router/internal/admin/model"
 	relaychannel "github.com/yeying-community/router/internal/relay/channel"
 	"github.com/yeying-community/router/internal/relay/relaymode"
+	"github.com/yeying-community/router/internal/relay/routeobs"
 )
 
 type Meta struct {
@@ -43,6 +44,7 @@ type Meta struct {
 	PromptTokens        int // only for DoResponse
 	StartTime           time.Time
 	FallbackCount       int
+	RouteDecision       string
 	FallbackAttempts    string
 	RelayErrorType      string
 	RelayErrorCode      string
@@ -71,6 +73,7 @@ func GetByContext(c *gin.Context) *Meta {
 		UpstreamRequestPath:   normalizedPath,
 		StartTime:             time.Now(),
 		FallbackCount:         c.GetInt(ctxkey.RelayRetryCount),
+		RouteDecision:         routeobs.FinalizedRouteDecisionJSON(c),
 		FallbackAttempts:      c.GetString(ctxkey.RelayFallbackAttempts),
 		RelayErrorType:        c.GetString(ctxkey.RelayErrorType),
 		RelayErrorCode:        c.GetString(ctxkey.RelayErrorCode),

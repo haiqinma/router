@@ -1941,6 +1941,27 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return ensureUserBalanceLotEntitlementSourceIndexWithDB(tx)
 			},
 		},
+		{
+			Version:     "202608031430_log_route_decision",
+			Description: "add structured initial and final route decision to request logs",
+			Up: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&Log{})
+			},
+		},
+		{
+			Version:     "202608031530_log_procurement_cost_status",
+			Description: "add explicit procurement cost attribution status to request logs",
+			Up: func(tx *gorm.DB) error {
+				return backfillLogProcurementCostStatusWithDB(tx)
+			},
+		},
+		{
+			Version:     "202608041000_log_billing_decision",
+			Description: "add structured billing decision to request logs",
+			Up: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&Log{})
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }
@@ -3205,6 +3226,26 @@ func backfillLogRouteModelNamesWithDB(db *gorm.DB) error {
 	`).Error
 }
 
+func backfillLogProcurementCostStatusWithDB(db *gorm.DB) error {
+	if db == nil {
+		return fmt.Errorf("database handle is nil")
+	}
+	if err := db.AutoMigrate(&Log{}); err != nil {
+		return err
+	}
+	return db.Exec(`
+		UPDATE event_logs
+		SET billing_procurement_cost_status = CASE
+			WHEN billing_procurement_cost_source = 'actual' THEN 'actual'
+			WHEN billing_procurement_cost_source = 'estimated' THEN 'estimated'
+			WHEN billing_procurement_cost_source = 'zero_cost' THEN 'none'
+			WHEN billing_procurement_cost_source = 'pending' THEN 'pending'
+			ELSE 'unconfigured'
+		END
+		WHERE COALESCE(TRIM(billing_procurement_cost_status), '') = ''
+	`).Error
+}
+
 func runLogVersionedMigrations(db *gorm.DB) error {
 	migrations := []versionedMigration{
 		{
@@ -3327,6 +3368,27 @@ func runLogVersionedMigrations(db *gorm.DB) error {
 					return tx.AutoMigrate(&Log{})
 				}
 				return tx.Migrator().AlterColumn(&Log{}, "Quota")
+			},
+		},
+		{
+			Version:     "202608031430_log_route_decision",
+			Description: "add structured initial and final route decision to request logs",
+			Up: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&Log{})
+			},
+		},
+		{
+			Version:     "202608031530_log_procurement_cost_status",
+			Description: "add explicit procurement cost attribution status to request logs",
+			Up: func(tx *gorm.DB) error {
+				return backfillLogProcurementCostStatusWithDB(tx)
+			},
+		},
+		{
+			Version:     "202608041000_log_billing_decision",
+			Description: "add structured billing decision to request logs",
+			Up: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&Log{})
 			},
 		},
 	}

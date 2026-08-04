@@ -499,6 +499,27 @@ func TestEstimateChannelProcurementCostWithDBReportsPartialCoverage(t *testing.T
 	}
 }
 
+func TestConsumeChannelProcurementBatchesWithDBReportsPartialCoverage(t *testing.T) {
+	db := newProcurementTestDB(t)
+	_, err := CreateChannelProcurementBatchWithDB(db, ChannelProcurementBatch{
+		ChannelId: "channel-1", ResourceType: "quota", QuotaType: "total", ScopeType: "global",
+		CapacityUnit: "token", CapacityTotal: 20, CapacityEffective: 20, CapacityRemaining: 20,
+		CostPerUnitAmount: 0.25, CostSource: ProcurementCostSourceActual, CostStatus: ProcurementCostStatusActive,
+	})
+	if err != nil {
+		t.Fatalf("create batch: %v", err)
+	}
+	result, err := ConsumeChannelProcurementBatchesWithDB(db, ProcurementConsumeInput{
+		RequestLogID: "log-partial", ChannelID: "channel-1", CapacityUnit: "token", Quantity: 50,
+	})
+	if err != nil {
+		t.Fatalf("consume procurement: %v", err)
+	}
+	if result.CoveredQuantity != 20 || result.MissingQuantity != 30 {
+		t.Fatalf("coverage=%v missing=%v, want 20/30", result.CoveredQuantity, result.MissingQuantity)
+	}
+}
+
 func TestUpdateLogProcurementCostObservationWithDB(t *testing.T) {
 	db := newProcurementTestDB(t)
 	logRow := Log{Id: "log-1", BillingSellBaseAmount: 10}
@@ -522,6 +543,9 @@ func TestUpdateLogProcurementCostObservationWithDB(t *testing.T) {
 	}
 	if updated.BillingGrossMargin != 0.6 {
 		t.Fatalf("BillingGrossMargin=%v, want 0.6", updated.BillingGrossMargin)
+	}
+	if updated.BillingProcurementCostStatus != ProcurementCostAttributionStatusActual {
+		t.Fatalf("BillingProcurementCostStatus=%q, want actual", updated.BillingProcurementCostStatus)
 	}
 }
 
@@ -943,6 +967,7 @@ func TestListProcurementReportWithDB(t *testing.T) {
 			BillingSellBaseAmount:            10,
 			BillingProcurementCostBaseAmount: 4,
 			BillingProcurementCostSource:     ProcurementCostSourceActual,
+			BillingProcurementCostStatus:     ProcurementCostAttributionStatusActual,
 			BillingGrossProfitBaseAmount:     6,
 		},
 		{
@@ -958,6 +983,7 @@ func TestListProcurementReportWithDB(t *testing.T) {
 			BillingChargeAmount:          80,
 			BillingSellBaseAmount:        8,
 			BillingProcurementCostSource: ProcurementCostSourceNone,
+			BillingProcurementCostStatus: ProcurementCostAttributionStatusUnconfigured,
 		},
 		{
 			Id:                           "log-3",
@@ -969,6 +995,7 @@ func TestListProcurementReportWithDB(t *testing.T) {
 			BillingChargeAmount:          50,
 			BillingSellBaseAmount:        5,
 			BillingProcurementCostSource: ProcurementCostSourceZeroCost,
+			BillingProcurementCostStatus: ProcurementCostAttributionStatusNone,
 			BillingGrossProfitBaseAmount: 5,
 		},
 	}
@@ -1081,6 +1108,7 @@ func TestListProcurementReportDoesNotClassifyEstimatedCostAsUnconfigured(t *test
 		BillingSellBaseAmount:            10,
 		BillingProcurementCostBaseAmount: 4,
 		BillingProcurementCostSource:     ProcurementCostSourceEstimated,
+		BillingProcurementCostStatus:     ProcurementCostAttributionStatusEstimated,
 		BillingGrossProfitBaseAmount:     6,
 	}).Error; err != nil {
 		t.Fatalf("seed estimated log: %v", err)
@@ -1107,5 +1135,26 @@ func TestListProcurementReportDoesNotClassifyEstimatedCostAsUnconfigured(t *test
 	}
 	if unconfigured.RequestCount != 0 {
 		t.Fatalf("unconfigured RequestCount=%d, want 0", unconfigured.RequestCount)
+	}
+}
+
+func TestListProcurementReportSeparatesPendingAndRetry(t *testing.T) {
+	db := newProcurementTestDB(t)
+	rows := []Log{
+		{Id: "pending", Type: LogTypeConsume, CreatedAt: 100, ChannelId: "channel-1", BillingSellBaseAmount: 10, BillingProcurementCostStatus: ProcurementCostAttributionStatusPending},
+		{Id: "retry", Type: LogTypeConsume, CreatedAt: 101, ChannelId: "channel-1", BillingSellBaseAmount: 20, BillingProcurementCostStatus: ProcurementCostAttributionStatusRetry},
+	}
+	if err := db.Create(&rows).Error; err != nil {
+		t.Fatalf("seed attribution logs: %v", err)
+	}
+	report, err := ListProcurementReportWithDB(db, ProcurementReportQuery{StartAt: 90, EndAt: 110, GroupBy: ProcurementReportGroupByChannel})
+	if err != nil {
+		t.Fatalf("list report: %v", err)
+	}
+	if report.PendingCostRequestCount != 1 || report.RetryCostRequestCount != 1 || report.UnconfiguredCostRequestCount != 0 {
+		t.Fatalf("unexpected attribution counts: pending=%d retry=%d unconfigured=%d", report.PendingCostRequestCount, report.RetryCostRequestCount, report.UnconfiguredCostRequestCount)
+	}
+	if report.ConfiguredSellBaseAmount != 0 || report.GrossProfitBaseAmount != 0 {
+		t.Fatalf("pending/retry requests entered formal margin: %+v", report)
 	}
 }

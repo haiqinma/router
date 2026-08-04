@@ -365,6 +365,12 @@ func CacheListSatisfiedChannels(group string, model string) ([]*Channel, error) 
 type ChannelCandidateStats struct {
 	ListedCount           int
 	EndpointFilteredCount int
+	FilteredCandidates    []ChannelCandidateFilter
+}
+
+type ChannelCandidateFilter struct {
+	ChannelID string
+	Reason    string
 }
 
 func CacheListSatisfiedChannelsForRequestWithStats(group string, model string, requestPath string) ([]*Channel, ChannelCandidateStats, error) {
@@ -376,9 +382,32 @@ func CacheListSatisfiedChannelsForRequestWithStats(group string, model string, r
 	if err != nil {
 		return nil, ChannelCandidateStats{}, err
 	}
+	eligible := make(map[string]struct{}, len(filtered))
+	for _, channel := range filtered {
+		if channel != nil {
+			eligible[strings.TrimSpace(channel.Id)] = struct{}{}
+		}
+	}
+	filteredCandidates := make([]ChannelCandidateFilter, 0, len(channels)-len(filtered))
+	for _, channel := range channels {
+		if channel == nil {
+			continue
+		}
+		channelID := strings.TrimSpace(channel.Id)
+		if channelID == "" {
+			continue
+		}
+		if _, ok := eligible[channelID]; !ok {
+			filteredCandidates = append(filteredCandidates, ChannelCandidateFilter{
+				ChannelID: channelID,
+				Reason:    "endpoint_unsupported",
+			})
+		}
+	}
 	return filtered, ChannelCandidateStats{
 		ListedCount:           len(channels),
 		EndpointFilteredCount: len(filtered),
+		FilteredCandidates:    filteredCandidates,
 	}, nil
 }
 

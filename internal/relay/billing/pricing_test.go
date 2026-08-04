@@ -1,6 +1,7 @@
 package billing
 
 import (
+	"encoding/json"
 	"math"
 	"testing"
 
@@ -364,6 +365,28 @@ func TestBillingSnapshotApplyToLogWritesRatioBreakdown(t *testing.T) {
 	}
 	if log.BillingEffectiveRatio != 3 {
 		t.Fatalf("BillingEffectiveRatio = %v, want 3", log.BillingEffectiveRatio)
+	}
+}
+
+func TestBillingSnapshotApplyToLogWritesStructuredDecision(t *testing.T) {
+	snapshot := BillingSnapshot{
+		PriceUnit:      "token",
+		Currency:       adminmodel.BillingCurrencyCodeCNY,
+		PricingSource:  "provider_default",
+		UsageSource:    "provider_usage",
+		SettlementMode: "usage_final",
+		ChargeRate:     1.2,
+		Amount:         0.5,
+		ChargeAmount:   42,
+	}
+	log := &adminmodel.Log{}
+	snapshot.ApplyToLog(log)
+	var got BillingDecision
+	if err := json.Unmarshal([]byte(log.BillingDecision), &got); err != nil {
+		t.Fatalf("unmarshal billing decision: %v", err)
+	}
+	if got.Version != "v1" || got.Stage != "settlement_pending" || got.ChargeAmount != 42 || got.SettlementMode != "usage_final" {
+		t.Fatalf("unexpected billing decision: %+v", got)
 	}
 }
 

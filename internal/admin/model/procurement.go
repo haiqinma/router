@@ -25,6 +25,42 @@ const (
 )
 
 const (
+	ProcurementCostAttributionStatusActual       = "actual"
+	ProcurementCostAttributionStatusEstimated    = "estimated"
+	ProcurementCostAttributionStatusPending      = "pending"
+	ProcurementCostAttributionStatusRetry        = "retry"
+	ProcurementCostAttributionStatusUnconfigured = "unconfigured"
+	ProcurementCostAttributionStatusNone         = "none"
+)
+
+func ProcurementCostAttributionStatusFromSource(source string) string {
+	switch normalizeProcurementCostSource(source) {
+	case ProcurementCostSourceActual:
+		return ProcurementCostAttributionStatusActual
+	case ProcurementCostSourceEstimated:
+		return ProcurementCostAttributionStatusEstimated
+	case ProcurementCostSourceZeroCost:
+		return ProcurementCostAttributionStatusNone
+	default:
+		return ProcurementCostAttributionStatusUnconfigured
+	}
+}
+
+func normalizeProcurementCostAttributionStatus(status string) string {
+	switch strings.TrimSpace(strings.ToLower(status)) {
+	case ProcurementCostAttributionStatusActual,
+		ProcurementCostAttributionStatusEstimated,
+		ProcurementCostAttributionStatusPending,
+		ProcurementCostAttributionStatusRetry,
+		ProcurementCostAttributionStatusUnconfigured,
+		ProcurementCostAttributionStatusNone:
+		return strings.TrimSpace(strings.ToLower(status))
+	default:
+		return ""
+	}
+}
+
+const (
 	ProcurementCostStatusActive           = "active"
 	ProcurementCostStatusCostUnconfigured = "cost_unconfigured"
 	ProcurementCostStatusExhausted        = "exhausted"
@@ -103,6 +139,8 @@ type ProcurementConsumeResult struct {
 	Consumptions    []RequestProcurementConsumption
 	TotalCostAmount float64
 	CostSource      string
+	CoveredQuantity float64
+	MissingQuantity float64
 }
 
 type ProcurementEstimateResult struct {
@@ -906,7 +944,7 @@ func ConsumeChannelProcurementBatchesWithDB(db *gorm.DB, input ProcurementConsum
 		return ProcurementConsumeResult{}, nil
 	}
 
-	result := ProcurementConsumeResult{}
+	result := ProcurementConsumeResult{MissingQuantity: input.Quantity}
 	now := helper.GetTimestamp()
 	err := db.Transaction(func(tx *gorm.DB) error {
 		query := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
@@ -978,6 +1016,7 @@ func ConsumeChannelProcurementBatchesWithDB(db *gorm.DB, input ProcurementConsum
 				result.Consumptions = append(result.Consumptions, consumption)
 			}
 			result.TotalCostAmount += consumeQuantity * costRow.CostPerUnitAmount
+			result.CoveredQuantity += consumeQuantity
 			if result.CostSource == "" {
 				result.CostSource = costRow.CostSource
 			} else if result.CostSource != costRow.CostSource {
@@ -993,6 +1032,7 @@ func ConsumeChannelProcurementBatchesWithDB(db *gorm.DB, input ProcurementConsum
 	if len(result.Consumptions) == 0 {
 		result.CostSource = ProcurementCostSourceNone
 	}
+	result.MissingQuantity = math.Max(input.Quantity-result.CoveredQuantity, 0)
 	return result, nil
 }
 
@@ -1012,6 +1052,7 @@ func UpdateLogProcurementCostObservationWithDB(db *gorm.DB, logID string, costBa
 	updates := map[string]any{
 		"billing_procurement_cost_base_amount": costBaseAmount,
 		"billing_procurement_cost_source":      normalizedCostSource,
+		"billing_procurement_cost_status":      ProcurementCostAttributionStatusFromSource(normalizedCostSource),
 	}
 	if sellBaseAmount > 0 {
 		grossProfit := sellBaseAmount - costBaseAmount
@@ -1019,4 +1060,22 @@ func UpdateLogProcurementCostObservationWithDB(db *gorm.DB, logID string, costBa
 		updates["billing_gross_margin"] = grossProfit / sellBaseAmount
 	}
 	return db.Model(&Log{}).Where("id = ?", normalizedLogID).Updates(updates).Error
+}
+
+func UpdateLogProcurementCostAttributionStatus(logID string, status string) error {
+	return UpdateLogProcurementCostAttributionStatusWithDB(LOG_DB, logID, status)
+}
+
+func UpdateLogProcurementCostAttributionStatusWithDB(db *gorm.DB, logID string, status string) error {
+	if db == nil {
+		return fmt.Errorf("database handle is nil")
+	}
+	normalizedLogID := strings.TrimSpace(logID)
+	normalizedStatus := normalizeProcurementCostAttributionStatus(status)
+	if normalizedLogID == "" || normalizedStatus == "" {
+		return nil
+	}
+	return db.Model(&Log{}).
+		Where("id = ?", normalizedLogID).
+		Update("billing_procurement_cost_status", normalizedStatus).Error
 }

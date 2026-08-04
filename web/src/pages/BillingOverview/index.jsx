@@ -30,6 +30,7 @@ const buildOperatingRisks = (items, t) => {
     const unconfigured = Number(item.unconfigured_cost_request_count || 0);
     const estimated = Number(item.estimated_cost_request_count || 0);
     const pending = Number(item.pending_cost_request_count || 0);
+    const retry = Number(item.retry_cost_request_count || 0);
     const configured = Number(item.configured_cost_request_count || 0);
     const profit = Number(item.gross_profit_base_amount || 0);
     const margin = Number(item.gross_margin || 0);
@@ -40,6 +41,7 @@ const buildOperatingRisks = (items, t) => {
     if (floorCount > 0) risks.push({ key: `${model}-floor`, level: 'warning', weight: floorCount, text: t('billing.overview.operating_risks.floor', { model, count: formatCount(floorCount) }) });
     if (estimated > 0) risks.push({ key: `${model}-estimated`, level: 'warning', weight: estimated, text: t('billing.overview.operating_risks.estimated', { model, count: formatCount(estimated) }) });
     if (pending > 0) risks.push({ key: `${model}-pending`, level: 'warning', weight: pending, text: t('billing.overview.operating_risks.pending', { model, count: formatCount(pending) }) });
+    if (retry > 0) risks.push({ key: `${model}-retry`, level: 'critical', weight: retry, text: t('billing.overview.operating_risks.retry', { model, count: formatCount(retry) }) });
   });
   return risks.sort((left, right) => (left.level === right.level ? right.weight - left.weight : left.level === 'critical' ? -1 : 1)).slice(0, 5);
 };
@@ -54,6 +56,7 @@ const normalize = (payload) => ({
   configured_cost_request_count: Number(payload?.configured_cost_request_count || 0),
   estimated_cost_request_count: Number(payload?.estimated_cost_request_count || 0),
   pending_cost_request_count: Number(payload?.pending_cost_request_count || 0),
+  retry_cost_request_count: Number(payload?.retry_cost_request_count || 0),
   unconfigured_cost_request_count: Number(payload?.unconfigured_cost_request_count || 0),
   input_quantity: Number(payload?.input_quantity || 0),
   output_quantity: Number(payload?.output_quantity || 0),

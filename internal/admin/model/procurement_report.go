@@ -36,6 +36,7 @@ type ProcurementReportItem struct {
 	UnconfiguredCostRequestCount int64   `json:"unconfigured_cost_request_count" gorm:"column:unconfigured_cost_request_count"`
 	EstimatedCostRequestCount    int64   `json:"estimated_cost_request_count" gorm:"column:estimated_cost_request_count"`
 	PendingCostRequestCount      int64   `json:"pending_cost_request_count" gorm:"column:pending_cost_request_count"`
+	RetryCostRequestCount        int64   `json:"retry_cost_request_count" gorm:"column:retry_cost_request_count"`
 	InputQuantity                float64 `json:"input_quantity" gorm:"column:input_quantity"`
 	OutputQuantity               float64 `json:"output_quantity" gorm:"column:output_quantity"`
 	CacheReadQuantity            float64 `json:"cache_read_quantity" gorm:"column:cache_read_quantity"`
@@ -68,6 +69,7 @@ type ProcurementReportSummary struct {
 	UnconfiguredCostRequestCount int64                   `json:"unconfigured_cost_request_count"`
 	EstimatedCostRequestCount    int64                   `json:"estimated_cost_request_count"`
 	PendingCostRequestCount      int64                   `json:"pending_cost_request_count"`
+	RetryCostRequestCount        int64                   `json:"retry_cost_request_count"`
 	InputQuantity                float64                 `json:"input_quantity"`
 	OutputQuantity               float64                 `json:"output_quantity"`
 	CacheReadQuantity            float64                 `json:"cache_read_quantity"`
@@ -113,24 +115,23 @@ func ListProcurementTrendWithDB(db *gorm.DB, query ProcurementTrendQuery) ([]Pro
 		return nil, fmt.Errorf("database handle is nil")
 	}
 	rows := make([]ProcurementTrendItem, 0)
-	configuredSources := []string{ProcurementCostSourceActual, ProcurementCostSourceZeroCost}
-	knownSources := []string{ProcurementCostSourceActual, ProcurementCostSourceEstimated, ProcurementCostSourceZeroCost, "pending"}
+	configuredStatuses := []string{ProcurementCostAttributionStatusActual, ProcurementCostAttributionStatusNone}
 	dbQuery := db.Table(EventLogsTableName).Select(`
 		TO_CHAR(TO_TIMESTAMP(created_at), 'YYYY-MM-DD') AS day,
 		COUNT(1) AS request_count,
-		COALESCE(SUM(CASE WHEN billing_procurement_cost_source IN ? THEN 1 ELSE 0 END), 0) AS configured_cost_request_count,
-		COALESCE(SUM(CASE WHEN billing_procurement_cost_source NOT IN ? OR COALESCE(NULLIF(TRIM(billing_procurement_cost_source), ''), '') = '' THEN 1 ELSE 0 END), 0) AS unconfigured_cost_request_count,
+		COALESCE(SUM(CASE WHEN billing_procurement_cost_status IN ? THEN 1 ELSE 0 END), 0) AS configured_cost_request_count,
+		COALESCE(SUM(CASE WHEN billing_procurement_cost_status = ? THEN 1 ELSE 0 END), 0) AS unconfigured_cost_request_count,
 		COALESCE(SUM(billing_input_quantity), 0) AS input_quantity,
 		COALESCE(SUM(billing_output_quantity), 0) AS output_quantity,
 		COALESCE(SUM(billing_cache_read_quantity), 0) AS cache_read_quantity,
 		COALESCE(SUM(billing_cache_write_quantity), 0) AS cache_write_quantity,
 		COALESCE(SUM(billing_charge_amount), 0) AS router_consumed_yyc,
 		COALESCE(SUM(billing_sell_base_amount), 0) AS sell_base_amount,
-		COALESCE(SUM(CASE WHEN billing_procurement_cost_source IN ? THEN billing_procurement_cost_base_amount ELSE 0 END), 0) AS procurement_cost_base_amount,
-		COALESCE(SUM(CASE WHEN billing_procurement_cost_source IN ? THEN billing_gross_profit_base_amount ELSE 0 END), 0) AS gross_profit_base_amount,
+		COALESCE(SUM(CASE WHEN billing_procurement_cost_status IN ? THEN billing_procurement_cost_base_amount ELSE 0 END), 0) AS procurement_cost_base_amount,
+		COALESCE(SUM(CASE WHEN billing_procurement_cost_status IN ? THEN billing_gross_profit_base_amount ELSE 0 END), 0) AS gross_profit_base_amount,
 		COALESCE(SUM(CASE WHEN billing_cost_floor_triggered = TRUE THEN 1 ELSE 0 END), 0) AS cost_floor_triggered_count,
 		COALESCE(SUM(CASE WHEN billing_cost_floor_triggered = TRUE THEN billing_cost_floor_base_amount ELSE 0 END), 0) AS cost_floor_triggered_amount
-	`, configuredSources, knownSources, configuredSources, configuredSources).Where("type = ? AND created_at BETWEEN ? AND ?", LogTypeConsume, query.StartAt, query.EndAt)
+	`, configuredStatuses, ProcurementCostAttributionStatusUnconfigured, configuredStatuses, configuredStatuses).Where("type = ? AND created_at BETWEEN ? AND ?", LogTypeConsume, query.StartAt, query.EndAt)
 	if strings.TrimSpace(query.GroupID) != "" {
 		dbQuery = dbQuery.Where("group_id = ?", strings.TrimSpace(query.GroupID))
 	}
@@ -178,7 +179,7 @@ func procurementReportDimensionExpression(groupBy string) string {
 }
 
 func procurementReportUnconfiguredCostCondition() string {
-	return "billing_procurement_cost_source NOT IN ? OR COALESCE(NULLIF(TRIM(billing_procurement_cost_source), ''), '') = ''"
+	return "billing_procurement_cost_status = ?"
 }
 
 func ListProcurementReportWithDB(db *gorm.DB, query ProcurementReportQuery) (ProcurementReportSummary, error) {
@@ -201,34 +202,34 @@ func ListProcurementReportWithDB(db *gorm.DB, query ProcurementReportQuery) (Pro
 
 	dimensionExpr := procurementReportDimensionExpression(groupBy)
 	rows := make([]ProcurementReportItem, 0)
-	configuredSources := []string{ProcurementCostSourceActual, ProcurementCostSourceZeroCost}
-	knownSources := []string{ProcurementCostSourceActual, ProcurementCostSourceEstimated, ProcurementCostSourceZeroCost, "pending"}
+	configuredStatuses := []string{ProcurementCostAttributionStatusActual, ProcurementCostAttributionStatusNone}
 	queryDB := db.Table(EventLogsTableName).
 		Select(`
 			`+dimensionExpr+` AS dimension_key,
 			COUNT(1) AS request_count,
-			COALESCE(SUM(CASE WHEN billing_procurement_cost_source IN ? THEN 1 ELSE 0 END), 0) AS configured_cost_request_count,
-			COALESCE(SUM(CASE WHEN billing_procurement_cost_source NOT IN ? OR COALESCE(NULLIF(TRIM(billing_procurement_cost_source), ''), '') = '' THEN 1 ELSE 0 END), 0) AS unconfigured_cost_request_count,
-			COALESCE(SUM(CASE WHEN billing_procurement_cost_source = ? THEN 1 ELSE 0 END), 0) AS estimated_cost_request_count,
-			COALESCE(SUM(CASE WHEN billing_procurement_cost_source = ? THEN 1 ELSE 0 END), 0) AS pending_cost_request_count,
+			COALESCE(SUM(CASE WHEN billing_procurement_cost_status IN ? THEN 1 ELSE 0 END), 0) AS configured_cost_request_count,
+			COALESCE(SUM(CASE WHEN billing_procurement_cost_status = ? THEN 1 ELSE 0 END), 0) AS unconfigured_cost_request_count,
+			COALESCE(SUM(CASE WHEN billing_procurement_cost_status = ? THEN 1 ELSE 0 END), 0) AS estimated_cost_request_count,
+			COALESCE(SUM(CASE WHEN billing_procurement_cost_status = ? THEN 1 ELSE 0 END), 0) AS pending_cost_request_count,
+			COALESCE(SUM(CASE WHEN billing_procurement_cost_status = ? THEN 1 ELSE 0 END), 0) AS retry_cost_request_count,
 			COALESCE(SUM(billing_input_quantity), 0) AS input_quantity,
 			COALESCE(SUM(billing_output_quantity), 0) AS output_quantity,
 			COALESCE(SUM(billing_cache_read_quantity), 0) AS cache_read_quantity,
 			COALESCE(SUM(billing_cache_write_quantity), 0) AS cache_write_quantity,
 			COALESCE(SUM(billing_charge_amount), 0) AS router_consumed_yyc,
 			COALESCE(SUM(billing_sell_base_amount), 0) AS sell_base_amount,
-			COALESCE(SUM(CASE WHEN billing_procurement_cost_source IN ? THEN billing_sell_base_amount ELSE 0 END), 0) AS configured_sell_base_amount,
-			COALESCE(SUM(CASE WHEN billing_procurement_cost_source NOT IN ? OR COALESCE(NULLIF(TRIM(billing_procurement_cost_source), ''), '') = '' THEN billing_sell_base_amount ELSE 0 END), 0) AS unconfigured_sell_base_amount,
-			COALESCE(SUM(CASE WHEN billing_procurement_cost_source IN ? THEN billing_procurement_cost_base_amount ELSE 0 END), 0) AS procurement_cost_base_amount,
-			COALESCE(SUM(CASE WHEN billing_procurement_cost_source IN ? THEN billing_gross_profit_base_amount ELSE 0 END), 0) AS gross_profit_base_amount,
-			COALESCE(SUM(CASE WHEN billing_procurement_cost_source = ? THEN billing_procurement_cost_base_amount ELSE 0 END), 0) AS actual_cost_base_amount,
-			COALESCE(SUM(CASE WHEN billing_procurement_cost_source = ? THEN billing_procurement_cost_base_amount ELSE 0 END), 0) AS estimated_cost_base_amount,
+			COALESCE(SUM(CASE WHEN billing_procurement_cost_status IN ? THEN billing_sell_base_amount ELSE 0 END), 0) AS configured_sell_base_amount,
+			COALESCE(SUM(CASE WHEN billing_procurement_cost_status = ? THEN billing_sell_base_amount ELSE 0 END), 0) AS unconfigured_sell_base_amount,
+			COALESCE(SUM(CASE WHEN billing_procurement_cost_status IN ? THEN billing_procurement_cost_base_amount ELSE 0 END), 0) AS procurement_cost_base_amount,
+			COALESCE(SUM(CASE WHEN billing_procurement_cost_status IN ? THEN billing_gross_profit_base_amount ELSE 0 END), 0) AS gross_profit_base_amount,
+			COALESCE(SUM(CASE WHEN billing_procurement_cost_status = ? THEN billing_procurement_cost_base_amount ELSE 0 END), 0) AS actual_cost_base_amount,
+			COALESCE(SUM(CASE WHEN billing_procurement_cost_status = ? THEN billing_procurement_cost_base_amount ELSE 0 END), 0) AS estimated_cost_base_amount,
 			COALESCE(SUM(CASE WHEN billing_cost_floor_triggered = TRUE THEN 1 ELSE 0 END), 0) AS cost_floor_triggered_count,
 			COALESCE(SUM(CASE WHEN billing_cost_floor_triggered = TRUE THEN billing_cost_floor_base_amount ELSE 0 END), 0) AS cost_floor_triggered_amount,
-			COALESCE(SUM(CASE WHEN billing_procurement_cost_source = ? THEN 1 ELSE 0 END), 0) AS zero_cost_request_count,
+			COALESCE(SUM(CASE WHEN billing_procurement_cost_status = ? THEN 1 ELSE 0 END), 0) AS zero_cost_request_count,
 			COALESCE(MIN(created_at), 0) AS first_request_at,
 			COALESCE(MAX(created_at), 0) AS last_request_at
-		`, configuredSources, knownSources, ProcurementCostSourceEstimated, "pending", configuredSources, knownSources, configuredSources, configuredSources, ProcurementCostSourceActual, ProcurementCostSourceEstimated, ProcurementCostSourceZeroCost).
+		`, configuredStatuses, ProcurementCostAttributionStatusUnconfigured, ProcurementCostAttributionStatusEstimated, ProcurementCostAttributionStatusPending, ProcurementCostAttributionStatusRetry, configuredStatuses, ProcurementCostAttributionStatusUnconfigured, configuredStatuses, configuredStatuses, ProcurementCostAttributionStatusActual, ProcurementCostAttributionStatusEstimated, ProcurementCostAttributionStatusNone).
 		Where("type = ? AND created_at BETWEEN ? AND ?", LogTypeConsume, query.StartAt, query.EndAt)
 	if summary.GroupID != "" {
 		queryDB = queryDB.Where("group_id = ?", summary.GroupID)
@@ -240,7 +241,7 @@ func ListProcurementReportWithDB(db *gorm.DB, query ProcurementReportQuery) (Pro
 		queryDB = queryDB.Where("COALESCE(NULLIF(TRIM(actual_model_name), ''), NULLIF(TRIM(model_name), '')) = ?", strings.TrimSpace(query.Model))
 	}
 	if costScope == ProcurementReportCostScopeUnconfigured {
-		queryDB = queryDB.Where(procurementReportUnconfiguredCostCondition(), knownSources)
+		queryDB = queryDB.Where(procurementReportUnconfiguredCostCondition(), ProcurementCostAttributionStatusUnconfigured)
 	}
 	if err := queryDB.
 		Group("dimension_key").
@@ -258,6 +259,7 @@ func ListProcurementReportWithDB(db *gorm.DB, query ProcurementReportQuery) (Pro
 		summary.UnconfiguredCostRequestCount += rows[index].UnconfiguredCostRequestCount
 		summary.EstimatedCostRequestCount += rows[index].EstimatedCostRequestCount
 		summary.PendingCostRequestCount += rows[index].PendingCostRequestCount
+		summary.RetryCostRequestCount += rows[index].RetryCostRequestCount
 		summary.InputQuantity += rows[index].InputQuantity
 		summary.OutputQuantity += rows[index].OutputQuantity
 		summary.CacheReadQuantity += rows[index].CacheReadQuantity
