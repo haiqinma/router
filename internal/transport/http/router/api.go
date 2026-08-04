@@ -55,6 +55,7 @@ func SetApiRouter(engine *gin.Engine) {
 		publicRouter.GET("/about", admin.GetAbout)
 		publicRouter.GET("/home_page_content", admin.GetHomePageContent)
 		publicRouter.POST("/topup/callback", admin.ProcessTopupCallback)
+		publicRouter.GET("/model/status", middleware.UserAuth(), admin.GetUserModelStatus)
 
 		// 仅保留密码找回，无额外人机验证
 		publicRouter.GET("/reset_password", middleware.CriticalRateLimit(), admin.SendPasswordResetEmail)
@@ -85,8 +86,7 @@ func SetApiRouter(engine *gin.Engine) {
 				publicSelfRoute.GET("/quota/overview", user.GetCurrentUserQuotaOverview)
 				publicSelfRoute.GET("/quota/cards", user.GetCurrentUserQuotaCards)
 				publicSelfRoute.GET("/quota/cards/:kind/:id", user.GetCurrentUserQuotaCard)
-				publicSelfRoute.GET("/available_models", admin.GetUserAvailableModels)
-				publicSelfRoute.GET("/model_status", admin.GetUserModelStatus)
+				publicSelfRoute.GET("/models/available", admin.GetUserAvailableModels)
 				publicSelfRoute.GET("/tasks/options", task.GetCurrentUserTaskFilterOptions)
 				publicSelfRoute.GET("/tasks", task.GetCurrentUserTasks)
 				publicSelfRoute.GET("/tasks/:id", task.GetCurrentUserTask)

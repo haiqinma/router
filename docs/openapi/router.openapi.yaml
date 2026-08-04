@@ -299,13 +299,13 @@ paths:
         - $ref: "#/components/parameters/IDPath"
       responses:
         "200": { $ref: "#/components/responses/APIResponse" }
-  /api/v1/public/user/available_models:
+  /api/v1/public/user/models/available:
     get:
       tags: [Public User]
       summary: List models available to current user
       responses:
         "200": { $ref: "#/components/responses/APIResponse" }
-  /api/v1/public/user/model_status:
+  /api/v1/public/model/status:
     get:
       tags: [Public User]
       summary: List platform model service status

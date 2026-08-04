@@ -226,7 +226,7 @@ const WorkspaceModels = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await API.get('/api/v1/public/user/model_status');
+      const res = await API.get('/api/v1/public/model/status');
       if (res.data?.success) {
         setPayload(normalizePayload(res.data.data || {}));
       } else {
@@ -485,7 +485,6 @@ const WorkspaceModels = () => {
                               title={title}
                               placement='top'
                               color='#ffffff'
-                              overlayClassName='workspace-model-health-tooltip-popup'
                               classNames={{ root: 'workspace-model-health-tooltip-popup' }}
                             >
                               <span
