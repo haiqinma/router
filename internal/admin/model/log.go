@@ -70,6 +70,7 @@ type Log struct {
 	BillingGrossMargin               float64 `json:"billing_gross_margin" gorm:"type:double precision;default:0"`
 	BillingPricingRuleVersion        string  `json:"billing_pricing_rule_version" gorm:"type:varchar(64);default:''"`
 	BillingCostRuleVersion           string  `json:"billing_cost_rule_version" gorm:"type:varchar(64);default:''"`
+	BillingDecision                  string  `json:"billing_decision" gorm:"type:text"`
 	EstimatedPromptTokens            int     `json:"estimated_prompt_tokens" gorm:"default:0"`
 	EstimatedOutputTokens            int     `json:"estimated_output_tokens" gorm:"default:0"`
 	EstimatedChargeAmount            int64   `json:"estimated_charge_amount" gorm:"bigint;default:0"`

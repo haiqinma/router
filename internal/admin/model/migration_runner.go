@@ -1955,6 +1955,13 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return backfillLogProcurementCostStatusWithDB(tx)
 			},
 		},
+		{
+			Version:     "202608041000_log_billing_decision",
+			Description: "add structured billing decision to request logs",
+			Up: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&Log{})
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }
@@ -3375,6 +3382,13 @@ func runLogVersionedMigrations(db *gorm.DB) error {
 			Description: "add explicit procurement cost attribution status to request logs",
 			Up: func(tx *gorm.DB) error {
 				return backfillLogProcurementCostStatusWithDB(tx)
+			},
+		},
+		{
+			Version:     "202608041000_log_billing_decision",
+			Description: "add structured billing decision to request logs",
+			Up: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&Log{})
 			},
 		},
 	}

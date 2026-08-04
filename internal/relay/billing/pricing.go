@@ -1,6 +1,7 @@
 package billing
 
 import (
+	"encoding/json"
 	"fmt"
 	"math"
 	"strings"
@@ -36,6 +37,23 @@ type BillingSnapshot struct {
 	ImageToolOutputTokens int              `json:"image_tool_output_tokens,omitempty"`
 	ImageToolAmount       float64          `json:"image_tool_amount,omitempty"`
 	ImageToolChargeAmount int64            `json:"image_tool_charge_amount,omitempty"`
+}
+
+// BillingDecision is the stable, request-level explanation of billing inputs
+// and the selected charge. Detailed token quantities remain in the log fields.
+type BillingDecision struct {
+	Version         string           `json:"version"`
+	Stage           string           `json:"stage"`
+	PriceUnit       string           `json:"price_unit,omitempty"`
+	Currency        string           `json:"currency,omitempty"`
+	PricingSource   string           `json:"pricing_source,omitempty"`
+	UsageSource     string           `json:"usage_source,omitempty"`
+	SettlementMode  string           `json:"settlement_mode,omitempty"`
+	EffectiveRatio  float64          `json:"effective_ratio,omitempty"`
+	ChargeRate      float64          `json:"charge_rate,omitempty"`
+	Amount          float64          `json:"amount,omitempty"`
+	ChargeAmount    int64            `json:"charge_amount,omitempty"`
+	PricingDecision *PricingDecision `json:"pricing_decision,omitempty"`
 }
 
 type ImageBillingMode string
@@ -85,6 +103,23 @@ func (snapshot BillingSnapshot) ApplyToLog(log *model.Log) {
 	log.BillingImageToolOutputTokens = snapshot.ImageToolOutputTokens
 	log.BillingImageToolAmount = snapshot.ImageToolAmount
 	log.BillingImageToolChargeAmount = snapshot.ImageToolChargeAmount
+	decision := BillingDecision{
+		Version:         "v1",
+		Stage:           "settlement_pending",
+		PriceUnit:       snapshot.PriceUnit,
+		Currency:        snapshot.Currency,
+		PricingSource:   snapshot.PricingSource,
+		UsageSource:     snapshot.UsageSource,
+		SettlementMode:  snapshot.SettlementMode,
+		EffectiveRatio:  snapshot.EffectiveRatio,
+		ChargeRate:      snapshot.ChargeRate,
+		Amount:          snapshot.Amount,
+		ChargeAmount:    snapshot.ChargeAmount,
+		PricingDecision: snapshot.PricingDecision,
+	}
+	if payload, err := json.Marshal(decision); err == nil {
+		log.BillingDecision = string(payload)
+	}
 	if snapshot.PricingDecision != nil {
 		switch snapshot.PricingDecision.Reason {
 		case PricingDecisionReasonCostFloor:
