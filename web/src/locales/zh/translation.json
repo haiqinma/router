@@ -1942,6 +1942,26 @@
       "test": "测试",
       "relay_failure": "调用失败"
     },
+    "route_anomalies": {
+      "title": "路由异常概览",
+      "summary": "按最近请求聚合路由失败和 fallback 事实，先看异常，再下钻日志详情。",
+      "empty": "暂无路由异常数据",
+      "load_failed": "加载路由异常概览失败",
+      "group_by": {
+        "model": "模型",
+        "channel": "渠道",
+        "endpoint": "端点",
+        "error": "错误"
+      },
+      "columns": {
+        "failure_count": "失败数",
+        "fallback_count": "Fallback 数",
+        "request_count": "请求数",
+        "failure_rate": "失败率",
+        "last_observed_at": "最后出现",
+        "last_error": "最近错误"
+      }
+    },
     "table": {
       "time": "时间",
       "channel": "渠道",
@@ -3574,6 +3594,26 @@
       },
       "actions": {
         "configure_cost": "打开采购配置"
+      },
+      "retry": {
+        "title": "采购重试",
+        "empty": "暂无需要重试的采购成本记录",
+        "retry_now": "立即重试",
+        "retry_confirm": "确认重新执行该采购成本归因？",
+        "load_failed": "加载采购重试记录失败",
+        "retry_success": "采购成本已重新归因",
+        "retry_failed": "采购成本重试失败",
+        "columns": {
+          "created_at": "创建时间",
+          "channel": "渠道",
+          "model": "模型",
+          "endpoint": "端点",
+          "sell_amount": "售价 CNY",
+          "retry_count": "重试次数",
+          "last_retry_at": "最后重试",
+          "last_error": "最后错误",
+          "action": "操作"
+        }
       },
       "messages": {
         "invalid_time": "请选择有效的时间范围",

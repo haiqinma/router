@@ -260,6 +260,8 @@ func SetApiRouter(engine *gin.Engine) {
 			adminBillingRoute.GET("/procurement-report", adminbilling.GetProcurementReport)
 			adminBillingRoute.GET("/procurement-trend", adminbilling.GetProcurementTrend)
 			adminBillingRoute.GET("/procurement-batches", adminbilling.GetProcurementBatches)
+			adminBillingRoute.GET("/procurement/retries", adminbilling.GetProcurementRetries)
+			adminBillingRoute.POST("/procurement/retries/:id/retry", adminbilling.RetryProcurementAttribution)
 			adminBillingRoute.GET("/pricing-matrix", adminbilling.GetPricingMatrix)
 			adminBillingRoute.GET("/fx/status", adminbilling.GetFXSyncStatus)
 			adminBillingRoute.GET("/fx/rates", adminbilling.GetFXMarketRates)
@@ -389,6 +391,7 @@ func SetApiRouter(engine *gin.Engine) {
 			adminLogRoute.DELETE("/", log.DeleteHistoryLogs)
 			adminLogRoute.GET("/stat", log.GetLogsStat)
 			adminLogRoute.GET("/options", log.GetLogFilterOptions)
+			adminLogRoute.GET("/route/anomalies", log.GetRouteAnomalies)
 			adminLogRoute.GET("/search", log.SearchAllLogs)
 			adminLogRoute.GET("/:id", log.GetLog)
 		}

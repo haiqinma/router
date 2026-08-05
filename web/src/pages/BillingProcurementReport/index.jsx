@@ -8,6 +8,7 @@ import {
   AppButton,
   AppFilterHeader,
   AppInput,
+  AppPopconfirm,
   AppSelect,
   AppSegmented,
   AppSection,
@@ -142,6 +143,9 @@ function BillingProcurementReport() {
   const [procurementBatches, setProcurementBatches] = useState([]);
   const [procurementLoading, setProcurementLoading] = useState(false);
   const [procurementSubmitting, setProcurementSubmitting] = useState(false);
+  const [retryItems, setRetryItems] = useState([]);
+  const [retryLoading, setRetryLoading] = useState(false);
+  const [retryingLogID, setRetryingLogID] = useState('');
 
   const loadProcurementManagement = useCallback(async (channelID = managedChannelID) => {
     const id = String(channelID || '').trim();
@@ -267,6 +271,36 @@ function BillingProcurementReport() {
     }
   }, [managedChannelID, t]);
 
+  const loadRetries = useCallback(async () => {
+    const startTimestamp = timestampFromDateTimeLocal(startAt);
+    const endTimestamp = timestampFromDateTimeLocal(endAt);
+    setRetryLoading(true);
+    try {
+      const response = await API.get('/api/v1/admin/billing/procurement/retries', {
+        params: {
+          start_at: startTimestamp,
+          end_at: endTimestamp,
+          group_id: groupID,
+          channel_id: managedChannelID,
+          limit: 50,
+        },
+      });
+      if (!response.data?.success) throw new Error(response.data?.message);
+      const items = Array.isArray(response.data?.data?.items) ? response.data.data.items : [];
+      setRetryItems(items.map((item) => ({
+        ...item,
+        created_at: Number(item?.created_at || 0),
+        sell_base_amount: Number(item?.sell_base_amount || 0),
+        retry_count: Number(item?.retry_count || 0),
+        last_retry_at: Number(item?.last_retry_at || 0),
+      })));
+    } catch (error) {
+      showError(error?.message || t('billing.procurement_report.retry.load_failed'));
+    } finally {
+      setRetryLoading(false);
+    }
+  }, [endAt, groupID, managedChannelID, startAt, t]);
+
   const loadGroups = async () => {
     try {
       const res = await API.get('/api/v1/admin/groups', {
@@ -323,6 +357,23 @@ function BillingProcurementReport() {
     }
   };
 
+  const retryProcurementAttribution = useCallback(async (logID) => {
+    const id = String(logID || '').trim();
+    if (!id) return;
+    setRetryingLogID(id);
+    try {
+      const response = await API.post(`/api/v1/admin/billing/procurement/retries/${encodeURIComponent(id)}/retry`);
+      if (!response.data?.success) throw new Error(response.data?.message);
+      await Promise.all([loadRetries(), loadReport()]);
+      showSuccess(t('billing.procurement_report.retry.retry_success'));
+    } catch (error) {
+      showError(error?.message || t('billing.procurement_report.retry.retry_failed'));
+      await loadRetries();
+    } finally {
+      setRetryingLogID('');
+    }
+  }, [loadRetries, t]);
+
   const loadHealth = async () => {
     setHealthLoading(true);
     try {
@@ -372,7 +423,8 @@ function BillingProcurementReport() {
 
   useEffect(() => {
     loadReport().then();
-  }, [groupBy, costScope, groupID]);
+    loadRetries().then();
+  }, [groupBy, costScope, groupID, managedChannelID, loadRetries]);
 
   const summaryItems = [
     {
@@ -585,6 +637,96 @@ function BillingProcurementReport() {
     },
   ];
 
+  const retryColumns = [
+    {
+      title: t('billing.procurement_report.retry.columns.created_at'),
+      dataIndex: 'created_at',
+      width: 168,
+      render: (value) => (value ? timestamp2string(value) : '-'),
+    },
+    {
+      title: t('billing.procurement_report.retry.columns.channel'),
+      key: 'channel',
+      width: 180,
+      render: (_, row) => {
+        const channelID = String(row.channel_id || '').trim();
+        const label = String(row.channel_name || channelID || '-').trim();
+        return channelID ? (
+          <Link className='billing-procurement-report-link' to={channelProcurementPath(channelID)}>
+            {label}
+          </Link>
+        ) : label;
+      },
+    },
+    {
+      title: t('billing.procurement_report.retry.columns.model'),
+      dataIndex: 'model',
+      width: 180,
+      render: (value) => value || '-',
+    },
+    {
+      title: t('billing.procurement_report.retry.columns.endpoint'),
+      dataIndex: 'endpoint',
+      width: 150,
+      render: (value) => value || '-',
+    },
+    {
+      title: t('billing.procurement_report.retry.columns.sell_amount'),
+      dataIndex: 'sell_base_amount',
+      width: 120,
+      align: 'right',
+      render: formatCNY,
+    },
+    {
+      title: t('billing.procurement_report.retry.columns.retry_count'),
+      dataIndex: 'retry_count',
+      width: 96,
+      align: 'right',
+      render: formatCount,
+    },
+    {
+      title: t('billing.procurement_report.retry.columns.last_retry_at'),
+      dataIndex: 'last_retry_at',
+      width: 168,
+      render: (value) => (value ? timestamp2string(value) : '-'),
+    },
+    {
+      title: t('billing.procurement_report.retry.columns.last_error'),
+      dataIndex: 'last_error',
+      width: 260,
+      render: (value) => (
+        <span className='billing-procurement-report-error' title={value || ''}>
+          {value || '-'}
+        </span>
+      ),
+    },
+    {
+      title: t('billing.procurement_report.retry.columns.action'),
+      key: 'action',
+      width: 150,
+      fixed: 'right',
+      render: (_, row) => (
+        <div className='billing-procurement-report-actions'>
+          <Link className='billing-procurement-report-link' to={`/admin/log/${encodeURIComponent(row.id)}`}>
+            {t('common.view')}
+          </Link>
+          <AppPopconfirm
+            title={t('billing.procurement_report.retry.retry_confirm')}
+            onConfirm={() => retryProcurementAttribution(row.id)}
+          >
+            <AppButton
+              className='router-table-button'
+              size='small'
+              loading={retryingLogID === row.id}
+            >
+              {t('billing.procurement_report.retry.retry_now')}
+            </AppButton>
+          </AppPopconfirm>
+        </div>
+      ),
+    },
+  ];
+
   const healthStatusClass = `is-${health.status || 'ok'}`;
   const healthIssues = health.issues.slice(0, 4);
 
@@ -607,6 +749,7 @@ function BillingProcurementReport() {
             onClick={() => {
               loadHealth().then();
               loadReport().then();
+              loadRetries().then();
             }}
           >
             {t('common.refresh')}
@@ -746,6 +889,32 @@ function BillingProcurementReport() {
               emptyText: loading
                 ? t('common.loading')
                 : t('billing.procurement_report.empty'),
+            }}
+          />
+        </AppSection>
+        <AppSection className='billing-procurement-report-section'>
+          <div className='billing-overview-section-heading'>
+            <h2>{t('billing.procurement_report.retry.title')}</h2>
+            <AppButton
+              className='router-page-button'
+              loading={retryLoading}
+              onClick={() => loadRetries().then()}
+            >
+              {t('common.refresh')}
+            </AppButton>
+          </div>
+          <AppTable
+            className='router-detail-table router-table-fit-page billing-procurement-report-table'
+            rowKey='id'
+            dataSource={retryItems}
+            columns={retryColumns}
+            pagination={false}
+            loading={retryLoading}
+            scroll={{ x: 1470 }}
+            locale={{
+              emptyText: retryLoading
+                ? t('common.loading')
+                : t('billing.procurement_report.retry.empty'),
             }}
           />
         </AppSection>

@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/yeying-community/router/common/config"
 	"github.com/yeying-community/router/common/ctxkey"
+	"github.com/yeying-community/router/common/helper"
 	"github.com/yeying-community/router/internal/admin/model"
 	"github.com/yeying-community/router/internal/admin/presenter"
 	logsvc "github.com/yeying-community/router/internal/admin/service/log"
@@ -29,6 +30,23 @@ type logFilterOptions struct {
 	Usernames  []string           `json:"usernames,omitempty"`
 	Channels   []logChannelOption `json:"channels,omitempty"`
 	Groups     []logGroupOption   `json:"groups,omitempty"`
+}
+
+type routeAnomalyItem struct {
+	Model          string  `json:"model"`
+	ChannelID      string  `json:"channel_id"`
+	ChannelName    string  `json:"channel_name"`
+	Endpoint       string  `json:"endpoint"`
+	ErrorType      string  `json:"error_type"`
+	ErrorCode      string  `json:"error_code"`
+	RequestCount   int64   `json:"request_count"`
+	FailureCount   int64   `json:"failure_count"`
+	FallbackCount  int64   `json:"fallback_count"`
+	SuccessCount   int64   `json:"success_count"`
+	FailureRate    float64 `json:"failure_rate"`
+	AvgLatencyMs   float64 `json:"avg_latency_ms"`
+	LastObservedAt int64   `json:"last_observed_at"`
+	LastError      string  `json:"last_error"`
 }
 
 func normalizeRequestedLogOptionField(raw string) string {
@@ -406,6 +424,145 @@ func countUserLogs(userId string, logType int, startTimestamp int64, endTimestam
 	var total int64
 	err := query.Count(&total).Error
 	return total, err
+}
+
+func normalizeRouteAnomalyGroupBy(raw string) string {
+	switch strings.TrimSpace(strings.ToLower(raw)) {
+	case "channel":
+		return "channel"
+	case "endpoint":
+		return "endpoint"
+	case "error":
+		return "error"
+	default:
+		return "model"
+	}
+}
+
+func routeAnomalyGroupSelect(groupBy string) string {
+	modelExpr := adminVisibleModelNameExpr
+	channelExpr := "COALESCE(NULLIF(TRIM(channel_id), ''), '-')"
+	endpointExpr := "COALESCE(NULLIF(TRIM(upstream_endpoint), ''), '-')"
+	errorTypeExpr := "COALESCE(NULLIF(TRIM(relay_error_type), ''), '-')"
+	errorCodeExpr := "COALESCE(NULLIF(TRIM(relay_error_code), ''), '-')"
+	switch normalizeRouteAnomalyGroupBy(groupBy) {
+	case "channel":
+		return channelExpr + " AS channel_id, '-' AS model, '-' AS endpoint, '-' AS error_type, '-' AS error_code"
+	case "endpoint":
+		return endpointExpr + " AS endpoint, '-' AS model, '-' AS channel_id, '-' AS error_type, '-' AS error_code"
+	case "error":
+		return errorTypeExpr + " AS error_type, " + errorCodeExpr + " AS error_code, '-' AS model, '-' AS channel_id, '-' AS endpoint"
+	default:
+		return modelExpr + " AS model, '-' AS channel_id, '-' AS endpoint, '-' AS error_type, '-' AS error_code"
+	}
+}
+
+func routeAnomalyGroupColumns(groupBy string) string {
+	switch normalizeRouteAnomalyGroupBy(groupBy) {
+	case "channel":
+		return "channel_id"
+	case "endpoint":
+		return "endpoint"
+	case "error":
+		return "error_type, error_code"
+	default:
+		return "model"
+	}
+}
+
+func hydrateRouteAnomalyChannelNames(items []routeAnomalyItem) []routeAnomalyItem {
+	channelIDs := make([]string, 0, len(items))
+	for _, item := range items {
+		channelID := strings.TrimSpace(item.ChannelID)
+		if channelID == "" || channelID == "-" {
+			continue
+		}
+		channelIDs = append(channelIDs, channelID)
+	}
+	options, err := loadChannelOptions(channelIDs)
+	if err != nil {
+		return items
+	}
+	names := make(map[string]string, len(options))
+	for _, option := range options {
+		names[strings.TrimSpace(option.ID)] = strings.TrimSpace(option.Label)
+	}
+	for index := range items {
+		if name := strings.TrimSpace(names[items[index].ChannelID]); name != "" {
+			items[index].ChannelName = name
+		}
+	}
+	return items
+}
+
+func GetRouteAnomalies(c *gin.Context) {
+	now := int64(0)
+	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
+	if endTimestamp <= 0 {
+		now = helper.GetTimestamp()
+		endTimestamp = now
+	}
+	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
+	if startTimestamp <= 0 {
+		startTimestamp = endTimestamp - 24*60*60
+	}
+	limit, _ := strconv.Atoi(c.Query("limit"))
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	groupBy := normalizeRouteAnomalyGroupBy(c.Query("group_by"))
+	rows := make([]routeAnomalyItem, 0)
+	query := model.LOG_DB.Table(model.EventLogsTableName).
+		Select(`
+			`+routeAnomalyGroupSelect(groupBy)+`,
+			COUNT(1) AS request_count,
+			COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) AS failure_count,
+			COALESCE(SUM(CASE WHEN fallback_count > 0 THEN 1 ELSE 0 END), 0) AS fallback_count,
+			COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) AS success_count,
+			COALESCE(AVG(elapsed_time), 0) AS avg_latency_ms,
+			COALESCE(MAX(created_at), 0) AS last_observed_at,
+			COALESCE(MAX(NULLIF(TRIM(relay_error_message), '')), '') AS last_error
+		`, model.LogTypeRelayFailure, model.LogTypeConsume).
+		Where("type IN ?", []int{model.LogTypeConsume, model.LogTypeRelayFailure}).
+		Where("created_at BETWEEN ? AND ?", startTimestamp, endTimestamp).
+		Where("(type <> ? OR ((relay_error_type IS NULL OR LOWER(TRIM(relay_error_type)) <> ?) AND (relay_error_code IS NULL OR LOWER(TRIM(relay_error_code)) <> ?)))", model.LogTypeRelayFailure, "client_abort", "request_aborted")
+	if modelName := strings.TrimSpace(c.Query("model_name")); modelName != "" {
+		query = query.Where(adminVisibleModelNameExpr+" = ?", modelName)
+	}
+	if channelID := strings.TrimSpace(c.Query("channel")); channelID != "" {
+		query = query.Where("channel_id = ?", channelID)
+	}
+	if groupID := strings.TrimSpace(c.Query("group_id")); groupID != "" {
+		query = query.Where("group_id = ?", groupID)
+	}
+	if err := query.
+		Group(routeAnomalyGroupColumns(groupBy)).
+		Having("COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) > 0 OR COALESCE(SUM(CASE WHEN fallback_count > 0 THEN 1 ELSE 0 END), 0) > 0", model.LogTypeRelayFailure).
+		Order("failure_count DESC, fallback_count DESC, request_count DESC, last_observed_at DESC").
+		Limit(limit).
+		Scan(&rows).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "加载路由异常聚合失败: " + err.Error()})
+		return
+	}
+	for index := range rows {
+		if rows[index].RequestCount > 0 {
+			rows[index].FailureRate = float64(rows[index].FailureCount) / float64(rows[index].RequestCount)
+		}
+	}
+	rows = hydrateRouteAnomalyChannelNames(rows)
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data": gin.H{
+			"group_by":           groupBy,
+			"start_timestamp":    startTimestamp,
+			"end_timestamp":      endTimestamp,
+			"items":              rows,
+			"total":              len(rows),
+			"generated_at":       helper.GetTimestamp(),
+			"used_default_range": now > 0,
+		},
+	})
 }
 
 func GetAllLogs(c *gin.Context) {

@@ -1,6 +1,7 @@
 package billing
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/yeying-community/router/common/helper"
 	"github.com/yeying-community/router/internal/admin/model"
 	billingsvc "github.com/yeying-community/router/internal/admin/service/billing"
+	relaybilling "github.com/yeying-community/router/internal/relay/billing"
 	relaymodel "github.com/yeying-community/router/internal/relay/model"
 )
 
@@ -57,6 +59,24 @@ type procurementReportRelatedChannel struct {
 type procurementReportResponse struct {
 	model.ProcurementReportSummary
 	Items []procurementReportItem `json:"items"`
+}
+
+type procurementRetryItem struct {
+	ID            string  `json:"id"`
+	CreatedAt     int64   `json:"created_at"`
+	UserID        string  `json:"user_id"`
+	Username      string  `json:"username"`
+	Model         string  `json:"model"`
+	ChannelID     string  `json:"channel_id"`
+	ChannelName   string  `json:"channel_name"`
+	Endpoint      string  `json:"endpoint"`
+	SellAmount    float64 `json:"sell_base_amount"`
+	RetryCount    int     `json:"retry_count"`
+	LastRetryAt   int64   `json:"last_retry_at"`
+	LastError     string  `json:"last_error"`
+	CostStatus    string  `json:"cost_status"`
+	Settlement    string  `json:"settlement_truth_mode"`
+	BillingSource string  `json:"billing_source"`
 }
 
 type billingHealthIssue struct {
@@ -214,6 +234,47 @@ func buildProcurementReportResponse(summary model.ProcurementReportSummary) proc
 	}
 	response.ProcurementReportSummary.Items = nil
 	return response
+}
+
+func buildProcurementRetryItems(rows []model.Log) []procurementRetryItem {
+	channelIDs := make([]string, 0, len(rows))
+	for _, row := range rows {
+		channelIDs = append(channelIDs, strings.TrimSpace(row.ChannelId))
+	}
+	channelNames := loadProcurementReportChannelNames(channelIDs)
+	items := make([]procurementRetryItem, 0, len(rows))
+	for _, row := range rows {
+		channelID := strings.TrimSpace(row.ChannelId)
+		channelName := strings.TrimSpace(channelNames[channelID])
+		if channelName == "" {
+			channelName = channelID
+		}
+		modelName := strings.TrimSpace(row.ActualModelName)
+		if modelName == "" {
+			modelName = strings.TrimSpace(row.ModelName)
+		}
+		if modelName == "" {
+			modelName = strings.TrimSpace(row.RequestModelName)
+		}
+		items = append(items, procurementRetryItem{
+			ID:            strings.TrimSpace(row.Id),
+			CreatedAt:     row.CreatedAt,
+			UserID:        strings.TrimSpace(row.UserId),
+			Username:      strings.TrimSpace(row.Username),
+			Model:         modelName,
+			ChannelID:     channelID,
+			ChannelName:   channelName,
+			Endpoint:      strings.TrimSpace(row.UpstreamEndpoint),
+			SellAmount:    row.BillingSellBaseAmount,
+			RetryCount:    row.BillingProcurementRetryCount,
+			LastRetryAt:   row.BillingProcurementLastRetryAt,
+			LastError:     strings.TrimSpace(row.BillingProcurementLastError),
+			CostStatus:    strings.TrimSpace(row.BillingProcurementCostStatus),
+			Settlement:    strings.TrimSpace(row.BillingSettlementTruthMode),
+			BillingSource: strings.TrimSpace(row.BillingSource),
+		})
+	}
+	return items
 }
 
 func appendBillingHealthIssue(response *billingHealthResponse, issue billingHealthIssue) {
@@ -606,6 +667,60 @@ func GetProcurementBatches(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": gin.H{"items": rows, "total": len(rows)}})
+}
+
+func GetProcurementRetries(c *gin.Context) {
+	limit, _ := strconv.Atoi(c.Query("limit"))
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	startAt := parseBillingReportTimestamp(c.Query("start_at"))
+	endAt := parseBillingReportTimestamp(c.Query("end_at"))
+	query := model.LOG_DB.
+		Where("type = ? AND billing_procurement_cost_status = ?", model.LogTypeConsume, model.ProcurementCostAttributionStatusRetry)
+	if startAt > 0 {
+		query = query.Where("created_at >= ?", startAt)
+	}
+	if endAt > 0 {
+		query = query.Where("created_at <= ?", endAt)
+	}
+	if groupID := strings.TrimSpace(c.Query("group_id")); groupID != "" {
+		query = query.Where("group_id = ?", groupID)
+	}
+	if channelID := strings.TrimSpace(c.Query("channel_id")); channelID != "" {
+		query = query.Where("channel_id = ?", channelID)
+	}
+	if modelName := strings.TrimSpace(c.Query("model")); modelName != "" {
+		query = query.Where("COALESCE(NULLIF(TRIM(actual_model_name), ''), NULLIF(TRIM(model_name), ''), NULLIF(TRIM(request_model_name), '')) = ?", modelName)
+	}
+	rows := make([]model.Log, 0, limit)
+	if err := query.Order("billing_procurement_last_retry_at DESC, created_at DESC, id DESC").Limit(limit).Find(&rows).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "加载采购成本重试列表失败: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": gin.H{"items": buildProcurementRetryItems(rows), "total": len(rows)}})
+}
+
+func RetryProcurementAttribution(c *gin.Context) {
+	logID := strings.TrimSpace(c.Param("id"))
+	row, err := model.GetProcurementCostRetryLog(logID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "采购成本重试记录不存在或已处理"})
+		return
+	}
+	relaybilling.RetryProcurementCostAttribution(context.WithoutCancel(c.Request.Context()), row)
+	refreshed, err := model.GetLogByID(logID)
+	if err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "重试完成，但重新加载日志失败: " + err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data": gin.H{
+			"item": buildProcurementRetryItems([]model.Log{*refreshed})[0],
+		},
+	})
 }
 
 func GetPricingMatrix(c *gin.Context) {

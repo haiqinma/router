@@ -1942,6 +1942,26 @@
       "test": "Test",
       "relay_failure": "Call Failed"
     },
+    "route_anomalies": {
+      "title": "Route Anomaly Overview",
+      "summary": "Aggregate route failures and fallback facts from recent requests. Check anomalies first, then drill into log details.",
+      "empty": "No route anomaly data",
+      "load_failed": "Failed to load route anomaly overview",
+      "group_by": {
+        "model": "Model",
+        "channel": "Channel",
+        "endpoint": "Endpoint",
+        "error": "Error"
+      },
+      "columns": {
+        "failure_count": "Failures",
+        "fallback_count": "Fallbacks",
+        "request_count": "Requests",
+        "failure_rate": "Failure rate",
+        "last_observed_at": "Last seen",
+        "last_error": "Recent error"
+      }
+    },
     "table": {
       "time": "Time",
       "channel": "Channel",
@@ -3579,6 +3599,26 @@
       },
       "actions": {
         "configure_cost": "Open procurement config"
+      },
+      "retry": {
+        "title": "Procurement Retry",
+        "empty": "No procurement cost records need retry",
+        "retry_now": "Retry now",
+        "retry_confirm": "Re-run procurement cost attribution for this record?",
+        "load_failed": "Failed to load procurement retry records",
+        "retry_success": "Procurement cost re-attributed",
+        "retry_failed": "Failed to retry procurement cost",
+        "columns": {
+          "created_at": "Created at",
+          "channel": "Channel",
+          "model": "Model",
+          "endpoint": "Endpoint",
+          "sell_amount": "Sell CNY",
+          "retry_count": "Retry count",
+          "last_retry_at": "Last retry",
+          "last_error": "Last error",
+          "action": "Action"
+        }
       },
       "messages": {
         "invalid_time": "Select a valid time range",
