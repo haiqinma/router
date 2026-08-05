@@ -3507,8 +3507,8 @@
   },
   "billing": {
     "pricing_analysis": {
-      "nav": "Profit Analysis",
-      "title": "Profit Analysis",
+      "nav": "Profit",
+      "title": "Profit",
       "load_failed": "Failed to load profit analysis",
       "group_placeholder": "Filter group",
       "note": "Showing models with requests in the last 7 days. Formal margin uses actual or explicitly zero cost only; models with incomplete cost coverage are not treated as healthy.",
@@ -3517,22 +3517,22 @@
       "columns": { "model": "Model", "state": "Profit state", "requests": "Requests", "sell": "Billed Revenue CNY", "cost": "Procurement cost CNY", "profit": "Gross profit CNY", "margin": "Gross margin", "cost_coverage": "Cost coverage" }
     },
     "overview": {
-      "nav": "Finance Overview",
-      "title": "Finance Overview",
-      "structure": { "title": "Finance board", "summary": "Start with billed revenue, procurement cost, gross profit, and margin. Drill into Profit Analysis and Procurement Cost only when something is off.", "pricing": "View profit analysis", "procurement": "View procurement cost" },
+      "nav": "Overview",
+      "title": "Overview",
+      "structure": { "title": "Finance board", "summary": "Start with billed revenue, procurement cost, gross profit, and margin. Drill into Profit and Procurement only when something is off.", "pricing": "View profit", "procurement": "View procurement" },
       "load_failed": "Failed to load finance data",
       "metrics": { "revenue": "Billed Revenue CNY", "cost": "Procurement Cost CNY", "profit": "Gross Profit CNY", "margin": "Gross Margin", "coverage": "Cost Coverage", "anomalies": "Issues" },
-      "operating_risks": { "title": "Finance exceptions in scope", "view_details": "View profit analysis", "empty": "No finance exception in the current scope", "unconfigured": "{{model}} has {{count}} requests without cost", "loss": "{{model}} has formal profit of {{amount}}", "low_margin": "{{model}} has only {{margin}} formal margin", "floor": "{{model}} triggered the cost floor {{count}} times", "estimated": "{{model}} has {{count}} requests using estimated cost only", "pending": "{{model}} has {{count}} requests pending cost attribution", "retry": "{{model}} has {{count}} failed cost attributions requiring retry" },
-      "configuration_risks": { "title": "Finance configuration risks", "view_details": "View procurement cost", "empty": "No finance configuration risk" },
-      "channels": { "title": "Channel gross profit", "view_details": "View procurement cost", "empty": "No channel data" },
+      "operating_risks": { "title": "Finance exceptions in scope", "view_details": "View profit", "empty": "No finance exception in the current scope", "unconfigured": "{{model}} has {{count}} requests without cost", "loss": "{{model}} has formal profit of {{amount}}", "low_margin": "{{model}} has only {{margin}} formal margin", "floor": "{{model}} triggered the cost floor {{count}} times", "estimated": "{{model}} has {{count}} requests using estimated cost only", "pending": "{{model}} has {{count}} requests pending cost attribution", "retry": "{{model}} has {{count}} failed cost attributions requiring retry" },
+      "configuration_risks": { "title": "Finance configuration risks", "view_details": "View procurement", "empty": "No finance configuration risk" },
+      "channels": { "title": "Channel gross profit", "view_details": "View procurement", "empty": "No channel data" },
       "trend": { "title": "7-day billed revenue and cost trend", "financials": "Billed revenue {{revenue}} / Cost {{cost}} / Profit {{profit}}" },
       "channel_placeholder": "Filter channel", "model_placeholder": "Filter model"
     },
     "procurement_report": {
-      "nav": "Procurement Cost",
-      "title": "Procurement Cost",
-      "empty": "No procurement cost data",
-      "management": { "title": "Procurement management", "channel_placeholder": "All channels", "select_channel": "Select a channel to manage purchase records" },
+      "nav": "Procurement",
+      "title": "Procurement",
+      "empty": "No procurement data",
+      "management": { "title": "Procurement management" },
       "health": {
         "status": {
           "ok": "Finance healthy",

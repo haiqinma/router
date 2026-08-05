@@ -151,8 +151,8 @@ function BillingOverview() {
       <div className='billing-overview-map' role='note'>
         <strong>{t('billing.overview.structure.title')}</strong>
         <span>{t('billing.overview.structure.summary')}</span>
-        <Link to='/admin/finance/profit-analysis'>{t('billing.overview.structure.pricing')}</Link>
-        <Link to='/admin/finance/procurement-cost'>{t('billing.overview.structure.procurement')}</Link>
+        <Link to='/admin/finance/profit'>{t('billing.overview.structure.pricing')}</Link>
+        <Link to='/admin/finance/procurement'>{t('billing.overview.structure.procurement')}</Link>
       </div>
       <AppSpin spinning={loading}>
         <AppSection className='billing-overview-section'>
@@ -162,16 +162,16 @@ function BillingOverview() {
         </AppSection>
         <div className='billing-overview-columns'>
           <AppSection className='billing-overview-section'>
-            <div className='billing-overview-section-heading'><h2>{t('billing.overview.operating_risks.title')}</h2><Link to='/admin/finance/profit-analysis'>{t('billing.overview.operating_risks.view_details')}</Link></div>
+            <div className='billing-overview-section-heading'><h2>{t('billing.overview.operating_risks.title')}</h2><Link to='/admin/finance/profit'>{t('billing.overview.operating_risks.view_details')}</Link></div>
             {operatingRisks.length === 0 ? <div className='billing-overview-empty'>{t('billing.overview.operating_risks.empty')}</div> : operatingRisks.map((issue) => <div className='billing-overview-risk' key={issue.key}><AppTag color={issue.level === 'critical' ? 'red' : 'orange'}>{t(`billing.procurement_report.health.level.${issue.level}`)}</AppTag><span title={issue.text}>{issue.text}</span></div>)}
           </AppSection>
           <AppSection className='billing-overview-section'>
-            <div className='billing-overview-section-heading'><h2>{t('billing.overview.channels.title')}</h2><Link to='/admin/finance/procurement-cost'>{t('billing.overview.channels.view_details')}</Link></div>
+            <div className='billing-overview-section-heading'><h2>{t('billing.overview.channels.title')}</h2><Link to='/admin/finance/procurement'>{t('billing.overview.channels.view_details')}</Link></div>
             {topChannels.length === 0 ? <div className='billing-overview-empty'>{t('billing.overview.channels.empty')}</div> : topChannels.map((item) => <div className='billing-overview-channel' key={item.dimension_key}><span>{item.dimension_name || item.dimension_key}</span><strong>{formatCNY(item.gross_profit_base_amount)} / {formatPercent(item.gross_margin)}</strong></div>)}
           </AppSection>
         </div>
         <AppSection className='billing-overview-section billing-overview-global-risks'>
-          <div className='billing-overview-section-heading'><h2>{t('billing.overview.configuration_risks.title')}</h2><Link to='/admin/finance/procurement-cost'>{t('billing.overview.configuration_risks.view_details')}</Link></div>
+          <div className='billing-overview-section-heading'><h2>{t('billing.overview.configuration_risks.title')}</h2><Link to='/admin/finance/procurement'>{t('billing.overview.configuration_risks.view_details')}</Link></div>
           {configurationRisks.length === 0 ? <div className='billing-overview-empty'>{t('billing.overview.configuration_risks.empty')}</div> : configurationRisks.map((issue) => <div className='billing-overview-risk' key={issue.key}><AppTag color={issue.level === 'critical' ? 'red' : 'orange'}>{t(`billing.procurement_report.health.level.${issue.level || 'warning'}`)}</AppTag><span title={issue.message}>{issue.title}{issue.count ? ` (${formatCount(issue.count)})` : ''}</span></div>)}
         </AppSection>
         <AppSection className='billing-overview-section'>
