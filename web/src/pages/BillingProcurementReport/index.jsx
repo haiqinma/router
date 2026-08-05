@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { API, showError, showInfo, showSuccess, timestamp2string } from '../../helpers';
 import { formatDecimalNumber } from '../../helpers/render';
 import ChannelDetailBillingTab from '../Channel/components/ChannelDetailBillingTab';
@@ -11,7 +11,6 @@ import {
   AppPopconfirm,
   AppSelect,
   AppSegmented,
-  AppSection,
   AppSpin,
   AppTable,
   AppTag,
@@ -119,11 +118,12 @@ const normalizeHealth = (payload) => ({
 });
 
 const channelProcurementPath = (channelID) =>
-  `/admin/finance/procurement-cost?channel_id=${encodeURIComponent(channelID)}`;
+  `/admin/finance/procurement?channel_id=${encodeURIComponent(channelID)}`;
 
 function BillingProcurementReport() {
   const { t } = useTranslation();
   const location = useLocation();
+  const navigate = useNavigate();
   const initialRange = useMemo(() => createLastSevenDaysRange(), []);
   const [groupBy, setGroupBy] = useState('channel');
   const [costScope, setCostScope] = useState('all');
@@ -146,6 +146,31 @@ function BillingProcurementReport() {
   const [retryItems, setRetryItems] = useState([]);
   const [retryLoading, setRetryLoading] = useState(false);
   const [retryingLogID, setRetryingLogID] = useState('');
+  const managedChannelLabel = useMemo(() => {
+    const selected = channelOptions.find(
+      (item) => String(item?.value || '') === managedChannelID,
+    );
+    return selected?.text || managedChannelID;
+  }, [channelOptions, managedChannelID]);
+
+  const selectManagedChannel = useCallback((channelID, replace = false) => {
+    const normalizedChannelID = String(channelID || '').trim();
+    const searchParams = new URLSearchParams(location.search);
+    if (normalizedChannelID) {
+      searchParams.set('channel_id', normalizedChannelID);
+    } else {
+      searchParams.delete('channel_id');
+    }
+    const search = searchParams.toString();
+    setManagedChannelID(normalizedChannelID);
+    navigate(
+      {
+        pathname: location.pathname,
+        search: search ? `?${search}` : '',
+      },
+      { replace },
+    );
+  }, [location.pathname, location.search, navigate]);
 
   const loadProcurementManagement = useCallback(async (channelID = managedChannelID) => {
     const id = String(channelID || '').trim();
@@ -214,7 +239,8 @@ function BillingProcurementReport() {
       };
       const response = recordID ? await API.put(path, requestPayload) : await API.post(path, requestPayload);
       if (!response.data?.success) throw new Error(response.data?.message);
-      await loadProcurementManagement(managedChannelID);
+      selectManagedChannel(targetChannelID, true);
+      await loadProcurementManagement(targetChannelID);
       showSuccess(t('channel.edit.billing.manual_snapshot_success'));
       return true;
     } catch (error) {
@@ -223,7 +249,7 @@ function BillingProcurementReport() {
     } finally {
       setProcurementSubmitting(false);
     }
-  }, [loadProcurementManagement, managedChannelID, t]);
+  }, [loadProcurementManagement, managedChannelID, selectManagedChannel, t]);
 
   const deletePurchaseRecord = useCallback(async (recordID) => {
     if (!managedChannelID || !recordID) return false;
@@ -422,6 +448,9 @@ function BillingProcurementReport() {
   }, [loadProcurementManagement]);
 
   useEffect(() => {
+    if (managedChannelID) {
+      return;
+    }
     loadReport().then();
     loadRetries().then();
   }, [groupBy, costScope, groupID, managedChannelID, loadRetries]);
@@ -733,29 +762,47 @@ function BillingProcurementReport() {
   return (
     <div className='dashboard-container billing-procurement-report-page'>
       <AppFilterHeader
-        breadcrumbs={[
-          { key: 'finance', label: t('header.finance') },
-          {
-            key: 'procurement-report',
-            label: t('billing.procurement_report.title'),
-            active: true,
-          },
-        ]}
+        breadcrumbs={managedChannelID
+          ? [
+              { key: 'finance', label: t('header.finance') },
+              {
+                key: 'procurement-report',
+                label: t('billing.procurement_report.title'),
+                onClick: () => selectManagedChannel('', true),
+              },
+              {
+                key: 'procurement-channel',
+                label: managedChannelLabel || managedChannelID,
+                active: true,
+              },
+            ]
+          : [
+              { key: 'finance', label: t('header.finance') },
+              {
+                key: 'procurement-report',
+                label: t('billing.procurement_report.title'),
+                active: true,
+              },
+            ]}
         actions={
           <AppButton
             className='router-page-button'
             color='blue'
-            loading={loading || healthLoading}
+            loading={managedChannelID ? procurementLoading : loading || healthLoading}
             onClick={() => {
-              loadHealth().then();
-              loadReport().then();
-              loadRetries().then();
+              if (managedChannelID) {
+                loadProcurementManagement().then();
+              } else {
+                loadHealth().then();
+                loadReport().then();
+                loadRetries().then();
+              }
             }}
           >
             {t('common.refresh')}
           </AppButton>
         }
-        query={
+        query={!managedChannelID ? (
           <div className='billing-procurement-report-filters'>
             <AppSegmented
               className='billing-procurement-report-segmented'
@@ -797,10 +844,11 @@ function BillingProcurementReport() {
               onChange={(e, { value }) => setGroupID((value || '').toString())}
             />
           </div>
-        }
+        ) : null}
       />
-      <AppSpin spinning={loading}>
-        <AppSection className='billing-procurement-report-section'>
+      <AppSpin spinning={managedChannelID ? procurementLoading : loading}>
+        {!managedChannelID ? (
+          <div className='billing-procurement-report-overview'>
           <div className={`billing-procurement-report-health ${healthStatusClass}`}>
             <div className='billing-procurement-report-health-main'>
               <div className='billing-procurement-report-health-title'>
@@ -853,8 +901,6 @@ function BillingProcurementReport() {
               )}
             </div>
           </div>
-        </AppSection>
-        <AppSection className='billing-procurement-report-section'>
           <div className='billing-procurement-report-summary-grid'>
             {summaryItems.map((item) => (
               <div
@@ -878,6 +924,9 @@ function BillingProcurementReport() {
               </div>
             ))}
           </div>
+          <div className='billing-overview-section-heading'>
+            <h2>{t('billing.procurement_report.title')}</h2>
+          </div>
           <AppTable
             className='router-detail-table router-table-fit-page billing-procurement-report-table'
             rowKey={(row) => `${row.dimension_type}-${row.dimension_key}`}
@@ -891,8 +940,8 @@ function BillingProcurementReport() {
                 : t('billing.procurement_report.empty'),
             }}
           />
-        </AppSection>
-        <AppSection className='billing-procurement-report-section'>
+        {retryItems.length > 0 ? (
+          <div className='billing-procurement-report-retries'>
           <div className='billing-overview-section-heading'>
             <h2>{t('billing.procurement_report.retry.title')}</h2>
             <AppButton
@@ -917,19 +966,14 @@ function BillingProcurementReport() {
                 : t('billing.procurement_report.retry.empty'),
             }}
           />
-        </AppSection>
-        <AppSection className='billing-procurement-report-section'>
+          </div>
+        ) : null}
+          </div>
+        ) : null}
+        {managedChannelID ? (
+          <div className='billing-procurement-report-detail'>
           <div className='billing-overview-section-heading'>
-            <h2>{t('billing.procurement_report.management.title')}</h2>
-            <AppSelect
-              className='billing-overview-channel-select'
-              clearable
-              search
-              options={channelOptions}
-              value={managedChannelID}
-              placeholder={t('billing.procurement_report.management.channel_placeholder')}
-              onChange={(e, { value }) => setManagedChannelID(String(value || ''))}
-            />
+            <h2>{managedChannelLabel || t('billing.procurement_report.management.title')}</h2>
           </div>
           <ChannelDetailBillingTab
             t={t}
@@ -947,11 +991,10 @@ function BillingProcurementReport() {
             timestamp2string={timestamp2string}
             viewMode='procurement'
             channelID={managedChannelID}
-            manualChannelOptions={channelOptions}
-            requireManualChannelSelect
             showProcurementBatches={false}
           />
-        </AppSection>
+          </div>
+        ) : null}
       </AppSpin>
     </div>
   );

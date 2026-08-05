@@ -484,7 +484,7 @@ func appendProcurementCostHealthIssues(response *billingHealthResponse) {
 		Title:   "近期请求未配置采购成本",
 		Message: message,
 		Count:   summary.UnconfiguredCostRequestCount,
-		Link:    "/admin/billing/procurement-report",
+		Link:    "/admin/finance/procurement",
 	})
 }
 
@@ -559,7 +559,7 @@ func appendProcurementBatchHealthIssues(response *billingHealthResponse) {
 				Title:   check.title,
 				Message: check.message,
 				Count:   count,
-				Link:    "/admin/billing/procurement-report",
+				Link:    "/admin/finance/procurement",
 			})
 		}
 	}

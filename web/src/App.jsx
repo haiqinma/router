@@ -851,11 +851,11 @@ function App() {
           element={<BillingOverview />}
         />
         <Route
-          path='/admin/finance/profit-analysis'
+          path='/admin/finance/profit'
           element={<BillingPricingAnalysis />}
         />
         <Route
-          path='/admin/finance/procurement-cost'
+          path='/admin/finance/procurement'
           element={<BillingProcurementReport />}
         />
         <Route

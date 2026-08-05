@@ -2859,7 +2859,7 @@
         }
       },
       "spending": {
-        "flow": { "title": "收支口径", "summary": "支付/充值是用户侧收入与现金流；请求消耗是用户权益的使用结果；渠道采购是上游成本，最终在财务总览中与收入匹配计算毛利。" },
+        "flow": { "title": "收支口径", "summary": "支付/充值是用户侧收入与现金流；请求消耗是用户权益的使用结果；渠道采购是上游成本，最终在财务模块总览中与收入匹配计算毛利。" },
         "insights": {
           "net_positive": "净流入为正",
           "net_positive_hint": "当前周期内充值大于消费，收支保持正向。",
@@ -3502,9 +3502,9 @@
   },
   "billing": {
     "pricing_analysis": {
-      "nav": "利润分析",
-      "title": "利润分析",
-      "load_failed": "利润分析加载失败",
+      "nav": "利润",
+      "title": "利润",
+      "load_failed": "利润数据加载失败",
       "group_placeholder": "筛选分组",
       "note": "默认展示最近 7 天有请求的模型。正式毛利只基于真实或明确零成本，成本覆盖不足的模型不会被判定为正常盈利。",
       "empty": "暂无模型财务数据",
@@ -3512,22 +3512,22 @@
       "columns": { "model": "模型", "state": "利润状态", "requests": "请求数", "sell": "计费收入 CNY", "cost": "采购成本 CNY", "profit": "毛利 CNY", "margin": "毛利率", "cost_coverage": "成本覆盖" }
     },
     "overview": {
-      "nav": "财务总览",
-      "title": "财务总览",
-      "structure": { "title": "财务看板", "summary": "先看计费收入、采购成本、毛利和毛利率是否符合预期；异常时再下钻利润分析和采购成本。", "pricing": "查看利润分析", "procurement": "查看采购成本" },
+      "nav": "总览",
+      "title": "总览",
+      "structure": { "title": "财务看板", "summary": "先看计费收入、采购成本、毛利和毛利率是否符合预期；异常时再下钻利润和采购。", "pricing": "查看利润", "procurement": "查看采购" },
       "load_failed": "财务数据加载失败",
       "metrics": { "revenue": "计费收入 CNY", "cost": "采购成本 CNY", "profit": "毛利 CNY", "margin": "毛利率", "coverage": "成本覆盖率", "anomalies": "异常项" },
-      "operating_risks": { "title": "当前范围财务异常", "view_details": "查看利润分析", "empty": "当前范围未发现财务异常", "unconfigured": "{{model}} 有 {{count}} 个请求未配置成本", "loss": "{{model}} 正式毛利为 {{amount}}", "low_margin": "{{model}} 正式毛利率仅 {{margin}}", "floor": "{{model}} 触发成本底线 {{count}} 次", "estimated": "{{model}} 有 {{count}} 个请求仅使用估算成本", "pending": "{{model}} 有 {{count}} 个请求成本待归因", "retry": "{{model}} 有 {{count}} 个请求成本归因失败，需要重试" },
-      "configuration_risks": { "title": "财务配置风险", "view_details": "查看采购成本", "empty": "未发现财务配置风险" },
-      "channels": { "title": "渠道毛利", "view_details": "查看采购成本", "empty": "暂无渠道数据" },
+      "operating_risks": { "title": "当前范围财务异常", "view_details": "查看利润", "empty": "当前范围未发现财务异常", "unconfigured": "{{model}} 有 {{count}} 个请求未配置成本", "loss": "{{model}} 正式毛利为 {{amount}}", "low_margin": "{{model}} 正式毛利率仅 {{margin}}", "floor": "{{model}} 触发成本底线 {{count}} 次", "estimated": "{{model}} 有 {{count}} 个请求仅使用估算成本", "pending": "{{model}} 有 {{count}} 个请求成本待归因", "retry": "{{model}} 有 {{count}} 个请求成本归因失败，需要重试" },
+      "configuration_risks": { "title": "财务配置风险", "view_details": "查看采购", "empty": "未发现财务配置风险" },
+      "channels": { "title": "渠道毛利", "view_details": "查看采购", "empty": "暂无渠道数据" },
       "trend": { "title": "近 7 天计费收支趋势", "financials": "计费收入 {{revenue}} / 成本 {{cost}} / 毛利 {{profit}}" },
       "channel_placeholder": "筛选渠道", "model_placeholder": "筛选模型"
     },
     "procurement_report": {
-      "nav": "采购成本",
-      "title": "采购成本",
-      "empty": "暂无采购成本数据",
-      "management": { "title": "采购管理", "channel_placeholder": "全部渠道", "select_channel": "请选择渠道后维护采购记录" },
+      "nav": "采购",
+      "title": "采购",
+      "empty": "暂无采购数据",
+      "management": { "title": "采购管理" },
       "health": {
         "status": {
           "ok": "财务健康",

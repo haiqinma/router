@@ -90,12 +90,12 @@ export const ADMIN_MENU_GROUPS = [
       },
       {
         name: 'billing.pricing_analysis.nav',
-        to: '/admin/finance/profit-analysis',
+        to: '/admin/finance/profit',
         icon: 'line chart',
       },
       {
         name: 'billing.procurement_report.nav',
-        to: '/admin/finance/procurement-cost',
+        to: '/admin/finance/procurement',
         icon: 'exchange',
       },
     ],
