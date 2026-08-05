@@ -344,6 +344,10 @@ func EnqueueRuntimeDisabledCapabilityRecoveryTests(limit int) (int, error) {
 		}
 		created, err := EnqueueChannelModelEndpointRecoveryTest(row.ChannelId, row.Model, row.Endpoint, "")
 		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				logSkippedRuntimeCapabilityRecovery(row.ChannelId, row.Model, row.Endpoint, err)
+				continue
+			}
 			return createdCount, err
 		}
 		if created {
@@ -365,6 +369,10 @@ func EnqueueRuntimeDisabledCapabilityRecoveryTests(limit int) (int, error) {
 		}
 		created, err := EnqueueChannelModelEndpointRecoveryTest(row.ChannelId, row.Model, row.Endpoint, "")
 		if err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				logSkippedRuntimeCapabilityRecovery(row.ChannelId, row.Model, row.Endpoint, err)
+				continue
+			}
 			return createdCount, err
 		}
 		if created {
@@ -373,6 +381,16 @@ func EnqueueRuntimeDisabledCapabilityRecoveryTests(limit int) (int, error) {
 		seen[key] = struct{}{}
 	}
 	return createdCount, nil
+}
+
+func logSkippedRuntimeCapabilityRecovery(channelID string, modelID string, endpoint string, err error) {
+	logger.Warn(context.Background(), fmt.Sprintf(
+		"[async-task] runtime_capability_recovery_skipped channel_id=%q model=%q endpoint=%q error=%q",
+		strings.TrimSpace(channelID),
+		strings.TrimSpace(modelID),
+		model.NormalizeRequestedChannelModelEndpoint(endpoint),
+		err.Error(),
+	))
 }
 
 func validateChannelModelTestEndpointAgainstProvider(row model.ChannelModel, endpoint string) error {

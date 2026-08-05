@@ -126,6 +126,44 @@ func TestUpdateChannelEndpointAllowsEnableWithoutTestResult(t *testing.T) {
 	}
 }
 
+func TestMergeUpdatedChannelEndpointRowsPreservesRuntimeDisableMetadata(t *testing.T) {
+	rows := []model.ChannelModelEndpoint{
+		{
+			ChannelId:      "channel-1",
+			Model:          "gpt-5.5",
+			Endpoint:       model.ChannelModelEndpointResponses,
+			Enabled:        false,
+			DisabledReason: "upstream quota exhausted",
+			DisabledAt:     123,
+			DisabledBy:     "runtime",
+		},
+		{
+			ChannelId: "channel-1",
+			Model:     "gpt-5.6-sol",
+			Endpoint:  model.ChannelModelEndpointResponses,
+			Enabled:   false,
+		},
+	}
+
+	merged := mergeUpdatedChannelEndpointRows(rows, model.ChannelModelEndpoint{
+		ChannelId: "channel-1",
+		Model:     "gpt-5.6-sol",
+		Endpoint:  model.ChannelModelEndpointResponses,
+		Enabled:   true,
+	})
+	if len(merged) != 2 {
+		t.Fatalf("merged rows len=%d, want 2", len(merged))
+	}
+	preserved := merged[0]
+	if preserved.Enabled || preserved.DisabledReason != "upstream quota exhausted" || preserved.DisabledAt != 123 || preserved.DisabledBy != "runtime" {
+		t.Fatalf("runtime-disabled endpoint metadata was not preserved: %+v", preserved)
+	}
+	updated := merged[1]
+	if !updated.Enabled || updated.DisabledReason != "" || updated.DisabledAt != 0 || updated.DisabledBy != "" {
+		t.Fatalf("enabled endpoint retained disabled metadata: %+v", updated)
+	}
+}
+
 func TestGetChannelEndpointsDoesNotShowLooseUpstreamModelSuccess(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	db := newChannelEndpointControllerTestDB(t)

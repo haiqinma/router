@@ -334,29 +334,40 @@ func UpdateChannelEndpoint(c *gin.Context) {
 
 func mergeUpdatedChannelEndpointRows(rows []model.ChannelModelEndpoint, updated model.ChannelModelEndpoint) []model.ChannelModelEndpoint {
 	normalizedUpdated := model.ChannelModelEndpoint{
-		ChannelId: strings.TrimSpace(updated.ChannelId),
-		Model:     strings.TrimSpace(updated.Model),
-		Endpoint:  model.NormalizeRequestedChannelModelEndpoint(updated.Endpoint),
-		BaseURL:   strings.TrimSpace(updated.BaseURL),
-		Enabled:   updated.Enabled,
-		UpdatedAt: updated.UpdatedAt,
+		ChannelId:      strings.TrimSpace(updated.ChannelId),
+		Model:          strings.TrimSpace(updated.Model),
+		Endpoint:       model.NormalizeRequestedChannelModelEndpoint(updated.Endpoint),
+		BaseURL:        strings.TrimSpace(updated.BaseURL),
+		Enabled:        updated.Enabled,
+		UpdatedAt:      updated.UpdatedAt,
+		DisabledReason: strings.TrimSpace(updated.DisabledReason),
+		DisabledAt:     updated.DisabledAt,
+		DisabledBy:     strings.TrimSpace(updated.DisabledBy),
 	}
 	result := make([]model.ChannelModelEndpoint, 0, len(rows)+1)
 	replaced := false
 	for _, row := range rows {
 		normalizedRow := model.ChannelModelEndpoint{
-			ChannelId: strings.TrimSpace(row.ChannelId),
-			Model:     strings.TrimSpace(row.Model),
-			Endpoint:  model.NormalizeRequestedChannelModelEndpoint(row.Endpoint),
-			BaseURL:   strings.TrimSpace(row.BaseURL),
-			Enabled:   row.Enabled,
-			UpdatedAt: row.UpdatedAt,
+			ChannelId:      strings.TrimSpace(row.ChannelId),
+			Model:          strings.TrimSpace(row.Model),
+			Endpoint:       model.NormalizeRequestedChannelModelEndpoint(row.Endpoint),
+			BaseURL:        strings.TrimSpace(row.BaseURL),
+			Enabled:        row.Enabled,
+			UpdatedAt:      row.UpdatedAt,
+			DisabledReason: strings.TrimSpace(row.DisabledReason),
+			DisabledAt:     row.DisabledAt,
+			DisabledBy:     strings.TrimSpace(row.DisabledBy),
 		}
 		if normalizedRow.ChannelId == normalizedUpdated.ChannelId &&
 			normalizedRow.Model == normalizedUpdated.Model &&
 			normalizedRow.Endpoint == normalizedUpdated.Endpoint {
 			normalizedRow.BaseURL = normalizedUpdated.BaseURL
 			normalizedRow.Enabled = normalizedUpdated.Enabled
+			if normalizedRow.Enabled {
+				normalizedRow.DisabledReason = ""
+				normalizedRow.DisabledAt = 0
+				normalizedRow.DisabledBy = ""
+			}
 			replaced = true
 		}
 		if normalizedRow.ChannelId == "" || normalizedRow.Model == "" || normalizedRow.Endpoint == "" {
