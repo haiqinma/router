@@ -188,6 +188,20 @@ a.billing-procurement-report-health-issue:hover {
   flex-wrap: wrap;
 }
 
+.billing-procurement-report-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.billing-procurement-report-error {
+  display: inline-block;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+
 @media (max-width: 1180px) {
   .billing-procurement-report-summary-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));

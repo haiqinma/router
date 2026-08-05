@@ -1,0 +1,46 @@
+.log-route-anomalies-section {
+  margin-bottom: 16px;
+}
+
+.log-route-anomalies-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.log-route-anomalies-header h2 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.log-route-anomalies-header p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.log-route-anomalies-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.log-route-anomaly-error {
+  display: inline-block;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+
+@media (max-width: 760px) {
+  .log-route-anomalies-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

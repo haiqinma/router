@@ -141,9 +141,6 @@ func TestBuildBillingServiceQueryUsesAdapterProtocol(t *testing.T) {
 	if query.Credentials["key"] != "billing-secret" {
 		t.Fatalf("credentials = %+v", query.Credentials)
 	}
-	if query.Config != nil {
-		t.Fatalf("config must be owned by billing service adapters, got %+v", query.Config)
-	}
 	body, err := json.Marshal(query)
 	if err != nil {
 		t.Fatal(err)
@@ -280,9 +277,6 @@ func TestCollectChannelBillingSnapshotPrefersBillingService(t *testing.T) {
 		credentials, ok := query["credentials"].(map[string]any)
 		if !ok || credentials["key"] != "billing-secret" {
 			t.Fatalf("credentials = %v", query["credentials"])
-		}
-		if query["config"] != nil {
-			t.Fatalf("unexpected config: %+v", query["config"])
 		}
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"data":{"channel_id":"channel-1","adapter":"vendor-a","fetched_at":"2026-07-18T00:00:00Z","items":[{"resource_type":"credit","quota_type":"total","quota_label":"Total quota","amount":50,"limit_amount":100,"used_amount":50,"remaining_amount":50,"currency":"CNY","status":"active","source_ref":"vendor_total"}]}}`))

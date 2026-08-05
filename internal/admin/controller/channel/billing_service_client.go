@@ -24,7 +24,6 @@ type billingServiceQueryRequest struct {
 	ChannelID   string            `json:"channel_id,omitempty"`
 	Adapter     string            `json:"adapter"`
 	Credentials map[string]string `json:"credentials,omitempty"`
-	Config      map[string]any    `json:"config,omitempty"`
 }
 
 type billingServiceQueryResponse struct {

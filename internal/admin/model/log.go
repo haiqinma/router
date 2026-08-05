@@ -71,6 +71,9 @@ type Log struct {
 	BillingPricingRuleVersion        string  `json:"billing_pricing_rule_version" gorm:"type:varchar(64);default:''"`
 	BillingCostRuleVersion           string  `json:"billing_cost_rule_version" gorm:"type:varchar(64);default:''"`
 	BillingDecision                  string  `json:"billing_decision" gorm:"type:text"`
+	BillingProcurementRetryCount     int     `json:"billing_procurement_retry_count" gorm:"default:0"`
+	BillingProcurementLastRetryAt    int64   `json:"billing_procurement_last_retry_at" gorm:"bigint;default:0"`
+	BillingProcurementLastError      string  `json:"billing_procurement_last_error" gorm:"type:text"`
 	EstimatedPromptTokens            int     `json:"estimated_prompt_tokens" gorm:"default:0"`
 	EstimatedOutputTokens            int     `json:"estimated_output_tokens" gorm:"default:0"`
 	EstimatedChargeAmount            int64   `json:"estimated_charge_amount" gorm:"bigint;default:0"`
@@ -120,6 +123,63 @@ func ListProcurementCostRetryLogsWithDB(db *gorm.DB, limit int, maxCreatedAt int
 
 func ListProcurementCostRetryLogs(limit int, maxCreatedAt int64) ([]Log, error) {
 	return ListProcurementCostRetryLogsWithDB(LOG_DB, limit, maxCreatedAt)
+}
+
+func GetProcurementCostRetryLogWithDB(db *gorm.DB, logID string) (*Log, error) {
+	if db == nil {
+		return nil, fmt.Errorf("database handle is nil")
+	}
+	if logID == "" {
+		return nil, fmt.Errorf("log id is required")
+	}
+	row := &Log{}
+	if err := db.Where("id = ? AND type = ? AND billing_procurement_cost_status = ?", logID, LogTypeConsume, ProcurementCostAttributionStatusRetry).First(row).Error; err != nil {
+		return nil, err
+	}
+	return row, nil
+}
+
+func GetProcurementCostRetryLog(logID string) (*Log, error) {
+	return GetProcurementCostRetryLogWithDB(LOG_DB, logID)
+}
+
+func MarkLogProcurementRetryFailureWithDB(db *gorm.DB, logID string, message string, retriedAt int64) error {
+	if db == nil {
+		return fmt.Errorf("database handle is nil")
+	}
+	if logID == "" {
+		return nil
+	}
+	return db.Model(&Log{}).
+		Where("id = ?", logID).
+		Updates(map[string]any{
+			"billing_procurement_cost_status":   ProcurementCostAttributionStatusRetry,
+			"billing_procurement_retry_count":   gorm.Expr("billing_procurement_retry_count + 1"),
+			"billing_procurement_last_retry_at": retriedAt,
+			"billing_procurement_last_error":    message,
+		}).Error
+}
+
+func MarkLogProcurementRetryFailure(logID string, message string, retriedAt int64) error {
+	return MarkLogProcurementRetryFailureWithDB(LOG_DB, logID, message, retriedAt)
+}
+
+func ClearLogProcurementRetryFailureWithDB(db *gorm.DB, logID string) error {
+	if db == nil {
+		return fmt.Errorf("database handle is nil")
+	}
+	if logID == "" {
+		return nil
+	}
+	return db.Model(&Log{}).
+		Where("id = ?", logID).
+		Updates(map[string]any{
+			"billing_procurement_last_error": "",
+		}).Error
+}
+
+func ClearLogProcurementRetryFailure(logID string) error {
+	return ClearLogProcurementRetryFailureWithDB(LOG_DB, logID)
 }
 
 const (
