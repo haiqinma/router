@@ -117,20 +117,36 @@ const normalizeHealth = (payload) => ({
     : [],
 });
 
-const channelProcurementPath = (channelID) =>
-  `/admin/finance/procurement?channel_id=${encodeURIComponent(channelID)}`;
-
 function BillingProcurementReport() {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const initialRange = useMemo(() => createLastSevenDaysRange(), []);
-  const [groupBy, setGroupBy] = useState('channel');
-  const [costScope, setCostScope] = useState('all');
-  const [groupID, setGroupID] = useState('');
+  const initialContext = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    const groupByValue = params.get('group_by');
+    const costScopeValue = params.get('cost_scope');
+    const toLocal = (key, fallback) => {
+      const timestamp = Number(params.get(key) || 0);
+      return Number.isFinite(timestamp) && timestamp > 0 ? toDateTimeLocalValue(new Date(timestamp * 1000)) : fallback;
+    };
+    return {
+      groupBy: ['channel', 'model', 'endpoint'].includes(groupByValue) ? groupByValue : 'channel',
+      costScope: ['all', 'unconfigured'].includes(costScopeValue) ? costScopeValue : 'all',
+      groupID: params.get('group_id') || '',
+      model: params.get('model') || '',
+      returnTo: params.get('return_to') || '',
+      startAt: toLocal('start_at', initialRange.startAt),
+      endAt: toLocal('end_at', initialRange.endAt),
+    };
+  }, []);
+  const [groupBy, setGroupBy] = useState(initialContext.groupBy);
+  const [costScope, setCostScope] = useState(initialContext.costScope);
+  const [groupID, setGroupID] = useState(initialContext.groupID);
+  const [model, setModel] = useState(initialContext.model);
   const [groupOptions, setGroupOptions] = useState([]);
-  const [startAt, setStartAt] = useState(initialRange.startAt);
-  const [endAt, setEndAt] = useState(initialRange.endAt);
+  const [startAt, setStartAt] = useState(initialContext.startAt);
+  const [endAt, setEndAt] = useState(initialContext.endAt);
   const [loading, setLoading] = useState(false);
   const [healthLoading, setHealthLoading] = useState(false);
   const [report, setReport] = useState(() => normalizeReport({}));
@@ -146,6 +162,11 @@ function BillingProcurementReport() {
   const [retryItems, setRetryItems] = useState([]);
   const [retryLoading, setRetryLoading] = useState(false);
   const [retryingLogID, setRetryingLogID] = useState('');
+  const channelProcurementPath = useCallback((channelID) => {
+    const params = new URLSearchParams(location.search);
+    params.set('channel_id', String(channelID || ''));
+    return `${location.pathname}?${params.toString()}`;
+  }, [location.pathname, location.search]);
   const managedChannelLabel = useMemo(() => {
     const selected = channelOptions.find(
       (item) => String(item?.value || '') === managedChannelID,
@@ -308,6 +329,7 @@ function BillingProcurementReport() {
           end_at: endTimestamp,
           group_id: groupID,
           channel_id: managedChannelID,
+          model,
           limit: 50,
         },
       });
@@ -325,7 +347,7 @@ function BillingProcurementReport() {
     } finally {
       setRetryLoading(false);
     }
-  }, [endAt, groupID, managedChannelID, startAt, t]);
+  }, [endAt, groupID, managedChannelID, model, startAt, t]);
 
   const loadGroups = async () => {
     try {
@@ -368,6 +390,8 @@ function BillingProcurementReport() {
           group_by: groupBy,
           cost_scope: costScope,
           group_id: groupID,
+          channel_id: managedChannelID,
+          model,
         },
       });
       const { success, message, data } = res.data || {};
@@ -444,6 +468,21 @@ function BillingProcurementReport() {
   }, [location.search]);
 
   useEffect(() => {
+    const params = new URLSearchParams();
+    const startTimestamp = timestampFromDateTimeLocal(startAt);
+    const endTimestamp = timestampFromDateTimeLocal(endAt);
+    if (startTimestamp) params.set('start_at', String(startTimestamp));
+    if (endTimestamp) params.set('end_at', String(endTimestamp));
+    params.set('group_by', groupBy);
+    params.set('cost_scope', costScope);
+    if (groupID) params.set('group_id', groupID);
+    if (managedChannelID) params.set('channel_id', managedChannelID);
+    if (model) params.set('model', model);
+    if (initialContext.returnTo) params.set('return_to', initialContext.returnTo);
+    navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true });
+  }, [costScope, endAt, groupBy, groupID, initialContext.returnTo, location.pathname, managedChannelID, model, navigate, startAt]);
+
+  useEffect(() => {
     loadProcurementManagement().then();
   }, [loadProcurementManagement]);
 
@@ -453,7 +492,7 @@ function BillingProcurementReport() {
     }
     loadReport().then();
     loadRetries().then();
-  }, [groupBy, costScope, groupID, managedChannelID, loadRetries]);
+  }, [groupBy, costScope, groupID, managedChannelID, model, loadRetries]);
 
   const summaryItems = [
     {
@@ -758,13 +797,20 @@ function BillingProcurementReport() {
 
   const healthStatusClass = `is-${health.status || 'ok'}`;
   const healthIssues = health.issues.slice(0, 4);
+  const fromOverview = initialContext.returnTo.startsWith('/admin/finance/overview');
+  const fromProfit = initialContext.returnTo.startsWith('/admin/finance/profit');
+  const baseBreadcrumbs = [
+    { key: 'finance', label: t('header.finance') },
+    ...(fromOverview ? [{ key: 'overview', label: t('billing.overview.title'), onClick: () => navigate(initialContext.returnTo) }] : []),
+    ...(fromProfit ? [{ key: 'profit', label: t('billing.pricing_analysis.title'), onClick: () => navigate(initialContext.returnTo) }] : []),
+  ];
 
   return (
     <div className='dashboard-container billing-procurement-report-page'>
       <AppFilterHeader
         breadcrumbs={managedChannelID
           ? [
-              { key: 'finance', label: t('header.finance') },
+              ...baseBreadcrumbs,
               {
                 key: 'procurement-report',
                 label: t('billing.procurement_report.title'),
@@ -777,31 +823,27 @@ function BillingProcurementReport() {
               },
             ]
           : [
-              { key: 'finance', label: t('header.finance') },
+              ...baseBreadcrumbs,
               {
                 key: 'procurement-report',
                 label: t('billing.procurement_report.title'),
                 active: true,
               },
             ]}
-        actions={
+        actions={!managedChannelID ? (
           <AppButton
             className='router-page-button'
             color='blue'
-            loading={managedChannelID ? procurementLoading : loading || healthLoading}
+            loading={loading || healthLoading}
             onClick={() => {
-              if (managedChannelID) {
-                loadProcurementManagement().then();
-              } else {
-                loadHealth().then();
-                loadReport().then();
-                loadRetries().then();
-              }
+              loadHealth().then();
+              loadReport().then();
+              loadRetries().then();
             }}
           >
             {t('common.refresh')}
           </AppButton>
-        }
+        ) : null}
         query={!managedChannelID ? (
           <div className='billing-procurement-report-filters'>
             <AppSegmented
@@ -842,6 +884,12 @@ function BillingProcurementReport() {
               value={groupID}
               placeholder={t('billing.procurement_report.filters.group')}
               onChange={(e, { value }) => setGroupID((value || '').toString())}
+            />
+            <AppInput
+              className='router-section-input billing-procurement-report-group-select'
+              value={model}
+              placeholder={t('billing.procurement_report.filters.model')}
+              onChange={(e, { value }) => setModel((value || '').toString())}
             />
           </div>
         ) : null}
@@ -972,9 +1020,6 @@ function BillingProcurementReport() {
         ) : null}
         {managedChannelID ? (
           <div className='billing-procurement-report-detail'>
-          <div className='billing-overview-section-heading'>
-            <h2>{managedChannelLabel || t('billing.procurement_report.management.title')}</h2>
-          </div>
           <ChannelDetailBillingTab
             t={t}
             billingSummary={null}
@@ -983,6 +1028,7 @@ function BillingProcurementReport() {
             procurementBatches={procurementBatches}
             billingReadonly={false}
             billingSubmitting={procurementSubmitting}
+            onRefreshBilling={() => loadProcurementManagement().then()}
             onManualSnapshotUpdate={savePurchaseRecord}
             onManualSnapshotDelete={deletePurchaseRecord}
             onProcurementBatchCostUpdate={(id, payload) => updateBatch(id, 'cost', payload, 'channel.edit.billing.procurement_update_success', 'channel.edit.billing.procurement_update_failed')}

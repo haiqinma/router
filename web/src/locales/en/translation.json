@@ -3514,18 +3514,28 @@
       "note": "Showing models with requests in the last 7 days. Formal margin uses actual or explicitly zero cost only; models with incomplete cost coverage are not treated as healthy.",
       "empty": "No model finance data",
       "states": { "healthy": "Healthy", "low_margin": "Low margin", "loss": "Below cost", "unknown": "Insufficient data" },
-      "columns": { "model": "Model", "state": "Profit state", "requests": "Requests", "sell": "Billed Revenue CNY", "cost": "Procurement cost CNY", "profit": "Gross profit CNY", "margin": "Gross margin", "cost_coverage": "Cost coverage" }
+      "columns": { "model": "Model", "state": "Profit state", "requests": "Requests", "sell": "Billed Revenue CNY", "cost": "Procurement cost CNY", "profit": "Gross profit CNY", "margin": "Gross margin", "cost_coverage": "Cost coverage", "actions": "Actions" },
+      "context": "Range: {{start}} to {{end}}",
+      "view_procurement": "View procurement"
     },
     "overview": {
       "nav": "Overview",
       "title": "Overview",
       "structure": { "title": "Finance board", "summary": "Start with billed revenue, procurement cost, gross profit, and margin. Drill into Profit and Procurement only when something is off.", "pricing": "View profit", "procurement": "View procurement" },
       "load_failed": "Failed to load finance data",
-      "metrics": { "revenue": "Billed Revenue CNY", "cost": "Procurement Cost CNY", "profit": "Gross Profit CNY", "margin": "Gross Margin", "coverage": "Cost Coverage", "anomalies": "Issues" },
+      "metrics": { "revenue": "Billed Revenue", "cost": "Procurement Cost", "profit": "Gross Profit", "margin": "Gross Margin", "coverage": "Cost Coverage", "anomalies": "Finance Risks", "risk_count": "{{count}} items", "risk_breakdown": "Operating {{operating}} / Config {{configuration}}", "coverage_note": "Covered {{configured}} / {{total}}" },
+      "invalid_time": "Select a valid time range",
+      "context": { "range": "Range: {{start}} to {{end}}", "currency": "Base currency: CNY" },
+      "actions": { "drilldown": "Drill down", "profit": "Profit", "procurement": "Procurement" },
+      "status": { "ok": "Healthy", "warning": "Watch", "critical": "Action", "empty": "No data" },
+      "overview_table": { "title": "Multidimensional Finance Overview", "summary": "{{risks}} operating risks in scope", "columns": { "dimension": "Dimension", "primary": "Key metric", "secondary": "Context", "status": "Status", "action": "Action" } },
+      "dimensions": { "profitability": { "title": "Revenue and Profit", "primary": "Revenue {{revenue}} / Profit {{profit}}", "secondary": "Margin {{margin}}, {{requests}} requests" }, "cost_coverage": { "title": "Cost Attribution", "primary": "Coverage {{coverage}}", "secondary": "Covered {{configured}}, unconfigured {{unconfigured}}, pending {{pending}}" }, "channel": { "title": "Channel Mix", "primary": "{{count}} channels, {{loss}} loss-making", "secondary": "Review procurement cost, gross profit, and cost coverage by channel" }, "model": { "title": "Model Mix", "primary": "{{count}} models, {{low}} low-margin", "secondary": "Review pricing, ratios, and procurement cost by model" }, "operating": { "title": "Operating Risks", "primary": "{{count}} open items", "secondary": "Critical {{critical}}, warning {{warning}}" }, "configuration": { "title": "Configuration Risks", "primary": "{{count}} config issues", "secondary": "Critical {{critical}}, warning {{warning}}" } },
       "operating_risks": { "title": "Finance exceptions in scope", "view_details": "View profit", "empty": "No finance exception in the current scope", "unconfigured": "{{model}} has {{count}} requests without cost", "loss": "{{model}} has formal profit of {{amount}}", "low_margin": "{{model}} has only {{margin}} formal margin", "floor": "{{model}} triggered the cost floor {{count}} times", "estimated": "{{model}} has {{count}} requests using estimated cost only", "pending": "{{model}} has {{count}} requests pending cost attribution", "retry": "{{model}} has {{count}} failed cost attributions requiring retry" },
       "configuration_risks": { "title": "Finance configuration risks", "view_details": "View procurement", "empty": "No finance configuration risk" },
-      "channels": { "title": "Channel gross profit", "view_details": "View procurement", "empty": "No channel data" },
-      "trend": { "title": "7-day billed revenue and cost trend", "financials": "Billed revenue {{revenue}} / Cost {{cost}} / Profit {{profit}}" },
+      "channels": { "title": "Channel Dimension", "view_details": "Open procurement", "empty": "No channel data", "sorted_note": "Top 10 channels by procurement cost and billed revenue", "columns": { "channel": "Channel", "requests": "Requests", "revenue": "Billed revenue", "cost": "Procurement cost", "profit": "Gross profit", "margin": "Gross margin", "coverage": "Cost coverage", "actions": "Actions" } },
+      "models": { "title": "Model Dimension", "view_details": "Open profit", "empty": "No model data", "sorted_note": "Top 10 models by procurement cost and billed revenue", "columns": { "model": "Model", "requests": "Requests", "profit": "Gross profit", "margin": "Gross margin", "coverage": "Cost coverage", "actions": "Actions" } },
+      "priority": { "title": "Priority Items", "scope_note": "Operating risks follow the current filters; configuration risks are global health", "sources": { "operating": "Operating", "configuration": "Configuration" }, "columns": { "source": "Source", "level": "Level", "issue": "Issue", "impact": "Affected requests", "action": "Action" } },
+      "trend": { "title": "Billed revenue and cost trend in scope", "financials": "Billed revenue {{revenue}} / Cost {{cost}} / Profit {{profit}}" },
       "channel_placeholder": "Filter channel", "model_placeholder": "Filter model"
     },
     "procurement_report": {
@@ -3558,7 +3568,8 @@
         "unconfigured": "Unconfigured cost only"
       },
       "filters": {
-        "group": "Filter group"
+        "group": "Filter group",
+        "model": "Filter model"
       },
       "summary": {
         "request_count": "Requests",

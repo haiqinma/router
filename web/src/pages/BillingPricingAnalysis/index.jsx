@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { API, showError } from '../../helpers';
 import { formatDecimalNumber } from '../../helpers/render';
 import {
@@ -52,10 +53,54 @@ const pricingState = (row) => {
 
 function BillingPricingAnalysis() {
   const { t } = useTranslation();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const initialContext = useMemo(() => {
+    const defaults = recentRange();
+    const params = new URLSearchParams(location.search);
+    const numberParam = (key, fallback) => {
+      const value = Number(params.get(key) || 0);
+      return Number.isFinite(value) && value > 0 ? value : fallback;
+    };
+    return {
+      startAt: numberParam('start_at', defaults.start_at),
+      endAt: numberParam('end_at', defaults.end_at),
+      channelID: params.get('channel_id') || '',
+      model: params.get('model') || '',
+      groupID: params.get('group_id') || '',
+      returnTo: params.get('return_to') || '',
+    };
+  }, []);
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState([]);
-  const [groupID, setGroupID] = useState('');
+  const [groupID, setGroupID] = useState(initialContext.groupID);
   const [groupOptions, setGroupOptions] = useState([]);
+
+  const queryContext = useMemo(() => ({
+    start_at: initialContext.startAt,
+    end_at: initialContext.endAt,
+    channel_id: initialContext.channelID,
+    model: initialContext.model,
+    group_id: groupID,
+    return_to: initialContext.returnTo,
+  }), [groupID, initialContext]);
+
+  const buildProcurementTarget = useCallback((model) => {
+    const params = new URLSearchParams();
+    Object.entries({ ...queryContext, model }).forEach(([key, value]) => {
+      if (value !== '') params.set(key, String(value));
+    });
+    params.set('return_to', `${location.pathname}?${new URLSearchParams(queryContext).toString()}`);
+    return `/admin/finance/procurement?${params.toString()}`;
+  }, [location.pathname, queryContext]);
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    Object.entries(queryContext).forEach(([key, value]) => {
+      if (value !== '') params.set(key, String(value));
+    });
+    navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true });
+  }, [location.pathname, navigate, queryContext]);
 
   useEffect(() => {
     API.get('/api/v1/admin/groups', { params: { page: 1, page_size: 200 } })
@@ -71,7 +116,7 @@ function BillingPricingAnalysis() {
     setLoading(true);
     try {
       const response = await API.get('/api/v1/admin/billing/procurement-report', {
-        params: { ...recentRange(), group_by: 'model', cost_scope: 'all', group_id: groupID },
+        params: { ...queryContext, return_to: undefined, group_by: 'model', cost_scope: 'all' },
       });
       if (!response.data?.success) {
         showError(response.data?.message || t('billing.pricing_analysis.load_failed'));
@@ -83,7 +128,7 @@ function BillingPricingAnalysis() {
     } finally {
       setLoading(false);
     }
-  }, [groupID, t]);
+  }, [queryContext, t]);
 
   useEffect(() => { load().then(); }, [load]);
 
@@ -145,17 +190,31 @@ function BillingPricingAnalysis() {
       align: 'right',
       render: (_, row) => `${formatCount(row.configured_cost_request_count)} / ${formatCount(row.request_count)}`,
     },
+    {
+      title: t('billing.pricing_analysis.columns.actions'),
+      key: 'actions',
+      width: 120,
+      render: (_, row) => <Link to={buildProcurementTarget(row.dimension_key)}>{t('billing.pricing_analysis.view_procurement')}</Link>,
+    },
+  ];
+
+  const fromOverview = initialContext.returnTo.startsWith('/admin/finance/overview');
+  const breadcrumbs = [
+    { key: 'finance', label: t('header.finance') },
+    ...(fromOverview ? [{ key: 'overview', label: t('billing.overview.title'), onClick: () => navigate(initialContext.returnTo) }] : []),
+    { key: 'pricing-analysis', label: t('billing.pricing_analysis.title'), active: true },
   ];
 
   return (
     <div className='dashboard-container billing-pricing-analysis-page'>
       <AppFilterHeader
-        breadcrumbs={[{ key: 'finance', label: t('header.finance') }, { key: 'pricing-analysis', label: t('billing.pricing_analysis.title'), active: true }]}
+        breadcrumbs={breadcrumbs}
         actions={<AppButton className='router-page-button' color='blue' loading={loading} onClick={() => load().then()}>{t('common.refresh')}</AppButton>}
         query={<AppSelect className='billing-pricing-analysis-group-select' clearable search options={groupOptions} value={groupID} placeholder={t('billing.pricing_analysis.group_placeholder')} onChange={(e, { value }) => setGroupID((value || '').toString())} />}
       />
       <AppSpin spinning={loading}>
         <AppSection className='billing-pricing-analysis-section'>
+          <div className='billing-pricing-analysis-note'>{t('billing.pricing_analysis.context', { start: new Date(initialContext.startAt * 1000).toLocaleString(), end: new Date(initialContext.endAt * 1000).toLocaleString() })}</div>
           <div className='billing-pricing-analysis-note'>{t('billing.pricing_analysis.note')}</div>
           <AppTable className='router-detail-table billing-pricing-analysis-table' size='small' pagination={false} rowKey={(row) => row.dimension_key} dataSource={rows} columns={columns} locale={{ emptyText: t('billing.pricing_analysis.empty') }} />
         </AppSection>

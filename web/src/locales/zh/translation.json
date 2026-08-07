@@ -3509,18 +3509,28 @@
       "note": "默认展示最近 7 天有请求的模型。正式毛利只基于真实或明确零成本，成本覆盖不足的模型不会被判定为正常盈利。",
       "empty": "暂无模型财务数据",
       "states": { "healthy": "正常", "low_margin": "低毛利", "loss": "低于成本", "unknown": "数据不足" },
-      "columns": { "model": "模型", "state": "利润状态", "requests": "请求数", "sell": "计费收入 CNY", "cost": "采购成本 CNY", "profit": "毛利 CNY", "margin": "毛利率", "cost_coverage": "成本覆盖" }
+      "columns": { "model": "模型", "state": "利润状态", "requests": "请求数", "sell": "计费收入 CNY", "cost": "采购成本 CNY", "profit": "毛利 CNY", "margin": "毛利率", "cost_coverage": "成本覆盖", "actions": "操作" },
+      "context": "统计范围：{{start}} 至 {{end}}",
+      "view_procurement": "查看采购"
     },
     "overview": {
       "nav": "总览",
       "title": "总览",
       "structure": { "title": "财务看板", "summary": "先看计费收入、采购成本、毛利和毛利率是否符合预期；异常时再下钻利润和采购。", "pricing": "查看利润", "procurement": "查看采购" },
       "load_failed": "财务数据加载失败",
-      "metrics": { "revenue": "计费收入 CNY", "cost": "采购成本 CNY", "profit": "毛利 CNY", "margin": "毛利率", "coverage": "成本覆盖率", "anomalies": "异常项" },
+      "metrics": { "revenue": "计费收入", "cost": "采购成本", "profit": "毛利", "margin": "毛利率", "coverage": "成本覆盖率", "anomalies": "财务风险", "risk_count": "{{count}} 项", "risk_breakdown": "运营 {{operating}} / 配置 {{configuration}}", "coverage_note": "已覆盖 {{configured}} / {{total}}" },
+      "invalid_time": "请选择有效的时间范围",
+      "context": { "range": "统计范围：{{start}} 至 {{end}}", "currency": "金额基准币种：CNY" },
+      "actions": { "drilldown": "下钻", "profit": "利润", "procurement": "采购" },
+      "status": { "ok": "正常", "warning": "关注", "critical": "处理", "empty": "无数据" },
+      "overview_table": { "title": "多维经营总览", "summary": "当前范围 {{risks}} 项运营风险", "columns": { "dimension": "维度", "primary": "关键指标", "secondary": "辅助信息", "status": "状态", "action": "操作" } },
+      "dimensions": { "profitability": { "title": "收入与利润", "primary": "收入 {{revenue}} / 毛利 {{profit}}", "secondary": "毛利率 {{margin}}，请求 {{requests}} 次" }, "cost_coverage": { "title": "成本归因", "primary": "覆盖率 {{coverage}}", "secondary": "已覆盖 {{configured}}，未配置 {{unconfigured}}，待归因 {{pending}}" }, "channel": { "title": "渠道结构", "primary": "{{count}} 个渠道，{{loss}} 个亏损", "secondary": "按渠道判断采购成本、毛利和成本覆盖" }, "model": { "title": "模型结构", "primary": "{{count}} 个模型，{{low}} 个低毛利", "secondary": "按模型判断售价、倍率和采购成本是否合理" }, "operating": { "title": "运营风险", "primary": "{{count}} 项待处理", "secondary": "严重 {{critical}}，提醒 {{warning}}" }, "configuration": { "title": "配置风险", "primary": "{{count}} 项配置问题", "secondary": "严重 {{critical}}，提醒 {{warning}}" } },
       "operating_risks": { "title": "当前范围财务异常", "view_details": "查看利润", "empty": "当前范围未发现财务异常", "unconfigured": "{{model}} 有 {{count}} 个请求未配置成本", "loss": "{{model}} 正式毛利为 {{amount}}", "low_margin": "{{model}} 正式毛利率仅 {{margin}}", "floor": "{{model}} 触发成本底线 {{count}} 次", "estimated": "{{model}} 有 {{count}} 个请求仅使用估算成本", "pending": "{{model}} 有 {{count}} 个请求成本待归因", "retry": "{{model}} 有 {{count}} 个请求成本归因失败，需要重试" },
       "configuration_risks": { "title": "财务配置风险", "view_details": "查看采购", "empty": "未发现财务配置风险" },
-      "channels": { "title": "渠道毛利", "view_details": "查看采购", "empty": "暂无渠道数据" },
-      "trend": { "title": "近 7 天计费收支趋势", "financials": "计费收入 {{revenue}} / 成本 {{cost}} / 毛利 {{profit}}" },
+      "channels": { "title": "渠道维度", "view_details": "进入采购", "empty": "暂无渠道数据", "sorted_note": "按采购成本、计费收入排序，展示前 10 个渠道", "columns": { "channel": "渠道", "requests": "请求数", "revenue": "计费收入", "cost": "采购成本", "profit": "毛利", "margin": "毛利率", "coverage": "成本覆盖率", "actions": "操作" } },
+      "models": { "title": "模型维度", "view_details": "进入利润", "empty": "暂无模型数据", "sorted_note": "按采购成本、计费收入排序，展示前 10 个模型", "columns": { "model": "模型", "requests": "请求数", "profit": "毛利", "margin": "毛利率", "coverage": "成本覆盖率", "actions": "操作" } },
+      "priority": { "title": "优先处理事项", "scope_note": "运营风险遵循当前筛选范围；配置风险为全局健康状态", "sources": { "operating": "运营", "configuration": "配置" }, "columns": { "source": "来源", "level": "级别", "issue": "事项", "impact": "影响请求", "action": "操作" } },
+      "trend": { "title": "当前范围计费收支趋势", "financials": "计费收入 {{revenue}} / 成本 {{cost}} / 毛利 {{profit}}" },
       "channel_placeholder": "筛选渠道", "model_placeholder": "筛选模型"
     },
     "procurement_report": {
@@ -3553,7 +3563,8 @@
         "unconfigured": "仅未配置成本"
       },
       "filters": {
-        "group": "筛选分组"
+        "group": "筛选分组",
+        "model": "筛选模型"
       },
       "summary": {
         "request_count": "请求数",

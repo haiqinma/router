@@ -1304,6 +1304,17 @@ const ChannelDetailBillingTab = ({
             {t('channel.edit.billing.add_purchase_record')}
           </AppButton>
         ) : null}
+        {typeof onRefreshBilling === 'function' ? (
+          <AppButton
+            type='button'
+            className='router-page-button'
+            loading={billingLoading}
+            disabled={billingLoading || billingSubmitting}
+            onClick={onRefreshBilling}
+          >
+            {t('common.refresh')}
+          </AppButton>
+        ) : null}
       </div> : null}
       {viewMode === 'procurement' ? <AppAlert type='info' showIcon className='router-section-message' title={t('channel.edit.billing.structure_hint')} /> : null}
       {billingView === 'overview' && (
