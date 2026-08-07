@@ -46,16 +46,19 @@ type channelBillingAlertFeedItem struct {
 }
 
 type channelBillingManualSnapshotRequest struct {
-	PurchaseAt         int64                                  `json:"purchase_at"`
-	PurchaseCurrency   string                                 `json:"purchase_currency"`
-	PurchaseAmount     float64                                `json:"purchase_amount"`
-	PurchaseFXRate     float64                                `json:"purchase_fx_rate"`
-	PurchaseCostAmount float64                                `json:"purchase_cost_amount"`
-	EntitlementName    string                                 `json:"entitlement_name"`
-	ValidFrom          int64                                  `json:"valid_from"`
-	ValidUntil         int64                                  `json:"valid_until"`
-	Items              []channelBillingManualQuotaItemRequest `json:"items"`
-	Message            string                                 `json:"message"`
+	PurchaseAt          int64                                  `json:"purchase_at"`
+	PurchaseCurrency    string                                 `json:"purchase_currency"`
+	PurchaseAmount      float64                                `json:"purchase_amount"`
+	PurchaseFXRate      float64                                `json:"purchase_fx_rate"`
+	PurchaseCostAmount  float64                                `json:"purchase_cost_amount"`
+	EntitlementName     string                                 `json:"entitlement_name"`
+	EventType           string                                 `json:"event_type"`
+	ParentSnapshotID    string                                 `json:"parent_snapshot_id"`
+	OldBatchDisposition string                                 `json:"old_batch_disposition"`
+	ValidFrom           int64                                  `json:"valid_from"`
+	ValidUntil          int64                                  `json:"valid_until"`
+	Items               []channelBillingManualQuotaItemRequest `json:"items"`
+	Message             string                                 `json:"message"`
 }
 
 type channelBillingManualQuotaItemRequest struct {
@@ -817,16 +820,19 @@ func updateConsumedManualBillingSnapshotWithDB(tx *gorm.DB, current model.Channe
 }
 
 type normalizedManualBillingSnapshotRequest struct {
-	PurchaseAt         int64
-	PurchaseCurrency   string
-	PurchaseAmount     float64
-	PurchaseFXRate     float64
-	PurchaseCostAmount float64
-	EntitlementName    string
-	ValidFrom          int64
-	ValidUntil         int64
-	Items              []model.ChannelBillingSnapshotItem
-	Message            string
+	PurchaseAt          int64
+	PurchaseCurrency    string
+	PurchaseAmount      float64
+	PurchaseFXRate      float64
+	PurchaseCostAmount  float64
+	EntitlementName     string
+	EventType           string
+	ParentSnapshotID    string
+	OldBatchDisposition string
+	ValidFrom           int64
+	ValidUntil          int64
+	Items               []model.ChannelBillingSnapshotItem
+	Message             string
 }
 
 func normalizeManualBillingSnapshotRequest(req channelBillingManualSnapshotRequest, now int64) (normalizedManualBillingSnapshotRequest, error) {
@@ -871,6 +877,29 @@ func normalizeManualBillingSnapshotRequest(req channelBillingManualSnapshotReque
 	entitlementName := strings.TrimSpace(req.EntitlementName)
 	if entitlementName == "" {
 		return normalizedManualBillingSnapshotRequest{}, fmt.Errorf("权益名称不能为空")
+	}
+	eventType := strings.TrimSpace(strings.ToLower(req.EventType))
+	if eventType == "" {
+		eventType = "purchase"
+	}
+	switch eventType {
+	case "purchase", "renewal", "upgrade", "downgrade", "quota_adjustment", "correction":
+	default:
+		return normalizedManualBillingSnapshotRequest{}, fmt.Errorf("采购变更类型无效")
+	}
+	parentSnapshotID := strings.TrimSpace(req.ParentSnapshotID)
+	oldBatchDisposition := strings.TrimSpace(strings.ToLower(req.OldBatchDisposition))
+	if oldBatchDisposition == "" {
+		oldBatchDisposition = "keep"
+	}
+	if oldBatchDisposition != "keep" && oldBatchDisposition != "disable" {
+		return normalizedManualBillingSnapshotRequest{}, fmt.Errorf("旧采购批次处理方式无效")
+	}
+	if (eventType == "upgrade" || eventType == "downgrade") && parentSnapshotID == "" {
+		return normalizedManualBillingSnapshotRequest{}, fmt.Errorf("套餐升级或降级必须选择原采购记录")
+	}
+	if eventType != "upgrade" && eventType != "downgrade" && parentSnapshotID != "" {
+		return normalizedManualBillingSnapshotRequest{}, fmt.Errorf("只有套餐升级或降级可以关联原采购记录")
 	}
 	quotaItems := make([]model.ChannelBillingSnapshotItem, 0, len(req.Items))
 	for index, item := range req.Items {
@@ -945,16 +974,19 @@ func normalizeManualBillingSnapshotRequest(req channelBillingManualSnapshotReque
 		return normalizedManualBillingSnapshotRequest{}, fmt.Errorf("请至少填写一条权益项")
 	}
 	return normalizedManualBillingSnapshotRequest{
-		PurchaseAt:         purchaseAt,
-		PurchaseCurrency:   purchaseCurrency,
-		PurchaseAmount:     purchaseAmount,
-		PurchaseFXRate:     purchaseFXRate,
-		PurchaseCostAmount: purchaseCostAmount,
-		EntitlementName:    entitlementName,
-		ValidFrom:          validFrom,
-		ValidUntil:         validUntil,
-		Items:              quotaItems,
-		Message:            strings.TrimSpace(req.Message),
+		PurchaseAt:          purchaseAt,
+		PurchaseCurrency:    purchaseCurrency,
+		PurchaseAmount:      purchaseAmount,
+		PurchaseFXRate:      purchaseFXRate,
+		PurchaseCostAmount:  purchaseCostAmount,
+		EntitlementName:     entitlementName,
+		EventType:           eventType,
+		ParentSnapshotID:    parentSnapshotID,
+		OldBatchDisposition: oldBatchDisposition,
+		ValidFrom:           validFrom,
+		ValidUntil:          validUntil,
+		Items:               quotaItems,
+		Message:             strings.TrimSpace(req.Message),
 	}, nil
 }
 
@@ -983,21 +1015,40 @@ func CreateChannelBillingSnapshot(c *gin.Context) {
 		return
 	}
 	err = model.DB.Transaction(func(tx *gorm.DB) error {
+		if normalizedReq.ParentSnapshotID != "" {
+			parent, err := model.GetChannelBillingSnapshotByIDWithDB(tx, normalizedReq.ParentSnapshotID)
+			if err != nil {
+				return fmt.Errorf("原采购记录不存在")
+			}
+			if strings.TrimSpace(parent.ChannelId) != channelRow.Id {
+				return fmt.Errorf("原采购记录不属于当前渠道")
+			}
+			if normalizedReq.OldBatchDisposition == "disable" {
+				if err := tx.Model(&model.ChannelProcurementBatch{}).
+					Where("source_snapshot_id = ? AND cost_status = ?", parent.Id, model.ProcurementCostStatusActive).
+					Updates(map[string]any{"cost_status": model.ProcurementCostStatusDisabled, "updated_at": now}).Error; err != nil {
+					return err
+				}
+			}
+		}
 		snapshotRow, err := model.CreateChannelBillingSnapshotWithDB(tx, model.ChannelBillingSnapshot{
-			ChannelId:          channelRow.Id,
-			SourceType:         model.ChannelBillingSnapshotSourceManual,
-			PurchaseAt:         normalizedReq.PurchaseAt,
-			PurchaseCurrency:   normalizedReq.PurchaseCurrency,
-			PurchaseAmount:     normalizedReq.PurchaseAmount,
-			PurchaseFXRate:     normalizedReq.PurchaseFXRate,
-			PurchaseCostAmount: normalizedReq.PurchaseCostAmount,
-			EntitlementName:    normalizedReq.EntitlementName,
-			ValidFrom:          normalizedReq.ValidFrom,
-			ValidUntil:         normalizedReq.ValidUntil,
-			RawStatus:          "manual",
-			Message:            normalizedReq.Message,
-			OperatorUserId:     operatorUserID,
-			CreatedAt:          now,
+			ChannelId:           channelRow.Id,
+			SourceType:          model.ChannelBillingSnapshotSourceManual,
+			PurchaseAt:          normalizedReq.PurchaseAt,
+			PurchaseCurrency:    normalizedReq.PurchaseCurrency,
+			PurchaseAmount:      normalizedReq.PurchaseAmount,
+			PurchaseFXRate:      normalizedReq.PurchaseFXRate,
+			PurchaseCostAmount:  normalizedReq.PurchaseCostAmount,
+			EntitlementName:     normalizedReq.EntitlementName,
+			EventType:           normalizedReq.EventType,
+			ParentSnapshotId:    normalizedReq.ParentSnapshotID,
+			OldBatchDisposition: normalizedReq.OldBatchDisposition,
+			ValidFrom:           normalizedReq.ValidFrom,
+			ValidUntil:          normalizedReq.ValidUntil,
+			RawStatus:           "manual",
+			Message:             normalizedReq.Message,
+			OperatorUserId:      operatorUserID,
+			CreatedAt:           now,
 		})
 		if err != nil {
 			return err
