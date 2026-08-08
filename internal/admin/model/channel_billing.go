@@ -70,27 +70,30 @@ func (ChannelBillingProfile) TableName() string {
 }
 
 type ChannelBillingSnapshot struct {
-	Id                 string                       `json:"id" gorm:"type:char(36);primaryKey"`
-	ChannelId          string                       `json:"channel_id" gorm:"type:char(36);not null;index"`
-	SourceType         string                       `json:"source_type" gorm:"type:varchar(32);not null;default:'manual'"`
-	Balance            float64                      `json:"balance" gorm:"not null;default:0"`
-	Currency           string                       `json:"currency" gorm:"type:varchar(16);default:''"`
-	PurchaseAt         int64                        `json:"purchase_at" gorm:"bigint;not null;default:0;index"`
-	PurchaseCurrency   string                       `json:"purchase_currency" gorm:"type:varchar(16);not null;default:''"`
-	PurchaseAmount     float64                      `json:"purchase_amount" gorm:"type:double precision;not null;default:0"`
-	PurchaseFXRate     float64                      `json:"purchase_fx_rate" gorm:"type:double precision;not null;default:0"`
-	PurchaseCostAmount float64                      `json:"purchase_cost_amount" gorm:"type:double precision;not null;default:0"`
-	EntitlementName    string                       `json:"entitlement_name" gorm:"type:varchar(191);not null;default:''"`
-	ValidFrom          int64                        `json:"valid_from" gorm:"bigint;not null;default:0;index"`
-	ValidUntil         int64                        `json:"valid_until" gorm:"bigint;not null;default:0;index"`
-	RawStatus          string                       `json:"raw_status" gorm:"type:varchar(64);default:''"`
-	Message            string                       `json:"message" gorm:"type:text"`
-	RequestURL         string                       `json:"request_url" gorm:"type:text"`
-	ResponseExcerpt    string                       `json:"response_excerpt" gorm:"type:text"`
-	OperatorUserId     string                       `json:"operator_user_id" gorm:"type:char(36);default:'';index"`
-	TaskId             string                       `json:"task_id" gorm:"type:char(36);default:'';index"`
-	CreatedAt          int64                        `json:"created_at" gorm:"bigint;index"`
-	Items              []ChannelBillingSnapshotItem `json:"items,omitempty" gorm:"-"`
+	Id                  string                       `json:"id" gorm:"type:char(36);primaryKey"`
+	ChannelId           string                       `json:"channel_id" gorm:"type:char(36);not null;index"`
+	SourceType          string                       `json:"source_type" gorm:"type:varchar(32);not null;default:'manual'"`
+	Balance             float64                      `json:"balance" gorm:"not null;default:0"`
+	Currency            string                       `json:"currency" gorm:"type:varchar(16);default:''"`
+	PurchaseAt          int64                        `json:"purchase_at" gorm:"bigint;not null;default:0;index"`
+	PurchaseCurrency    string                       `json:"purchase_currency" gorm:"type:varchar(16);not null;default:''"`
+	PurchaseAmount      float64                      `json:"purchase_amount" gorm:"type:double precision;not null;default:0"`
+	PurchaseFXRate      float64                      `json:"purchase_fx_rate" gorm:"type:double precision;not null;default:0"`
+	PurchaseCostAmount  float64                      `json:"purchase_cost_amount" gorm:"type:double precision;not null;default:0"`
+	EntitlementName     string                       `json:"entitlement_name" gorm:"type:varchar(191);not null;default:''"`
+	EventType           string                       `json:"event_type" gorm:"type:varchar(32);not null;default:'purchase';index"`
+	ParentSnapshotId    string                       `json:"parent_snapshot_id" gorm:"type:char(36);not null;default:'';index"`
+	OldBatchDisposition string                       `json:"old_batch_disposition" gorm:"type:varchar(32);not null;default:'keep'"`
+	ValidFrom           int64                        `json:"valid_from" gorm:"bigint;not null;default:0;index"`
+	ValidUntil          int64                        `json:"valid_until" gorm:"bigint;not null;default:0;index"`
+	RawStatus           string                       `json:"raw_status" gorm:"type:varchar(64);default:''"`
+	Message             string                       `json:"message" gorm:"type:text"`
+	RequestURL          string                       `json:"request_url" gorm:"type:text"`
+	ResponseExcerpt     string                       `json:"response_excerpt" gorm:"type:text"`
+	OperatorUserId      string                       `json:"operator_user_id" gorm:"type:char(36);default:'';index"`
+	TaskId              string                       `json:"task_id" gorm:"type:char(36);default:'';index"`
+	CreatedAt           int64                        `json:"created_at" gorm:"bigint;index"`
+	Items               []ChannelBillingSnapshotItem `json:"items,omitempty" gorm:"-"`
 }
 
 func (ChannelBillingSnapshot) TableName() string {
@@ -113,6 +116,9 @@ func ensureChannelBillingSnapshotPurchaseFieldsWithDB(db *gorm.DB) error {
 			"PurchaseFXRate",
 			"PurchaseCostAmount",
 			"EntitlementName",
+			"EventType",
+			"ParentSnapshotId",
+			"OldBatchDisposition",
 			"ValidFrom",
 			"ValidUntil",
 		}

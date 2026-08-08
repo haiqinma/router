@@ -58,6 +58,9 @@ const buildManualPurchaseRecord = () => ({
   purchase_fx_rate: 1,
   purchase_cost_amount: null,
   entitlement_name: '',
+  event_type: 'purchase',
+  parent_snapshot_id: '',
+  old_batch_disposition: 'keep',
   valid_from_input: '',
   valid_until_input: '',
 });
@@ -544,6 +547,9 @@ const buildManualPurchaseRecordFromSnapshot = (row) => ({
   purchase_fx_rate: Number(row?.purchase_fx_rate || 1) || 1,
   purchase_cost_amount: Number(row?.purchase_cost_amount || 0),
   entitlement_name: (row?.entitlement_name || '').toString(),
+  event_type: (row?.event_type || 'purchase').toString(),
+  parent_snapshot_id: (row?.parent_snapshot_id || '').toString(),
+  old_batch_disposition: (row?.old_batch_disposition || 'keep').toString(),
   valid_from_input: toDateTimeLocalValueFromTimestamp(row?.valid_from),
   valid_until_input: toDateTimeLocalValueFromTimestamp(row?.valid_until),
 });
@@ -624,6 +630,12 @@ const ChannelDetailBillingTab = ({
   const procurementRows = Array.isArray(procurementBatches)
     ? procurementBatches
     : [];
+  const parentPurchaseOptions = purchaseRecords
+    .filter((item) => item?.id && item.id !== editingPurchaseRecord?.id)
+    .map((item) => ({
+      value: item.id,
+      label: `${item.entitlement_name || item.id} ${item.purchase_at ? timestamp2string(item.purchase_at) : ''}`.trim(),
+    }));
   const latestSnapshotStatus = normalizeBillingValue(
     billingSummary?.latest_snapshot_status
   );
@@ -789,6 +801,9 @@ const ChannelDetailBillingTab = ({
       purchase_fx_rate: purchaseFXRate,
       purchase_cost_amount: purchaseCostAmount,
       entitlement_name: manualPurchaseRecord.entitlement_name,
+      event_type: manualPurchaseRecord.event_type,
+      parent_snapshot_id: manualPurchaseRecord.parent_snapshot_id,
+      old_batch_disposition: manualPurchaseRecord.old_batch_disposition,
       valid_from: toUnixTimestamp(manualPurchaseRecord.valid_from_input),
       valid_until: toUnixTimestamp(manualPurchaseRecord.valid_until_input),
       items: manualItems.map((manualItem) => {
@@ -1021,7 +1036,28 @@ const ChannelDetailBillingTab = ({
               readOnly={billingReadonly || billingSubmitting}
             />
           </AppField>
+          {!editingPurchaseRecord ? <AppField label={t('channel.edit.billing.procurement_event_type')} required>
+            <AppSegmented
+              options={[
+                { value: 'purchase', label: t('channel.edit.billing.procurement_events.purchase') },
+                { value: 'renewal', label: t('channel.edit.billing.procurement_events.renewal') },
+                { value: 'upgrade', label: t('channel.edit.billing.procurement_events.upgrade') },
+                { value: 'quota_adjustment', label: t('channel.edit.billing.procurement_events.quota_adjustment') },
+              ]}
+              value={manualPurchaseRecord.event_type}
+              onChange={(e, { value }) => updateManualPurchaseRecord({ event_type: value, parent_snapshot_id: value === 'upgrade' ? manualPurchaseRecord.parent_snapshot_id : '', old_batch_disposition: value === 'upgrade' ? manualPurchaseRecord.old_batch_disposition : 'keep' })}
+              disabled={billingReadonly || billingSubmitting}
+            />
+          </AppField> : null}
         </AppFormRow>
+        {!editingPurchaseRecord && manualPurchaseRecord.event_type === 'upgrade' ? <AppFormRow>
+          <AppField label={t('channel.edit.billing.procurement_parent_record')} required>
+            <AppSelect className='router-section-input' search options={parentPurchaseOptions} value={manualPurchaseRecord.parent_snapshot_id} placeholder={t('channel.edit.billing.procurement_parent_record_placeholder')} onChange={(e, { value }) => updateManualPurchaseRecord({ parent_snapshot_id: (value || '').toString() })} disabled={billingReadonly || billingSubmitting} />
+          </AppField>
+          <AppField label={t('channel.edit.billing.procurement_old_batch_disposition')} required>
+            <AppSegmented options={[{ value: 'keep', label: t('channel.edit.billing.procurement_old_batch_dispositions.keep') }, { value: 'disable', label: t('channel.edit.billing.procurement_old_batch_dispositions.disable') }]} value={manualPurchaseRecord.old_batch_disposition} onChange={(e, { value }) => updateManualPurchaseRecord({ old_batch_disposition: value })} disabled={billingReadonly || billingSubmitting} />
+          </AppField>
+        </AppFormRow> : null}
       </div>
       <div className='router-billing-manual-item-header'>
         <div className='router-billing-manual-item-title'>
@@ -1302,6 +1338,17 @@ const ChannelDetailBillingTab = ({
             disabled={billingReadonly || billingSubmitting}
             onClick={openCreateManualModal}>
             {t('channel.edit.billing.add_purchase_record')}
+          </AppButton>
+        ) : null}
+        {typeof onRefreshBilling === 'function' ? (
+          <AppButton
+            type='button'
+            className='router-page-button'
+            loading={billingLoading}
+            disabled={billingLoading || billingSubmitting}
+            onClick={onRefreshBilling}
+          >
+            {t('common.refresh')}
           </AppButton>
         ) : null}
       </div> : null}
