@@ -397,7 +397,7 @@ check_database() {
     return 0
   fi
   local output
-  output="$(PGCONNECT_TIMEOUT="$TIMEOUT" PGDATABASE="$dsn" psql -X -q -tA -c 'SELECT 1' 2>/dev/null || true)"
+  output="$(PGCONNECT_TIMEOUT="$TIMEOUT" psql "$dsn" -X -q -tA -c 'SELECT 1' 2>/dev/null || true)"
   if [[ "$output" == "1" ]]; then
     set_check "PASS" "database read-only query succeeded"
   else
