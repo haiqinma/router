@@ -5,4 +5,4 @@ BACKUP_CONF_FLAG="True"
 BACKUP_CONF_PREFIX=""
 
 # Backup file suffix.
-BACKUP_CONF_SUFFIX="conf.tar.gz"
+BACKUP_CONF_SUFFIX=".conf.tar.gz.gpg"
