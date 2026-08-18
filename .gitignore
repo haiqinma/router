@@ -14,6 +14,7 @@ cmd.md
 .env
 config.yaml
 scripts/backup.conf
+scripts/.passphrase-file
 temp
 .DS_Store
 .gocache

@@ -4,7 +4,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REAL_PATH="$(realpath "$SCRIPT_DIR/..")"
 MODULE_NAME="$(basename "$REAL_PATH")"
+LOG_MODULE_NAME="${MODULE_NAME%%-v*}"
 CONF_FILE="$SCRIPT_DIR/backup.conf"
+PASSPHRASE_FILE="$SCRIPT_DIR/.passphrase-file"
 CONFIG_FILE="$REAL_PATH/config.yaml"
 BACKUP_DIR="/opt/backup"
 TMP_BASE_DIR="/tmp"
@@ -16,7 +18,7 @@ EXIT_BACKUP_EXISTS=255
 
 BACKUP_CONF_FLAG="False"
 BACKUP_CONF_PREFIX=""
-BACKUP_CONF_SUFFIX="conf.tar.gz"
+BACKUP_CONF_SUFFIX=".conf.tar.gz.gpg"
 
 init_log_file() {
     local logfile_name=$1
@@ -66,6 +68,23 @@ validate_backup_conf() {
     fi
 }
 
+validate_encryption_dependencies() {
+    if [[ ! -f "$PASSPHRASE_FILE" ]]; then
+        log_err "passphrase file not found: $PASSPHRASE_FILE"
+        exit 1
+    fi
+
+    if [[ ! -s "$PASSPHRASE_FILE" ]]; then
+        log_err "passphrase file must not be empty: $PASSPHRASE_FILE"
+        exit 1
+    fi
+
+    if ! command -v gpg >/dev/null 2>&1; then
+        log_err "gpg command not found"
+        exit 1
+    fi
+}
+
 backup_config() {
     local backup_file_name="${BACKUP_CONF_PREFIX}${MODULE_NAME}${BACKUP_CONF_SUFFIX}"
     local backup_file_path="$BACKUP_DIR/$backup_file_name"
@@ -81,6 +100,8 @@ backup_config() {
         exit 1
     fi
 
+    validate_encryption_dependencies
+
     mkdir -p "$BACKUP_DIR"
 
     if [[ -f "$backup_file_path" ]]; then
@@ -94,10 +115,12 @@ backup_config() {
     log "copy config file to temporary directory: $tmp_conf_dir"
     cp "$CONFIG_FILE" "$tmp_conf_dir/config.yaml"
 
-    log "create backup file: $backup_file_path"
+    log "create encrypted backup file: $backup_file_path"
     (
         cd "$TMP_BASE_DIR"
-        tar -czf "$backup_file_path" "${MODULE_NAME}-conf"
+        gpg --batch --yes --symmetric --cipher-algo AES256 \
+            --passphrase-file "$PASSPHRASE_FILE" \
+            -o "$backup_file_path" < <(tar -czf - "${MODULE_NAME}-conf")
     )
 
     rm -rf "$tmp_conf_dir"
@@ -110,7 +133,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-init_log_file "config-backup-router.log"
+init_log_file "config-backup-${LOG_MODULE_NAME}.log"
 log "config backup started for $MODULE_NAME at $REAL_PATH"
 load_backup_conf
 validate_backup_conf
