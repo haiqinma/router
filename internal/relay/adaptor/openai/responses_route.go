@@ -16,7 +16,20 @@ func rememberResponsesRoute(c *gin.Context, responseID string) {
 	responsestate.StoreRoute(responseID, c.GetString(ctxkey.ChannelId))
 }
 
+func rememberResponsesRoutes(c *gin.Context, raw []byte) {
+	if c == nil {
+		return
+	}
+	responsestate.StoreRoutes(responsestate.ExtractResponseItemIDs(raw), c.GetString(ctxkey.ChannelId))
+	responseID := responsestate.ExtractResponseID(raw)
+	if responseID == "" {
+		responseID = extractResponsesStreamResponseID(raw)
+	}
+	rememberResponsesRoute(c, responseID)
+}
+
 func rememberResponsesRouteFromBody(c *gin.Context, raw []byte) {
+	responsestate.StoreRoutes(responsestate.ExtractResponseItemIDs(raw), c.GetString(ctxkey.ChannelId))
 	rememberResponsesRoute(c, responsestate.ExtractResponseID(raw))
 }
 

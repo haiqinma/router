@@ -354,6 +354,13 @@ func normalizeFinalRelayError(err *model.ErrorWithStatusCode) {
 	if err == nil {
 		return
 	}
+	if isResponsesStateIncompatibleError(err) {
+		err.StatusCode = http.StatusBadRequest
+		err.Error.Type = "state_incompatible_error"
+		err.Error.Code = "state_incompatible"
+		err.Error.Message = "当前 Responses 会话与所选上游不兼容，请新建会话后重试"
+		return
+	}
 	if isLocalQuotaRelayError(err) {
 		return
 	}
@@ -372,6 +379,18 @@ func normalizeFinalRelayError(err *model.ErrorWithStatusCode) {
 	}
 	err.StatusCode = http.StatusServiceUnavailable
 	err.Error.Message = "当前分组可用上游暂时不可用，请稍后再试"
+}
+
+func isResponsesStateIncompatibleError(err *model.ErrorWithStatusCode) bool {
+	if err == nil {
+		return false
+	}
+	message := strings.ToLower(strings.TrimSpace(err.Error.Message))
+	if err.StatusCode != http.StatusBadRequest || message == "" {
+		return false
+	}
+	return strings.Contains(message, "invalid 'input .id'") &&
+		strings.Contains(message, "expected an id that begins with")
 }
 
 func isLocalQuotaRelayError(err *model.ErrorWithStatusCode) bool {

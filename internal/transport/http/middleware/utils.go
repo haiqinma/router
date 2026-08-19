@@ -13,13 +13,22 @@ import (
 )
 
 func abortWithMessage(c *gin.Context, statusCode int, message string) {
+	errorType := c.GetString(ctxkey.RelayErrorType)
+	if errorType == "" {
+		errorType = "one_api_error"
+	}
+	errorCode := c.GetString(ctxkey.RelayErrorCode)
+	if errorCode == "" {
+		errorCode = "request_aborted"
+	}
 	c.Set(ctxkey.RelayError, strings.TrimSpace(message))
-	c.Set(ctxkey.RelayErrorType, "one_api_error")
-	c.Set(ctxkey.RelayErrorCode, "request_aborted")
+	c.Set(ctxkey.RelayErrorType, errorType)
+	c.Set(ctxkey.RelayErrorCode, errorCode)
 	c.JSON(statusCode, gin.H{
 		"error": gin.H{
 			"message": helper.MessageWithTraceID(message, c.GetString(helper.TraceIDKey)),
-			"type":    "one_api_error",
+			"type":    errorType,
+			"code":    errorCode,
 		},
 	})
 	c.Abort()

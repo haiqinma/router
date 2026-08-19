@@ -39,6 +39,7 @@ var (
 type RequestState struct {
 	PreviousResponseID string
 	HasToolOutput      bool
+	ItemIDs            []string
 }
 
 func AnalyzeRequestBody(raw []byte) RequestState {
@@ -53,6 +54,7 @@ func AnalyzeRequestBody(raw []byte) RequestState {
 	if root, ok := payload.(map[string]any); ok {
 		state.PreviousResponseID = strings.TrimSpace(asString(root["previous_response_id"]))
 	}
+	state.ItemIDs = extractInputItemIDs(payload)
 	state.HasToolOutput = containsFunctionCallOutput(payload)
 	return state
 }
@@ -71,6 +73,82 @@ func ExtractResponseID(raw []byte) string {
 		return ""
 	}
 	return strings.TrimSpace(asString(payload["id"]))
+}
+
+func ExtractResponseItemIDs(raw []byte) []string {
+	if len(raw) == 0 {
+		return nil
+	}
+	var payload any
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return nil
+	}
+	return extractResponseItemIDs(payload)
+}
+
+func extractInputItemIDs(value any) []string {
+	return extractIDsFromInput(value)
+}
+
+func extractIDsFromInput(value any) []string {
+	result := make([]string, 0)
+	var walk func(any)
+	walk = func(current any) {
+		switch typed := current.(type) {
+		case map[string]any:
+			if id := strings.TrimSpace(asString(typed["id"])); id != "" {
+				if itemType := strings.TrimSpace(asString(typed["type"])); itemType != "" && itemType != "response" {
+					result = appendUnique(result, id)
+				}
+			}
+			for key, child := range typed {
+				if key != "id" {
+					walk(child)
+				}
+			}
+		case []any:
+			for _, child := range typed {
+				walk(child)
+			}
+		}
+	}
+	walk(value)
+	return result
+}
+
+func extractResponseItemIDs(value any) []string {
+	result := make([]string, 0)
+	var walk func(any)
+	walk = func(current any) {
+		switch typed := current.(type) {
+		case map[string]any:
+			if id := strings.TrimSpace(asString(typed["id"])); id != "" {
+				if itemType := strings.TrimSpace(asString(typed["type"])); itemType != "" && itemType != "response" {
+					result = appendUnique(result, id)
+				}
+			}
+			for key, child := range typed {
+				if key != "id" {
+					walk(child)
+				}
+			}
+		case []any:
+			for _, child := range typed {
+				walk(child)
+			}
+		}
+	}
+	walk(value)
+	return result
+}
+
+func appendUnique(values []string, value string) []string {
+	for _, existing := range values {
+		if existing == value {
+			return values
+		}
+	}
+	return append(values, value)
 }
 
 func StoreRoute(responseID string, channelID string) {
@@ -98,6 +176,12 @@ func StoreRoute(responseID string, channelID string) {
 	}
 }
 
+func StoreRoutes(responseIDs []string, channelID string) {
+	for _, responseID := range responseIDs {
+		StoreRoute(responseID, channelID)
+	}
+}
+
 func LookupRoute(responseID string) (string, bool) {
 	normalizedResponseID := strings.TrimSpace(responseID)
 	if normalizedResponseID == "" {
@@ -118,6 +202,21 @@ func LookupRoute(responseID string) (string, bool) {
 		return channelID, true
 	}
 	return lookupMemoryRoute(normalizedResponseID)
+}
+
+func LookupRoutes(responseIDs []string) (string, bool, bool) {
+	selected := ""
+	for _, responseID := range responseIDs {
+		channelID, ok := LookupRoute(responseID)
+		if !ok {
+			continue
+		}
+		if selected != "" && selected != channelID {
+			return "", false, true
+		}
+		selected = channelID
+	}
+	return selected, selected != "", false
 }
 
 func lookupMemoryRoute(responseID string) (string, bool) {

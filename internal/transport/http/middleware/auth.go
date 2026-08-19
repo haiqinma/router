@@ -117,6 +117,9 @@ func hydrateResponsesRelayContext(c *gin.Context) {
 	if state.PreviousResponseID != "" {
 		c.Set(ctxkey.ResponsesPreviousResponseID, state.PreviousResponseID)
 	}
+	if len(state.ItemIDs) > 0 {
+		c.Set(ctxkey.ResponsesItemIDs, state.ItemIDs)
+	}
 	if state.PreviousResponseID != "" || state.HasToolOutput {
 		c.Set(ctxkey.ResponsesStatefulRequest, true)
 	}
