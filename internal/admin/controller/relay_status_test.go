@@ -36,6 +36,29 @@ func TestNormalizeFinalRelayErrorForTransientUpstream429(t *testing.T) {
 	}
 }
 
+func TestNormalizeFinalRelayErrorForResponsesStateIncompatibleID(t *testing.T) {
+	err := &relaymodel.ErrorWithStatusCode{
+		StatusCode: http.StatusBadRequest,
+		Error: relaymodel.Error{
+			Message: "Invalid 'input .id': 'fc_abc'. Expected an ID that begins with 'ctc'.",
+			Type:    "invalid_request_error",
+			Code:    "invalid_request_error",
+		},
+	}
+
+	normalizeFinalRelayError(err)
+
+	if err.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status=%d, want %d", err.StatusCode, http.StatusBadRequest)
+	}
+	if err.Type != "state_incompatible_error" || errorCodeString(err.Code) != "state_incompatible" {
+		t.Fatalf("type/code=%s/%s, want state_incompatible_error/state_incompatible", err.Type, errorCodeString(err.Code))
+	}
+	if err.Message != "当前 Responses 会话与所选上游不兼容，请新建会话后重试" {
+		t.Fatalf("message=%q", err.Message)
+	}
+}
+
 func TestNormalizeFinalRelayErrorForTransientDoRequestFailed(t *testing.T) {
 	err := &relaymodel.ErrorWithStatusCode{
 		StatusCode: http.StatusInternalServerError,

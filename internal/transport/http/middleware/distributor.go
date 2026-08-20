@@ -96,10 +96,19 @@ func recordRouteDecision(c *gin.Context, source string, groupID string, requestM
 
 func selectPinnedResponsesChannel(c *gin.Context, userGroup string, requestModel string, requestPath string) (*model.Channel, bool) {
 	previousResponseID := strings.TrimSpace(c.GetString(ctxkey.ResponsesPreviousResponseID))
-	if previousResponseID == "" {
+	itemIDs := responseItemIDsFromContext(c)
+	if previousResponseID == "" && len(itemIDs) == 0 {
 		return nil, false
 	}
-	channelID, ok := responsestate.LookupRoute(previousResponseID)
+	lookupIDs := append([]string{}, itemIDs...)
+	if previousResponseID != "" {
+		lookupIDs = append(lookupIDs, previousResponseID)
+	}
+	channelID, ok, conflict := responsestate.LookupRoutes(lookupIDs)
+	if conflict {
+		logger.RelayWarnf(c.Request.Context(), "DISTRIBUTE decision=state_conflict reason=responses_route_multiple_channels user_id=%s group=%s response_id=%s item_ids=%s endpoint=%s", c.GetString(ctxkey.Id), userGroup, previousResponseID, strings.Join(itemIDs, ","), requestPath)
+		return nil, true
+	}
 	if !ok {
 		logger.RelayInfof(c.Request.Context(), "DISTRIBUTE decision=miss reason=responses_route_missing user_id=%s group=%s response_id=%s endpoint=%s", c.GetString(ctxkey.Id), userGroup, previousResponseID, requestPath)
 		return nil, false
@@ -129,8 +138,23 @@ func selectPinnedResponsesChannel(c *gin.Context, userGroup string, requestModel
 	return channel, true
 }
 
+func responseItemIDsFromContext(c *gin.Context) []string {
+	value, exists := c.Get(ctxkey.ResponsesItemIDs)
+	if !exists {
+		return nil
+	}
+	ids, ok := value.([]string)
+	if !ok {
+		return nil
+	}
+	return ids
+}
+
 func selectEntitlementChannelForRequest(ctx context.Context, c *gin.Context, userID string, initialGroup string, initialSource *model.UserEntitlementSource, requestModel string) (*model.Channel, string, *model.UserEntitlementSource, error) {
 	requestPath := c.Request.URL.Path
+	if responseStateConflict(c) {
+		return nil, initialGroup, initialSource, fmt.Errorf("state_incompatible: 当前 Responses 会话同时绑定了多个上游渠道，请新建会话后重试")
+	}
 	if pinnedChannel, ok := selectPinnedResponsesChannel(c, initialGroup, requestModel, requestPath); ok {
 		return pinnedChannel, initialGroup, initialSource, nil
 	}
@@ -193,6 +217,21 @@ func selectEntitlementChannelForRequest(ctx context.Context, c *gin.Context, use
 	return nil, "", nil, fmt.Errorf("%s", message)
 }
 
+func responseStateConflict(c *gin.Context) bool {
+	if c == nil {
+		return false
+	}
+	ids := responseItemIDsFromContext(c)
+	if previous := strings.TrimSpace(c.GetString(ctxkey.ResponsesPreviousResponseID)); previous != "" {
+		ids = append(ids, previous)
+	}
+	if len(ids) == 0 {
+		return false
+	}
+	_, _, conflict := responsestate.LookupRoutes(ids)
+	return conflict
+}
+
 func Distribute() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
@@ -229,7 +268,15 @@ func Distribute() func(c *gin.Context) {
 			recordRouteDecision(c, "specific_channel", userGroup, requestModel, c.Request.URL.Path, []*model.Channel{channel}, nil, channel, "explicit")
 		} else {
 			if channel, userGroup, entitlementSource, err = selectEntitlementChannelForRequest(ctx, c, userId, userGroup, entitlementSource, requestModel); err != nil {
-				abortWithMessage(c, http.StatusServiceUnavailable, err.Error())
+				statusCode := http.StatusServiceUnavailable
+				message := err.Error()
+				if strings.HasPrefix(message, "state_incompatible: ") {
+					statusCode = http.StatusBadRequest
+					message = strings.TrimPrefix(message, "state_incompatible: ")
+					c.Set(ctxkey.RelayErrorType, "state_incompatible_error")
+					c.Set(ctxkey.RelayErrorCode, "state_incompatible")
+				}
+				abortWithMessage(c, statusCode, message)
 				return
 			}
 			c.Set(ctxkey.Group, userGroup)

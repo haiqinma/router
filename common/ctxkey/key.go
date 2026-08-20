@@ -25,6 +25,7 @@ const (
 	BaseURL                     = "base_url"
 	AvailableModels             = "available_models"
 	ResponsesPreviousResponseID = "responses_previous_response_id"
+	ResponsesItemIDs            = "responses_item_ids"
 	ResponsesStatefulRequest    = "responses_stateful_request"
 	KeyRequestBody              = "key_request_body"
 	UpstreamURL                 = "upstream_url"
