@@ -13,6 +13,9 @@ bin_src=""
 config_template=""
 starter_src=""
 health_check_src=""
+backup_conf_template=""
+config_backup_src=""
+passphrase_template=""
 
 usage() {
   echo "Usage: $(basename "$0") [v<major>.<minor>.<patch>]" >&2
@@ -59,6 +62,9 @@ prepare_source_dir() {
   config_template="$source_dir/config.yaml.template"
   starter_src="$source_dir/scripts/starter.sh"
   health_check_src="$source_dir/scripts/health-check.sh"
+  backup_conf_template="$source_dir/scripts/backup.conf.template"
+  config_backup_src="$source_dir/scripts/config_backup.sh"
+  passphrase_template="$source_dir/scripts/.passphrase-file.template"
 }
 
 verify_artifacts() {
@@ -83,6 +89,18 @@ verify_artifacts() {
   fi
   if [[ ! -x "$health_check_src" ]]; then
     echo "Missing health check script or not executable: $health_check_src" >&2
+    exit 1
+  fi
+  if [[ ! -f "$backup_conf_template" ]]; then
+    echo "Missing backup config template: $backup_conf_template" >&2
+    exit 1
+  fi
+  if [[ ! -x "$config_backup_src" ]]; then
+    echo "Missing config backup script or not executable: $config_backup_src" >&2
+    exit 1
+  fi
+  if [[ ! -f "$passphrase_template" ]]; then
+    echo "Missing passphrase file template: $passphrase_template" >&2
     exit 1
   fi
 }
@@ -210,6 +228,9 @@ cp "$bin_src" "$stage_dir/build/"
 cp "$config_template" "$stage_dir/"
 cp "$starter_src" "$stage_dir/scripts/"
 cp "$health_check_src" "$stage_dir/scripts/"
+cp "$backup_conf_template" "$stage_dir/scripts/"
+cp "$config_backup_src" "$stage_dir/scripts/"
+cp "$passphrase_template" "$stage_dir/scripts/"
 cp -R "$web_build_dir" "$stage_dir/web/"
 
 rm -f "$archive_path"
