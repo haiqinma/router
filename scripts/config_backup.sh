@@ -8,6 +8,10 @@ LOG_MODULE_NAME="${MODULE_NAME%%-v*}"
 CONF_FILE="$SCRIPT_DIR/backup.conf"
 PASSPHRASE_FILE="$SCRIPT_DIR/.passphrase-file"
 CONFIG_FILE="$REAL_PATH/config.yaml"
+NGINX_CONF_FILES=(
+    "/etc/nginx/conf.d/router.conf"
+    "/etc/nginx/conf.d/test-router.conf"
+)
 BACKUP_DIR="/opt/backup"
 TMP_BASE_DIR="/tmp"
 LOGFILE=""
@@ -114,6 +118,15 @@ backup_config() {
 
     log "copy config file to temporary directory: $tmp_conf_dir"
     cp "$CONFIG_FILE" "$tmp_conf_dir/config.yaml"
+
+    for nginx_conf_file in "${NGINX_CONF_FILES[@]}"; do
+        if [[ -f "$nginx_conf_file" ]]; then
+            local nginx_conf_name
+            nginx_conf_name="$(basename "$nginx_conf_file")"
+            log "copy nginx config file to temporary directory: $nginx_conf_file"
+            cp "$nginx_conf_file" "$tmp_conf_dir/$nginx_conf_name"
+        fi
+    done
 
     log "create encrypted backup file: $backup_file_path"
     (

@@ -15,6 +15,7 @@ starter_src=""
 health_check_src=""
 backup_conf_template=""
 config_backup_src=""
+copy_for_upgrade_src=""
 passphrase_template=""
 
 usage() {
@@ -64,6 +65,7 @@ prepare_source_dir() {
   health_check_src="$source_dir/scripts/health-check.sh"
   backup_conf_template="$source_dir/scripts/backup.conf.template"
   config_backup_src="$source_dir/scripts/config_backup.sh"
+  copy_for_upgrade_src="$source_dir/scripts/copy-for-upgrade.sh"
   passphrase_template="$source_dir/scripts/.passphrase-file.template"
 }
 
@@ -230,6 +232,9 @@ cp "$starter_src" "$stage_dir/scripts/"
 cp "$health_check_src" "$stage_dir/scripts/"
 cp "$backup_conf_template" "$stage_dir/scripts/"
 cp "$config_backup_src" "$stage_dir/scripts/"
+if [[ -x "$copy_for_upgrade_src" ]]; then
+  cp "$copy_for_upgrade_src" "$stage_dir/scripts/"
+fi
 cp "$passphrase_template" "$stage_dir/scripts/"
 cp -R "$web_build_dir" "$stage_dir/web/"
 
