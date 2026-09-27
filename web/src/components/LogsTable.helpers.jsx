@@ -455,10 +455,11 @@ export function parseLogFiltersFromSearch(search, isAdminScope) {
 // keys are appended, and the keys mirror parseLogFiltersFromSearch above so the
 // round-trip (build → parse) stays consistent.
 //
-// By default the link also carries a "last 24h" time window (start/end unix
+// By default the link also carries a "last 7 days" time window (start/end unix
 // seconds) so entity drill-downs land on a bounded, shareable view instead of
-// the unbounded all-time log. Callers can override the window by passing an
-// explicit `start_timestamp`/`end_timestamp` in `filters`, or opt out entirely
+// the unbounded all-time log — 7d keeps recent-but-not-just-today usage visible
+// for support lookups. Callers can override the window by passing an explicit
+// `start_timestamp`/`end_timestamp` in `filters`, or opt out entirely
 // with `{ rangeDays: 0 }`. No log_type is prefilled.
 export function buildLogDrilldownPath(scope, filters = {}, options = {}) {
   const base = scope === 'workspace' ? '/workspace/log' : '/admin/log';
@@ -483,7 +484,7 @@ export function buildLogDrilldownPath(scope, filters = {}, options = {}) {
       params.set('end_timestamp', explicitEnd);
     }
   } else {
-    const rangeDays = options.rangeDays === undefined ? 1 : options.rangeDays;
+    const rangeDays = options.rangeDays === undefined ? 7 : options.rangeDays;
     if (rangeDays > 0) {
       const nowSec = Math.floor(Date.now() / 1000);
       params.set('start_timestamp', String(nowSec - rangeDays * 86400));

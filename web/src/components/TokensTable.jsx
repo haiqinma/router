@@ -1176,7 +1176,7 @@ const TokensTable = ({ admin = false, embedded = false, userId = '' } = {}) => {
                     disabled={!token.name}
                     onClick={() => {
                       navigate(
-                        buildLogDrilldownPath('workspace', {
+                        buildLogDrilldownPath(admin ? 'admin' : 'workspace', {
                           token_name: token.name,
                         }),
                       );
