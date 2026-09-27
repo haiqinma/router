@@ -555,9 +555,10 @@ func GetAllUsers(c *gin.Context) {
 
 	statusFilter, _ := strconv.Atoi(c.Query("status"))
 	roleFilter, _ := strconv.Atoi(c.Query("role"))
+	group := strings.TrimSpace(c.Query("group"))
 
 	order := c.DefaultQuery("order", "")
-	users, err := usersvc.GetAllFiltered((page-1)*pageSize, pageSize, order, statusFilter, roleFilter)
+	users, err := usersvc.GetAllFiltered((page-1)*pageSize, pageSize, order, statusFilter, roleFilter, group)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,
@@ -565,7 +566,7 @@ func GetAllUsers(c *gin.Context) {
 		})
 		return
 	}
-	total, err := usersvc.CountAllFiltered(statusFilter, roleFilter)
+	total, err := usersvc.CountAllFiltered(statusFilter, roleFilter, group)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"success": false,

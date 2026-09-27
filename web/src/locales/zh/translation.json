@@ -1646,6 +1646,7 @@
       "remove_channel": "移除",
       "confirm_remove_channel": "确认从分组中移除该渠道？移除后该渠道不再属于此分组。",
       "view_channel": "查看渠道",
+      "view_members": "查看成员",
       "bind_channels": "配置渠道",
       "enable": "启用",
       "disable": "禁用",
@@ -2613,6 +2614,7 @@
       "package_mode_title": "套餐",
       "balance_mode_title": "余额",
       "tokens_title": "令牌",
+      "view_logs": "查看使用日志",
       "remaining_amount": "剩余",
       "used_amount": "已用",
       "request_count_hint": "累计请求次数",
@@ -2743,6 +2745,11 @@
       "title": "当前筛选用户",
       "summary": "当前列表展示 {{count}} 个用户，来源命中 {{total}} 个用户，可直接导出当前结果。",
       "clear": "清空筛选"
+    },
+    "group_filter": {
+      "title": "分组成员：{{group}}",
+      "summary": "该分组下共 {{total}} 个用户。",
+      "clear": "取消分组筛选"
     },
     "batch": {
       "grant_topup": "批量赠送额度",

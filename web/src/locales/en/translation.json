@@ -1646,6 +1646,7 @@
       "remove_channel": "Remove",
       "confirm_remove_channel": "Remove this channel from the group? It will no longer be assigned to this group.",
       "view_channel": "View Channel",
+      "view_members": "View Members",
       "bind_channels": "Configure Channels",
       "enable": "Enable",
       "disable": "Disable",
@@ -2613,6 +2614,7 @@
       "package_mode_title": "Package",
       "balance_mode_title": "Balance",
       "tokens_title": "Tokens",
+      "view_logs": "View usage logs",
       "remaining_amount": "Remaining",
       "used_amount": "Used",
       "request_count_hint": "Total requests",
@@ -2743,6 +2745,11 @@
       "title": "Filtered Users",
       "summary": "This list shows {{count}} users from {{total}} matched users. You can export the current result directly.",
       "clear": "Clear Filter"
+    },
+    "group_filter": {
+      "title": "Group members: {{group}}",
+      "summary": "This group has {{total}} users in total.",
+      "clear": "Clear group filter"
     },
     "batch": {
       "grant_topup": "Batch Grant Balance",

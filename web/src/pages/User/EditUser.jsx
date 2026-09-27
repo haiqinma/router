@@ -16,6 +16,7 @@ import {
 import UnitDropdown from '../../components/UnitDropdown';
 import BusinessRecordsTable from '../../components/BusinessRecordsTable';
 import TokensTable from '../../components/TokensTable';
+import { buildLogDrilldownPath } from '../../components/LogsTable.helpers';
 import CopyButton from '../../components/CopyButton';
 import {
   AppButton,
@@ -1861,6 +1862,23 @@ const UserDetail = () => {
               {activeDetailTab === 'tokens' ? (
               <AppDetailSection
                 title={t('user.detail.tokens_title')}
+                headerEnd={
+                  persistedUsername ? (
+                    <AppButton
+                      type='button'
+                      size='small'
+                      onClick={() =>
+                        navigate(
+                          buildLogDrilldownPath('admin', {
+                            username: persistedUsername,
+                          }),
+                        )
+                      }
+                    >
+                      {t('user.detail.view_logs')}
+                    </AppButton>
+                  ) : null
+                }
               >
                 <TokensTable admin embedded userId={userId} />
               </AppDetailSection>

@@ -2564,15 +2564,29 @@ const GroupsManager = ({ detailGroupId = '' }) => {
                   </AppButton>
                 </>
               ) : (
-                <AppButton
-                  type='button'
-                  className='router-page-button'
-                  color='blue'
-                  disabled={submitting || detailBasicEditLocked}
-                  onClick={startDetailBasicEdit}
-                >
-                  {t('group_manage.buttons.edit')}
-                </AppButton>
+                <>
+                  <AppButton
+                    type='button'
+                    className='router-page-button'
+                    disabled={!activeGroup.id}
+                    onClick={() =>
+                      navigate(
+                        `/admin/user?group=${encodeURIComponent(activeGroup.id || '')}&group_name=${encodeURIComponent(activeGroup.name || activeGroup.id || '')}`,
+                      )
+                    }
+                  >
+                    {t('group_manage.buttons.view_members')}
+                  </AppButton>
+                  <AppButton
+                    type='button'
+                    className='router-page-button'
+                    color='blue'
+                    disabled={submitting || detailBasicEditLocked}
+                    onClick={startDetailBasicEdit}
+                  >
+                    {t('group_manage.buttons.edit')}
+                  </AppButton>
+                </>
               )
             }
           >
