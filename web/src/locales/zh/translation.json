@@ -892,10 +892,6 @@
         "filter_all": "全部（{{count}}）",
         "go_to_fix": "去处理",
         "published_model_required": "发布名称不能为空",
-        "mark_zero_cost": "标记零成本",
-        "mark_zero_cost_confirm": "确认该模型上游采购成本为零？将记录一条零成本采购批次，用于毛利核算（成本按 0 计），可事后在账务页调整。",
-        "mark_zero_cost_success": "已标记零成本，毛利可按零成本核算",
-        "mark_zero_cost_failed": "标记零成本失败",
         "unpublish_confirm": "确认取消发布该模型吗？取消后该模型不会参与运行时选路。",
         "table": {
           "published_model": "发布名称",
@@ -929,6 +925,19 @@
         "latest_snapshot_at": "最近刷新",
         "current_quotas_title": "权益项状态",
         "billing_source": "账务来源",
+        "cost_tracking_mode": {
+          "label": "成本跟踪方式",
+          "options": {
+            "untracked": "不跟踪",
+            "free": "免费",
+            "actual": "记录实际成本"
+          },
+          "hint": {
+            "untracked": "不核算该渠道成本，相关请求不计入毛利报表(如实标记为未跟踪)。",
+            "free": "上游免费,成本按 0 计,自动维护零成本采购批次,毛利按满额核算。",
+            "actual": "按采购批次记录实际成本,缺批次的模型会在分组页提示补录成本。"
+          }
+        },
         "updated_at": "更新时间",
         "manual_update_title": "新增采购记录",
         "manual_purchase_title": "采购信息",

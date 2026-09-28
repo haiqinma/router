@@ -703,6 +703,13 @@ const normalizeChannelBillingSummary = (item) => {
   };
 };
 
+const normalizeChannelCostTrackingModeValue = (mode) => {
+  const normalized = (mode || '').toString().trim().toLowerCase();
+  return normalized === 'free' || normalized === 'actual'
+    ? normalized
+    : 'untracked';
+};
+
 const normalizeChannelBillingProfile = (item) => {
   if (!item || typeof item !== 'object') {
     return null;
@@ -712,6 +719,9 @@ const normalizeChannelBillingProfile = (item) => {
     channel_id: (item.channel_id || '').toString().trim(),
     enabled: item.enabled === true,
     billing_source: billingSource,
+    cost_tracking_mode: normalizeChannelCostTrackingModeValue(
+      item.cost_tracking_mode
+    ),
     billing_credentials: normalizeBillingCredentials(item.billing_credentials),
     action_capabilities: Array.isArray(item.action_capabilities)
       ? item.action_capabilities
@@ -2227,6 +2237,7 @@ export {
   normalizeChannelBillingSnapshots,
   normalizeChannelBillingSourceValue,
   normalizeChannelBillingSummary,
+  normalizeChannelCostTrackingModeValue,
   normalizeChannelEndpointPolicyRows,
   normalizeChannelEndpointRows,
   normalizeChannelIdentifier,

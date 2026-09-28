@@ -63,7 +63,6 @@ const ChannelDetailPublishTab = ({
   normalizeChannelModelType,
   onUpdatePublishedModelName,
   onUpdatePublish,
-  onMarkZeroCost,
   onNavigateTab,
   publishMutatingModel,
   publishReadonly,
@@ -187,39 +186,6 @@ const ChannelDetailPublishTab = ({
     );
   };
 
-  // 缺成本时,在「操作」列就地给出「标记零成本」——原因放悬停,点击直接执行,不跳页签。
-  const renderCostAction = (row) => {
-    const readiness = row?.procurement_readiness || {};
-    const status = (readiness.status || 'missing').toString();
-    if (status === 'ready' || publishReadonly || !onMarkZeroCost) {
-      return null;
-    }
-    const reason = (readiness.reason || '').toString().trim();
-    const modelName = (row?.model || row?.upstream_model || '').toString().trim();
-    const isMutating = publishMutatingModel === modelName;
-    return (
-      <AppPopconfirm
-        title={t('channel.edit.publish.mark_zero_cost_confirm')}
-        okText={t('common.confirm')}
-        cancelText={t('common.cancel')}
-        disabled={isMutating}
-        onConfirm={() => onMarkZeroCost(row)}
-      >
-        <span>
-          <AppButton
-            type='button'
-            className='router-inline-button'
-            title={reason}
-            loading={isMutating}
-            disabled={isMutating}
-          >
-            {t('channel.edit.publish.mark_zero_cost')}
-          </AppButton>
-        </span>
-      </AppPopconfirm>
-    );
-  };
-
   const renderPublishAction = (row) => {
     const status = normalizePublishStatus(row);
     const modelName = (row?.model || row?.upstream_model || '').toString().trim();
@@ -263,7 +229,6 @@ const ChannelDetailPublishTab = ({
               </AppButton>
             </span>
           </AppPopconfirm>
-          {renderCostAction(row)}
         </div>
       );
     }
@@ -311,7 +276,6 @@ const ChannelDetailPublishTab = ({
             {t('channel.edit.publish.go_to_fix')}
           </AppButton>
         ) : null}
-        {renderCostAction(row)}
       </div>
     );
   };

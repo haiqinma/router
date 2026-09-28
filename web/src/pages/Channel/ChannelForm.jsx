@@ -91,6 +91,7 @@ import {
   normalizeAsyncTaskStatus,
   normalizeBaseURL,
   normalizeChannelBillingProfile,
+  normalizeChannelCostTrackingModeValue,
   normalizeChannelEndpointPolicyRows,
   normalizeChannelEndpointRows,
   normalizeChannelIdentifier,
@@ -1618,48 +1619,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     ]
   );
 
-  const markChannelModelZeroCost = useCallback(
-    async (row) => {
-      if (!isDetailMode || detailPublishReadonly) {
-        return false;
-      }
-      const targetChannelId = (channelId || '').toString().trim();
-      const modelName = (row?.model || row?.upstream_model || '')
-        .toString()
-        .trim();
-      if (targetChannelId === '' || modelName === '') {
-        return false;
-      }
-      setPublishMutatingModel(modelName);
-      try {
-        const res = await API.post(
-          `/api/v1/admin/channel/${targetChannelId}/billing/procurement-batches/zero-cost`,
-          { model: modelName }
-        );
-        const { success, message } = res.data || {};
-        if (!success) {
-          showError(message || t('channel.edit.publish.mark_zero_cost_failed'));
-          return false;
-        }
-        await refreshChannelRuntimeState(targetChannelId);
-        showSuccess(t('channel.edit.publish.mark_zero_cost_success'));
-        return true;
-      } catch (error) {
-        showError(error?.message || t('channel.edit.publish.mark_zero_cost_failed'));
-        return false;
-      } finally {
-        setPublishMutatingModel('');
-      }
-    },
-    [
-      channelId,
-      detailPublishReadonly,
-      isDetailMode,
-      refreshChannelRuntimeState,
-      t,
-    ]
-  );
-
   const updateChannelModelPublishedName = useCallback(
     (row, value) => {
       const targetModel = (row?.model || row?.upstream_model || '')
@@ -2009,6 +1968,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
           channel_id: (channelId || '').toString().trim(),
           enabled: true,
           billing_source: 'manual',
+          cost_tracking_mode: 'untracked',
           billing_credentials: {},
           action_capabilities: [],
         }),
@@ -2061,6 +2021,9 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
         `/api/v1/admin/channel/${targetChannelId}/billing/profile`,
         {
           billing_source: billingSource,
+          cost_tracking_mode: normalizeChannelCostTrackingModeValue(
+            detailBillingDraft.cost_tracking_mode
+          ),
           billing_credentials: billingCredentials,
         }
       );
@@ -4310,7 +4273,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
                 normalizeChannelModelType={normalizeChannelModelType}
                 onUpdatePublishedModelName={updateChannelModelPublishedName}
                 onUpdatePublish={updateChannelModelPublish}
-                onMarkZeroCost={markChannelModelZeroCost}
                 onNavigateTab={goToDetailTab}
                 publishMutatingModel={publishMutatingModel}
                 publishReadonly={detailPublishReadonly}

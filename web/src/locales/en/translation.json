@@ -892,10 +892,6 @@
         "filter_all": "All ({{count}})",
         "go_to_fix": "Go fix",
         "published_model_required": "Published name is required",
-        "mark_zero_cost": "Mark zero cost",
-        "mark_zero_cost_confirm": "Confirm this model's upstream procurement cost is zero? A zero-cost batch will be recorded so gross margin can be computed (cost counted as 0); adjust later on the billing page.",
-        "mark_zero_cost_success": "Marked zero cost; gross margin can be computed at zero cost",
-        "mark_zero_cost_failed": "Failed to mark zero cost",
         "unpublish_confirm": "Unpublish this model? It will stop participating in runtime routing.",
         "table": {
           "published_model": "Published Name",
@@ -929,6 +925,19 @@
         "latest_snapshot_at": "Latest Refresh",
         "current_quotas_title": "Entitlement Status",
         "billing_source": "Billing Source",
+        "cost_tracking_mode": {
+          "label": "Cost Tracking",
+          "options": {
+            "untracked": "Untracked",
+            "free": "Free",
+            "actual": "Record actual cost"
+          },
+          "hint": {
+            "untracked": "Cost is not tracked for this channel; its requests are excluded from the margin report (honestly marked as untracked).",
+            "free": "Upstream is free; cost counted as 0 with auto-managed zero-cost batches, so margin is computed at full amount.",
+            "actual": "Record actual cost via procurement batches; models missing a batch are flagged on the group page to add cost."
+          }
+        },
         "updated_at": "Updated At",
         "manual_update_title": "Add Purchase Record",
         "manual_purchase_title": "Purchase Info",
