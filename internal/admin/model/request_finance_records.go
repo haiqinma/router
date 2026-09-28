@@ -3,6 +3,7 @@ package model
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -331,17 +332,34 @@ func CreateLogWithFinanceRecords(db *gorm.DB, row *Log) error {
 	})
 }
 
+// financeRecordTables 缓存一次性建表校验结果。迁移在启动阶段完成后表结构进程内稳定,
+// 无需在每个请求的写路径上重复做 HasTable 库表探测(那会给热路径平白增加两次查询)。
+var (
+	financeRecordTablesOnce sync.Once
+	financeRecordTablesErr  error
+)
+
+func ensureFinanceRecordTables(db *gorm.DB) error {
+	financeRecordTablesOnce.Do(func() {
+		if !db.Migrator().HasTable(&BillingSettlement{}) {
+			financeRecordTablesErr = fmt.Errorf("normalized billing settlement table is missing")
+			return
+		}
+		if !db.Migrator().HasTable(&ProcurementAttribution{}) {
+			financeRecordTablesErr = fmt.Errorf("normalized procurement attribution table is missing")
+		}
+	})
+	return financeRecordTablesErr
+}
+
 // RecordFinanceRecordsForLog writes normalized records for an existing
 // consume log. Missing tables are fatal because callers rely on atomicity.
 func RecordFinanceRecordsForLog(db *gorm.DB, row *Log) error {
 	if db == nil || row == nil || strings.TrimSpace(row.Id) == "" || row.Type != LogTypeConsume {
 		return nil
 	}
-	if !db.Migrator().HasTable(&BillingSettlement{}) {
-		return fmt.Errorf("normalized billing settlement table is missing")
-	}
-	if !db.Migrator().HasTable(&ProcurementAttribution{}) {
-		return fmt.Errorf("normalized procurement attribution table is missing")
+	if err := ensureFinanceRecordTables(db); err != nil {
+		return err
 	}
 	settlement := billingSettlementFromLog(row)
 	if err := db.Clauses(clause.OnConflict{UpdateAll: true}).Create(&settlement).Error; err != nil {

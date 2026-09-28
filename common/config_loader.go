@@ -21,9 +21,9 @@ var (
 
 	SQLDSN                = ""
 	LogSQLDSN             = ""
-	SQLMaxIdleConns       = 100
-	SQLMaxOpenConns       = 1000
-	SQLMaxLifetimeSeconds = 60
+	SQLMaxIdleConns       = 25
+	SQLMaxOpenConns       = 50
+	SQLMaxLifetimeSeconds = 300
 
 	RedisConnString = ""
 	RedisMasterName = ""
@@ -395,15 +395,15 @@ func ApplyAppConfig(cfg *AppConfig, portFlagSet bool, logDirFlagSet bool) error 
 	LogSQLDSN = strings.TrimSpace(cfg.Database.LogSQLDSN)
 	SQLMaxIdleConns = cfg.Database.MaxIdleConns
 	if SQLMaxIdleConns <= 0 {
-		SQLMaxIdleConns = 100
+		SQLMaxIdleConns = 25
 	}
 	SQLMaxOpenConns = cfg.Database.MaxOpenConns
 	if SQLMaxOpenConns <= 0 {
-		SQLMaxOpenConns = 1000
+		SQLMaxOpenConns = 50
 	}
 	SQLMaxLifetimeSeconds = cfg.Database.MaxLifetimeSeconds
 	if SQLMaxLifetimeSeconds <= 0 {
-		SQLMaxLifetimeSeconds = 60
+		SQLMaxLifetimeSeconds = 300
 	}
 
 	RedisConnString = strings.TrimSpace(cfg.Redis.ConnString)

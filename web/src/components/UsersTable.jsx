@@ -188,12 +188,14 @@ const UsersTable = ({ embedded = false }) => {
   const [totalCount, setTotalCount] = useState(0);
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [
-    { status: statusFilter, role: roleFilter, keyword: searchKeyword },
+    { status: statusFilter, role: roleFilter, keyword: searchKeyword, group: groupFilter, groupName: groupFilterName },
     patchQuery,
   ] = useUrlState({
     status: { param: 'status', default: 'all' },
     role: { param: 'role', default: 'all' },
     keyword: { param: 'q', default: '' },
+    group: { param: 'group', default: '' },
+    groupName: { param: 'group_name', default: '' },
     page: { param: 'page', default: 1, parse: parsePageParam },
     pageSize: {
       param: 'page_size',
@@ -237,7 +239,7 @@ const UsersTable = ({ embedded = false }) => {
   const [batchManageSubmitting, setBatchManageSubmitting] = useState(false);
 
   const loadUsers = useCallback(
-    async (page, { status = 'all', role = 'all' } = {}) => {
+    async (page, { status = 'all', role = 'all', group = '' } = {}) => {
       const normalizedPage = Number(page) > 0 ? Number(page) : 1;
       try {
         const params = new URLSearchParams();
@@ -246,8 +248,10 @@ const UsersTable = ({ embedded = false }) => {
         params.set('page_size', String(size));
         const normalizedStatus = (status || 'all').toString();
         const normalizedRole = (role || 'all').toString();
+        const normalizedGroup = (group || '').toString().trim();
         if (normalizedStatus !== 'all') params.set('status', normalizedStatus);
         if (normalizedRole !== 'all') params.set('role', normalizedRole);
+        if (normalizedGroup !== '') params.set('group', normalizedGroup);
         const res = await API.get(`/api/v1/admin/user/?${params.toString()}`);
         const { success, message, data, meta } = res.data;
         if (success) {
@@ -334,7 +338,7 @@ const UsersTable = ({ embedded = false }) => {
     }
     setIsFocusMode(false);
     setFocusTotal(0);
-    await loadUsers(activePage, { status: statusFilter, role: roleFilter });
+    await loadUsers(activePage, { status: statusFilter, role: roleFilter, group: groupFilter });
   };
 
   const loadTopupPlanOptions = useCallback(async () => {
@@ -373,14 +377,14 @@ const UsersTable = ({ embedded = false }) => {
         if (!isSearchMode) {
           // 每页条数变了,按旧尺寸建立的行缓存已失效,重建
           setUsers([]);
-          await loadUsers(1, { status: statusFilter, role: roleFilter });
+          await loadUsers(1, { status: statusFilter, role: roleFilter, group: groupFilter });
         }
         return;
       }
       const nextPage = Number(activePage) > 0 ? Number(activePage) : 1;
       const hasLoadedPageRows = hasLoadedPagedRows(users, nextPage, size);
       if (!isSearchMode && !hasLoadedPageRows) {
-        await loadUsers(nextPage, { status: statusFilter, role: roleFilter });
+        await loadUsers(nextPage, { status: statusFilter, role: roleFilter, group: groupFilter });
       }
       setActivePage(nextPage);
       patchQuery({ page: nextPage });
@@ -407,7 +411,7 @@ const UsersTable = ({ embedded = false }) => {
     didInitListRef.current = true;
     const startPage = firstRun ? initialListQuery.page : 1;
     setActivePage(startPage);
-    loadUsers(startPage, { status: statusFilter, role: roleFilter })
+    loadUsers(startPage, { status: statusFilter, role: roleFilter, group: groupFilter })
       .then()
       .catch((reason) => {
         setLoadError(true);
@@ -422,6 +426,7 @@ const UsersTable = ({ embedded = false }) => {
     focusParams.total,
     statusFilter,
     roleFilter,
+    groupFilter,
     initialListQuery,
   ]);
 
@@ -810,8 +815,10 @@ const UsersTable = ({ embedded = false }) => {
       params.set('page_size', '10000');
       const normalizedStatus = (statusFilter || 'all').toString();
       const normalizedRole = (roleFilter || 'all').toString();
+      const normalizedGroup = (groupFilter || '').toString().trim();
       if (normalizedStatus !== 'all') params.set('status', normalizedStatus);
       if (normalizedRole !== 'all') params.set('role', normalizedRole);
+      if (normalizedGroup !== '') params.set('group', normalizedGroup);
       const res = await API.get(`/api/v1/admin/user/?${params.toString()}`);
       const { success, message, data } = res?.data || {};
       if (!success) {
@@ -1076,6 +1083,28 @@ const UsersTable = ({ embedded = false }) => {
             onClick={clearFocusMode}
           >
             {t('user.focus.clear')}
+          </AppButton>
+        </div>
+      ) : null}
+
+      {groupFilter && !isFocusMode ? (
+        <div className='router-user-focus-summary'>
+          <div className='router-user-focus-summary-main'>
+            <div className='router-user-focus-summary-title'>
+              {t('user.group_filter.title', {
+                group: groupFilterName || groupFilter,
+              })}
+            </div>
+            <div className='router-user-focus-summary-text'>
+              {t('user.group_filter.summary', { total: totalCount })}
+            </div>
+          </div>
+          <AppButton
+            className='router-inline-button'
+            type='button'
+            onClick={() => patchQuery({ group: '', groupName: '', page: 1 })}
+          >
+            {t('user.group_filter.clear')}
           </AppButton>
         </div>
       ) : null}

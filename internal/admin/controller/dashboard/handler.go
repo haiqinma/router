@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/yeying-community/router/common/helper"
+	"github.com/yeying-community/router/internal/admin/cache"
 	"github.com/yeying-community/router/internal/admin/healthtrend"
 	"github.com/yeying-community/router/internal/admin/model"
 	"gorm.io/gorm"
@@ -1727,11 +1728,22 @@ func buildModelDashboard(startAt int64, endAt int64, limit int) (modelSummaryDat
 	return summary, items, nil
 }
 
+// dashboardCacheTTL keeps the expensive dashboard aggregation result warm for a
+// short window so repeated loads / auto-refreshes don't hammer event_logs.
+const dashboardCacheTTL = 30 * time.Second
+
+var dashboardCache = cache.NewTTL(128)
+
 func GetDashboard(c *gin.Context) {
 	period := normalizePeriod(c.DefaultQuery("period", periodLast7Days))
 	section := normalizeSection(c.Query("section"))
 	userKeyword := strings.TrimSpace(c.Query("user_keyword"))
 	userGrowthGranularity := normalizeUserGrowthGranularity(c.DefaultQuery("user_growth_granularity", userGrowthGranularityWeek))
+	cacheKey := strings.Join([]string{"dashboard", period, section, userGrowthGranularity, userKeyword}, "|")
+	if cached, ok := dashboardCache.Get(cacheKey); ok {
+		c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": cached})
+		return
+	}
 	now := time.Now()
 	start, end := periodRange(period, now)
 	if period == periodAllTime {
@@ -1879,6 +1891,7 @@ func GetDashboard(c *gin.Context) {
 		payload.TopModels = topModels
 	}
 
+	dashboardCache.Set(cacheKey, payload, dashboardCacheTTL)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",

@@ -23,14 +23,18 @@ database:
   # 主业务数据库 DSN（仅支持 PostgreSQL）。
   # 格式：postgres://user:password@host:port/dbname?sslmode=disable
   sql_dsn: "postgres://postgres:postgres@127.0.0.1:5432/postgres?sslmode=disable"
-  # 日志库 DSN；留空则复用 sql_dsn。
+  # 日志库 DSN（承载 event_logs 热表）；留空则复用 sql_dsn，
+  # 即业务写路径与监控大盘/账务报表/日志列表共用同一连接池。
+  # 大盘卡顿或写路径抢连接时拆独立库，见 docs/部署运维/日志库拆分.md
   log_sql_dsn: ""
-  # 连接池：空闲连接上限。
-  max_idle_conns: 100
-  # 连接池：打开连接上限。
-  max_open_conns: 1000
+  # 连接池：空闲连接上限（每实例每库）。
+  max_idle_conns: 25
+  # 连接池：打开连接上限（每实例每库）。
+  # 单库总连接数 = 实例数 x (主库 + 日志库) x max_open_conns，
+  # 不要超过 PostgreSQL 的 max_connections。
+  max_open_conns: 50
   # 连接最大生命周期（秒）。
-  max_lifetime_seconds: 60
+  max_lifetime_seconds: 300
 
 redis:
   # Redis 连接串；cache.type=redis 时必填。

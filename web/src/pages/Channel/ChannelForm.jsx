@@ -355,6 +355,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
   const fetchingModelsRef = useRef(false);
   const pendingRefreshTaskIdRef = useRef('');
   const pendingRefreshSignatureRef = useRef('');
+  const pendingRefreshBeforeCountRef = useRef(0);
   const pendingBillingRefreshTaskIdRef = useRef('');
   const deferredModelSearchKeyword = useDeferredValue(modelSearchKeyword);
   const currentProtocolOption = useMemo(() => {
@@ -1542,6 +1543,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
       setChannelBillingProfile(nextBillingProfile);
       setDetailBillingDraft(nextBillingProfile);
       setChannelBillingError('');
+      return { channelModels: nextChannelModels };
     },
     [
       effectiveAPIBaseURL,
@@ -2265,6 +2267,11 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
         );
         pendingRefreshTaskIdRef.current = refreshTask.id;
         pendingRefreshSignatureRef.current = requestSignature;
+        pendingRefreshBeforeCountRef.current = Array.isArray(
+          inputs.channel_models,
+        )
+          ? inputs.channel_models.length
+          : 0;
         setModelsSyncError('');
         if (!silent) {
           showSuccess(t('channel.messages.operation_success'));
@@ -3434,7 +3441,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
               completedRefreshTask = null;
             }
           }
-          await refreshChannelRuntimeState(targetChannelId);
+          const runtimeState = await refreshChannelRuntimeState(targetChannelId);
           if (refreshTaskId !== '') {
             pendingRefreshTaskIdRef.current = '';
             if (
@@ -3447,6 +3454,19 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
               if (pendingRefreshSignatureRef.current !== '') {
                 setVerifiedModelSignature(pendingRefreshSignatureRef.current);
               }
+              const totalCount = Array.isArray(runtimeState?.channelModels)
+                ? runtimeState.channelModels.length
+                : pendingRefreshBeforeCountRef.current;
+              const addedCount = Math.max(
+                0,
+                totalCount - pendingRefreshBeforeCountRef.current,
+              );
+              showSuccess(
+                t('channel.edit.messages.sync_models_result', {
+                  added: addedCount,
+                  total: totalCount,
+                }),
+              );
             } else {
               setVerifiedModelSignature('');
               setModelsSyncError(
@@ -3455,6 +3475,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
               );
             }
             pendingRefreshSignatureRef.current = '';
+            pendingRefreshBeforeCountRef.current = 0;
           }
           const billingRefreshTaskId = pendingBillingRefreshTaskIdRef.current;
           if (billingRefreshTaskId !== '') {

@@ -592,6 +592,8 @@ func TestSetChannelModelPublishEnabledWithDBBlocksDuplicatePublishedModel(t *tes
 			Provider:      "qwen",
 			Type:          ProviderModelTypeText,
 			Selected:      true,
+			InputPrice:    floatPtr(0.001),
+			OutputPrice:   floatPtr(0.002),
 		},
 	}
 	if err := db.Create(&rows).Error; err != nil {
