@@ -868,8 +868,8 @@
       "detail_models_title": "模型选择",
       "detail_tabs": {
         "overview": "概览",
-        "models": "选择",
-        "endpoints": "配置",
+        "models": "模型",
+        "endpoints": "接口",
         "tests": "测试",
         "publish": "发布",
         "billing": "账务"

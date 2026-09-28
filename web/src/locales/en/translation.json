@@ -868,8 +868,8 @@
       "detail_models_title": "Model Selection",
       "detail_tabs": {
         "overview": "Overview",
-        "models": "Selection",
-        "endpoints": "Configuration",
+        "models": "Models",
+        "endpoints": "Endpoints",
         "tests": "Tests",
         "publish": "Publish",
         "billing": "Billing"
