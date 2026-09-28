@@ -4333,6 +4333,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
                 onUpdatePublishedModelName={updateChannelModelPublishedName}
                 onUpdatePublish={updateChannelModelPublish}
                 onBatchPublish={batchPublishChannelModels}
+                onNavigateTab={goToDetailTab}
                 publishMutatingModel={publishMutatingModel}
                 publishReadonly={detailPublishReadonly}
               />

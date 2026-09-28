@@ -7,6 +7,7 @@ import {
   AppEmpty,
   AppInput,
   AppPopconfirm,
+  AppSelect,
   AppTable,
   AppTag,
 } from '../../../router-ui';
@@ -66,12 +67,14 @@ const ChannelDetailPublishTab = ({
   onUpdatePublishedModelName,
   onUpdatePublish,
   onBatchPublish,
+  onNavigateTab,
   publishMutatingModel,
   publishReadonly,
 }) => {
   const [batchMode, setBatchMode] = useState(false);
   const [batchRowKeys, setBatchRowKeys] = useState([]);
   const [batchSubmitting, setBatchSubmitting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const publishRows = useMemo(
     () =>
@@ -91,6 +94,51 @@ const ChannelDetailPublishTab = ({
         .length,
     [publishRows],
   );
+
+  const statusCounts = useMemo(() => {
+    const counts = {};
+    publishRows.forEach((row) => {
+      const status = normalizePublishStatus(row);
+      counts[status] = (counts[status] || 0) + 1;
+    });
+    return counts;
+  }, [publishRows]);
+
+  const statusFilterOptions = useMemo(() => {
+    const order = [
+      'pending_config',
+      'pending_test',
+      'pending_publish',
+      'published',
+      'disabled',
+      'selectable',
+    ];
+    const options = [
+      {
+        key: 'all',
+        value: 'all',
+        text: t('channel.edit.publish.filter_all', { count: publishRows.length }),
+      },
+    ];
+    order.forEach((status) => {
+      const count = statusCounts[status] || 0;
+      if (count > 0) {
+        options.push({
+          key: status,
+          value: status,
+          text: `${t(`channel.edit.model_selector.publish_status.${status}`)} (${count})`,
+        });
+      }
+    });
+    return options;
+  }, [publishRows.length, statusCounts, t]);
+
+  const filteredRows = useMemo(() => {
+    if (statusFilter === 'all') {
+      return publishRows;
+    }
+    return publishRows.filter((row) => normalizePublishStatus(row) === statusFilter);
+  }, [publishRows, statusFilter]);
 
   const hasPositiveSellPrice = (row) => {
     if (Number(row?.input_price || 0) > 0 || Number(row?.output_price || 0) > 0) {
@@ -313,6 +361,22 @@ const ChannelDetailPublishTab = ({
       status !== 'pending_publish' ||
       !procurementReady ||
       missingSellPrice;
+    let blockReason = '';
+    let blockTab = '';
+    if (missingSellPrice) {
+      blockReason = t('channel.edit.publish.zero_price_blocked');
+    } else if (!procurementReady) {
+      blockReason =
+        (row?.procurement_readiness?.reason || '').toString().trim() ||
+        t('channel.edit.publish.procurement_status.missing');
+    } else if (status !== 'pending_publish') {
+      blockReason = t(`channel.edit.publish.check_status.${status}`);
+      if (status === 'pending_config') {
+        blockTab = 'endpoints';
+      } else if (status === 'pending_test') {
+        blockTab = 'tests';
+      }
+    }
     return (
       <div className='router-inline-actions'>
         <AppButton
@@ -320,23 +384,23 @@ const ChannelDetailPublishTab = ({
           className='router-inline-button'
           loading={isMutating}
           disabled={publishDisabled}
-          title={
-            publishDisabled && missingSellPrice
-              ? t('channel.edit.publish.zero_price_blocked')
-              : publishDisabled && !procurementReady
-                ? row?.procurement_readiness?.reason
-                : publishDisabled && status !== 'pending_publish'
-                  ? t(`channel.edit.publish.check_status.${status}`)
-                  : undefined
-          }
           onClick={() => onUpdatePublish?.(row, true)}
         >
           {t('channel.edit.publish.action_publish')}
         </AppButton>
-        {missingSellPrice ? (
-          <AppTag color='red' className='router-tag'>
-            {t('channel.edit.publish.zero_price_tag')}
-          </AppTag>
+        {blockReason ? (
+          <span className='router-toolbar-meta' title={blockReason}>
+            {blockReason}
+          </span>
+        ) : null}
+        {blockTab && onNavigateTab ? (
+          <AppButton
+            type='button'
+            className='router-inline-button'
+            onClick={() => onNavigateTab(blockTab)}
+          >
+            {t('channel.edit.publish.go_to_fix')}
+          </AppButton>
         ) : null}
       </div>
     );
@@ -375,6 +439,17 @@ const ChannelDetailPublishTab = ({
             }
           />
         ) : null}
+        <div className='router-inline-actions router-section-message'>
+          <span className='router-toolbar-meta'>
+            {t('channel.edit.publish.filter_label')}
+          </span>
+          <AppSelect
+            className='router-section-dropdown router-dropdown-min-170 router-detail-filter-dropdown'
+            value={statusFilter}
+            options={statusFilterOptions}
+            onChange={(e, { value }) => setStatusFilter((value || 'all').toString())}
+          />
+        </div>
         {!publishReadonly ? (
           <div className='router-inline-actions router-section-message'>
             {!batchMode ? (
@@ -432,7 +507,7 @@ const ChannelDetailPublishTab = ({
             ),
           }}
           rowKey={(row) => row.model || row.upstream_model}
-          dataSource={publishRows}
+          dataSource={filteredRows}
           columns={[
             {
               title: t('channel.edit.model_selector.table.name'),
