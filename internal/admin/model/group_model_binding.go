@@ -47,6 +47,8 @@ type GroupModelViewChannel struct {
 	UpstreamModel   string  `json:"upstream_model"`
 	Priority        *int64  `json:"priority,omitempty"`
 	BillingRatio    float64 `json:"billing_ratio"`
+	CostReady       bool    `json:"cost_ready"`
+	CostStatus      string  `json:"cost_status,omitempty"`
 }
 
 type GroupModelViewItem struct {
@@ -77,11 +79,24 @@ func ListGroupModelsPayload(groupID string) (GroupModelsPayload, error) {
 	if err != nil {
 		return GroupModelsPayload{}, err
 	}
+	// Resolve per-channel procurement readiness so the group view can flag published
+	// models whose gross margin can't be computed yet (cost not recorded), matching
+	// the soft warning shown on the channel publish page.
+	readinessByChannelModel, err := resolveGroupBindingProcurementReadiness(DB, bindings)
+	if err != nil {
+		return GroupModelsPayload{}, err
+	}
 	channelsByModel := make(map[string][]GroupModelViewChannel)
 	for _, item := range bindings {
 		modelName := strings.TrimSpace(item.Model)
 		if modelName == "" {
 			continue
+		}
+		costReady := true
+		costStatus := ""
+		if readiness, ok := readinessByChannelModel[groupBindingReadinessKey(strings.TrimSpace(item.ChannelId), modelName)]; ok {
+			costStatus = readiness.Status
+			costReady = readiness.Status == ProcurementReadinessReady
 		}
 		channelsByModel[modelName] = append(channelsByModel[modelName], GroupModelViewChannel{
 			ChannelId:       strings.TrimSpace(item.ChannelId),
@@ -91,6 +106,8 @@ func ListGroupModelsPayload(groupID string) (GroupModelsPayload, error) {
 			UpstreamModel:   NormalizeGroupModelChannelUpstreamModel(modelName, item.UpstreamModel),
 			Priority:        helperInt64Pointer(item.Priority),
 			BillingRatio:    resolveGroupModelChannelBillingRatio(item.BillingRatio),
+			CostReady:       costReady,
+			CostStatus:      costStatus,
 		})
 	}
 	items := make([]GroupModelViewItem, 0, len(groupModels))
@@ -130,6 +147,60 @@ func ListGroupModelsPayload(groupID string) (GroupModelsPayload, error) {
 		return items[i].Model < items[j].Model
 	})
 	return GroupModelsPayload{Items: items}, nil
+}
+
+func groupBindingReadinessKey(channelID string, modelName string) string {
+	return channelID + "\x00" + modelName
+}
+
+// resolveGroupBindingProcurementReadiness resolves procurement readiness for every
+// (channel, model) binding in a group. It loads each distinct channel's batches and
+// model rows once and resolves in memory, so the group view avoids per-binding
+// queries. Bindings whose channel model can't be resolved are omitted (no badge).
+func resolveGroupBindingProcurementReadiness(db *gorm.DB, bindings []GroupModelBindingItem) (map[string]ChannelModelProcurementReadiness, error) {
+	result := make(map[string]ChannelModelProcurementReadiness)
+	if db == nil {
+		return result, nil
+	}
+	channelIDs := make([]string, 0)
+	seen := make(map[string]struct{})
+	for _, item := range bindings {
+		channelID := strings.TrimSpace(item.ChannelId)
+		if channelID == "" {
+			continue
+		}
+		if _, ok := seen[channelID]; ok {
+			continue
+		}
+		seen[channelID] = struct{}{}
+		channelIDs = append(channelIDs, channelID)
+	}
+	for _, channelID := range channelIDs {
+		batches, err := ListAllChannelProcurementBatchesByChannelIDWithDB(db, channelID)
+		if err != nil {
+			return nil, err
+		}
+		rows, err := ListChannelModelRowsByChannelIDWithDB(db, channelID)
+		if err != nil {
+			return nil, err
+		}
+		rowByModel := make(map[string]ChannelModel, len(rows))
+		for _, row := range rows {
+			rowByModel[strings.TrimSpace(row.Model)] = row
+		}
+		for _, item := range bindings {
+			if strings.TrimSpace(item.ChannelId) != channelID {
+				continue
+			}
+			modelName := strings.TrimSpace(item.Model)
+			row, ok := rowByModel[modelName]
+			if !ok {
+				continue
+			}
+			result[groupBindingReadinessKey(channelID, modelName)] = ResolveChannelModelProcurementReadinessFromChannelBatches(row, batches)
+		}
+	}
+	return result, nil
 }
 
 func ReplaceGroupModels(groupID string, channelIDs []string, items []GroupModelBindingItem, explicitChannels bool) error {

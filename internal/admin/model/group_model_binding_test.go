@@ -434,3 +434,47 @@ func TestBuildGroupChannelModelOptionsOnlyIncludesPublishedModels(t *testing.T) 
 		t.Fatalf("pending test status = %q, want pending_test", statusByModel["pending-test-model"])
 	}
 }
+
+func TestResolveGroupBindingProcurementReadinessReflectsZeroCostMarking(t *testing.T) {
+	db := openGroupModelBindingTestDB(t)
+	if err := db.AutoMigrate(&ChannelProcurementBatch{}); err != nil {
+		t.Fatalf("auto migrate batches: %v", err)
+	}
+	if err := db.Create(&Channel{Id: "channel-1", Name: "channel-1", Protocol: "openai"}).Error; err != nil {
+		t.Fatalf("create channel: %v", err)
+	}
+	if err := db.Create(&ChannelModel{
+		ChannelId:     "channel-1",
+		Model:         "model-1",
+		UpstreamModel: "model-1",
+		Provider:      "openai",
+		Type:          ProviderModelTypeText,
+		Selected:      true,
+		PriceUnit:     ProviderPriceUnitPer1KTokens,
+		Currency:      ProviderPriceCurrencyUSD,
+	}).Error; err != nil {
+		t.Fatalf("create channel model: %v", err)
+	}
+	bindings := []GroupModelBindingItem{{Model: "model-1", ChannelId: "channel-1"}}
+	key := groupBindingReadinessKey("channel-1", "model-1")
+
+	before, err := resolveGroupBindingProcurementReadiness(db, bindings)
+	if err != nil {
+		t.Fatalf("resolve before: %v", err)
+	}
+	if got := before[key].Status; got != ProcurementReadinessMissing {
+		t.Fatalf("before status = %q, want %q", got, ProcurementReadinessMissing)
+	}
+
+	if _, err := MarkChannelModelZeroCostProcurementWithDB(db, "channel-1", "model-1"); err != nil {
+		t.Fatalf("mark zero cost: %v", err)
+	}
+
+	after, err := resolveGroupBindingProcurementReadiness(db, bindings)
+	if err != nil {
+		t.Fatalf("resolve after: %v", err)
+	}
+	if got := after[key].Status; got != ProcurementReadinessReady {
+		t.Fatalf("after status = %q, want %q", got, ProcurementReadinessReady)
+	}
+}

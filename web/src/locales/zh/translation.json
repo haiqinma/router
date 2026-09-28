@@ -1698,6 +1698,8 @@
       "channel_billing_ratio": "分组渠道售价倍率",
       "model_channel_billing_ratio": "模型渠道售价倍率",
       "model_channel_billing_ratio_short": "模型售价倍率",
+      "model_channel_cost_missing": "成本未记录",
+      "model_channel_cost_missing_hint": "该渠道模型未记录采购成本，毛利暂不可算；可在渠道发布页一键标记零成本或补录采购成本。",
       "channel_count": "渠道数",
       "model_channels": "渠道",
       "model_search_placeholder": "搜索模型或渠道",

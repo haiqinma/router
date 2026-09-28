@@ -1698,6 +1698,8 @@
       "channel_billing_ratio": "Group Channel Sell Ratio",
       "model_channel_billing_ratio": "Model Channel Sell Ratio",
       "model_channel_billing_ratio_short": "Model Sell Ratio",
+      "model_channel_cost_missing": "Cost not recorded",
+      "model_channel_cost_missing_hint": "This channel model has no procurement cost recorded, so gross margin can't be computed yet. Use the channel publish page to mark it zero-cost or record the actual cost.",
       "channel_count": "Channel Count",
       "model_channels": "Channels",
       "model_search_placeholder": "Search model or channel",

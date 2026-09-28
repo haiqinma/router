@@ -157,6 +157,8 @@ const toDetailModelEntries = (items) =>
         upstream_model: row?.upstream_model || '',
         priority: row?.priority ?? 0,
         billing_ratio: toSafeBillingRatio(row?.billing_ratio, 1),
+        cost_ready: row?.cost_ready !== false,
+        cost_status: row?.cost_status || '',
         enabled: item?.enabled !== false,
       })),
       allEnabled: item?.enabled !== false,
@@ -1838,19 +1840,31 @@ const GroupsManager = ({ detailGroupId = '' }) => {
                 rows.length > 0 ? (
                   <div className='router-tag-group'>
                     {rows.map((item) => (
-                      <AppTag
+                      <React.Fragment
                         key={`${item?.model || '-'}-${item?.channel_id || '-'}-${item?.upstream_model || '-'}`}
-                        className='router-tag'
-                        color={channelStatusColor(item?.channel_status)}
-                        onClick={(event) => {
-                          event.preventDefault();
-                          openChannelDetailFromCurrentPage(item.channel_id);
-                        }}
                       >
-                        {item?.channel_name || item?.channel_id}
-                        {` · ${formatPriorityLabel(item?.priority)}`}
-                        {` · ${t('group_manage.detail.model_channel_billing_ratio_short')}: ${toSafeBillingRatio(item?.billing_ratio, 1).toFixed(2)}`}
-                      </AppTag>
+                        <AppTag
+                          className='router-tag'
+                          color={channelStatusColor(item?.channel_status)}
+                          onClick={(event) => {
+                            event.preventDefault();
+                            openChannelDetailFromCurrentPage(item.channel_id);
+                          }}
+                        >
+                          {item?.channel_name || item?.channel_id}
+                          {` · ${formatPriorityLabel(item?.priority)}`}
+                          {` · ${t('group_manage.detail.model_channel_billing_ratio_short')}: ${toSafeBillingRatio(item?.billing_ratio, 1).toFixed(2)}`}
+                        </AppTag>
+                        {item?.cost_ready === false ? (
+                          <AppTag
+                            className='router-tag'
+                            color='orange'
+                            title={t('group_manage.detail.model_channel_cost_missing_hint')}
+                          >
+                            {t('group_manage.detail.model_channel_cost_missing')}
+                          </AppTag>
+                        ) : null}
+                      </React.Fragment>
                     ))}
                   </div>
                 ) : (
