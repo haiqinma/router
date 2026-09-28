@@ -2078,6 +2078,13 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return ensureTokenSortIndexesWithDB(tx)
 			},
 		},
+		{
+			Version:     "202609281100_channel_list_indexes",
+			Description: "add status and created_time indexes on channels for channel list filter and ordering",
+			Up: func(tx *gorm.DB) error {
+				return ensureChannelListIndexesWithDB(tx)
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }

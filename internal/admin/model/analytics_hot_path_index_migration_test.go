@@ -58,6 +58,30 @@ func TestEnsureTokenSortIndexesWithDB(t *testing.T) {
 	}
 }
 
+func TestEnsureChannelListIndexesWithDB(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=private"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open db: %v", err)
+	}
+	if err := db.AutoMigrate(&Channel{}); err != nil {
+		t.Fatalf("automigrate channel: %v", err)
+	}
+	for i := 0; i < 2; i++ {
+		if err := ensureChannelListIndexesWithDB(db); err != nil {
+			t.Fatalf("ensure channel indexes (run %d): %v", i, err)
+		}
+	}
+	names := listSQLiteIndexNames(t, db, "channels")
+	for _, want := range []string{
+		"idx_channels_status",
+		"idx_channels_created_time",
+	} {
+		if _, ok := names[want]; !ok {
+			t.Fatalf("expected index %s to exist, got %v", want, names)
+		}
+	}
+}
+
 func listSQLiteIndexNames(t *testing.T, db *gorm.DB, table string) map[string]struct{} {
 	t.Helper()
 	rows := make([]string, 0)

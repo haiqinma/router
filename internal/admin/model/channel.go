@@ -29,10 +29,10 @@ type Channel struct {
 	Id                    string         `json:"id" gorm:"type:char(36);primaryKey"`
 	Protocol              string         `json:"protocol" gorm:"type:varchar(64);default:'openai';index"`
 	Key                   string         `json:"key" gorm:"type:text"`
-	Status                int            `json:"status" gorm:"default:1"`
+	Status                int            `json:"status" gorm:"default:1;index"`
 	Name                  string         `json:"name" gorm:"type:varchar(64);not null;uniqueIndex"`
 	Weight                *uint          `json:"weight" gorm:"default:0"`
-	CreatedTime           int64          `json:"created_time" gorm:"bigint"`
+	CreatedTime           int64          `json:"created_time" gorm:"bigint;index"`
 	UpdatedAt             int64          `json:"updated_at" gorm:"bigint;index"`
 	TestTime              int64          `json:"test_time" gorm:"bigint"`
 	ResponseTime          int            `json:"response_time"`

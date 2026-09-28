@@ -45,6 +45,33 @@ func ensureEventLogAnalyticsIndexesWithDB(db *gorm.DB) error {
 	return nil
 }
 
+// ensureChannelListIndexesWithDB adds btree indexes on the channels list filter and
+// sort columns. The channel list always filters WHERE status (= / IN) and orders by
+// created_time desc plus a mandatory COUNT over the same predicate; without these
+// indexes Postgres does a full table scan and external sort on every list page.
+func ensureChannelListIndexesWithDB(db *gorm.DB) error {
+	if db == nil {
+		return fmt.Errorf("database handle is nil")
+	}
+	if !db.Migrator().HasTable(&Channel{}) {
+		if err := db.AutoMigrate(&Channel{}); err != nil {
+			return err
+		}
+	}
+	statements := []string{
+		`CREATE INDEX IF NOT EXISTS idx_channels_status
+		 ON channels (status)`,
+		`CREATE INDEX IF NOT EXISTS idx_channels_created_time
+		 ON channels (created_time)`,
+	}
+	for _, statement := range statements {
+		if err := db.Exec(statement).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // ensureTokenSortIndexesWithDB adds btree indexes on the token list sort columns
 // so the admin/personal token listings order by created_time / updated_time
 // without a full-table sort.
