@@ -678,6 +678,32 @@ func ListLatestChannelBillingSnapshotsByChannelIDsWithDB(db *gorm.DB, channelIDs
 	if len(normalizedChannelIDs) == 0 {
 		return []ChannelBillingSnapshot{}, nil
 	}
+	latestRows, err := listLatestChannelBillingSnapshotRowsWithDB(db, normalizedChannelIDs)
+	if err != nil {
+		return nil, err
+	}
+	if err := HydrateChannelBillingSnapshotsWithItemsWithDB(db, latestRows); err != nil {
+		return nil, err
+	}
+	return latestRows, nil
+}
+
+// listLatestChannelBillingSnapshotRowsWithDB 取每个渠道的最新一条快照(按
+// created_at desc, id desc)。PostgreSQL 走 DISTINCT ON 让数据库只回每渠道一行,
+// 避免拉全史再在 Go 内去重;其它方言(测试用 sqlite)保留全量拉取 + 内存去重的
+// 等价回退。
+func listLatestChannelBillingSnapshotRowsWithDB(db *gorm.DB, normalizedChannelIDs []string) ([]ChannelBillingSnapshot, error) {
+	if db.Dialector != nil && strings.ToLower(strings.TrimSpace(db.Dialector.Name())) == "postgres" {
+		rows := make([]ChannelBillingSnapshot, 0, len(normalizedChannelIDs))
+		if err := db.
+			Distinct("ON (channel_id) *").
+			Where("channel_id IN ?", normalizedChannelIDs).
+			Order("channel_id ASC, created_at DESC, id DESC").
+			Find(&rows).Error; err != nil {
+			return nil, err
+		}
+		return rows, nil
+	}
 	rows := make([]ChannelBillingSnapshot, 0)
 	if err := db.
 		Where("channel_id IN ?", normalizedChannelIDs).
@@ -697,9 +723,6 @@ func ListLatestChannelBillingSnapshotsByChannelIDsWithDB(db *gorm.DB, channelIDs
 		}
 		seen[channelID] = struct{}{}
 		latestRows = append(latestRows, row)
-	}
-	if err := HydrateChannelBillingSnapshotsWithItemsWithDB(db, latestRows); err != nil {
-		return nil, err
 	}
 	return latestRows, nil
 }
