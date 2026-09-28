@@ -1536,6 +1536,7 @@
         "load_failed": "加载渠道失败",
         "channel_not_found": "该渠道不存在或已被删除，已返回渠道列表",
         "fetch_models_failed": "获取模型失败",
+        "sync_models_result": "同步完成：新增 {{added}} 个，共 {{total}} 个",
         "models_empty": "未返回可用模型",
         "model_config_invalid": "模型配置无效，请检查模型名称是否为空或重复，价格覆盖是否为非负数。",
         "blocked_selected_models": "当前保存会校验整条渠道。以下已启用模型当前不可保存：{{models}}。请先停用这些模型，或先重新同步并确认上游返回。",
