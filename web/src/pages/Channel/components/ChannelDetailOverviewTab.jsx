@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   AppButton,
   AppDetailSection,
@@ -165,6 +165,9 @@ const ChannelDetailOverviewTab = ({
   channelID,
 }) => {
   const billingReadonly = !detailBillingEditing || billingSubmitting;
+  // 账务/采购成本默认收起——SOLO 运营平时基本不用手工录成本;编辑进行中强制展开,避免把正在改的东西藏起来。
+  const [showBillingDetails, setShowBillingDetails] = useState(false);
+  const billingExpanded = showBillingDetails || detailBillingEditing;
   const selectedBillingSource = detailBillingEditing
     ? detailBillingDraft?.billing_source
     : billingProfile?.billing_source;
@@ -294,6 +297,25 @@ const ChannelDetailOverviewTab = ({
           </AppField>
         </AppFormRow>
       </AppDetailSection>
+      <div className='router-inline-actions router-section-message'>
+        <AppButton
+          type='button'
+          className='router-inline-button'
+          disabled={detailBillingEditing}
+          onClick={() => setShowBillingDetails((prev) => !prev)}
+        >
+          {billingExpanded
+            ? t('channel.edit.billing.cost_details_hide')
+            : t('channel.edit.billing.cost_details_show')}
+        </AppButton>
+        {!billingExpanded ? (
+          <span className='router-toolbar-meta'>
+            {t('channel.edit.billing.cost_details_hint')}
+          </span>
+        ) : null}
+      </div>
+      {billingExpanded ? (
+        <>
       <AppDetailSection
         title={t('channel.edit.billing.profile_title')}
         titleTag='span'
@@ -426,6 +448,8 @@ const ChannelDetailOverviewTab = ({
         viewMode='account'
         channelID={channelID}
       />
+        </>
+      ) : null}
     </>
   );
 };
