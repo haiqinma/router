@@ -381,8 +381,58 @@ func UpdateModelPublish(channelID string, modelName string, publishEnabled bool,
 	if err := model.SetChannelModelPublishEnabledWithDB(model.DB, normalizedChannelID, modelName, publishEnabled, publishedModel, operator); err != nil {
 		return err
 	}
+	return refreshChannelGroupModelChannels(normalizedChannelID)
+}
+
+// ChannelModelPublishResult 记录批量发布中单个模型的处理结果。
+type ChannelModelPublishResult struct {
+	Model          string
+	PublishedModel string
+	Success        bool
+	Message        string
+}
+
+// UpdateModelPublishBatch 逐个模型复用单模型发布的全部校验(状态门 → 零价拦截 →
+// 重名 → 采购成本就绪),各自独立事务,一条失败不影响其余。只要有一条成功,最后统一
+// 刷新一次分组模型映射,避免逐条重复重水合。
+func UpdateModelPublishBatch(channelID string, models []string, publishEnabled bool, operator string) ([]ChannelModelPublishResult, error) {
+	normalizedChannelID := strings.TrimSpace(channelID)
+	if normalizedChannelID == "" {
+		return nil, errors.New("渠道 ID 不能为空")
+	}
+	results := make([]ChannelModelPublishResult, 0, len(models))
+	seen := make(map[string]struct{}, len(models))
+	anySuccess := false
+	for _, raw := range models {
+		modelName := strings.TrimSpace(raw)
+		if modelName == "" {
+			continue
+		}
+		if _, ok := seen[modelName]; ok {
+			continue
+		}
+		seen[modelName] = struct{}{}
+		result := ChannelModelPublishResult{Model: modelName}
+		if err := model.SetChannelModelPublishEnabledWithDB(model.DB, normalizedChannelID, modelName, publishEnabled, "", operator); err != nil {
+			result.Message = err.Error()
+			results = append(results, result)
+			continue
+		}
+		result.Success = true
+		anySuccess = true
+		results = append(results, result)
+	}
+	if anySuccess {
+		if err := refreshChannelGroupModelChannels(normalizedChannelID); err != nil {
+			return results, err
+		}
+	}
+	return results, nil
+}
+
+func refreshChannelGroupModelChannels(channelID string) error {
 	channel := &model.Channel{}
-	if err := model.DB.First(channel, "id = ?", normalizedChannelID).Error; err != nil {
+	if err := model.DB.First(channel, "id = ?", channelID).Error; err != nil {
 		return err
 	}
 	if err := model.HydrateChannelWithModels(model.DB, channel); err != nil {

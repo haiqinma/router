@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   AppAlert,
@@ -65,9 +65,14 @@ const ChannelDetailPublishTab = ({
   normalizeChannelModelType,
   onUpdatePublishedModelName,
   onUpdatePublish,
+  onBatchPublish,
   publishMutatingModel,
   publishReadonly,
 }) => {
+  const [batchMode, setBatchMode] = useState(false);
+  const [batchRowKeys, setBatchRowKeys] = useState([]);
+  const [batchSubmitting, setBatchSubmitting] = useState(false);
+
   const publishRows = useMemo(
     () =>
       (Array.isArray(channelModels) ? channelModels : [])
@@ -86,6 +91,109 @@ const ChannelDetailPublishTab = ({
         .length,
     [publishRows],
   );
+
+  const hasPositiveSellPrice = (row) => {
+    if (Number(row?.input_price || 0) > 0 || Number(row?.output_price || 0) > 0) {
+      return true;
+    }
+    const complexPricingDetails = getComplexPricingDetailsForModel(row);
+    return complexPricingDetails.some((detail) =>
+      (detail.price_components || []).some(
+        (component) =>
+          Number(component.input_price || 0) > 0 ||
+          Number(component.output_price || 0) > 0,
+      ),
+    );
+  };
+
+  const isPublishEligible = (row) => {
+    if (normalizePublishStatus(row) !== 'pending_publish') {
+      return false;
+    }
+    if (row?.procurement_readiness?.status !== 'ready') {
+      return false;
+    }
+    if (normalizeChannelModelType(row?.type) !== 'image' && !hasPositiveSellPrice(row)) {
+      return false;
+    }
+    return true;
+  };
+
+  const rowKeyOf = (row) => (row?.model || row?.upstream_model || '').toString().trim();
+
+  const eligibleRows = useMemo(
+    () => publishRows.filter((row) => isPublishEligible(row)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [publishRows],
+  );
+
+  const selectedModels = useMemo(() => {
+    const keySet = new Set(batchRowKeys);
+    return publishRows
+      .filter((row) => keySet.has(rowKeyOf(row)) && isPublishEligible(row))
+      .map((row) => rowKeyOf(row))
+      .filter(Boolean);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [batchRowKeys, publishRows]);
+
+  const exitBatchMode = () => {
+    setBatchMode(false);
+    setBatchRowKeys([]);
+  };
+
+  const runBatchPublish = async (models) => {
+    const list = Array.from(new Set((models || []).filter(Boolean)));
+    if (list.length === 0 || batchSubmitting) {
+      return;
+    }
+    setBatchSubmitting(true);
+    try {
+      const ok = await onBatchPublish?.(list);
+      if (ok) {
+        exitBatchMode();
+      }
+    } finally {
+      setBatchSubmitting(false);
+    }
+  };
+
+  const tableRowSelection = batchMode
+    ? {
+        columnWidth: 48,
+        selectedRowKeys: batchRowKeys,
+        getCheckboxProps: (row) => ({
+          disabled: publishReadonly || !isPublishEligible(row),
+        }),
+        onSelect: (record, selected) => {
+          const rowKey = rowKeyOf(record);
+          setBatchRowKeys((prev) => {
+            const next = new Set(prev);
+            if (selected) {
+              next.add(rowKey);
+            } else {
+              next.delete(rowKey);
+            }
+            return Array.from(next);
+          });
+        },
+        onSelectAll: (selected, _selectedRows, changeRows) => {
+          const changedKeys = changeRows
+            .filter((row) => isPublishEligible(row))
+            .map(rowKeyOf);
+          setBatchRowKeys((prev) => {
+            const next = new Set(prev);
+            changedKeys.forEach((rowKey) => {
+              if (selected) {
+                next.add(rowKey);
+              } else {
+                next.delete(rowKey);
+              }
+            });
+            return Array.from(next);
+          });
+        },
+      }
+    : undefined;
 
   const renderPrice = (row, field) => {
     const complexPricingDetails = getComplexPricingDetailsForModel(row);
@@ -147,20 +255,6 @@ const ChannelDetailPublishTab = ({
           </Link>
         ) : null}
       </div>
-    );
-  };
-
-  const hasPositiveSellPrice = (row) => {
-    if (Number(row?.input_price || 0) > 0 || Number(row?.output_price || 0) > 0) {
-      return true;
-    }
-    const complexPricingDetails = getComplexPricingDetailsForModel(row);
-    return complexPricingDetails.some((detail) =>
-      (detail.price_components || []).some(
-        (component) =>
-          Number(component.input_price || 0) > 0 ||
-          Number(component.output_price || 0) > 0,
-      ),
     );
   };
 
@@ -281,9 +375,57 @@ const ChannelDetailPublishTab = ({
             }
           />
         ) : null}
+        {!publishReadonly ? (
+          <div className='router-inline-actions router-section-message'>
+            {!batchMode ? (
+              <AppButton
+                type='button'
+                className='router-inline-button'
+                disabled={eligibleRows.length === 0}
+                onClick={() => {
+                  setBatchMode(true);
+                  setBatchRowKeys(eligibleRows.map((row) => rowKeyOf(row)));
+                }}
+              >
+                {t('channel.edit.publish.batch_enter', { count: eligibleRows.length })}
+              </AppButton>
+            ) : (
+              <>
+                <AppButton
+                  type='button'
+                  className='router-inline-button'
+                  disabled={eligibleRows.length === 0}
+                  onClick={() =>
+                    setBatchRowKeys(eligibleRows.map((row) => rowKeyOf(row)))
+                  }
+                >
+                  {t('channel.edit.publish.batch_select_all', { count: eligibleRows.length })}
+                </AppButton>
+                <AppButton
+                  type='button'
+                  className='router-inline-button'
+                  loading={batchSubmitting}
+                  disabled={batchSubmitting || selectedModels.length === 0}
+                  onClick={() => runBatchPublish(selectedModels)}
+                >
+                  {t('channel.edit.publish.batch_publish', { count: selectedModels.length })}
+                </AppButton>
+                <AppButton
+                  type='button'
+                  className='router-inline-button'
+                  disabled={batchSubmitting}
+                  onClick={exitBatchMode}
+                >
+                  {t('common.cancel')}
+                </AppButton>
+              </>
+            )}
+          </div>
+        ) : null}
         <AppTable
           className='router-detail-table router-table-fit-page'
           pagination={false}
+          rowSelection={tableRowSelection}
           locale={{
             emptyText: (
               <AppEmpty>{t('channel.edit.publish.empty')}</AppEmpty>
