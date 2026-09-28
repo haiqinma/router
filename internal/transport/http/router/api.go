@@ -327,7 +327,6 @@ func SetApiRouter(engine *gin.Engine) {
 			adminChannelRoute.GET("/:id/models", channel.GetChannelModels)
 			adminChannelRoute.PUT("/:id/models", channel.UpdateChannelModels)
 			adminChannelRoute.PUT("/:id/models/publish", channel.UpdateChannelModelPublish)
-			adminChannelRoute.PUT("/:id/models/publish/batch", channel.BatchUpdateChannelModelPublish)
 			adminChannelRoute.DELETE("/:id/models", channel.DeleteChannelModel)
 			adminChannelRoute.GET("/:id/endpoints", channel.GetChannelEndpoints)
 			adminChannelRoute.GET("/:id/policies", channel.GetChannelEndpointPolicies)

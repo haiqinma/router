@@ -43,17 +43,6 @@ type updateChannelModelPublishRequest struct {
 	PublishedModel string `json:"published_model"`
 }
 
-type batchChannelModelPublishRequest struct {
-	Models         []string `json:"models"`
-	PublishEnabled bool     `json:"publish_enabled"`
-}
-
-type batchChannelModelPublishResultItem struct {
-	Model   string `json:"model"`
-	Success bool   `json:"success"`
-	Message string `json:"message,omitempty"`
-}
-
 const (
 	defaultChannelModelPageSize = 10
 	maxChannelModelPageSize     = 100
@@ -319,54 +308,6 @@ func UpdateChannelModelPublish(c *gin.Context) {
 			"model":           modelName,
 			"published_model": publishedModel,
 			"publish_enabled": req.PublishEnabled,
-		},
-	})
-}
-
-func BatchUpdateChannelModelPublish(c *gin.Context) {
-	channelID := strings.TrimSpace(c.Param("id"))
-	if channelID == "" {
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": "渠道 ID 无效"})
-		return
-	}
-	req := batchChannelModelPublishRequest{}
-	if err := c.ShouldBindJSON(&req); err != nil {
-		logChannelAdminWarn(c, "batch_update_model_publish", stringField("channel_id", channelID), stringField("reason", err.Error()))
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
-		return
-	}
-	if len(req.Models) == 0 {
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": "模型列表不能为空"})
-		return
-	}
-	operator := channelAdminOperator(c)
-	results, err := channelsvc.UpdateModelPublishBatch(channelID, req.Models, req.PublishEnabled, operator)
-	if err != nil {
-		logChannelAdminWarn(c, "batch_update_model_publish", stringField("channel_id", channelID), stringField("reason", err.Error()))
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
-		return
-	}
-	items := make([]batchChannelModelPublishResultItem, 0, len(results))
-	successCount := 0
-	for _, result := range results {
-		if result.Success {
-			successCount++
-		}
-		items = append(items, batchChannelModelPublishResultItem{
-			Model:   result.Model,
-			Success: result.Success,
-			Message: result.Message,
-		})
-	}
-	logChannelAdminInfo(c, "batch_update_model_publish", stringField("channel_id", channelID), intField("total", len(items)), intField("success", successCount), stringField("publish_enabled", strconv.FormatBool(req.PublishEnabled)))
-	c.JSON(http.StatusOK, gin.H{
-		"success": true,
-		"message": "",
-		"data": gin.H{
-			"channel_id":    channelID,
-			"total":         len(items),
-			"success_count": successCount,
-			"results":       items,
 		},
 	})
 }

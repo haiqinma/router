@@ -49,10 +49,6 @@ func UpdateModelPublish(id string, modelName string, publishEnabled bool, publis
 	return channelrepo.UpdateModelPublish(id, modelName, publishEnabled, publishedModel, operator)
 }
 
-func UpdateModelPublishBatch(id string, models []string, publishEnabled bool, operator string) ([]channelrepo.ChannelModelPublishResult, error) {
-	return channelrepo.UpdateModelPublishBatch(id, models, publishEnabled, operator)
-}
-
 func UpdateTestModelByID(id string, testModel string) error {
 	return channelrepo.UpdateTestModelByID(id, testModel)
 }

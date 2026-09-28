@@ -1618,70 +1618,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     ]
   );
 
-  const batchPublishChannelModels = useCallback(
-    async (models) => {
-      if (!isDetailMode || detailPublishReadonly) {
-        return false;
-      }
-      const targetChannelId = (channelId || '').toString().trim();
-      const list = Array.from(
-        new Set(
-          (Array.isArray(models) ? models : [])
-            .map((item) => (item || '').toString().trim())
-            .filter(Boolean),
-        ),
-      );
-      if (targetChannelId === '' || list.length === 0) {
-        return false;
-      }
-      try {
-        const res = await API.put(
-          `/api/v1/admin/channel/${targetChannelId}/models/publish/batch`,
-          {
-            models: list,
-            publish_enabled: true,
-          }
-        );
-        const { success, message, data } = res.data || {};
-        if (!success) {
-          showError(message || t('channel.edit.publish.update_failed'));
-          return false;
-        }
-        await refreshChannelRuntimeState(targetChannelId);
-        const successCount = Number(data?.success_count || 0);
-        const total = Number(data?.total || list.length);
-        const failedCount = Math.max(0, total - successCount);
-        if (failedCount > 0) {
-          const firstFailure = (Array.isArray(data?.results) ? data.results : []).find(
-            (item) => item && !item.success
-          );
-          showError(
-            t('channel.edit.publish.batch_partial', {
-              success: successCount,
-              failed: failedCount,
-              reason: (firstFailure?.message || '').toString().trim(),
-            })
-          );
-        } else {
-          showSuccess(
-            t('channel.edit.publish.batch_success', { count: successCount })
-          );
-        }
-        return successCount > 0;
-      } catch (error) {
-        showError(error?.message || t('channel.edit.publish.update_failed'));
-        return false;
-      }
-    },
-    [
-      channelId,
-      detailPublishReadonly,
-      isDetailMode,
-      refreshChannelRuntimeState,
-      t,
-    ]
-  );
-
   const markChannelModelZeroCost = useCallback(
     async (row) => {
       if (!isDetailMode || detailPublishReadonly) {
@@ -4374,7 +4310,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
                 normalizeChannelModelType={normalizeChannelModelType}
                 onUpdatePublishedModelName={updateChannelModelPublishedName}
                 onUpdatePublish={updateChannelModelPublish}
-                onBatchPublish={batchPublishChannelModels}
                 onMarkZeroCost={markChannelModelZeroCost}
                 onNavigateTab={goToDetailTab}
                 publishMutatingModel={publishMutatingModel}
