@@ -6,16 +6,24 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/yeying-community/router/common/config"
 	"github.com/yeying-community/router/common/ctxkey"
 	"github.com/yeying-community/router/common/helper"
+	"github.com/yeying-community/router/internal/admin/cache"
 	"github.com/yeying-community/router/internal/admin/model"
 	billingsvc "github.com/yeying-community/router/internal/admin/service/billing"
 	relaybilling "github.com/yeying-community/router/internal/relay/billing"
 	relaymodel "github.com/yeying-community/router/internal/relay/model"
 )
+
+// billingReportCacheTTL keeps heavy billing report/health aggregations warm for
+// a short window; these all scan event_logs and its finance joins.
+const billingReportCacheTTL = 30 * time.Second
+
+var billingReportCache = cache.NewTTL(256)
 
 func usdChargeRate() float64 {
 	value, err := model.GetBillingCurrencyChargeRate(model.BillingCurrencyCodeUSD)
@@ -597,6 +605,11 @@ func appendPricingPolicyHealthIssues(response *billingHealthResponse) {
 }
 
 func GetBillingHealth(c *gin.Context) {
+	const cacheKey = "billing_health"
+	if cached, ok := billingReportCache.Get(cacheKey); ok {
+		c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": cached})
+		return
+	}
 	now := helper.GetTimestamp()
 	response := billingHealthResponse{
 		Status:        "ok",
@@ -620,6 +633,7 @@ func GetBillingHealth(c *gin.Context) {
 	} else if response.WarningCount > 0 {
 		response.Status = "warning"
 	}
+	billingReportCache.Set(cacheKey, response, billingReportCacheTTL)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -637,11 +651,18 @@ func GetFinanceConsistency(c *gin.Context) {
 	if startAt == 0 {
 		startAt = endAt - 7*24*60*60
 	}
+	// 用原始查询参数做键,默认窗口(空参数)才能稳定命中,不受 now 每秒变化影响。
+	cacheKey := strings.Join([]string{"finance_consistency", c.Query("start_at"), c.Query("end_at")}, "|")
+	if cached, ok := billingReportCache.Get(cacheKey); ok {
+		c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": cached})
+		return
+	}
 	result, err := model.InspectFinanceConsistency(model.LOG_DB, startAt, endAt)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": "财务一致性检查失败: " + err.Error()})
 		return
 	}
+	billingReportCache.Set(cacheKey, result, billingReportCacheTTL)
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": result})
 }
 
@@ -666,6 +687,17 @@ func GetProcurementReport(c *gin.Context) {
 	if endAt == 0 {
 		endAt = parseBillingReportTimestamp(c.Query("end_timestamp"))
 	}
+	cacheKey := strings.Join([]string{
+		"procurement_report",
+		strconv.FormatInt(startAt, 10), strconv.FormatInt(endAt, 10),
+		c.Query("group_by"), c.Query("cost_scope"),
+		strings.TrimSpace(c.Query("group_id")), strings.TrimSpace(c.Query("channel_id")),
+		strings.TrimSpace(c.Query("provider")), strings.TrimSpace(c.Query("model")),
+	}, "|")
+	if cached, ok := billingReportCache.Get(cacheKey); ok {
+		c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": cached})
+		return
+	}
 	summary, err := model.ListProcurementReportWithDB(model.LOG_DB, model.ProcurementReportQuery{
 		StartAt:   startAt,
 		EndAt:     endAt,
@@ -683,22 +715,35 @@ func GetProcurementReport(c *gin.Context) {
 		})
 		return
 	}
+	response := buildProcurementReportResponse(summary)
+	billingReportCache.Set(cacheKey, response, billingReportCacheTTL)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    buildProcurementReportResponse(summary),
+		"data":    response,
 	})
 }
 
 func GetProcurementTrend(c *gin.Context) {
 	startAt := parseBillingReportTimestamp(c.Query("start_at"))
 	endAt := parseBillingReportTimestamp(c.Query("end_at"))
+	cacheKey := strings.Join([]string{
+		"procurement_trend",
+		strconv.FormatInt(startAt, 10), strconv.FormatInt(endAt, 10),
+		c.Query("group_id"), c.Query("channel_id"), c.Query("provider"), c.Query("model"),
+	}, "|")
+	if cached, ok := billingReportCache.Get(cacheKey); ok {
+		c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": cached})
+		return
+	}
 	rows, err := model.ListProcurementTrendWithDB(model.LOG_DB, model.ProcurementTrendQuery{StartAt: startAt, EndAt: endAt, GroupID: c.Query("group_id"), ChannelID: c.Query("channel_id"), Provider: c.Query("provider"), Model: c.Query("model")})
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": "加载计费趋势失败: " + err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": gin.H{"items": rows}})
+	data := gin.H{"items": rows}
+	billingReportCache.Set(cacheKey, data, billingReportCacheTTL)
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": data})
 }
 
 func GetProcurementBatches(c *gin.Context) {
