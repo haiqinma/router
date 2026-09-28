@@ -206,9 +206,9 @@ func evaluateChannelModelProcurementReadiness(capacityUnits []string, matchingBa
 	if len(matchingBatches) == 0 {
 		if anyBatchExists {
 			readiness.Status = ProcurementReadinessUnitMismatch
-			readiness.Reason = fmt.Sprintf("现有采购批次容量单位与 %s 不匹配", strings.Join(capacityUnits, " / "))
+			readiness.Reason = "已记录的成本和这个模型的计费口径对不上，毛利暂时算不了"
 		} else {
-			readiness.Reason = fmt.Sprintf("缺少容量单位为 %s 的采购批次", strings.Join(capacityUnits, " / "))
+			readiness.Reason = "还没记录这个模型的成本，毛利暂时算不了"
 		}
 		return readiness
 	}
@@ -238,22 +238,22 @@ func evaluateChannelModelProcurementReadiness(capacityUnits []string, matchingBa
 			continue
 		}
 		readiness.Status = ProcurementReadinessReady
-		readiness.Reason = "正式采购成本已就绪"
+		readiness.Reason = "成本已记录，可以核算毛利"
 		readiness.Action = ""
 		return readiness
 	}
 	switch {
 	case !hasFormalSource:
 		readiness.Status = ProcurementReadinessEstimated
-		readiness.Reason = "只有预估成本，正式发布需要实际成本或明确零成本"
+		readiness.Reason = "目前只有预估成本，需记录实际成本或标记零成本才能核算毛利"
 	case hasExpired:
 		readiness.Status = ProcurementReadinessExpired
-		readiness.Reason = "正式采购批次已过期"
+		readiness.Reason = "之前记录的成本已过期，需要重新记录或标记零成本"
 	case hasActive && !hasRemaining:
 		readiness.Status = ProcurementReadinessExhausted
-		readiness.Reason = "正式采购批次剩余容量不足"
+		readiness.Reason = "已记录的成本额度用完了，需要补充或标记零成本"
 	default:
-		readiness.Reason = "没有可用于正式发布的采购批次"
+		readiness.Reason = "还没有可用的成本记录，毛利暂时算不了"
 	}
 	return readiness
 }
