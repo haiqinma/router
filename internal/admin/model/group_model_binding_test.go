@@ -13,7 +13,7 @@ func openGroupModelBindingTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
-	if err := db.AutoMigrate(&GroupCatalog{}, &GroupChannel{}, &GroupModel{}, &GroupModelChannel{}, &Channel{}, &ChannelModel{}, &ChannelModelEndpoint{}, &ChannelModelEndpointTestResult{}, &ChannelModelPriceComponent{}); err != nil {
+	if err := db.AutoMigrate(&GroupCatalog{}, &GroupChannel{}, &GroupModel{}, &GroupModelChannel{}, &Channel{}, &ChannelModel{}, &ChannelModelEndpoint{}, &ChannelModelEndpointTestResult{}, &ChannelModelPriceComponent{}, &ChannelProcurementBatch{}, &ChannelBillingProfile{}); err != nil {
 		t.Fatalf("auto migrate: %v", err)
 	}
 	return db
@@ -435,11 +435,8 @@ func TestBuildGroupChannelModelOptionsOnlyIncludesPublishedModels(t *testing.T) 
 	}
 }
 
-func TestResolveGroupBindingProcurementReadinessReflectsZeroCostMarking(t *testing.T) {
+func TestResolveGroupBindingProcurementReadinessFollowsCostTrackingMode(t *testing.T) {
 	db := openGroupModelBindingTestDB(t)
-	if err := db.AutoMigrate(&ChannelProcurementBatch{}); err != nil {
-		t.Fatalf("auto migrate batches: %v", err)
-	}
 	if err := db.Create(&Channel{Id: "channel-1", Name: "channel-1", Protocol: "openai"}).Error; err != nil {
 		t.Fatalf("create channel: %v", err)
 	}
@@ -458,23 +455,39 @@ func TestResolveGroupBindingProcurementReadinessReflectsZeroCostMarking(t *testi
 	bindings := []GroupModelBindingItem{{Model: "model-1", ChannelId: "channel-1"}}
 	key := groupBindingReadinessKey("channel-1", "model-1")
 
-	before, err := resolveGroupBindingProcurementReadiness(db, bindings)
+	// Default (no profile) resolves to untracked — silent, not a "missing" alert.
+	untracked, err := resolveGroupBindingProcurementReadiness(db, bindings)
 	if err != nil {
-		t.Fatalf("resolve before: %v", err)
+		t.Fatalf("resolve untracked: %v", err)
 	}
-	if got := before[key].Status; got != ProcurementReadinessMissing {
-		t.Fatalf("before status = %q, want %q", got, ProcurementReadinessMissing)
+	if got := untracked[key].Status; got != ProcurementReadinessUntracked {
+		t.Fatalf("untracked status = %q, want %q", got, ProcurementReadinessUntracked)
 	}
 
-	if _, err := MarkChannelModelZeroCostProcurementWithDB(db, "channel-1", "model-1"); err != nil {
-		t.Fatalf("mark zero cost: %v", err)
+	// actual mode with no batches surfaces a real config gap.
+	if err := upsertChannelCostTrackingModeWithDB(db, "channel-1", ChannelCostTrackingModeActual); err != nil {
+		t.Fatalf("set actual mode: %v", err)
+	}
+	actual, err := resolveGroupBindingProcurementReadiness(db, bindings)
+	if err != nil {
+		t.Fatalf("resolve actual: %v", err)
+	}
+	if got := actual[key].Status; got != ProcurementReadinessMissing {
+		t.Fatalf("actual status = %q, want %q", got, ProcurementReadinessMissing)
 	}
 
-	after, err := resolveGroupBindingProcurementReadiness(db, bindings)
-	if err != nil {
-		t.Fatalf("resolve after: %v", err)
+	// free mode auto-manages coverage → ready.
+	if err := upsertChannelCostTrackingModeWithDB(db, "channel-1", ChannelCostTrackingModeFree); err != nil {
+		t.Fatalf("set free mode: %v", err)
 	}
-	if got := after[key].Status; got != ProcurementReadinessReady {
-		t.Fatalf("after status = %q, want %q", got, ProcurementReadinessReady)
+	if _, err := EnsureChannelFreeProcurementBatchesWithDB(db, "channel-1"); err != nil {
+		t.Fatalf("ensure free batches: %v", err)
+	}
+	free, err := resolveGroupBindingProcurementReadiness(db, bindings)
+	if err != nil {
+		t.Fatalf("resolve free: %v", err)
+	}
+	if got := free[key].Status; got != ProcurementReadinessReady {
+		t.Fatalf("free status = %q, want %q", got, ProcurementReadinessReady)
 	}
 }
