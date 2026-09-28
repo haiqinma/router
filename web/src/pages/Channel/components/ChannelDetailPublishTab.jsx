@@ -80,6 +80,13 @@ const ChannelDetailPublishTab = ({
     [channelModels],
   );
 
+  const publishedCount = useMemo(
+    () =>
+      publishRows.filter((row) => normalizePublishStatus(row) === 'published')
+        .length,
+    [publishRows],
+  );
+
   const renderPrice = (row, field) => {
     const complexPricingDetails = getComplexPricingDetailsForModel(row);
     const hasComplexPricing = complexPricingDetails.some((detail) =>
@@ -258,6 +265,22 @@ const ChannelDetailPublishTab = ({
           className='router-section-message'
           title={t('channel.edit.publish.hint')}
         />
+        {publishedCount > 0 ? (
+          <AppAlert
+            type='success'
+            showIcon
+            className='router-section-message'
+            title={t('channel.edit.publish.next_step_title')}
+            description={
+              <span>
+                {t('channel.edit.publish.next_step_desc')}{' '}
+                <Link to='/admin/group'>
+                  {t('channel.edit.publish.next_step_link')}
+                </Link>
+              </span>
+            }
+          />
+        ) : null}
         <AppTable
           className='router-detail-table router-table-fit-page'
           pagination={false}

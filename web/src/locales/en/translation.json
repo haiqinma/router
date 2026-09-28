@@ -877,8 +877,11 @@
       "publish": {
         "title": "Model Publishing",
         "hint": "The Publish tab is the final entry point for runtime routing. A model must be selected, have an enabled endpoint, and pass its latest test before it can be manually published.",
+        "next_step_title": "Next step: bind to a group",
+        "next_step_desc": "The model is published, but it only serves traffic after you bind it to a group and set its ratios.",
+        "next_step_link": "Go to group binding",
         "summary": "{{count}} selected models",
-        "empty": "No selected models yet. Enable models in the Selection tab first.",
+        "empty": "No selected models yet. Enable models in the Models tab first.",
         "action_publish": "Publish",
         "action_save_name": "Save",
         "action_unpublish": "Unpublish",

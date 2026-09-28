@@ -877,8 +877,11 @@
       "publish": {
         "title": "模型发布",
         "hint": "发布页是模型进入运行时选路的最终入口。模型需要已选择、端点已启用且最近测试成功后，才能手动发布。",
+        "next_step_title": "下一步：绑定分组",
+        "next_step_desc": "模型已发布，但要真正对外提供，还需把它绑定到分组并配置倍率。",
+        "next_step_link": "去绑定分组",
         "summary": "已选择 {{count}} 个模型",
-        "empty": "暂无已选择模型，请先到“选择”页启用模型。",
+        "empty": "暂无已选择模型，请先到“模型”页启用模型。",
         "action_publish": "发布",
         "action_save_name": "保存",
         "action_unpublish": "取消发布",
