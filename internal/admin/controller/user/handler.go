@@ -825,17 +825,25 @@ func GetCurrentUserTopupRedemptions(c *gin.Context) {
 		})
 		return
 	}
+	redeemedByUsername := model.GetUsernameById(userID)
+	groupNameCache := make(map[string]string)
 	for _, row := range rows {
 		if row == nil {
 			continue
 		}
-		row.RedeemedByUsername = model.GetUsernameById(userID)
+		row.RedeemedByUsername = redeemedByUsername
 		groupID := strings.TrimSpace(row.GroupID)
 		if groupID == "" {
 			continue
 		}
+		if cached, ok := groupNameCache[groupID]; ok {
+			row.GroupName = cached
+			continue
+		}
 		if groupRow, err := model.GetGroupCatalogByID(groupID); err == nil {
-			row.GroupName = strings.TrimSpace(groupRow.Name)
+			name := strings.TrimSpace(groupRow.Name)
+			row.GroupName = name
+			groupNameCache[groupID] = name
 		}
 	}
 	c.JSON(http.StatusOK, gin.H{
