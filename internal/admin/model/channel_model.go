@@ -702,9 +702,9 @@ func SetChannelModelPublishEnabledWithDB(db *gorm.DB, channelID string, modelNam
 			if duplicateCount > 0 {
 				return fmt.Errorf("发布名称 %s 已被该渠道其他模型使用，请先取消原模型发布", normalizedPublishedModel)
 			}
-			if err := ValidateChannelModelProcurementCostReadyWithDB(tx, row); err != nil {
-				return err
-			}
+			// 采购成本不再作为发布硬门:缺成本只影响毛利核算,不影响能否对外服务。
+			// 发布仍受服务就绪(状态门)与销售价(零价资损)约束,采购成本改由发布页/
+			// 分组页的"成本未记录"告警提示,可事后补录或标记零成本。
 		}
 		now := helper.GetTimestamp()
 		updates := map[string]any{

@@ -55,8 +55,21 @@ const publishCheckColor = (status) => {
   }
 };
 
-const procurementReadinessColor = (status) =>
-  status === 'ready' ? 'green' : 'orange';
+const procurementReadinessColor = (status) => {
+  switch (status) {
+    case 'ready':
+      return 'green';
+    case 'estimated':
+      return 'blue';
+    case 'exhausted':
+    case 'expired':
+    case 'unit_mismatch':
+      return 'red';
+    case 'missing':
+    default:
+      return 'orange';
+  }
+};
 
 const ChannelDetailPublishTab = ({
   t,
@@ -158,9 +171,7 @@ const ChannelDetailPublishTab = ({
     if (normalizePublishStatus(row) !== 'pending_publish') {
       return false;
     }
-    if (row?.procurement_readiness?.status !== 'ready') {
-      return false;
-    }
+    // 采购成本已不再是发布硬门(缺成本只影响毛利核算),这里仅保留服务就绪与销售价约束。
     if (normalizeChannelModelType(row?.type) !== 'image' && !hasPositiveSellPrice(row)) {
       return false;
     }
@@ -285,22 +296,31 @@ const ChannelDetailPublishTab = ({
   const renderProcurementReadiness = (row) => {
     const readiness = row?.procurement_readiness || {};
     const status = (readiness.status || 'missing').toString();
-    const channelID = (row?.channel_id || '').toString().trim();
-    const modelName = (row?.model || row?.upstream_model || '').toString().trim();
-    const procurementPath = `/admin/finance?tab=procurement&channel_id=${encodeURIComponent(channelID)}&model=${encodeURIComponent(modelName)}`;
+    if (status === 'ready') {
+      return (
+        <AppTag color='green' className='router-tag'>
+          {t('channel.edit.publish.procurement_status.ready')}
+        </AppTag>
+      );
+    }
+    const reason = (readiness.reason || '').toString().trim();
     return (
       <div className='router-inline-actions'>
         <AppTag
           color={procurementReadinessColor(status)}
           className='router-tag'
-          title={readiness.reason || ''}
+          title={reason}
         >
           {t(`channel.edit.publish.procurement_status.${status}`)}
         </AppTag>
-        {status !== 'ready' && channelID !== '' && modelName !== '' ? (
-          <Link className='router-inline-button' to={procurementPath}>
+        {onNavigateTab ? (
+          <AppButton
+            type='button'
+            className='router-inline-button'
+            onClick={() => onNavigateTab('overview')}
+          >
             {t('channel.edit.publish.configure_procurement')}
-          </Link>
+          </AppButton>
         ) : null}
       </div>
     );
@@ -310,7 +330,6 @@ const ChannelDetailPublishTab = ({
     const status = normalizePublishStatus(row);
     const modelName = (row?.model || row?.upstream_model || '').toString().trim();
     const isMutating = publishMutatingModel === modelName;
-    const procurementReady = row?.procurement_readiness?.status === 'ready';
     if (status === 'published') {
       const currentPublishedName = (row?.published_model || row?.model || row?.upstream_model || '')
         .toString()
@@ -359,16 +378,11 @@ const ChannelDetailPublishTab = ({
       publishReadonly ||
       isMutating ||
       status !== 'pending_publish' ||
-      !procurementReady ||
       missingSellPrice;
     let blockReason = '';
     let blockTab = '';
     if (missingSellPrice) {
       blockReason = t('channel.edit.publish.zero_price_blocked');
-    } else if (!procurementReady) {
-      blockReason =
-        (row?.procurement_readiness?.reason || '').toString().trim() ||
-        t('channel.edit.publish.procurement_status.missing');
     } else if (status !== 'pending_publish') {
       blockReason = t(`channel.edit.publish.check_status.${status}`);
       if (status === 'pending_config') {

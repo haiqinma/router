@@ -897,17 +897,17 @@
         "filter_all": "全部（{{count}}）",
         "go_to_fix": "去处理",
         "published_model_required": "发布名称不能为空",
-        "configure_procurement": "配置采购成本",
+        "configure_procurement": "补录采购成本",
         "unpublish_confirm": "确认取消发布该模型吗？取消后该模型不会参与运行时选路。",
         "table": {
           "published_model": "发布名称",
           "check": "发布检查",
-          "procurement": "成本就绪",
+          "procurement": "采购成本",
           "actions": "操作"
         },
         "procurement_status": {
           "ready": "成本已就绪",
-          "missing": "缺少采购批次",
+          "missing": "成本未记录",
           "estimated": "仅有预估成本",
           "exhausted": "容量已耗尽",
           "expired": "批次已过期",

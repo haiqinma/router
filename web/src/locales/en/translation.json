@@ -897,17 +897,17 @@
         "filter_all": "All ({{count}})",
         "go_to_fix": "Go fix",
         "published_model_required": "Published name is required",
-        "configure_procurement": "Configure procurement",
+        "configure_procurement": "Record cost",
         "unpublish_confirm": "Unpublish this model? It will stop participating in runtime routing.",
         "table": {
           "published_model": "Published Name",
           "check": "Publish Check",
-          "procurement": "Cost Readiness",
+          "procurement": "Procurement Cost",
           "actions": "Actions"
         },
         "procurement_status": {
           "ready": "Ready",
-          "missing": "Missing batch",
+          "missing": "Cost not recorded",
           "estimated": "Estimated only",
           "exhausted": "Capacity exhausted",
           "expired": "Batch expired",
