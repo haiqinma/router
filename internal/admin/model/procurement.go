@@ -165,6 +165,10 @@ const (
 	ProcurementReadinessExhausted    = "exhausted"
 	ProcurementReadinessExpired      = "expired"
 	ProcurementReadinessUnitMismatch = "unit_mismatch"
+	// ProcurementReadinessUntracked marks a channel whose cost tracking mode is
+	// "untracked": cost is deliberately not recorded, so this is not a warning
+	// state. The UI renders it silently and treats it as cost-ready.
+	ProcurementReadinessUntracked = "untracked"
 )
 
 // channelModelProcurementCapacityUnits derives the capacity units a model needs
@@ -289,6 +293,22 @@ func ResolveChannelModelProcurementReadinessFromChannelBatches(row ChannelModel,
 		}
 	}
 	return evaluateChannelModelProcurementReadiness(capacityUnits, matching, len(channelBatches) > 0)
+}
+
+// ResolveChannelModelProcurementReadinessForMode layers the channel-level cost
+// tracking mode over the batch-derived readiness. In untracked mode cost is
+// deliberately not recorded, so readiness is reported as untracked (no warning,
+// treated as ready by the group badge) regardless of batches. Free and actual
+// modes fall through to the normal batch resolution — free channels carry
+// auto-managed global zero-cost batches, so they resolve to ready naturally.
+func ResolveChannelModelProcurementReadinessForMode(row ChannelModel, channelBatches []ChannelProcurementBatch, mode string) ChannelModelProcurementReadiness {
+	if NormalizeChannelCostTrackingMode(mode) == ChannelCostTrackingModeUntracked {
+		return ChannelModelProcurementReadiness{
+			Status:        ProcurementReadinessUntracked,
+			RequiredUnits: channelModelProcurementCapacityUnits(row),
+		}
+	}
+	return ResolveChannelModelProcurementReadinessFromChannelBatches(row, channelBatches)
 }
 
 // ResolveChannelModelProcurementReadinessWithDB explains the same production
@@ -762,55 +782,89 @@ func CreateChannelProcurementBatchWithDB(db *gorm.DB, row ChannelProcurementBatc
 // cost, so an unbounded capacity carries no accounting risk.
 const ProcurementZeroCostCapacitySentinel = 1e18
 
-// MarkChannelModelZeroCostProcurementWithDB records an explicit zero-cost basis for
-// a channel model so publishing can report gross margin (cost = 0) instead of
-// "cost not recorded". It creates one active, model-scoped zero_cost batch per
-// capacity unit the model needs, covering both the publish readiness gate and the
-// two runtime consumption candidates (capacity unit + currency equivalent).
-// Idempotent: a capacity unit that already has a ready zero-cost batch is skipped.
-func MarkChannelModelZeroCostProcurementWithDB(db *gorm.DB, channelID string, modelName string) ([]ChannelProcurementBatch, error) {
+// ProcurementAutoFreeSourceRef tags a procurement batch as auto-managed by the
+// channel-level "free" cost tracking mode. Cleanup filters on this exact value, so
+// it can never touch manually-created actual/zero-cost batches.
+const ProcurementAutoFreeSourceRef = "auto:cost_tracking_mode=free"
+
+// channelProcurementCapacityUnitUnion collects the distinct capacity units every
+// model in the channel needs its procurement batches to match, so a single set of
+// global batches can cover the whole channel.
+func channelProcurementCapacityUnitUnion(rows []ChannelModel) []string {
+	units := make([]string, 0, len(rows)*2)
+	for _, row := range rows {
+		units = append(units, channelModelProcurementCapacityUnits(row)...)
+	}
+	return normalizeTrimmedValuesPreserveOrder(units)
+}
+
+// findAutoFreeGlobalBatchIndex returns the index of an auto-managed global
+// zero-cost batch matching the unit, or -1.
+func findAutoFreeGlobalBatchIndex(batches []ChannelProcurementBatch, unit string) int {
+	for i, batch := range batches {
+		if batch.SourceRef != ProcurementAutoFreeSourceRef {
+			continue
+		}
+		if batch.ScopeType != "global" {
+			continue
+		}
+		if batch.CapacityUnit != unit {
+			continue
+		}
+		return i
+	}
+	return -1
+}
+
+// EnsureChannelFreeProcurementBatchesWithDB makes a channel report zero upstream
+// cost (full gross margin) by ensuring one active global zero-cost sentinel batch
+// per capacity unit any of its models needs. Idempotent: it only considers
+// auto-managed global batches (SourceRef == ProcurementAutoFreeSourceRef), so it
+// never duplicates coverage and never depends on manual batches. A channel with no
+// models needs no batches.
+func EnsureChannelFreeProcurementBatchesWithDB(db *gorm.DB, channelID string) ([]ChannelProcurementBatch, error) {
 	if db == nil {
 		return nil, fmt.Errorf("database handle is nil")
 	}
 	normalizedChannelID := strings.TrimSpace(channelID)
-	normalizedModel := strings.TrimSpace(modelName)
-	if normalizedChannelID == "" || normalizedModel == "" {
-		return nil, fmt.Errorf("渠道和模型不能为空")
+	if normalizedChannelID == "" {
+		return nil, fmt.Errorf("渠道 ID 不能为空")
 	}
 	rows, err := ListChannelModelRowsByChannelIDWithDB(db, normalizedChannelID)
 	if err != nil {
 		return nil, err
 	}
-	modelRow := ChannelModel{}
-	found := false
-	for _, row := range rows {
-		if strings.TrimSpace(row.Model) == normalizedModel {
-			modelRow = row
-			found = true
-			break
-		}
-	}
-	if !found {
-		return nil, fmt.Errorf("模型不存在")
-	}
-	capacityUnits := channelModelProcurementCapacityUnits(modelRow)
-	if len(capacityUnits) == 0 {
-		return nil, fmt.Errorf("无法确定模型的采购容量单位")
+	units := channelProcurementCapacityUnitUnion(rows)
+	if len(units) == 0 {
+		return []ChannelProcurementBatch{}, nil
 	}
 	existing, err := ListAllChannelProcurementBatchesByChannelIDWithDB(db, normalizedChannelID)
 	if err != nil {
 		return nil, err
 	}
 	now := helper.GetTimestamp()
-	created := make([]ChannelProcurementBatch, 0, len(capacityUnits))
-	for _, unit := range capacityUnits {
-		if channelModelHasReadyZeroCostBatchForUnit(existing, normalizedModel, unit, now) {
+	created := make([]ChannelProcurementBatch, 0, len(units))
+	for _, unit := range units {
+		if idx := findAutoFreeGlobalBatchIndex(existing, unit); idx >= 0 {
+			batch := existing[idx]
+			if batch.CostStatus == ProcurementCostStatusActive && batch.CapacityRemaining > 0 {
+				continue
+			}
+			// Reactivate/refill an auto-free batch disabled by a prior mode toggle.
+			if err := db.Model(&ChannelProcurementBatch{}).Where("id = ?", batch.Id).Updates(map[string]any{
+				"cost_status":        ProcurementCostStatusActive,
+				"capacity_total":     ProcurementZeroCostCapacitySentinel,
+				"capacity_effective": ProcurementZeroCostCapacitySentinel,
+				"capacity_remaining": ProcurementZeroCostCapacitySentinel,
+				"updated_at":         now,
+			}).Error; err != nil {
+				return nil, err
+			}
 			continue
 		}
 		row, err := CreateChannelProcurementBatchWithDB(db, ChannelProcurementBatch{
 			ChannelId:         normalizedChannelID,
-			ScopeType:         "model",
-			ScopeValue:        normalizedModel,
+			ScopeType:         "global",
 			CapacityUnit:      unit,
 			CapacityTotal:     ProcurementZeroCostCapacitySentinel,
 			CapacityEffective: ProcurementZeroCostCapacitySentinel,
@@ -820,6 +874,7 @@ func MarkChannelModelZeroCostProcurementWithDB(db *gorm.DB, channelID string, mo
 			CostPerUnitAmount: 0,
 			ValidFrom:         now,
 			ResetCycle:        "none",
+			SourceRef:         ProcurementAutoFreeSourceRef,
 			CreatedAt:         now,
 		})
 		if err != nil {
@@ -830,32 +885,54 @@ func MarkChannelModelZeroCostProcurementWithDB(db *gorm.DB, channelID string, mo
 	return created, nil
 }
 
-// channelModelHasReadyZeroCostBatchForUnit reports whether the channel already has an
-// active, unexpired, non-empty zero-cost batch covering the given model and unit, so
-// MarkChannelModelZeroCostProcurementWithDB stays idempotent.
-func channelModelHasReadyZeroCostBatchForUnit(batches []ChannelProcurementBatch, modelName string, unit string, now int64) bool {
-	for _, batch := range batches {
-		if normalizeProcurementCostSource(batch.CostSource) != ProcurementCostSourceZeroCost {
-			continue
-		}
-		if batch.CostStatus != ProcurementCostStatusActive {
-			continue
-		}
-		if batch.CapacityUnit != unit {
-			continue
-		}
-		if !(batch.ScopeType == "global" || (batch.ScopeType == "model" && batch.ScopeValue == modelName)) {
-			continue
-		}
-		if batch.ExpireAt > 0 && batch.ExpireAt <= now {
-			continue
-		}
-		if batch.CapacityRemaining <= 0 {
-			continue
-		}
-		return true
+// CleanupChannelFreeProcurementBatchesWithDB soft-disables every auto-managed free
+// batch for a channel (leaving manual actual/zero-cost batches untouched), so
+// switching away from free mode stops the zero-cost attribution immediately. The
+// consume query only selects active batches, so disabled rows stop contributing at
+// once while their audit trail and consumption references stay intact.
+func CleanupChannelFreeProcurementBatchesWithDB(db *gorm.DB, channelID string) error {
+	if db == nil {
+		return fmt.Errorf("database handle is nil")
 	}
-	return false
+	normalizedChannelID := strings.TrimSpace(channelID)
+	if normalizedChannelID == "" {
+		return fmt.Errorf("渠道 ID 不能为空")
+	}
+	return db.Model(&ChannelProcurementBatch{}).
+		Where("channel_id = ?", normalizedChannelID).
+		Where("source_ref = ?", ProcurementAutoFreeSourceRef).
+		Where("cost_status <> ?", ProcurementCostStatusDisabled).
+		Updates(map[string]any{
+			"cost_status": ProcurementCostStatusDisabled,
+			"updated_at":  helper.GetTimestamp(),
+		}).Error
+}
+
+// ReconcileChannelCostTrackingModeWithDB brings a channel's procurement batches in
+// line with its cost tracking mode: free ensures auto-managed global zero-cost
+// batches; untracked/actual disable them.
+func ReconcileChannelCostTrackingModeWithDB(db *gorm.DB, channelID string, mode string) error {
+	if NormalizeChannelCostTrackingMode(mode) == ChannelCostTrackingModeFree {
+		_, err := EnsureChannelFreeProcurementBatchesWithDB(db, channelID)
+		return err
+	}
+	return CleanupChannelFreeProcurementBatchesWithDB(db, channelID)
+}
+
+// EnsureChannelFreeCoverageWithDB tops up auto-managed zero-cost coverage only when
+// the channel is in free mode; a safe no-op otherwise. Called after channel model
+// edits so newly added models on a free channel gain global zero-cost batches
+// without requiring the operator to re-save the billing profile.
+func EnsureChannelFreeCoverageWithDB(db *gorm.DB, channelID string) error {
+	mode, err := GetChannelCostTrackingModeWithDB(db, channelID)
+	if err != nil {
+		return err
+	}
+	if mode != ChannelCostTrackingModeFree {
+		return nil
+	}
+	_, err = EnsureChannelFreeProcurementBatchesWithDB(db, channelID)
+	return err
 }
 
 func ListChannelProcurementBatchesByChannelIDWithDB(db *gorm.DB, channelID string, limit int) ([]ChannelProcurementBatch, error) {

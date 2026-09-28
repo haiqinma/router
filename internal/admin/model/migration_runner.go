@@ -2085,6 +2085,22 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return ensureChannelListIndexesWithDB(tx)
 			},
 		},
+		{
+			Version:     "202609291200_channel_cost_tracking_mode",
+			Description: "add cost_tracking_mode to channel billing profiles and backfill from existing procurement batches",
+			Up: func(tx *gorm.DB) error {
+				if err := tx.AutoMigrate(&ChannelBillingProfile{}); err != nil {
+					return err
+				}
+				if tx.Dialector.Name() == "postgres" {
+					if err := tx.Exec(`ALTER TABLE ` + ChannelBillingProfilesTableName +
+						` ADD COLUMN IF NOT EXISTS cost_tracking_mode varchar(64) NOT NULL DEFAULT 'untracked'`).Error; err != nil {
+						return err
+					}
+				}
+				return backfillChannelCostTrackingModeWithDB(tx)
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }

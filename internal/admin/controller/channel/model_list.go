@@ -81,6 +81,10 @@ func buildChannelModelListData(channelID string, page int, pageSize int, keyword
 	if err != nil {
 		return channelModelListData{}, err
 	}
+	costTrackingMode, err := model.GetChannelCostTrackingModeWithDB(model.DB, channelID)
+	if err != nil {
+		return channelModelListData{}, err
+	}
 	blockRows := make([]model.ChannelModel, 0, len(rows))
 	for _, row := range rows {
 		if !row.Selected {
@@ -99,7 +103,7 @@ func buildChannelModelListData(channelID string, page int, pageSize int, keyword
 			SyncStatus:   syncStatus,
 			LastSyncedAt: lastSyncedAt,
 		}
-		readiness := model.ResolveChannelModelProcurementReadinessFromChannelBatches(row, channelBatches)
+		readiness := model.ResolveChannelModelProcurementReadinessForMode(row, channelBatches, costTrackingMode)
 		item.ProcurementReadiness = &readiness
 		if !row.Selected {
 			item.EnableBlockReason = strings.TrimSpace(enableBlockReasons[strings.TrimSpace(row.Model)])

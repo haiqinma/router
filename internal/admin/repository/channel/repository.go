@@ -329,6 +329,9 @@ func Update(channel *model.Channel) error {
 	if err := model.HydrateChannelWithTests(model.DB, channel); err != nil {
 		return err
 	}
+	if err := model.EnsureChannelFreeCoverageWithDB(model.DB, channel.Id); err != nil {
+		return err
+	}
 	return channel.UpdateGroupModelChannels()
 }
 
@@ -370,6 +373,9 @@ func UpdateModels(channelID string, rows []model.ChannelModel) error {
 		return err
 	}
 	if err := model.HydrateChannelWithTests(model.DB, channel); err != nil {
+		return err
+	}
+	if err := model.EnsureChannelFreeCoverageWithDB(model.DB, normalizedChannelID); err != nil {
 		return err
 	}
 	return channel.UpdateGroupModelChannels()

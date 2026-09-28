@@ -96,7 +96,7 @@ func ListGroupModelsPayload(groupID string) (GroupModelsPayload, error) {
 		costStatus := ""
 		if readiness, ok := readinessByChannelModel[groupBindingReadinessKey(strings.TrimSpace(item.ChannelId), modelName)]; ok {
 			costStatus = readiness.Status
-			costReady = readiness.Status == ProcurementReadinessReady
+			costReady = readiness.Status == ProcurementReadinessReady || readiness.Status == ProcurementReadinessUntracked
 		}
 		channelsByModel[modelName] = append(channelsByModel[modelName], GroupModelViewChannel{
 			ChannelId:       strings.TrimSpace(item.ChannelId),
@@ -180,6 +180,10 @@ func resolveGroupBindingProcurementReadiness(db *gorm.DB, bindings []GroupModelB
 		if err != nil {
 			return nil, err
 		}
+		mode, err := GetChannelCostTrackingModeWithDB(db, channelID)
+		if err != nil {
+			return nil, err
+		}
 		rows, err := ListChannelModelRowsByChannelIDWithDB(db, channelID)
 		if err != nil {
 			return nil, err
@@ -197,7 +201,7 @@ func resolveGroupBindingProcurementReadiness(db *gorm.DB, bindings []GroupModelB
 			if !ok {
 				continue
 			}
-			result[groupBindingReadinessKey(channelID, modelName)] = ResolveChannelModelProcurementReadinessFromChannelBatches(row, batches)
+			result[groupBindingReadinessKey(channelID, modelName)] = ResolveChannelModelProcurementReadinessForMode(row, batches, mode)
 		}
 	}
 	return result, nil
