@@ -143,6 +143,20 @@ const ChannelDetailPublishTab = ({
     );
   };
 
+  const hasPositiveSellPrice = (row) => {
+    if (Number(row?.input_price || 0) > 0 || Number(row?.output_price || 0) > 0) {
+      return true;
+    }
+    const complexPricingDetails = getComplexPricingDetailsForModel(row);
+    return complexPricingDetails.some((detail) =>
+      (detail.price_components || []).some(
+        (component) =>
+          Number(component.input_price || 0) > 0 ||
+          Number(component.output_price || 0) > 0,
+      ),
+    );
+  };
+
   const renderPublishAction = (row) => {
     const status = normalizePublishStatus(row);
     const modelName = (row?.model || row?.upstream_model || '').toString().trim();
@@ -190,24 +204,40 @@ const ChannelDetailPublishTab = ({
         </div>
       );
     }
-    const publishDisabled = publishReadonly || isMutating || status !== 'pending_publish' || !procurementReady;
+    const missingSellPrice =
+      normalizeChannelModelType(row?.type) !== 'image' && !hasPositiveSellPrice(row);
+    const publishDisabled =
+      publishReadonly ||
+      isMutating ||
+      status !== 'pending_publish' ||
+      !procurementReady ||
+      missingSellPrice;
     return (
-      <AppButton
-        type='button'
-        className='router-inline-button'
-        loading={isMutating}
-        disabled={publishDisabled}
-        title={
-          publishDisabled && !procurementReady
-            ? row?.procurement_readiness?.reason
-            : publishDisabled && status !== 'pending_publish'
-              ? t(`channel.edit.publish.check_status.${status}`)
-            : undefined
-        }
-        onClick={() => onUpdatePublish?.(row, true)}
-      >
-        {t('channel.edit.publish.action_publish')}
-      </AppButton>
+      <div className='router-inline-actions'>
+        <AppButton
+          type='button'
+          className='router-inline-button'
+          loading={isMutating}
+          disabled={publishDisabled}
+          title={
+            publishDisabled && missingSellPrice
+              ? t('channel.edit.publish.zero_price_blocked')
+              : publishDisabled && !procurementReady
+                ? row?.procurement_readiness?.reason
+                : publishDisabled && status !== 'pending_publish'
+                  ? t(`channel.edit.publish.check_status.${status}`)
+                  : undefined
+          }
+          onClick={() => onUpdatePublish?.(row, true)}
+        >
+          {t('channel.edit.publish.action_publish')}
+        </AppButton>
+        {missingSellPrice ? (
+          <AppTag color='red' className='router-tag'>
+            {t('channel.edit.publish.zero_price_tag')}
+          </AppTag>
+        ) : null}
+      </div>
     );
   };
 

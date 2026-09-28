@@ -903,13 +903,15 @@
           "unit_mismatch": "Unit mismatch"
         },
         "check_status": {
-          "selectable": "Enable it in Selection first",
+          "selectable": "Enable it in the Models tab first",
           "pending_config": "Configure and enable an endpoint first",
           "pending_test": "Run a successful test first",
           "pending_publish": "Checks passed, ready to publish",
           "published": "Included in runtime routing",
           "disabled": "Model is disabled"
-        }
+        },
+        "zero_price_blocked": "No sell price configured. Publishing at zero price causes revenue loss; set a valid price in the model pricing first.",
+        "zero_price_tag": "No sell price"
       },
       "billing": {
         "structure_hint": "This page records channel procurement facts. Purchase records create batches; request consumption turns batches into unit cost. It is separate from user payment records.",

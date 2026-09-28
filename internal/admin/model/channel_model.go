@@ -684,6 +684,10 @@ func loadChannelModelPriceComponentsForPublishCheck(db *gorm.DB, row ChannelMode
 
 func validateChannelModelPublishBilling(row ChannelModel) error {
 	if normalizeModelType(row.Type, row.Model) != ProviderModelTypeImage {
+		// 非图片模型:发布前必须配置正的销售价,否则等同零价供给会造成资损。
+		if !channelModelHasPositiveSellPrice(resolvedPricingFromChannelModelRow(row)) {
+			return fmt.Errorf("模型 %s 未配置销售价(输入价与输出价均为空或为 0),零价发布会造成资损,请先在模型价格中填写有效售价", strings.TrimSpace(row.Model))
+		}
 		return nil
 	}
 	pricing := resolvedPricingFromChannelModelRow(row)
@@ -701,6 +705,18 @@ func validateChannelModelPublishBilling(row ChannelModel) error {
 	default:
 		return fmt.Errorf("图片模型 %s 的计价单位 %s 暂不支持发布", strings.TrimSpace(row.Model), strings.TrimSpace(row.PriceUnit))
 	}
+}
+
+func channelModelHasPositiveSellPrice(pricing ResolvedModelPricing) bool {
+	if pricing.InputPrice > 0 || pricing.OutputPrice > 0 {
+		return true
+	}
+	for _, component := range pricing.PriceComponents {
+		if component.InputPrice > 0 || component.OutputPrice > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func resolvedPricingFromChannelModelRow(row ChannelModel) ResolvedModelPricing {

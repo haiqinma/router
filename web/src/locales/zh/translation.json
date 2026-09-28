@@ -903,13 +903,15 @@
           "unit_mismatch": "容量单位不匹配"
         },
         "check_status": {
-          "selectable": "请先在选择页启用",
+          "selectable": "请先在模型页启用",
           "pending_config": "请先配置并启用端点",
           "pending_test": "请先完成成功测试",
           "pending_publish": "检查通过，可发布",
           "published": "已进入运行时选路",
           "disabled": "模型已停用"
-        }
+        },
+        "zero_price_blocked": "未配置销售价，零价发布会造成资损，请先在模型价格中填写有效售价",
+        "zero_price_tag": "缺销售价"
       },
       "billing": {
         "structure_hint": "这里维护该渠道的采购事实：采购记录生成采购批次，批次容量被请求消费后形成单位成本；它不是用户支付记录。",
