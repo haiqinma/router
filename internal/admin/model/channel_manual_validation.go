@@ -193,6 +193,97 @@ func ExplainManualChannelModelEnableBlockWithDB(db *gorm.DB, channelID string, r
 	return "", nil
 }
 
+// ExplainManualChannelModelEnableBlocksForRows resolves enable-block reasons for a
+// page of channel models in bulk: one provider_models lookup for the whole page plus
+// the already-loaded sync rows, replacing the 2 queries-per-row that
+// ExplainManualChannelModelEnableBlockWithDB issues. Result is keyed by trimmed model.
+func ExplainManualChannelModelEnableBlocksForRows(db *gorm.DB, channelID string, rows []ChannelModel, syncRows []ChannelModelSyncResult) (map[string]string, error) {
+	if db == nil {
+		return nil, fmt.Errorf("database handle is nil")
+	}
+	result := make(map[string]string, len(rows))
+	if len(rows) == 0 {
+		return result, nil
+	}
+	candidateSet := make(map[string]struct{})
+	for _, row := range rows {
+		for _, candidate := range NormalizeProviderLookupCandidates(row.UpstreamModel, row.Model) {
+			candidateSet[candidate] = struct{}{}
+		}
+	}
+	byModel := make(map[string][]providerModelValidationRow)
+	if len(candidateSet) > 0 {
+		candidates := make([]string, 0, len(candidateSet))
+		for candidate := range candidateSet {
+			candidates = append(candidates, candidate)
+		}
+		loaded := make([]providerModelValidationRow, 0)
+		if err := db.Model(&ProviderModel{}).
+			Select("provider", "model", "tags", "status", "supported_endpoints").
+			Where("is_deleted = ?", false).
+			Where("model IN ?", candidates).
+			Find(&loaded).Error; err != nil {
+			return nil, err
+		}
+		for _, loadedRow := range loaded {
+			key := strings.TrimSpace(loadedRow.Model)
+			byModel[key] = append(byModel[key], loadedRow)
+		}
+	}
+	for _, row := range rows {
+		result[strings.TrimSpace(row.Model)] = explainManualChannelModelEnableBlockFromIndex(row, byModel, syncRows)
+	}
+	return result, nil
+}
+
+func explainManualChannelModelEnableBlockFromIndex(row ChannelModel, byModel map[string][]providerModelValidationRow, syncRows []ChannelModelSyncResult) string {
+	official := resolveProviderModelValidationRowFromIndex(row.Provider, byModel, row.UpstreamModel, row.Model)
+	if official == nil {
+		return fmt.Sprintf("模型 %s 缺少供应商官方信息，不能启用", displayChannelModelName(row))
+	}
+	if normalizeManualValidationProviderModelStatus(official.Status) != ProviderModelStatusActive {
+		return fmt.Sprintf("模型 %s 当前官方状态不是 active，不能启用", displayOfficialModelName(row, official.Model))
+	}
+	if ProviderModelTagsContain(splitProviderModelTags(official.Tags), ProviderModelTagNativeAdapterRequired) {
+		return fmt.Sprintf("模型 %s 需要 Router 原生渠道适配，当前不能启用", displayOfficialModelName(row, official.Model))
+	}
+	if !ChannelModelSyncReturnedFromRows(syncRows, row.Model, row.UpstreamModel) {
+		return fmt.Sprintf("模型 %s 最近一次上游返回未包含，不能启用", displayChannelModelName(row))
+	}
+	return ""
+}
+
+// resolveProviderModelValidationRowFromIndex mirrors loadProviderModelValidationRowWithDB
+// against a pre-loaded model→rows index so a page resolves with one query.
+func resolveProviderModelValidationRowFromIndex(provider string, byModel map[string][]providerModelValidationRow, candidates ...string) *providerModelValidationRow {
+	modelCandidates := NormalizeProviderLookupCandidates(candidates...)
+	if len(modelCandidates) == 0 {
+		return nil
+	}
+	if normalizedProvider := NormalizeGroupModelProviderValue(provider); normalizedProvider != "" {
+		for _, candidate := range modelCandidates {
+			for _, row := range byModel[candidate] {
+				if row.Provider == normalizedProvider {
+					item := row
+					return &item
+				}
+			}
+		}
+		return nil
+	}
+	for _, candidate := range modelCandidates {
+		matches := byModel[candidate]
+		if len(matches) == 1 {
+			item := matches[0]
+			return &item
+		}
+		if len(matches) > 1 {
+			return nil
+		}
+	}
+	return nil
+}
+
 func loadProviderModelValidationRowWithDB(db *gorm.DB, provider string, candidates ...string) (*providerModelValidationRow, error) {
 	if db == nil {
 		return nil, fmt.Errorf("database handle is nil")

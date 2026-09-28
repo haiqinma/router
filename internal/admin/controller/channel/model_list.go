@@ -73,11 +73,21 @@ func buildChannelModelListData(channelID string, page int, pageSize int, keyword
 	if err != nil {
 		return channelModelListData{}, err
 	}
-	channelRow, err := channelsvc.GetByID(channelID)
+	syncRows, err := model.ListChannelModelSyncResultsByChannelIDWithDB(model.DB, channelID)
 	if err != nil {
 		return channelModelListData{}, err
 	}
-	syncRows, err := model.ListChannelModelSyncResultsByChannelIDWithDB(model.DB, channelID)
+	channelBatches, err := model.ListAllChannelProcurementBatchesByChannelIDWithDB(model.DB, channelID)
+	if err != nil {
+		return channelModelListData{}, err
+	}
+	blockRows := make([]model.ChannelModel, 0, len(rows))
+	for _, row := range rows {
+		if !row.Selected {
+			blockRows = append(blockRows, row)
+		}
+	}
+	enableBlockReasons, err := model.ExplainManualChannelModelEnableBlocksForRows(model.DB, channelID, blockRows, syncRows)
 	if err != nil {
 		return channelModelListData{}, err
 	}
@@ -89,34 +99,24 @@ func buildChannelModelListData(channelID string, page int, pageSize int, keyword
 			SyncStatus:   syncStatus,
 			LastSyncedAt: lastSyncedAt,
 		}
-		readiness, readinessErr := model.ResolveChannelModelProcurementReadinessWithDB(model.DB, row)
-		if readinessErr != nil {
-			return channelModelListData{}, readinessErr
-		}
+		readiness := model.ResolveChannelModelProcurementReadinessFromChannelBatches(row, channelBatches)
 		item.ProcurementReadiness = &readiness
 		if !row.Selected {
-			reason, reasonErr := model.ExplainManualChannelModelEnableBlockWithDB(model.DB, channelID, row)
-			if reasonErr != nil {
-				return channelModelListData{}, reasonErr
-			}
-			item.EnableBlockReason = strings.TrimSpace(reason)
+			item.EnableBlockReason = strings.TrimSpace(enableBlockReasons[strings.TrimSpace(row.Model)])
 		}
 		items = append(items, item)
 	}
-	allRows := channelRow.GetChannelModels()
-	selectedCount := 0
-	for _, row := range allRows {
-		if row.Selected {
-			selectedCount++
-		}
+	activeCount, selectedCount, err := model.CountChannelModelsByChannelIDWithDB(model.DB, channelID)
+	if err != nil {
+		return channelModelListData{}, err
 	}
 	return channelModelListData{
 		Items:         items,
 		Total:         total,
 		Page:          page,
 		PageSize:      pageSize,
-		SelectedCount: selectedCount,
-		ActiveCount:   len(allRows),
+		SelectedCount: int(selectedCount),
+		ActiveCount:   int(activeCount),
 	}, nil
 }
 

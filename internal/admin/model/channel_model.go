@@ -1172,6 +1172,26 @@ func ListChannelModelRowsByChannelIDWithDB(db *gorm.DB, channelID string) ([]Cha
 	return listChannelModelRowsByChannelIDWithDB(db, channelID)
 }
 
+// CountChannelModelsByChannelIDWithDB returns the total channel_models rows and how
+// many are selected for a channel, so callers can report counts without a full
+// channel hydration (GetByID).
+func CountChannelModelsByChannelIDWithDB(db *gorm.DB, channelID string) (total int64, selected int64, err error) {
+	if db == nil {
+		return 0, 0, fmt.Errorf("database handle is nil")
+	}
+	normalizedChannelID := strings.TrimSpace(channelID)
+	if normalizedChannelID == "" {
+		return 0, 0, nil
+	}
+	if err = db.Model(&ChannelModel{}).Where("channel_id = ?", normalizedChannelID).Count(&total).Error; err != nil {
+		return 0, 0, err
+	}
+	if err = db.Model(&ChannelModel{}).Where("channel_id = ? AND selected = ?", normalizedChannelID, true).Count(&selected).Error; err != nil {
+		return 0, 0, err
+	}
+	return total, selected, nil
+}
+
 func buildChannelModelListQueryWithDB(db *gorm.DB, channelID string, keyword string) *gorm.DB {
 	query := db.Model(&ChannelModel{}).Where("channel_id = ?", strings.TrimSpace(channelID))
 	normalizedKeyword := strings.ToLower(strings.TrimSpace(keyword))

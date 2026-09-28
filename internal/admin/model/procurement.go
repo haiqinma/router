@@ -167,48 +167,54 @@ const (
 	ProcurementReadinessUnitMismatch = "unit_mismatch"
 )
 
-// ResolveChannelModelProcurementReadinessWithDB explains the same production
-// cost gate used by publishing, so the UI can guide operators before submit.
-func ResolveChannelModelProcurementReadinessWithDB(db *gorm.DB, row ChannelModel) (ChannelModelProcurementReadiness, error) {
-	if db == nil {
-		return ChannelModelProcurementReadiness{}, fmt.Errorf("database handle is nil")
-	}
-	channelID := strings.TrimSpace(row.ChannelId)
-	modelName := strings.TrimSpace(row.Model)
-	if channelID == "" || modelName == "" {
-		return ChannelModelProcurementReadiness{}, fmt.Errorf("渠道和模型不能为空")
-	}
+// channelModelProcurementCapacityUnits derives the capacity units a model needs
+// its procurement batches to match, shared by the readiness and batch resolvers.
+func channelModelProcurementCapacityUnits(row ChannelModel) []string {
 	pricing := resolvedPricingFromChannelModelRow(row)
 	capacityUnits := []string{normalizePricingCapacityUnit(pricing.PriceUnit)}
 	if currency := strings.TrimSpace(strings.ToLower(pricing.Currency)); currency != "" {
 		capacityUnits = append(capacityUnits, currency+"_equivalent")
 	}
-	capacityUnits = normalizeTrimmedValuesPreserveOrder(capacityUnits)
-	readiness := ChannelModelProcurementReadiness{Status: ProcurementReadinessMissing, RequiredUnits: capacityUnits, Action: "configure_procurement"}
-	var batches []ChannelProcurementBatch
-	if err := db.Where("channel_id = ?", channelID).
-		Where("capacity_unit IN ?", capacityUnits).
-		Where("(scope_type = ? OR (scope_type = ? AND scope_value = ?))", "global", "model", modelName).
-		Find(&batches).Error; err != nil {
-		return ChannelModelProcurementReadiness{}, err
-	}
-	readiness.MatchingBatches = int64(len(batches))
-	if len(batches) == 0 {
-		var anyBatchCount int64
-		if err := db.Model(&ChannelProcurementBatch{}).Where("channel_id = ?", channelID).Count(&anyBatchCount).Error; err != nil {
-			return ChannelModelProcurementReadiness{}, err
+	return normalizeTrimmedValuesPreserveOrder(capacityUnits)
+}
+
+// channelProcurementBatchMatchesModelScope mirrors the SQL filter
+// `capacity_unit IN (...) AND (scope_type='global' OR (scope_type='model' AND scope_value=?))`
+// so in-memory batch resolution stays identical to the per-row query.
+func channelProcurementBatchMatchesModelScope(batch ChannelProcurementBatch, modelName string, capacityUnits []string) bool {
+	unitMatch := false
+	for _, unit := range capacityUnits {
+		if batch.CapacityUnit == unit {
+			unitMatch = true
+			break
 		}
-		if anyBatchCount > 0 {
+	}
+	if !unitMatch {
+		return false
+	}
+	if batch.ScopeType == "global" {
+		return true
+	}
+	return batch.ScopeType == "model" && batch.ScopeValue == modelName
+}
+
+// evaluateChannelModelProcurementReadiness holds the pure decision logic shared by
+// the DB-backed and batched resolvers so their verdicts never drift.
+func evaluateChannelModelProcurementReadiness(capacityUnits []string, matchingBatches []ChannelProcurementBatch, anyBatchExists bool) ChannelModelProcurementReadiness {
+	readiness := ChannelModelProcurementReadiness{Status: ProcurementReadinessMissing, RequiredUnits: capacityUnits, Action: "configure_procurement"}
+	readiness.MatchingBatches = int64(len(matchingBatches))
+	if len(matchingBatches) == 0 {
+		if anyBatchExists {
 			readiness.Status = ProcurementReadinessUnitMismatch
 			readiness.Reason = fmt.Sprintf("现有采购批次容量单位与 %s 不匹配", strings.Join(capacityUnits, " / "))
 		} else {
 			readiness.Reason = fmt.Sprintf("缺少容量单位为 %s 的采购批次", strings.Join(capacityUnits, " / "))
 		}
-		return readiness, nil
+		return readiness
 	}
 	now := helper.GetTimestamp()
 	hasFormalSource, hasActive, hasRemaining, hasExpired := false, false, false, false
-	for _, batch := range batches {
+	for _, batch := range matchingBatches {
 		source := normalizeProcurementCostSource(batch.CostSource)
 		if source != ProcurementCostSourceActual && source != ProcurementCostSourceZeroCost {
 			continue
@@ -234,7 +240,7 @@ func ResolveChannelModelProcurementReadinessWithDB(db *gorm.DB, row ChannelModel
 		readiness.Status = ProcurementReadinessReady
 		readiness.Reason = "正式采购成本已就绪"
 		readiness.Action = ""
-		return readiness, nil
+		return readiness
 	}
 	switch {
 	case !hasFormalSource:
@@ -249,7 +255,70 @@ func ResolveChannelModelProcurementReadinessWithDB(db *gorm.DB, row ChannelModel
 	default:
 		readiness.Reason = "没有可用于正式发布的采购批次"
 	}
-	return readiness, nil
+	return readiness
+}
+
+// ListAllChannelProcurementBatchesByChannelIDWithDB loads every procurement batch for
+// a channel in one query (no cap) so callers can resolve per-model readiness in memory
+// with the same completeness as the per-row query.
+func ListAllChannelProcurementBatchesByChannelIDWithDB(db *gorm.DB, channelID string) ([]ChannelProcurementBatch, error) {
+	if db == nil {
+		return nil, fmt.Errorf("database handle is nil")
+	}
+	normalizedChannelID := strings.TrimSpace(channelID)
+	if normalizedChannelID == "" {
+		return []ChannelProcurementBatch{}, nil
+	}
+	batches := make([]ChannelProcurementBatch, 0)
+	if err := db.Where("channel_id = ?", normalizedChannelID).Find(&batches).Error; err != nil {
+		return nil, err
+	}
+	return batches, nil
+}
+
+// ResolveChannelModelProcurementReadinessFromChannelBatches resolves readiness from
+// a pre-loaded slice of the channel's batches, avoiding the 1-2 queries per row that
+// ResolveChannelModelProcurementReadinessWithDB issues.
+func ResolveChannelModelProcurementReadinessFromChannelBatches(row ChannelModel, channelBatches []ChannelProcurementBatch) ChannelModelProcurementReadiness {
+	modelName := strings.TrimSpace(row.Model)
+	capacityUnits := channelModelProcurementCapacityUnits(row)
+	matching := make([]ChannelProcurementBatch, 0, len(channelBatches))
+	for _, batch := range channelBatches {
+		if channelProcurementBatchMatchesModelScope(batch, modelName, capacityUnits) {
+			matching = append(matching, batch)
+		}
+	}
+	return evaluateChannelModelProcurementReadiness(capacityUnits, matching, len(channelBatches) > 0)
+}
+
+// ResolveChannelModelProcurementReadinessWithDB explains the same production
+// cost gate used by publishing, so the UI can guide operators before submit.
+func ResolveChannelModelProcurementReadinessWithDB(db *gorm.DB, row ChannelModel) (ChannelModelProcurementReadiness, error) {
+	if db == nil {
+		return ChannelModelProcurementReadiness{}, fmt.Errorf("database handle is nil")
+	}
+	channelID := strings.TrimSpace(row.ChannelId)
+	modelName := strings.TrimSpace(row.Model)
+	if channelID == "" || modelName == "" {
+		return ChannelModelProcurementReadiness{}, fmt.Errorf("渠道和模型不能为空")
+	}
+	capacityUnits := channelModelProcurementCapacityUnits(row)
+	var batches []ChannelProcurementBatch
+	if err := db.Where("channel_id = ?", channelID).
+		Where("capacity_unit IN ?", capacityUnits).
+		Where("(scope_type = ? OR (scope_type = ? AND scope_value = ?))", "global", "model", modelName).
+		Find(&batches).Error; err != nil {
+		return ChannelModelProcurementReadiness{}, err
+	}
+	anyBatchExists := len(batches) > 0
+	if len(batches) == 0 {
+		var anyBatchCount int64
+		if err := db.Model(&ChannelProcurementBatch{}).Where("channel_id = ?", channelID).Count(&anyBatchCount).Error; err != nil {
+			return ChannelModelProcurementReadiness{}, err
+		}
+		anyBatchExists = anyBatchCount > 0
+	}
+	return evaluateChannelModelProcurementReadiness(capacityUnits, batches, anyBatchExists), nil
 }
 
 // ValidateChannelModelProcurementCostReadyWithDB ensures a model has a
