@@ -1,9 +1,16 @@
 package app
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
+	"time"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
@@ -113,9 +120,33 @@ func Run() {
 	router.SetRouter(server, rootapp.BuildFS)
 	var port = strconv.Itoa(*common.Port)
 	logger.SysLogf("server started on http://localhost:%s", port)
-	err = server.Run(":" + port)
-	if err != nil {
-		logger.FatalLog("failed to start HTTP server: " + err.Error())
+
+	httpServer := &http.Server{
+		Addr:    ":" + port,
+		Handler: server,
+	}
+	serverErr := make(chan error, 1)
+	go func() {
+		serverErr <- httpServer.ListenAndServe()
+	}()
+
+	stopSignals := make(chan os.Signal, 1)
+	signal.Notify(stopSignals, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(stopSignals)
+
+	select {
+	case err = <-serverErr:
+		if !errors.Is(err, http.ErrServerClosed) {
+			logger.FatalLog("failed to start HTTP server: " + err.Error())
+		}
+	case sig := <-stopSignals:
+		logger.SysLogf("received %s, shutting down HTTP server", sig)
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := httpServer.Shutdown(shutdownCtx); err != nil {
+			logger.SysError("HTTP server graceful shutdown failed: " + err.Error())
+			_ = httpServer.Close()
+		}
 	}
 }
 
