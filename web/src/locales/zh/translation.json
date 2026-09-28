@@ -1500,6 +1500,7 @@
         "stale": "连接信息、模型选择或端点已变更，请重新执行模型测试。",
         "untested": "当前端点尚未执行测试。",
         "latest_result_from_endpoint": "当前端点未测试，展示最近一次测试结果（端点：{{endpoint}}）",
+        "failure_reason": "失败原因：{{reason}}",
         "status": {
           "pending": "排队中",
           "running": "运行中",

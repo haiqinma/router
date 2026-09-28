@@ -1500,6 +1500,7 @@
         "stale": "Connection info, model selection, or endpoint changed. Please run model tests again.",
         "untested": "The current endpoint has not been tested yet.",
         "latest_result_from_endpoint": "Current endpoint is untested. Showing latest test result from endpoint: {{endpoint}}.",
+        "failure_reason": "Failure reason: {{reason}}",
         "status": {
           "pending": "Pending",
           "running": "Running",
