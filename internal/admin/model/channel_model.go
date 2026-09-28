@@ -378,6 +378,67 @@ func HydrateChannelsWithModels(db *gorm.DB, channels []*Channel) error {
 	return nil
 }
 
+// HydrateChannelWithModelCapabilitiesWithDB 是 HydrateChannelWithModels 的轻量版:
+// 仅加载能力所需的 channel_models 行(model/type/selected),跳过端点状态、测试支持、
+// 价格组件与发布状态解析。仅用于渠道列表(只展示 capabilities),避免为一页渠道额外
+// 拉端点/测试/价格三张表。
+func HydrateChannelsWithModelCapabilitiesWithDB(db *gorm.DB, channels []*Channel) error {
+	if db == nil {
+		return fmt.Errorf("database handle is nil")
+	}
+	channelIDs := make([]string, 0, len(channels))
+	normalizedChannels := make([]*Channel, 0, len(channels))
+	for _, channel := range channels {
+		if channel == nil {
+			continue
+		}
+		channel.Id = strings.TrimSpace(channel.Id)
+		if channel.Id == "" {
+			channel.SetSelectedModelIDs(nil)
+			channel.SetAvailableModelIDs(nil)
+			channel.SetChannelModels(nil)
+			continue
+		}
+		channelIDs = append(channelIDs, channel.Id)
+		normalizedChannels = append(normalizedChannels, channel)
+	}
+	if len(normalizedChannels) == 0 {
+		return nil
+	}
+	rowsByChannelID, err := loadChannelModelCapabilityRowsByChannelIDs(db, channelIDs)
+	if err != nil {
+		return err
+	}
+	for _, channel := range normalizedChannels {
+		applyChannelModelRows(channel, rowsByChannelID[channel.Id])
+	}
+	return nil
+}
+
+func loadChannelModelCapabilityRowsByChannelIDs(db *gorm.DB, channelIDs []string) (map[string][]ChannelModel, error) {
+	rowsByChannelID := make(map[string][]ChannelModel)
+	normalizedIDs := normalizeTrimmedValuesPreserveOrder(channelIDs)
+	if len(normalizedIDs) == 0 {
+		return rowsByChannelID, nil
+	}
+	rows := make([]ChannelModel, 0)
+	if err := db.
+		Select("channel_id", "model", "type", "selected", "sort_order").
+		Where("channel_id IN ?", normalizedIDs).
+		Order("channel_id asc, sort_order asc, model asc").
+		Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		normalizeChannelModelRow(&row)
+		if row.ChannelId == "" || row.Model == "" {
+			continue
+		}
+		rowsByChannelID[row.ChannelId] = append(rowsByChannelID[row.ChannelId], row)
+	}
+	return rowsByChannelID, nil
+}
+
 func ListSelectedChannelModelIDsByChannelIDWithDB(db *gorm.DB, channelID string) ([]string, error) {
 	rows, err := listChannelModelRowsByChannelIDWithDB(db, channelID)
 	if err != nil {

@@ -85,7 +85,7 @@ func ListPage(page int, pageSize int, keyword string, status string) ([]*model.C
 		Find(&channels).Error; err != nil {
 		return nil, 0, err
 	}
-	if err := model.HydrateChannelsWithModels(model.DB, channels); err != nil {
+	if err := model.HydrateChannelsWithModelCapabilitiesWithDB(model.DB, channels); err != nil {
 		return nil, 0, err
 	}
 	return channels, total, nil
