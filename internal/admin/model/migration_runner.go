@@ -2071,6 +2071,13 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				)
 			},
 		},
+		{
+			Version:     "202609281000_api_token_sort_indexes",
+			Description: "add created_time and updated_time indexes on api_tokens for token list ordering",
+			Up: func(tx *gorm.DB) error {
+				return ensureTokenSortIndexesWithDB(tx)
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }
@@ -3506,6 +3513,13 @@ func runLogVersionedMigrations(db *gorm.DB) error {
 			Description: "record selected provider in request logs for audit and reporting",
 			Up: func(tx *gorm.DB) error {
 				return tx.AutoMigrate(&Log{})
+			},
+		},
+		{
+			Version:     "202609281000_event_log_analytics_indexes",
+			Description: "add composite and model-expression indexes on event_logs for dashboards, billing reports, and log lists",
+			Up: func(tx *gorm.DB) error {
+				return ensureEventLogAnalyticsIndexesWithDB(tx)
 			},
 		},
 	}
