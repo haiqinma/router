@@ -906,11 +906,11 @@
         "table": {
           "published_model": "Published Name",
           "check": "Publish Check",
-          "procurement": "Procurement Cost",
+          "procurement": "Cost",
           "actions": "Actions"
         },
         "procurement_status": {
-          "ready": "Ready",
+          "ready": "Cost recorded",
           "missing": "Cost not recorded",
           "estimated": "Estimated only",
           "exhausted": "Capacity exhausted",

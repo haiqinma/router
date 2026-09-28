@@ -55,21 +55,10 @@ const publishCheckColor = (status) => {
   }
 };
 
-const procurementReadinessColor = (status) => {
-  switch (status) {
-    case 'ready':
-      return 'green';
-    case 'estimated':
-      return 'blue';
-    case 'exhausted':
-    case 'expired':
-    case 'unit_mismatch':
-      return 'red';
-    case 'missing':
-    default:
-      return 'orange';
-  }
-};
+// 成本对运营只有两种可见状态:已记录(可算毛利)/ 未记录(暂不可算)。
+// 底层的耗尽/过期/单位不匹配等细分只放进悬停提示,不再作为独立概念顶到界面。
+const procurementReadinessColor = (status) =>
+  status === 'ready' ? 'green' : 'orange';
 
 const ChannelDetailPublishTab = ({
   t,
@@ -314,7 +303,7 @@ const ChannelDetailPublishTab = ({
           className='router-tag'
           title={reason}
         >
-          {t(`channel.edit.publish.procurement_status.${status}`)}
+          {t('channel.edit.publish.procurement_status.missing')}
         </AppTag>
         {!publishReadonly && onMarkZeroCost ? (
           <AppPopconfirm
