@@ -892,7 +892,6 @@
         "filter_all": "全部（{{count}}）",
         "go_to_fix": "去处理",
         "published_model_required": "发布名称不能为空",
-        "configure_procurement": "记录成本",
         "mark_zero_cost": "标记零成本",
         "mark_zero_cost_confirm": "确认该模型上游采购成本为零？将记录一条零成本采购批次，用于毛利核算（成本按 0 计），可事后在账务页调整。",
         "mark_zero_cost_success": "已标记零成本，毛利可按零成本核算",
@@ -901,16 +900,7 @@
         "table": {
           "published_model": "发布名称",
           "check": "发布检查",
-          "procurement": "成本",
           "actions": "操作"
-        },
-        "procurement_status": {
-          "ready": "成本已记录",
-          "missing": "成本未记录",
-          "estimated": "仅有预估成本",
-          "exhausted": "容量已耗尽",
-          "expired": "批次已过期",
-          "unit_mismatch": "容量单位不匹配"
         },
         "check_status": {
           "selectable": "请先在模型页启用",

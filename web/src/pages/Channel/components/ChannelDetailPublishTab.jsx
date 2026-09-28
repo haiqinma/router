@@ -55,11 +55,6 @@ const publishCheckColor = (status) => {
   }
 };
 
-// 成本对运营只有两种可见状态:已记录(可算毛利)/ 未记录(暂不可算)。
-// 底层的耗尽/过期/单位不匹配等细分只放进悬停提示,不再作为独立概念顶到界面。
-const procurementReadinessColor = (status) =>
-  status === 'ready' ? 'green' : 'orange';
-
 const ChannelDetailPublishTab = ({
   t,
   channelModels,
@@ -192,58 +187,36 @@ const ChannelDetailPublishTab = ({
     );
   };
 
-  const renderProcurementReadiness = (row) => {
+  // 缺成本时,在「操作」列就地给出「标记零成本」——原因放悬停,点击直接执行,不跳页签。
+  const renderCostAction = (row) => {
     const readiness = row?.procurement_readiness || {};
     const status = (readiness.status || 'missing').toString();
-    if (status === 'ready') {
-      return (
-        <AppTag color='green' className='router-tag'>
-          {t('channel.edit.publish.procurement_status.ready')}
-        </AppTag>
-      );
+    if (status === 'ready' || publishReadonly || !onMarkZeroCost) {
+      return null;
     }
     const reason = (readiness.reason || '').toString().trim();
     const modelName = (row?.model || row?.upstream_model || '').toString().trim();
     const isMutating = publishMutatingModel === modelName;
     return (
-      <div className='router-inline-actions'>
-        <AppTag
-          color={procurementReadinessColor(status)}
-          className='router-tag'
-          title={reason}
-        >
-          {t('channel.edit.publish.procurement_status.missing')}
-        </AppTag>
-        {!publishReadonly && onMarkZeroCost ? (
-          <AppPopconfirm
-            title={t('channel.edit.publish.mark_zero_cost_confirm')}
-            okText={t('common.confirm')}
-            cancelText={t('common.cancel')}
-            disabled={isMutating}
-            onConfirm={() => onMarkZeroCost(row)}
-          >
-            <span>
-              <AppButton
-                type='button'
-                className='router-inline-button'
-                loading={isMutating}
-                disabled={isMutating}
-              >
-                {t('channel.edit.publish.mark_zero_cost')}
-              </AppButton>
-            </span>
-          </AppPopconfirm>
-        ) : null}
-        {onNavigateTab ? (
+      <AppPopconfirm
+        title={t('channel.edit.publish.mark_zero_cost_confirm')}
+        okText={t('common.confirm')}
+        cancelText={t('common.cancel')}
+        disabled={isMutating}
+        onConfirm={() => onMarkZeroCost(row)}
+      >
+        <span>
           <AppButton
             type='button'
             className='router-inline-button'
-            onClick={() => onNavigateTab('overview')}
+            title={reason}
+            loading={isMutating}
+            disabled={isMutating}
           >
-            {t('channel.edit.publish.configure_procurement')}
+            {t('channel.edit.publish.mark_zero_cost')}
           </AppButton>
-        ) : null}
-      </div>
+        </span>
+      </AppPopconfirm>
     );
   };
 
@@ -290,6 +263,7 @@ const ChannelDetailPublishTab = ({
               </AppButton>
             </span>
           </AppPopconfirm>
+          {renderCostAction(row)}
         </div>
       );
     }
@@ -337,6 +311,7 @@ const ChannelDetailPublishTab = ({
             {t('channel.edit.publish.go_to_fix')}
           </AppButton>
         ) : null}
+        {renderCostAction(row)}
       </div>
     );
   };
@@ -472,15 +447,9 @@ const ChannelDetailPublishTab = ({
               render: (_, row) => renderPublishCheck(row),
             },
             {
-              title: t('channel.edit.publish.table.procurement'),
-              key: 'procurement_readiness',
-              width: 220,
-              render: (_, row) => renderProcurementReadiness(row),
-            },
-            {
               title: t('channel.edit.publish.table.actions'),
               key: 'actions',
-              width: 112,
+              width: 200,
               render: (_, row) => renderPublishAction(row),
             },
           ]}

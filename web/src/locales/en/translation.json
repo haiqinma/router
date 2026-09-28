@@ -892,7 +892,6 @@
         "filter_all": "All ({{count}})",
         "go_to_fix": "Go fix",
         "published_model_required": "Published name is required",
-        "configure_procurement": "Record cost",
         "mark_zero_cost": "Mark zero cost",
         "mark_zero_cost_confirm": "Confirm this model's upstream procurement cost is zero? A zero-cost batch will be recorded so gross margin can be computed (cost counted as 0); adjust later on the billing page.",
         "mark_zero_cost_success": "Marked zero cost; gross margin can be computed at zero cost",
@@ -901,16 +900,7 @@
         "table": {
           "published_model": "Published Name",
           "check": "Publish Check",
-          "procurement": "Cost",
           "actions": "Actions"
-        },
-        "procurement_status": {
-          "ready": "Cost recorded",
-          "missing": "Cost not recorded",
-          "estimated": "Estimated only",
-          "exhausted": "Capacity exhausted",
-          "expired": "Batch expired",
-          "unit_mismatch": "Unit mismatch"
         },
         "check_status": {
           "selectable": "Enable it in the Models tab first",
