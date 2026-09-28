@@ -754,6 +754,110 @@ func CreateChannelProcurementBatchWithDB(db *gorm.DB, row ChannelProcurementBatc
 	return normalized, nil
 }
 
+// ProcurementZeroCostCapacitySentinel marks a declared zero-cost batch as
+// effectively unlimited: runtime consumption decrements capacity_remaining, but
+// float64 cannot represent (sentinel - a typical per-request quantity), so the
+// value never actually moves. The batch stays "ready" and the model never
+// re-surfaces a "cost not recorded" badge. Zero-cost batches contribute 0 to gross
+// cost, so an unbounded capacity carries no accounting risk.
+const ProcurementZeroCostCapacitySentinel = 1e18
+
+// MarkChannelModelZeroCostProcurementWithDB records an explicit zero-cost basis for
+// a channel model so publishing can report gross margin (cost = 0) instead of
+// "cost not recorded". It creates one active, model-scoped zero_cost batch per
+// capacity unit the model needs, covering both the publish readiness gate and the
+// two runtime consumption candidates (capacity unit + currency equivalent).
+// Idempotent: a capacity unit that already has a ready zero-cost batch is skipped.
+func MarkChannelModelZeroCostProcurementWithDB(db *gorm.DB, channelID string, modelName string) ([]ChannelProcurementBatch, error) {
+	if db == nil {
+		return nil, fmt.Errorf("database handle is nil")
+	}
+	normalizedChannelID := strings.TrimSpace(channelID)
+	normalizedModel := strings.TrimSpace(modelName)
+	if normalizedChannelID == "" || normalizedModel == "" {
+		return nil, fmt.Errorf("渠道和模型不能为空")
+	}
+	rows, err := ListChannelModelRowsByChannelIDWithDB(db, normalizedChannelID)
+	if err != nil {
+		return nil, err
+	}
+	modelRow := ChannelModel{}
+	found := false
+	for _, row := range rows {
+		if strings.TrimSpace(row.Model) == normalizedModel {
+			modelRow = row
+			found = true
+			break
+		}
+	}
+	if !found {
+		return nil, fmt.Errorf("模型不存在")
+	}
+	capacityUnits := channelModelProcurementCapacityUnits(modelRow)
+	if len(capacityUnits) == 0 {
+		return nil, fmt.Errorf("无法确定模型的采购容量单位")
+	}
+	existing, err := ListAllChannelProcurementBatchesByChannelIDWithDB(db, normalizedChannelID)
+	if err != nil {
+		return nil, err
+	}
+	now := helper.GetTimestamp()
+	created := make([]ChannelProcurementBatch, 0, len(capacityUnits))
+	for _, unit := range capacityUnits {
+		if channelModelHasReadyZeroCostBatchForUnit(existing, normalizedModel, unit, now) {
+			continue
+		}
+		row, err := CreateChannelProcurementBatchWithDB(db, ChannelProcurementBatch{
+			ChannelId:         normalizedChannelID,
+			ScopeType:         "model",
+			ScopeValue:        normalizedModel,
+			CapacityUnit:      unit,
+			CapacityTotal:     ProcurementZeroCostCapacitySentinel,
+			CapacityEffective: ProcurementZeroCostCapacitySentinel,
+			CapacityRemaining: ProcurementZeroCostCapacitySentinel,
+			CostSource:        ProcurementCostSourceZeroCost,
+			CostStatus:        ProcurementCostStatusActive,
+			CostPerUnitAmount: 0,
+			ValidFrom:         now,
+			ResetCycle:        "none",
+			CreatedAt:         now,
+		})
+		if err != nil {
+			return nil, err
+		}
+		created = append(created, row)
+	}
+	return created, nil
+}
+
+// channelModelHasReadyZeroCostBatchForUnit reports whether the channel already has an
+// active, unexpired, non-empty zero-cost batch covering the given model and unit, so
+// MarkChannelModelZeroCostProcurementWithDB stays idempotent.
+func channelModelHasReadyZeroCostBatchForUnit(batches []ChannelProcurementBatch, modelName string, unit string, now int64) bool {
+	for _, batch := range batches {
+		if normalizeProcurementCostSource(batch.CostSource) != ProcurementCostSourceZeroCost {
+			continue
+		}
+		if batch.CostStatus != ProcurementCostStatusActive {
+			continue
+		}
+		if batch.CapacityUnit != unit {
+			continue
+		}
+		if !(batch.ScopeType == "global" || (batch.ScopeType == "model" && batch.ScopeValue == modelName)) {
+			continue
+		}
+		if batch.ExpireAt > 0 && batch.ExpireAt <= now {
+			continue
+		}
+		if batch.CapacityRemaining <= 0 {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
 func ListChannelProcurementBatchesByChannelIDWithDB(db *gorm.DB, channelID string, limit int) ([]ChannelProcurementBatch, error) {
 	if db == nil {
 		return nil, fmt.Errorf("database handle is nil")

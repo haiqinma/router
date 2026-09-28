@@ -31,7 +31,8 @@ const (
 	ChannelBillingSnapshotSourceAPI    = "api"
 	ChannelBillingSnapshotSourceManual = "manual"
 
-	ChannelBillingActionTypeManualUpdateSnapshot = "manual_update_snapshot"
+	ChannelBillingActionTypeManualUpdateSnapshot    = "manual_update_snapshot"
+	ChannelBillingActionTypeMarkZeroCostProcurement = "mark_zero_cost_procurement"
 
 	ChannelBillingActionStatusPending = "pending"
 	ChannelBillingActionStatusDone    = "done"

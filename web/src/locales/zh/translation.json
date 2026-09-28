@@ -898,6 +898,10 @@
         "go_to_fix": "去处理",
         "published_model_required": "发布名称不能为空",
         "configure_procurement": "补录采购成本",
+        "mark_zero_cost": "标记零成本",
+        "mark_zero_cost_confirm": "确认该模型上游采购成本为零？将记录一条零成本采购批次，用于毛利核算（成本按 0 计），可事后在账务页调整。",
+        "mark_zero_cost_success": "已标记零成本，毛利可按零成本核算",
+        "mark_zero_cost_failed": "标记零成本失败",
         "unpublish_confirm": "确认取消发布该模型吗？取消后该模型不会参与运行时选路。",
         "table": {
           "published_model": "发布名称",

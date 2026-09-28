@@ -92,6 +92,10 @@ type channelProcurementBatchStatusUpdateRequest struct {
 	CostStatus string `json:"cost_status"`
 }
 
+type channelModelZeroCostProcurementRequest struct {
+	Model string `json:"model"`
+}
+
 func isSupportedBillingResourceType(value string) bool {
 	switch strings.TrimSpace(strings.ToLower(value)) {
 	case model.ChannelBillingResourceTypeQuota,
@@ -432,6 +436,58 @@ func UpdateChannelProcurementBatchStatus(c *gin.Context) {
 	}
 	logChannelAdminInfo(c, "update_procurement_batch_status", stringField("channel_id", channelID), stringField("batch_id", batchID), stringField("cost_status", row.CostStatus))
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": row})
+}
+
+func MarkChannelModelZeroCostProcurement(c *gin.Context) {
+	channelID := strings.TrimSpace(c.Param("id"))
+	if channelID == "" {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "渠道 ID 无效"})
+		return
+	}
+	req := channelModelZeroCostProcurementRequest{}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "请求参数无效"})
+		return
+	}
+	modelName := strings.TrimSpace(req.Model)
+	if modelName == "" {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "模型不能为空"})
+		return
+	}
+	channelRow, _, err := getEffectiveChannelBillingProfile(channelID)
+	if err != nil {
+		logChannelAdminWarn(c, "mark_zero_cost_procurement", stringField("channel_id", channelID), stringField("model", modelName), stringField("reason", err.Error()))
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	operatorUserID := strings.TrimSpace(c.GetString(ctxkey.Id))
+	now := helper.GetTimestamp()
+	created := make([]model.ChannelProcurementBatch, 0)
+	err = model.DB.Transaction(func(tx *gorm.DB) error {
+		batches, err := model.MarkChannelModelZeroCostProcurementWithDB(tx, channelRow.Id, modelName)
+		if err != nil {
+			return err
+		}
+		created = batches
+		_, err = model.CreateChannelBillingActionWithDB(tx, model.ChannelBillingAction{
+			ChannelId:      channelRow.Id,
+			ActionType:     model.ChannelBillingActionTypeMarkZeroCostProcurement,
+			Status:         model.ChannelBillingActionStatusDone,
+			RequestPayload: marshalLogJSON(req),
+			ResultPayload:  marshalLogJSON(map[string]any{"model": modelName, "created": len(batches)}),
+			OperatorUserId: operatorUserID,
+			CreatedAt:      now,
+			UpdatedAt:      now,
+		})
+		return err
+	})
+	if err != nil {
+		logChannelAdminWarn(c, "mark_zero_cost_procurement", stringField("channel_id", channelID), stringField("model", modelName), stringField("reason", err.Error()))
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	logChannelAdminInfo(c, "mark_zero_cost_procurement", stringField("channel_id", channelID), stringField("model", modelName), intField("created", len(created)))
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": gin.H{"channel_id": channelID, "model": modelName, "created": len(created)}})
 }
 
 func GetChannelProcurementBatchConsumptions(c *gin.Context) {

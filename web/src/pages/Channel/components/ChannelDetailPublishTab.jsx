@@ -80,6 +80,7 @@ const ChannelDetailPublishTab = ({
   onUpdatePublishedModelName,
   onUpdatePublish,
   onBatchPublish,
+  onMarkZeroCost,
   onNavigateTab,
   publishMutatingModel,
   publishReadonly,
@@ -304,6 +305,8 @@ const ChannelDetailPublishTab = ({
       );
     }
     const reason = (readiness.reason || '').toString().trim();
+    const modelName = (row?.model || row?.upstream_model || '').toString().trim();
+    const isMutating = publishMutatingModel === modelName;
     return (
       <div className='router-inline-actions'>
         <AppTag
@@ -313,6 +316,26 @@ const ChannelDetailPublishTab = ({
         >
           {t(`channel.edit.publish.procurement_status.${status}`)}
         </AppTag>
+        {!publishReadonly && onMarkZeroCost ? (
+          <AppPopconfirm
+            title={t('channel.edit.publish.mark_zero_cost_confirm')}
+            okText={t('common.confirm')}
+            cancelText={t('common.cancel')}
+            disabled={isMutating}
+            onConfirm={() => onMarkZeroCost(row)}
+          >
+            <span>
+              <AppButton
+                type='button'
+                className='router-inline-button'
+                loading={isMutating}
+                disabled={isMutating}
+              >
+                {t('channel.edit.publish.mark_zero_cost')}
+              </AppButton>
+            </span>
+          </AppPopconfirm>
+        ) : null}
         {onNavigateTab ? (
           <AppButton
             type='button'
@@ -601,7 +624,7 @@ const ChannelDetailPublishTab = ({
             {
               title: t('channel.edit.publish.table.procurement'),
               key: 'procurement_readiness',
-              width: 128,
+              width: 220,
               render: (_, row) => renderProcurementReadiness(row),
             },
             {
