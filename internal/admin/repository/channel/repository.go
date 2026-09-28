@@ -2,6 +2,7 @@ package channel
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 
 	"github.com/yeying-community/router/common/config"
@@ -78,6 +79,7 @@ func ListPage(page int, pageSize int, keyword string, status string) ([]*model.C
 	}
 	channels := make([]*model.Channel, 0, pageSize)
 	if err := query.
+		Order("CASE WHEN status = " + strconv.Itoa(model.ChannelStatusEnabled) + " THEN 0 ELSE 1 END asc").
 		Order("created_time desc").
 		Limit(pageSize).
 		Offset((page - 1) * pageSize).

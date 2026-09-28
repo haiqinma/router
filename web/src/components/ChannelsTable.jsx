@@ -41,7 +41,6 @@ import {
   AppSwitch,
   AppTable,
   AppTableActionButton,
-  AppTag,
   AppTooltip,
 } from '../router-ui';
 
@@ -59,36 +58,6 @@ const compareArrayValue = (left, right) =>
 
 function renderTimestamp(timestamp) {
   return <>{timestamp2string(timestamp)}</>;
-}
-
-// 渠道账务列:展示最新快照的额度摘要,并在余额偏低/耗尽时加醒目标记。
-// 供给侧余额不足会导致该渠道全部请求失败,故在列表直接暴露,复用账务 tab
-// 已有的 low/depleted 文案与配色。
-function renderChannelBilling(summary, channel, t) {
-  const level = (channel?.billing_level || '').toString().trim().toLowerCase();
-  const text = (summary || '').toString().trim();
-  const hasSummary = text && text !== '-';
-  const tag =
-    level === 'depleted' ? (
-      <AppTag color='red'>
-        {t('channel.edit.billing.quota_table.status_depleted')}
-      </AppTag>
-    ) : level === 'low' ? (
-      <AppTag color='orange'>
-        {t('channel.edit.billing.quota_table.status_low')}
-      </AppTag>
-    ) : null;
-  if (!hasSummary && !tag) {
-    return <span className='router-text-muted'>-</span>;
-  }
-  return (
-    <div className='router-block-gap-xs'>
-      <span className={hasSummary ? undefined : 'router-text-muted'}>
-        {hasSummary ? text : '-'}
-      </span>
-      {tag}
-    </div>
-  );
 }
 
 const MAX_VENDOR_ICONS = 3;
@@ -200,9 +169,11 @@ const ChannelsTable = ({ embedded = false }) => {
     },
   });
   const currentPagePath = `${location.pathname}${location.search}${location.hash}`;
+  // 默认不设客户端排序,交由服务端 ORDER BY(活跃渠道优先,再按创建时间倒序)决定,
+  // 否则 antd 会按 created_time 重排当页,冲掉活跃优先的分组。
   const [tableSorter, setTableSorter] = useState({
-    columnKey: 'created_time',
-    order: 'descend',
+    columnKey: null,
+    order: null,
   });
 
   const processChannelData = useCallback((channel) => {
@@ -885,14 +856,6 @@ const ChannelsTable = ({ embedded = false }) => {
             sortOrder:
               tableSorter.columnKey === 'capabilities' ? tableSorter.order : null,
             render: (value) => renderCapabilities(value, t),
-          },
-          {
-            title: t('channel.table.billing'),
-            dataIndex: 'billing_summary',
-            key: 'billing',
-            width: CHANNEL_LIST_COLUMN_WIDTHS.billing,
-            ellipsis: true,
-            render: (value, channel) => renderChannelBilling(value, channel, t),
           },
           {
             title: t('channel.table.priority'),
