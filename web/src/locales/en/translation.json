@@ -1537,7 +1537,7 @@
         "load_failed": "Failed to load channel",
         "channel_not_found": "This channel does not exist or has been deleted. Returned to the channel list.",
         "fetch_models_failed": "Failed to fetch models",
-        "sync_models_result": "Sync complete: {{added}} added, {{total}} total",
+        "sync_models_result": "Sync complete: {{added}} added, {{stale}} no longer returned by upstream, {{total}} total",
         "models_empty": "No available models were returned",
         "model_config_invalid": "Invalid model configuration. Check model name emptiness or duplicates, and ensure price overrides are non-negative.",
         "blocked_selected_models": "Saving validates the whole channel. These enabled models currently block the save: {{models}}. Disable them first, or sync models again and confirm the latest upstream return.",

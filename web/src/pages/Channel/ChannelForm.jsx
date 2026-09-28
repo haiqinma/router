@@ -356,6 +356,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
   const pendingRefreshTaskIdRef = useRef('');
   const pendingRefreshSignatureRef = useRef('');
   const pendingRefreshBeforeCountRef = useRef(0);
+  const pendingRefreshBeforeModelsRef = useRef([]);
   const pendingBillingRefreshTaskIdRef = useRef('');
   const deferredModelSearchKeyword = useDeferredValue(modelSearchKeyword);
   const currentProtocolOption = useMemo(() => {
@@ -2272,6 +2273,13 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
         )
           ? inputs.channel_models.length
           : 0;
+        pendingRefreshBeforeModelsRef.current = Array.isArray(
+          inputs.channel_models,
+        )
+          ? inputs.channel_models
+              .map((row) => (row?.model || '').toString().trim())
+              .filter((name) => name !== '')
+          : [];
         setModelsSyncError('');
         if (!silent) {
           showSuccess(t('channel.messages.operation_success'));
@@ -3454,16 +3462,30 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
               if (pendingRefreshSignatureRef.current !== '') {
                 setVerifiedModelSignature(pendingRefreshSignatureRef.current);
               }
+              const afterModels = Array.isArray(runtimeState?.channelModels)
+                ? runtimeState.channelModels
+                : [];
               const totalCount = Array.isArray(runtimeState?.channelModels)
-                ? runtimeState.channelModels.length
+                ? afterModels.length
                 : pendingRefreshBeforeCountRef.current;
-              const addedCount = Math.max(
-                0,
-                totalCount - pendingRefreshBeforeCountRef.current,
+              const beforeModelSet = new Set(
+                pendingRefreshBeforeModelsRef.current,
               );
+              let addedCount = 0;
+              let staleCount = 0;
+              afterModels.forEach((row) => {
+                const modelName = (row?.model || '').toString().trim();
+                if (modelName !== '' && !beforeModelSet.has(modelName)) {
+                  addedCount += 1;
+                }
+                if ((row?.sync_status || '').toString().trim() === 'not_returned') {
+                  staleCount += 1;
+                }
+              });
               showSuccess(
                 t('channel.edit.messages.sync_models_result', {
                   added: addedCount,
+                  stale: staleCount,
                   total: totalCount,
                 }),
               );
@@ -3476,6 +3498,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
             }
             pendingRefreshSignatureRef.current = '';
             pendingRefreshBeforeCountRef.current = 0;
+            pendingRefreshBeforeModelsRef.current = [];
           }
           const billingRefreshTaskId = pendingBillingRefreshTaskIdRef.current;
           if (billingRefreshTaskId !== '') {
