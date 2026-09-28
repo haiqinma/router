@@ -2072,6 +2072,13 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 			},
 		},
 		{
+			Version:     "202609281200_refresh_official_provider_catalog",
+			Description: "refresh official model additions, retired aliases, and verified pricing from the September 28 catalog review",
+			Up: func(tx *gorm.DB) error {
+				return upsertProviderMigrationProvidersWithDB(tx, "openai", "anthropic", "deepseek", "qwen")
+			},
+		},
+		{
 			Version:     "202609281000_api_token_sort_indexes",
 			Description: "add created_time and updated_time indexes on api_tokens for token list ordering",
 			Up: func(tx *gorm.DB) error {

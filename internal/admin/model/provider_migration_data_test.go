@@ -2156,12 +2156,6 @@ func TestBuildProviderMigrationSeeds_RemainingUnpricedModelsAreExplicitlyTracked
 			"glm-5.3":         false,
 			"glm-5.3-flash":   false,
 		},
-		"qwen": {
-			"qwen3.8-max":        false,
-			"qwen3.8-flash":      false,
-			"qwen3.8-omni-flash": false,
-			"qwen-image-3.0-pro": false,
-		},
 		"mistral": {
 			"pixtral-large-latest": false,
 			"voxtral-mini-latest":  false,

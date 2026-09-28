@@ -2779,6 +2779,38 @@
         "updated_at": 1700000000
       },
       {
+        "model": "gpt-6-sol",
+        "type": "text",
+        "status": "active",
+        "description": "GPT-6 Sol 是 OpenAI 官方价格页列出的文本模型。",
+        "supported_endpoints": [
+          "/v1/chat/completions",
+          "/v1/responses"
+        ],
+        "input_price": 0.002,
+        "output_price": 0.01,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "migration",
+        "updated_at": 1700000000
+      },
+      {
+        "model": "gpt-6-luna",
+        "type": "text",
+        "status": "active",
+        "description": "GPT-6 Luna 是 OpenAI 官方价格页列出的轻量文本模型。",
+        "supported_endpoints": [
+          "/v1/chat/completions",
+          "/v1/responses"
+        ],
+        "input_price": 0.0001,
+        "output_price": 0.0005,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "migration",
+        "updated_at": 1700000000
+      },
+      {
         "model": "gpt-5.6-cyber",
         "type": "text",
         "status": "active",
@@ -3515,6 +3547,21 @@
         "updated_at": 1700000000
       },
       {
+        "model": "claude-opus-5-5",
+        "type": "text",
+        "status": "active",
+        "description": "Claude Opus 5.5 是 Anthropic 官方模型目录中的 Agent 和知识工作模型。",
+        "supported_endpoints": [
+          "/v1/messages"
+        ],
+        "input_price": 0.004,
+        "output_price": 0.02,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "migration",
+        "updated_at": 1700000000
+      },
+      {
         "model": "claude-sonnet-5",
         "type": "text",
         "status": "active",
@@ -3546,6 +3593,26 @@
         ],
         "status": "deprecated",
         "description": "DeepSeek V4 Flash 是已退役的兼容模型名，请改用 deepseek-flash。",
+        "supported_endpoints": [
+          "/v1/chat/completions",
+          "/v1/messages"
+        ],
+        "input_price": 0.0003,
+        "output_price": 0.0012,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "migration",
+        "updated_at": 1700000000
+      },
+      {
+        "model": "deepseek-v4-flash-vision-exp",
+        "type": "text",
+        "tags": [
+          "reasoning",
+          "vision"
+        ],
+        "status": "deprecated",
+        "description": "DeepSeek V4 Flash Vision Experimental 是已退役的兼容模型名，请改用 deepseek-flash。",
         "supported_endpoints": [
           "/v1/chat/completions",
           "/v1/messages"
@@ -6585,8 +6652,10 @@
           "/v1/chat/completions",
           "/v1/responses"
         ],
+        "input_price": 0.002,
+        "output_price": 0.006,
         "price_unit": "per_1k_tokens",
-        "currency": "CNY",
+        "currency": "USD",
         "source": "migration",
         "updated_at": 1700000000
       },
@@ -6599,8 +6668,10 @@
           "/v1/chat/completions",
           "/v1/responses"
         ],
+        "input_price": 0.00015,
+        "output_price": 0.00047,
         "price_unit": "per_1k_tokens",
-        "currency": "CNY",
+        "currency": "USD",
         "source": "migration",
         "updated_at": 1700000000
       },
@@ -6617,8 +6688,10 @@
         "supported_endpoints": [
           "/v1/chat/completions"
         ],
+        "input_price": 0.00015,
+        "output_price": 0.00047,
         "price_unit": "per_1k_tokens",
-        "currency": "CNY",
+        "currency": "USD",
         "source": "migration",
         "updated_at": 1700000000
       },
@@ -6630,10 +6703,23 @@
         "supported_endpoints": [
           "/v1/images/generations"
         ],
+        "input_price": 0.04,
         "price_unit": "per_image",
-        "currency": "CNY",
+        "currency": "USD",
         "source": "migration",
-        "updated_at": 1700000000
+        "updated_at": 1700000000,
+        "price_components": [
+          {
+            "component": "image_generation",
+            "condition": "size=2k",
+            "input_price": 0.075,
+            "price_unit": "per_image",
+            "currency": "USD",
+            "source": "migration",
+            "source_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+            "sort_order": 20
+          }
+        ]
       }
     ]
   },
