@@ -210,12 +210,28 @@ func responseAli2OpenAI(response *ChatResponse, modelName string) *openai.TextRe
 		Model:   strings.TrimSpace(modelName),
 		Choices: response.Output.Choices,
 		Usage: model.Usage{
-			PromptTokens:     response.Usage.InputTokens,
-			CompletionTokens: response.Usage.OutputTokens,
-			TotalTokens:      response.Usage.InputTokens + response.Usage.OutputTokens,
+			PromptTokens:        response.Usage.InputTokens,
+			CompletionTokens:    response.Usage.OutputTokens,
+			TotalTokens:         response.Usage.InputTokens + response.Usage.OutputTokens,
+			PromptTokensDetails: aliCachePromptDetails(response.Usage),
 		},
 	}
 	return &fullTextResponse
+}
+
+// aliCachePromptDetails 把 DashScope 的缓存命中/写入映射到内部 PromptTokensDetails。
+// DashScope 是包含语义(缓存量已计入 input_tokens),因此只补明细、不改 PromptTokens,
+// 让计费 carve-out 把命中量按缓存价扣减。无缓存时返回 nil。
+func aliCachePromptDetails(usage Usage) *model.PromptTokensDetails {
+	cacheRead := usage.CacheReadTokens()
+	cacheWrite := usage.CacheCreationTokens()
+	if cacheRead <= 0 && cacheWrite <= 0 {
+		return nil
+	}
+	return &model.PromptTokensDetails{
+		CachedTokens:        cacheRead,
+		CacheCreationTokens: cacheWrite,
+	}
 }
 
 func streamResponseAli2OpenAI(aliResponse *ChatResponse, modelName string) *openai.ChatCompletionsStreamResponse {
@@ -274,6 +290,7 @@ func StreamHandler(c *gin.Context, resp *http.Response, modelName string) (*mode
 			usage.PromptTokens = aliResponse.Usage.InputTokens
 			usage.CompletionTokens = aliResponse.Usage.OutputTokens
 			usage.TotalTokens = aliResponse.Usage.InputTokens + aliResponse.Usage.OutputTokens
+			usage.PromptTokensDetails = aliCachePromptDetails(aliResponse.Usage)
 		}
 		response := streamResponseAli2OpenAI(&aliResponse, modelName)
 		if response == nil {

@@ -174,6 +174,31 @@ type Usage struct {
 	InputTokens  int `json:"input_tokens"`
 	OutputTokens int `json:"output_tokens"`
 	TotalTokens  int `json:"total_tokens"`
+	// DashScope 上下文缓存命中是包含语义(input_tokens 的子集)。新版模型放在
+	// prompt_tokens_details.cached_tokens,旧版模型直接给顶层 cached_tokens。
+	CachedTokens        int                     `json:"cached_tokens"`
+	PromptTokensDetails *UsagePromptTokenDetail `json:"prompt_tokens_details"`
+}
+
+type UsagePromptTokenDetail struct {
+	CachedTokens             int `json:"cached_tokens"`
+	CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
+}
+
+// CacheReadTokens 归一化「命中缓存」的读取量,优先取新版嵌套字段,回退到旧版顶层字段。
+func (u Usage) CacheReadTokens() int {
+	if u.PromptTokensDetails != nil && u.PromptTokensDetails.CachedTokens > 0 {
+		return u.PromptTokensDetails.CachedTokens
+	}
+	return u.CachedTokens
+}
+
+// CacheCreationTokens 归一化「写入缓存」的量(仅新版嵌套字段提供)。
+func (u Usage) CacheCreationTokens() int {
+	if u.PromptTokensDetails != nil {
+		return u.PromptTokensDetails.CacheCreationInputTokens
+	}
+	return 0
 }
 
 type Output struct {
