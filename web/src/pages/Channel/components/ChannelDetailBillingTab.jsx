@@ -636,12 +636,6 @@ const ChannelDetailBillingTab = ({
       value: item.id,
       label: `${item.entitlement_name || item.id} ${item.purchase_at ? timestamp2string(item.purchase_at) : ''}`.trim(),
     }));
-  const latestSnapshotStatus = normalizeBillingValue(
-    billingSummary?.latest_snapshot_status
-  );
-  const latestSnapshotMessage = (billingSummary?.latest_snapshot_message || '')
-    .toString()
-    .trim();
 
   const appendManualItem = () => {
     setManualItems((prev) => [...prev, buildManualQuotaItem()]);
@@ -1382,18 +1376,6 @@ const ChannelDetailBillingTab = ({
             </div>
           }
         >
-          {latestSnapshotStatus === 'failed' ? (
-            <AppAlert
-              type='warning'
-              showIcon
-              className='router-section-message'
-              title={t('channel.edit.billing.latest_refresh_failed', {
-                message:
-                  latestSnapshotMessage ||
-                  t('channel.edit.billing.latest_refresh_failed_unknown'),
-              })}
-            />
-          ) : null}
           <AppTable
             className='router-detail-table'
             pagination={false}

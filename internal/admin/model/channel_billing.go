@@ -789,6 +789,7 @@ func ListChannelBillingAlertEventsByChannelIDWithDB(db *gorm.DB, channelID strin
 	}
 	rows := make([]ChannelBillingAlertEvent, 0, limit)
 	if err := db.Where("channel_id = ?", normalizedChannelID).
+		Where("event_type <> ?", ChannelBillingAlertTypeRefreshFailed).
 		Order("created_at desc").
 		Limit(limit).
 		Find(&rows).Error; err != nil {
@@ -806,6 +807,7 @@ func ListRecentChannelBillingAlertEventsWithDB(db *gorm.DB, limit int) ([]Channe
 	}
 	rows := make([]ChannelBillingAlertEvent, 0, limit)
 	if err := db.
+		Where("event_type <> ?", ChannelBillingAlertTypeRefreshFailed).
 		Order("created_at desc").
 		Limit(limit).
 		Find(&rows).Error; err != nil {

@@ -922,8 +922,6 @@
         "profile_update_success": "Billing profile updated",
         "profile_update_failed": "Failed to update billing profile",
         "refresh_now": "Refresh",
-        "latest_refresh_failed": "Latest billing refresh failed: {{message}}",
-        "latest_refresh_failed_unknown": "Billing service returned an error",
         "latest_snapshot_at": "Latest Refresh",
         "current_quotas_title": "Entitlement Status",
         "billing_source": "Billing Source",

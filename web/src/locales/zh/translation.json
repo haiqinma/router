@@ -922,8 +922,6 @@
         "profile_update_success": "账务配置保存成功",
         "profile_update_failed": "账务配置保存失败",
         "refresh_now": "刷新",
-        "latest_refresh_failed": "最近一次账务刷新失败：{{message}}",
-        "latest_refresh_failed_unknown": "账务服务返回异常",
         "latest_snapshot_at": "最近刷新",
         "current_quotas_title": "权益项状态",
         "billing_source": "账务来源",
