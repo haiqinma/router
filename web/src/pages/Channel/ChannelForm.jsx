@@ -779,6 +779,28 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     },
     [getProviderOwnersForModel, providerModelDetailsIndex]
   );
+  const getEffectivePriceMetaForModel = useCallback(
+    (row) => {
+      const owners = getProviderOwnersForModel(row);
+      const keys = buildProviderLookupKeys(row);
+      let matched = null;
+      owners.some((providerId) => {
+        const providerDetails = providerModelDetailsIndex[providerId] || {};
+        const detail = keys.map((key) => providerDetails[key]).find(Boolean);
+        if (detail) {
+          matched = detail;
+          return true;
+        }
+        return false;
+      });
+      const overrideUnit = (row?.price_unit || '').toString().trim();
+      const priceUnit =
+        overrideUnit || (matched?.price_unit || '').toString().trim();
+      const currency = (matched?.currency || '').toString().trim();
+      return { price_unit: priceUnit, currency };
+    },
+    [getProviderOwnersForModel, providerModelDetailsIndex]
+  );
   const getProviderCandidateEndpointsForModel = useCallback(
     (row) => {
       const providerId = resolvePreferredProviderForModel(row);
@@ -858,13 +880,24 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
   const openComplexPricingModal = useCallback(
     (row) => {
       const details = getComplexPricingDetailsForModel(row);
+      const meta = getEffectivePriceMetaForModel(row);
       setComplexPricingModalData({
         model: row?.upstream_model || row?.model || '',
+        base: {
+          input_price: getEffectivePriceForModel(row, 'input_price'),
+          output_price: getEffectivePriceForModel(row, 'output_price'),
+          price_unit: meta.price_unit,
+          currency: meta.currency,
+        },
         details,
       });
       setComplexPricingModalOpen(true);
     },
-    [getComplexPricingDetailsForModel]
+    [
+      getComplexPricingDetailsForModel,
+      getEffectivePriceForModel,
+      getEffectivePriceMetaForModel,
+    ]
   );
   const closeComplexPricingModal = useCallback(() => {
     setComplexPricingModalOpen(false);
@@ -4296,6 +4329,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
                   getComplexPricingDetailsForModel
                 }
                 getEffectivePriceForModel={getEffectivePriceForModel}
+                getEffectivePriceMetaForModel={getEffectivePriceMetaForModel}
                 openComplexPricingModal={openComplexPricingModal}
                 normalizeChannelModelType={normalizeChannelModelType}
                 onUpdatePublishedModelName={updateChannelModelPublishedName}

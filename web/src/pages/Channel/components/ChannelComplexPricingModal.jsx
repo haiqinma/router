@@ -26,6 +26,16 @@ const ChannelComplexPricingModal = ({
       component?.price || component?.value || '',
     ].join('-');
 
+  const formatPriceValue = (value) => {
+    if (value === null || value === undefined || value === '') {
+      return '-';
+    }
+    return value;
+  };
+
+  const base = data?.base || {};
+  const baseCurrency = (base.currency || '').toString().trim().toUpperCase();
+
   return (
     <AppModal
       size='large'
@@ -51,6 +61,44 @@ const ChannelComplexPricingModal = ({
               model: data?.model || '-',
             })}
           </div>
+        </div>
+        <div className='router-detail-subtable-caption router-muted'>
+          {t('channel.edit.model_selector.pricing_detail_base_caption')}
+        </div>
+        <AppTable
+          className='router-detail-table'
+          pagination={false}
+          rowKey={() => 'base'}
+          dataSource={[base]}
+          columns={[
+            {
+              title: t('channel.edit.model_selector.pricing_detail_table.input_price'),
+              dataIndex: 'input_price',
+              key: 'input_price',
+              render: (value) => formatPriceValue(value),
+            },
+            {
+              title: t('channel.edit.model_selector.pricing_detail_table.output_price'),
+              dataIndex: 'output_price',
+              key: 'output_price',
+              render: (value) => formatPriceValue(value),
+            },
+            {
+              title: t('channel.edit.model_selector.pricing_detail_table.price_unit'),
+              dataIndex: 'price_unit',
+              key: 'price_unit',
+              render: (value) => value || '-',
+            },
+            {
+              title: t('channel.edit.model_selector.pricing_detail_table.currency'),
+              dataIndex: 'currency',
+              key: 'currency',
+              render: () => baseCurrency || 'USD',
+            },
+          ]}
+        />
+        <div className='router-detail-subtable-caption router-muted'>
+          {t('channel.edit.model_selector.pricing_detail_components_caption')}
         </div>
         {(data?.details || []).length === 0 ? (
           <div className='router-empty-cell'>

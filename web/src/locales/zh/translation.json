@@ -1432,6 +1432,8 @@
         "pricing_detail_title": "复杂计费详情",
         "pricing_detail_model": "模型：{{model}}",
         "pricing_detail_empty": "当前模型暂无复杂计费详情",
+        "pricing_detail_base_caption": "基础价格",
+        "pricing_detail_components_caption": "附加计费项",
         "editor": {
           "info_title": "模型信息",
           "status_title": "模型状态",

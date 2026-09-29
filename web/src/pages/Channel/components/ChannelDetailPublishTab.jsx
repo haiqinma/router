@@ -60,6 +60,7 @@ const ChannelDetailPublishTab = ({
   channelModels,
   getComplexPricingDetailsForModel,
   getEffectivePriceForModel,
+  getEffectivePriceMetaForModel,
   openComplexPricingModal,
   normalizeChannelModelType,
   onUpdatePublishedModelName,
@@ -155,24 +156,51 @@ const ChannelDetailPublishTab = ({
     return modelHasComplexPricing(row);
   };
 
-  const renderPrice = (row, field) => {
-    if (modelHasComplexPricing(row)) {
-      return (
-        <AppButton
-          type='button'
-          className='router-inline-button'
-          onClick={() => openComplexPricingModal(row)}
-        >
-          {t('channel.edit.model_selector.pricing_detail_button')}
-        </AppButton>
-      );
+  const formatPriceMeta = (meta) => {
+    const parts = [];
+    const currency = (meta?.currency || '').toString().trim().toUpperCase();
+    const priceUnit = (meta?.price_unit || '').toString().trim();
+    if (currency) {
+      parts.push(currency);
     }
+    if (priceUnit) {
+      parts.push(priceUnit);
+    }
+    return parts.join(' / ');
+  };
+
+  const fieldHasComplexComponent = (row, field) =>
+    getComplexPricingDetailsForModel(row).some((detail) =>
+      (detail.price_components || []).some(
+        (component) => Number(component?.[field] || 0) > 0,
+      ),
+    );
+
+  const renderPrice = (row, field) => {
     const price = getEffectivePriceForModel(row, field);
     const hasPrice = price !== null && price !== undefined && price !== '';
-    if (!hasPrice) {
+    const hasComponent = fieldHasComplexComponent(row, field);
+    if (!hasPrice && !hasComponent) {
       return <span className='router-nowrap'>-</span>;
     }
-    return <span className='router-nowrap'>{price}</span>;
+    const metaText = hasPrice
+      ? formatPriceMeta(getEffectivePriceMetaForModel(row))
+      : '';
+    return (
+      <div className='router-provider-model-price-cell'>
+        <span className='router-monospace-value'>{hasPrice ? price : '-'}</span>
+        {metaText ? <span className='router-muted'>{metaText}</span> : null}
+        {hasComponent ? (
+          <AppButton
+            type='button'
+            className='router-inline-button'
+            onClick={() => openComplexPricingModal(row)}
+          >
+            {t('channel.edit.model_selector.pricing_detail_button')}
+          </AppButton>
+        ) : null}
+      </div>
+    );
   };
 
   const renderPublishCheck = (row) => {

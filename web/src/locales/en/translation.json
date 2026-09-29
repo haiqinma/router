@@ -1432,6 +1432,8 @@
         "pricing_detail_title": "Complex Pricing Details",
         "pricing_detail_model": "Model: {{model}}",
         "pricing_detail_empty": "No complex pricing details for this model",
+        "pricing_detail_base_caption": "Base price",
+        "pricing_detail_components_caption": "Additional charges",
         "editor": {
           "info_title": "Model Info",
           "status_title": "Model Status",
