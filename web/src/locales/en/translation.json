@@ -898,7 +898,6 @@
         "unpublish_confirm": "Unpublish this model? It will stop participating in runtime routing.",
         "table": {
           "published_model": "Published Name",
-          "check": "Publish Check",
           "actions": "Actions"
         },
         "check_status": {

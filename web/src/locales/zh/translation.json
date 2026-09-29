@@ -898,7 +898,6 @@
         "unpublish_confirm": "确认取消发布该模型吗？取消后该模型不会参与运行时选路。",
         "table": {
           "published_model": "发布名称",
-          "check": "发布检查",
           "actions": "操作"
         },
         "check_status": {

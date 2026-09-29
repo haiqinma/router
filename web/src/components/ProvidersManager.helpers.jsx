@@ -2,7 +2,7 @@
 // from ProvidersManager.jsx to keep the container focused on data + effects.
 // Nothing here reads ProvidersManager state; `t` is always passed in as an arg.
 import React, { useState } from 'react';
-import { AppButton } from '../router-ui';
+import { AppButton, AppIcon, AppTooltip } from '../router-ui';
 const PROVIDER_DETAIL_MODEL_PAGE_SIZE = 20;
 const PROVIDER_CATALOG_REQUEST_PAGE_SIZE = 100;
 const PROVIDER_MODEL_STATUS_FILTER_ALL = 'all';
@@ -861,23 +861,24 @@ const renderProviderPriceCell = (detail, field, t, openPricingDetail) => {
     field === 'input_price'
       ? hasComplexInputPricing(detail)
       : hasComplexOutputPricing(detail);
-  if (hasDetail) {
-    return (
-      <AppButton
-        type='button'
-        basic
-        className='router-inline-button'
-        onClick={() => openPricingDetail(detail)}
-      >
-        {t('channel.providers.model_detail_table.detail')}
-      </AppButton>
-    );
-  }
   const priceText = formatProviderPriceCellValue(detail?.[field]);
   const metaText = priceText === '-' ? '' : formatProviderPriceMeta(detail);
   return (
     <div className='router-provider-model-price-cell'>
-      <span className='router-monospace-value'>{priceText}</span>
+      <div className='router-provider-model-price-line'>
+        <span className='router-monospace-value'>{priceText}</span>
+        {hasDetail ? (
+          <AppTooltip title={t('channel.providers.model_detail_table.detail')}>
+            <AppButton
+              type='button'
+              aria-label={t('channel.providers.model_detail_table.detail')}
+              className='router-price-detail-icon-button'
+              icon={<AppIcon name='eye' />}
+              onClick={() => openPricingDetail(detail)}
+            />
+          </AppTooltip>
+        ) : null}
+      </div>
       {metaText ? <span className='router-muted'>{metaText}</span> : null}
     </div>
   );

@@ -5,11 +5,13 @@ import {
   AppButton,
   AppDetailSection,
   AppEmpty,
+  AppIcon,
   AppInput,
   AppPopconfirm,
   AppSelect,
   AppTable,
   AppTag,
+  AppTooltip,
 } from '../../../router-ui';
 
 const normalizePublishStatus = (row) => {
@@ -37,19 +39,6 @@ const publishStatusColor = (status) => {
       return 'blue';
     case 'disabled':
       return 'grey';
-    default:
-      return 'grey';
-  }
-};
-
-const publishCheckColor = (status) => {
-  switch (status) {
-    case 'published':
-    case 'pending_publish':
-      return 'green';
-    case 'pending_test':
-    case 'pending_config':
-      return 'orange';
     default:
       return 'grey';
   }
@@ -188,27 +177,28 @@ const ChannelDetailPublishTab = ({
       : '';
     return (
       <div className='router-provider-model-price-cell'>
-        <span className='router-monospace-value'>{hasPrice ? price : '-'}</span>
+        <div className='router-provider-model-price-line'>
+          <span className='router-monospace-value'>
+            {hasPrice ? price : '-'}
+          </span>
+          {hasComponent ? (
+            <AppTooltip
+              title={t('channel.edit.model_selector.pricing_detail_button')}
+            >
+              <AppButton
+                type='button'
+                aria-label={t(
+                  'channel.edit.model_selector.pricing_detail_button',
+                )}
+                className='router-price-detail-icon-button'
+                icon={<AppIcon name='eye' />}
+                onClick={() => openComplexPricingModal(row)}
+              />
+            </AppTooltip>
+          ) : null}
+        </div>
         {metaText ? <span className='router-muted'>{metaText}</span> : null}
-        {hasComponent ? (
-          <AppButton
-            type='button'
-            className='router-inline-button'
-            onClick={() => openComplexPricingModal(row)}
-          >
-            {t('channel.edit.model_selector.pricing_detail_button')}
-          </AppButton>
-        ) : null}
       </div>
-    );
-  };
-
-  const renderPublishCheck = (row) => {
-    const status = normalizePublishStatus(row);
-    return (
-      <AppTag color={publishCheckColor(status)} className='router-tag'>
-        {t(`channel.edit.publish.check_status.${status}`)}
-      </AppTag>
     );
   };
 
@@ -412,9 +402,16 @@ const ChannelDetailPublishTab = ({
               render: (_, row) => {
                 const status = normalizePublishStatus(row);
                 return (
-                  <AppTag color={publishStatusColor(status)} className='router-tag'>
-                    {t(`channel.edit.model_selector.publish_status.${status}`)}
-                  </AppTag>
+                  <AppTooltip
+                    title={t(`channel.edit.publish.check_status.${status}`)}
+                  >
+                    <AppTag
+                      color={publishStatusColor(status)}
+                      className='router-tag'
+                    >
+                      {t(`channel.edit.model_selector.publish_status.${status}`)}
+                    </AppTag>
+                  </AppTooltip>
                 );
               },
             },
@@ -429,12 +426,6 @@ const ChannelDetailPublishTab = ({
               key: 'output_price',
               width: 112,
               render: (_, row) => renderPrice(row, 'output_price'),
-            },
-            {
-              title: t('channel.edit.publish.table.check'),
-              key: 'check',
-              width: 128,
-              render: (_, row) => renderPublishCheck(row),
             },
             {
               title: t('channel.edit.publish.table.actions'),
