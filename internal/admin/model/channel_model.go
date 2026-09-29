@@ -690,7 +690,16 @@ func SetChannelModelPublishEnabledWithDB(db *gorm.DB, channelID string, modelNam
 				return fmt.Errorf("%s", channelModelPublishBlockedMessage(status))
 			}
 			row = loadChannelModelPriceComponentsForPublishCheck(tx, row)
-			if err := validateChannelModelPublishBilling(row); err != nil {
+			channelProtocol, err := loadChannelProtocolByChannelIDWithDB(tx, normalizedChannelID)
+			if err != nil {
+				return err
+			}
+			pricing, pricingErr := ResolveChannelModelPricing(channelProtocol, []ChannelModel{row}, row.Model)
+			if pricingErr != nil {
+				if err := validateChannelModelPublishBilling(row); err != nil {
+					return err
+				}
+			} else if err := validateResolvedChannelModelPublishBilling(pricing); err != nil {
 				return err
 			}
 			duplicateCount := int64(0)
@@ -744,27 +753,30 @@ func loadChannelModelPriceComponentsForPublishCheck(db *gorm.DB, row ChannelMode
 }
 
 func validateChannelModelPublishBilling(row ChannelModel) error {
-	if normalizeModelType(row.Type, row.Model) != ProviderModelTypeImage {
+	return validateResolvedChannelModelPublishBilling(resolvedPricingFromChannelModelRow(row))
+}
+
+func validateResolvedChannelModelPublishBilling(pricing ResolvedModelPricing) error {
+	if normalizeModelType(pricing.Type, pricing.Model) != ProviderModelTypeImage {
 		// 非图片模型:发布前必须配置正的销售价,否则等同零价供给会造成资损。
-		if !channelModelHasPositiveSellPrice(resolvedPricingFromChannelModelRow(row)) {
-			return fmt.Errorf("模型 %s 未配置销售价(输入价与输出价均为空或为 0),零价发布会造成资损,请先在模型价格中填写有效售价", strings.TrimSpace(row.Model))
+		if !channelModelHasPositiveSellPrice(pricing) {
+			return fmt.Errorf("模型 %s 未配置销售价(输入价与输出价均为空或为 0),零价发布会造成资损,请先在模型价格中填写有效售价", strings.TrimSpace(pricing.Model))
 		}
 		return nil
 	}
-	pricing := resolvedPricingFromChannelModelRow(row)
 	switch strings.TrimSpace(strings.ToLower(pricing.PriceUnit)) {
 	case ProviderPriceUnitPerImage, ProviderPriceUnitPerRequest, ProviderPriceUnitPerTask:
 		return nil
 	case ProviderPriceUnitPer1KTokens, ProviderPriceUnitPer1KChars, "":
 		if !supportsPublishableTraditionalImageTokenBilling(pricing) {
-			return fmt.Errorf("图片模型 %s 使用 token 计费但当前传统图片端点不支持可靠本地估算，不能发布；请改为按张/按次计价或补齐明确支持的图片 token 计费规则", strings.TrimSpace(row.Model))
+			return fmt.Errorf("图片模型 %s 使用 token 计费但当前传统图片端点不支持可靠本地估算，不能发布；请改为按张/按次计价或补齐明确支持的图片 token 计费规则", strings.TrimSpace(pricing.Model))
 		}
 		if err := validatePublishableTraditionalImageTokenPricing(pricing); err != nil {
 			return err
 		}
 		return nil
 	default:
-		return fmt.Errorf("图片模型 %s 的计价单位 %s 暂不支持发布", strings.TrimSpace(row.Model), strings.TrimSpace(row.PriceUnit))
+		return fmt.Errorf("图片模型 %s 的计价单位 %s 暂不支持发布", strings.TrimSpace(pricing.Model), strings.TrimSpace(pricing.PriceUnit))
 	}
 }
 
