@@ -626,6 +626,7 @@
     "search": "Search channels by identifier...",
     "table": {
       "empty_cta": "No channels yet. Add one to start routing models.",
+      "total": "{{count}} channels",
       "id": "Channel Identifier",
       "name": "Channel",
       "group": "Group",
