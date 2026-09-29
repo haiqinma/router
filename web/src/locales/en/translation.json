@@ -825,6 +825,8 @@
         "model_details": "Model Details",
         "model_details_placeholder": "[{\"model\":\"gpt-4o-mini\",\"type\":\"text\",\"input_price\":0.00015,\"output_price\":0.0006,\"price_unit\":\"per_1k_tokens\",\"currency\":\"USD\"}]",
         "pricing_detail_title": "Complex Pricing Details",
+        "pricing_detail_base_caption": "Base price",
+        "pricing_detail_components_caption": "Additional charges",
         "cancel": "Back",
         "cancel_create": "Cancel",
         "confirm": "Confirm"

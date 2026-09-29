@@ -45,8 +45,6 @@ import {
   buildConditionString,
   formatProviderPriceCellValue,
   renderProviderPriceCell,
-  isComponentBasedPricing,
-  summarizeModelPriceUnit,
 } from './ProvidersManager.helpers';
 
 const ProvidersManager = () => {
@@ -3020,6 +3018,9 @@ const ProvidersManager = () => {
             }
           />
         </div>
+        <div className='router-detail-subtable-caption router-muted'>
+          {t('channel.providers.dialog.pricing_detail_base_caption')}
+        </div>
         <AppTable
           className='router-detail-subtable'
           size='small'
@@ -3031,22 +3032,18 @@ const ProvidersManager = () => {
               title: t('channel.providers.model_detail_table.input_price'),
               key: 'input_price',
               render: (_, record) =>
-                isComponentBasedPricing(record)
-                  ? t('channel.providers.model_detail_table.component_based')
-                  : formatProviderPriceCellValue(record?.input_price),
+                formatProviderPriceCellValue(record?.input_price),
             },
             {
               title: t('channel.providers.model_detail_table.output_price'),
               key: 'output_price',
               render: (_, record) =>
-                isComponentBasedPricing(record)
-                  ? t('channel.providers.model_detail_table.component_based')
-                  : formatProviderPriceCellValue(record?.output_price),
+                formatProviderPriceCellValue(record?.output_price),
             },
             {
               title: t('channel.providers.model_detail_table.price_unit'),
               key: 'price_unit',
-              render: (_, record) => summarizeModelPriceUnit(record, t),
+              render: (_, record) => record?.price_unit || '-',
             },
             {
               title: t('channel.providers.model_detail_table.currency'),
@@ -3056,6 +3053,9 @@ const ProvidersManager = () => {
             },
           ]}
         />
+        <div className='router-detail-subtable-caption router-muted'>
+          {t('channel.providers.dialog.pricing_detail_components_caption')}
+        </div>
         <AppTable
           className='router-detail-subtable'
           size='small'

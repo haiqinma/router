@@ -5317,6 +5317,16 @@ html[data-theme='dark'] .router-workspace-start-checklist-status {
     margin-bottom: 8px;
 }
 
+.router-detail-subtable-caption {
+    margin: 12px 0 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.router-detail-subtable-caption:first-child {
+    margin-top: 0;
+}
+
 .router-block-gap-md {
     margin-bottom: 16px;
 }
