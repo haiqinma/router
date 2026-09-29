@@ -1238,6 +1238,19 @@
         "editor": {
           "base_url": "独立访问地址",
           "base_url_placeholder": "留空时继承模型访问地址"
+        },
+        "batch": {
+          "enter": "批量操作",
+          "cancel": "退出批量",
+          "select_required": "请先勾选要操作的端点。",
+          "enable_selected": "启用所选 ({{count}})",
+          "disable_selected": "禁用所选 ({{count}})",
+          "enable_done": "已启用 {{success}} 个，失败 {{failed}} 个，跳过 {{skipped}} 个。",
+          "disable_done": "已禁用 {{success}} 个，失败 {{failed}} 个。",
+          "clear_policies_selected": "清除策略 ({{count}})",
+          "clear_policies_confirm": "确认清除所选 {{count}} 个端点上的全部策略？清除后这些规则将立即失效。",
+          "clear_policies_none": "所选端点没有可清除的策略。",
+          "clear_policies_done": "已清除 {{success}} 条策略，失败 {{failed}} 条。"
         }
       },
       "endpoint_policies": {

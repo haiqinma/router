@@ -223,6 +223,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
   const [channelEndpointsLoading, setChannelEndpointsLoading] = useState(false);
   const [channelEndpointsError, setChannelEndpointsError] = useState('');
   const [endpointMutatingKey, setEndpointMutatingKey] = useState('');
+  const [endpointBatchMutating, setEndpointBatchMutating] = useState(false);
   const [channelEndpointPolicies, setChannelEndpointPolicies] = useState([]);
   const [channelEndpointPoliciesLoading, setChannelEndpointPoliciesLoading] =
     useState(false);
@@ -3048,6 +3049,170 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     ]
   );
 
+  const handleBatchUpdateEndpointCapabilities = useCallback(
+    async (rows, enabled) => {
+      if (!isDetailMode || endpointCapabilityReadonly || endpointBatchMutating) {
+        return false;
+      }
+      const targetChannelId = (channelId || '').toString().trim();
+      const targetRows = Array.isArray(rows) ? rows : [];
+      if (targetChannelId === '' || targetRows.length === 0) {
+        showInfo(t('channel.edit.endpoint_capabilities.batch.select_required'));
+        return false;
+      }
+      setEndpointBatchMutating(true);
+      let successCount = 0;
+      let failedCount = 0;
+      let skippedCount = 0;
+      try {
+        for (const row of targetRows) {
+          const modelName = (row?.model || '').toString().trim();
+          const endpoint = (row?.endpoint || '').toString().trim();
+          if (modelName === '' || endpoint === '') {
+            continue;
+          }
+          // 存在启用阻断的端点无法开启，直接跳过。
+          if (
+            enabled &&
+            (row?.enable_block_reason || '').toString().trim() !== '' &&
+            row?.enabled !== true
+          ) {
+            skippedCount += 1;
+            continue;
+          }
+          // 已是目标状态则省去一次请求，直接计入成功。
+          if ((row?.enabled === true) === enabled) {
+            successCount += 1;
+            continue;
+          }
+          try {
+            const res = await API.put(
+              `/api/v1/admin/channel/${targetChannelId}/endpoints`,
+              {
+                model: modelName,
+                endpoint,
+                base_url: normalizeBaseURL(row?.base_url),
+                enabled: !!enabled,
+              }
+            );
+            const { success } = res.data || {};
+            if (success) {
+              successCount += 1;
+            } else {
+              failedCount += 1;
+            }
+          } catch (error) {
+            failedCount += 1;
+          }
+        }
+        const nextEndpoints = await loadChannelEndpointsFromServer(
+          targetChannelId
+        );
+        setChannelEndpoints(normalizeChannelEndpointRows(nextEndpoints));
+        setChannelEndpointsError('');
+        const message = t(
+          enabled
+            ? 'channel.edit.endpoint_capabilities.batch.enable_done'
+            : 'channel.edit.endpoint_capabilities.batch.disable_done',
+          { success: successCount, failed: failedCount, skipped: skippedCount }
+        );
+        if (failedCount > 0) {
+          showError(message);
+        } else {
+          showSuccess(message);
+        }
+        return failedCount === 0;
+      } finally {
+        setEndpointBatchMutating(false);
+      }
+    },
+    [
+      channelId,
+      endpointBatchMutating,
+      endpointCapabilityReadonly,
+      isDetailMode,
+      loadChannelEndpointsFromServer,
+      t,
+    ]
+  );
+
+  const handleBatchClearEndpointPolicies = useCallback(
+    async (rows) => {
+      if (endpointPolicyReadonly || endpointBatchMutating) {
+        return false;
+      }
+      const targetChannelId = (channelId || '').toString().trim();
+      const targetRows = Array.isArray(rows) ? rows : [];
+      if (targetChannelId === '') {
+        return false;
+      }
+      const keySet = new Set(
+        targetRows.map((row) =>
+          buildChannelEndpointKey(row?.model, row?.endpoint)
+        )
+      );
+      const policyIDs = channelEndpointPolicies
+        .filter((policy) =>
+          keySet.has(buildChannelEndpointKey(policy.model, policy.endpoint))
+        )
+        .map((policy) => (policy?.id || '').toString().trim())
+        .filter((policyID) => policyID !== '');
+      if (policyIDs.length === 0) {
+        showInfo(
+          t('channel.edit.endpoint_capabilities.batch.clear_policies_none')
+        );
+        return false;
+      }
+      setEndpointBatchMutating(true);
+      let successCount = 0;
+      let failedCount = 0;
+      try {
+        for (const policyID of policyIDs) {
+          try {
+            await deleteChannelEndpointPolicy(targetChannelId, policyID);
+            successCount += 1;
+          } catch (error) {
+            failedCount += 1;
+          }
+        }
+        const nextPolicies = await loadChannelEndpointPoliciesFromServer(
+          targetChannelId
+        );
+        const nextEndpoints = await loadChannelEndpointsFromServer(
+          targetChannelId
+        );
+        setChannelEndpointPolicies(
+          normalizeChannelEndpointPolicyRows(nextPolicies)
+        );
+        setChannelEndpointPoliciesError('');
+        setChannelEndpoints(normalizeChannelEndpointRows(nextEndpoints));
+        setChannelEndpointsError('');
+        const message = t(
+          'channel.edit.endpoint_capabilities.batch.clear_policies_done',
+          { success: successCount, failed: failedCount }
+        );
+        if (failedCount > 0) {
+          showError(message);
+        } else {
+          showSuccess(message);
+        }
+        return failedCount === 0;
+      } finally {
+        setEndpointBatchMutating(false);
+      }
+    },
+    [
+      buildChannelEndpointKey,
+      channelId,
+      channelEndpointPolicies,
+      endpointBatchMutating,
+      endpointPolicyReadonly,
+      loadChannelEndpointsFromServer,
+      loadChannelEndpointPoliciesFromServer,
+      t,
+    ]
+  );
+
   const toggleModelSelection = useCallback(
     async (upstreamModel, checked) => {
       const nextConfigs = visibleChannelModels.map((row) =>
@@ -4273,6 +4438,13 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
                     endpointPolicyDeletingKey={endpointPolicyDeletingKey}
                     removeEndpointPolicy={removeEndpointPolicy}
                     openEndpointPolicyEditor={openEndpointPolicyEditor}
+                    endpointBatchMutating={endpointBatchMutating}
+                    handleBatchUpdateEndpointCapabilities={
+                      handleBatchUpdateEndpointCapabilities
+                    }
+                    handleBatchClearEndpointPolicies={
+                      handleBatchClearEndpointPolicies
+                    }
                   />
                 )}
               </>

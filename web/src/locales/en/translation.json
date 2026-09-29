@@ -1238,6 +1238,19 @@
         "editor": {
           "base_url": "Dedicated Access Address",
           "base_url_placeholder": "Leave empty to inherit the model API base URL"
+        },
+        "batch": {
+          "enter": "Batch Actions",
+          "cancel": "Exit Batch",
+          "select_required": "Select at least one endpoint first.",
+          "enable_selected": "Enable Selected ({{count}})",
+          "disable_selected": "Disable Selected ({{count}})",
+          "enable_done": "Enabled {{success}}, failed {{failed}}, skipped {{skipped}}.",
+          "disable_done": "Disabled {{success}}, failed {{failed}}.",
+          "clear_policies_selected": "Clear Policies ({{count}})",
+          "clear_policies_confirm": "Clear all policies on the selected {{count}} endpoint(s)? These rules take effect immediately once removed.",
+          "clear_policies_none": "The selected endpoints have no policies to clear.",
+          "clear_policies_done": "Cleared {{success}} policies, failed {{failed}}."
         }
       },
       "endpoint_policies": {
