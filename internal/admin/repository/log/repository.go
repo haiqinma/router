@@ -269,9 +269,11 @@ func RecordTopupLog(ctx context.Context, userId string, content string, quota in
 }
 
 func RecordConsumeLog(ctx context.Context, log *model.Log) {
-	if !config.LogConsumeEnabled {
-		return
-	}
+	// 消费日志行是财务/采购/毛利的锚:billing_settlements、procurement_attributions
+	// 均以 event_logs.id 为外键(request_finance_records.go),毛利报表也直接 FROM event_logs。
+	// 若这里被 LogConsumeEnabled 吞掉,财务记录与采购归因会连带静默失效(log.Id 不赋值,
+	// RecordProcurementConsumptionObservation 因空 Id 直接返回)。故消费日志无条件落库,
+	// 与「记录消费日志」开关解耦;该开关仅约束失败日志/通用日志等不承载财务的路径。
 	log.Username = model.GetUsernameById(log.UserId)
 	log.CreatedAt = helper.GetTimestamp()
 	log.Type = model.LogTypeConsume
