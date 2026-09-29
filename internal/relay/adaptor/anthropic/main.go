@@ -313,6 +313,27 @@ func ResponseClaude2OpenAI(claudeResponse *Response) *openai.TextResponse {
 	return &fullTextResponse
 }
 
+// ClaudeUsageToOpenAIUsage 把 Anthropic 的用量映射成内部 model.Usage。
+// Anthropic 的用量是「叠加」语义:input_tokens 不含缓存,cache_read_input_tokens 与
+// cache_creation_input_tokens 是独立计费的额外输入。为让下游计费的 carve-out
+// (regularInput = prompt - cacheRead - cacheWrite) 正确还原出 regularInput = input_tokens,
+// 这里把 PromptTokens 设为三者之和,并把缓存量填进 PromptTokensDetails。
+func ClaudeUsageToOpenAIUsage(claudeUsage Usage) model.Usage {
+	promptTokens := claudeUsage.InputTokens + claudeUsage.CacheReadInputTokens + claudeUsage.CacheCreationInputTokens
+	usage := model.Usage{
+		PromptTokens:     promptTokens,
+		CompletionTokens: claudeUsage.OutputTokens,
+		TotalTokens:      promptTokens + claudeUsage.OutputTokens,
+	}
+	if claudeUsage.CacheReadInputTokens > 0 || claudeUsage.CacheCreationInputTokens > 0 {
+		usage.PromptTokensDetails = &model.PromptTokensDetails{
+			CacheReadTokens:     claudeUsage.CacheReadInputTokens,
+			CacheCreationTokens: claudeUsage.CacheCreationInputTokens,
+		}
+	}
+	return usage
+}
+
 func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCode, *model.Usage) {
 	createdTime := helper.GetTimestamp()
 	scanner := newAnthropicStreamScanner(resp.Body)
@@ -332,6 +353,7 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 	common.SetEventStreamHeaders(c)
 
 	var usage model.Usage
+	var inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens int
 	var modelName string
 	var id string
 	var lastToolCallChoice openai.ChatCompletionsStreamResponseChoice
@@ -353,11 +375,17 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 
 		response, meta := StreamResponseClaude2OpenAI(&claudeResponse)
 		if meta != nil {
-			if meta.Usage.InputTokens > usage.PromptTokens {
-				usage.PromptTokens = meta.Usage.InputTokens
+			if meta.Usage.InputTokens > inputTokens {
+				inputTokens = meta.Usage.InputTokens
 			}
-			if meta.Usage.OutputTokens > usage.CompletionTokens {
-				usage.CompletionTokens = meta.Usage.OutputTokens
+			if meta.Usage.OutputTokens > outputTokens {
+				outputTokens = meta.Usage.OutputTokens
+			}
+			if meta.Usage.CacheReadInputTokens > cacheReadTokens {
+				cacheReadTokens = meta.Usage.CacheReadInputTokens
+			}
+			if meta.Usage.CacheCreationInputTokens > cacheWriteTokens {
+				cacheWriteTokens = meta.Usage.CacheCreationInputTokens
 			}
 			if len(meta.Id) > 0 { // only message_start has an id, otherwise it's a finish_reason event.
 				modelName = meta.Model
@@ -408,7 +436,12 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 	if err != nil {
 		return openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil
 	}
-	usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
+	usage = ClaudeUsageToOpenAIUsage(Usage{
+		InputTokens:              inputTokens,
+		OutputTokens:             outputTokens,
+		CacheReadInputTokens:     cacheReadTokens,
+		CacheCreationInputTokens: cacheWriteTokens,
+	})
 	return nil, &usage
 }
 
@@ -439,11 +472,7 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 	}
 	fullTextResponse := ResponseClaude2OpenAI(&claudeResponse)
 	fullTextResponse.Model = modelName
-	usage := model.Usage{
-		PromptTokens:     claudeResponse.Usage.InputTokens,
-		CompletionTokens: claudeResponse.Usage.OutputTokens,
-		TotalTokens:      claudeResponse.Usage.InputTokens + claudeResponse.Usage.OutputTokens,
-	}
+	usage := ClaudeUsageToOpenAIUsage(claudeResponse.Usage)
 	fullTextResponse.Usage = usage
 	jsonResponse, err := json.Marshal(fullTextResponse)
 	if err != nil {

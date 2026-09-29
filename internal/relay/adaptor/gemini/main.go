@@ -185,6 +185,35 @@ func ConvertEmbeddingRequest(request model.GeneralOpenAIRequest) *BatchEmbedding
 type ChatResponse struct {
 	Candidates     []ChatCandidate    `json:"candidates"`
 	PromptFeedback ChatPromptFeedback `json:"promptFeedback"`
+	UsageMetadata  *UsageMetadata     `json:"usageMetadata"`
+}
+
+// UsageMetadata 是 Gemini 官方返回的用量。cachedContentTokenCount 是包含语义:
+// 它是 promptTokenCount 的一部分,因此映射时 PromptTokens 不变,只把命中量填进
+// PromptTokensDetails.CachedTokens,让计费按缓存价扣减。
+type UsageMetadata struct {
+	PromptTokenCount        int `json:"promptTokenCount"`
+	CandidatesTokenCount    int `json:"candidatesTokenCount"`
+	TotalTokenCount         int `json:"totalTokenCount"`
+	CachedContentTokenCount int `json:"cachedContentTokenCount"`
+}
+
+func (u *UsageMetadata) toOpenAIUsage() *model.Usage {
+	if u == nil || (u.PromptTokenCount == 0 && u.CandidatesTokenCount == 0 && u.TotalTokenCount == 0) {
+		return nil
+	}
+	usage := &model.Usage{
+		PromptTokens:     u.PromptTokenCount,
+		CompletionTokens: u.CandidatesTokenCount,
+		TotalTokens:      u.TotalTokenCount,
+	}
+	if usage.TotalTokens == 0 {
+		usage.TotalTokens = u.PromptTokenCount + u.CandidatesTokenCount
+	}
+	if u.CachedContentTokenCount > 0 {
+		usage.PromptTokensDetails = &model.PromptTokensDetails{CachedTokens: u.CachedContentTokenCount}
+	}
+	return usage
 }
 
 func (g *ChatResponse) GetResponseText() string {
@@ -306,8 +335,9 @@ func embeddingResponseGemini2OpenAI(response *EmbeddingResponse) *openai.Embeddi
 	return &openAIEmbeddingResponse
 }
 
-func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCode, string) {
+func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCode, *model.Usage, string) {
 	responseText := ""
+	var usage *model.Usage
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Split(bufio.ScanLines)
 
@@ -327,6 +357,11 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 		if err != nil {
 			logger.SysError("error unmarshalling stream response: " + err.Error())
 			continue
+		}
+
+		// Gemini 流式在每个 chunk 携带累计 usageMetadata,末 chunk 为最终值,后者覆盖前者。
+		if u := geminiResponse.UsageMetadata.toOpenAIUsage(); u != nil {
+			usage = u
 		}
 
 		response := streamResponseGeminiChat2OpenAI(&geminiResponse)
@@ -350,10 +385,10 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 
 	err := resp.Body.Close()
 	if err != nil {
-		return openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), ""
+		return openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil, ""
 	}
 
-	return nil, responseText
+	return nil, usage, responseText
 }
 
 func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName string) (*model.ErrorWithStatusCode, *model.Usage) {
@@ -383,13 +418,17 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 	}
 	fullTextResponse := responseGeminiChat2OpenAI(&geminiResponse)
 	fullTextResponse.Model = modelName
-	completionTokens := openai.CountTokenText(geminiResponse.GetResponseText(), modelName)
-	usage := model.Usage{
-		PromptTokens:     promptTokens,
-		CompletionTokens: completionTokens,
-		TotalTokens:      promptTokens + completionTokens,
+	usage := geminiResponse.UsageMetadata.toOpenAIUsage()
+	if usage == nil {
+		// 上游未返回 usageMetadata 时退回本地估算,保证仍有计费口径。
+		completionTokens := openai.CountTokenText(geminiResponse.GetResponseText(), modelName)
+		usage = &model.Usage{
+			PromptTokens:     promptTokens,
+			CompletionTokens: completionTokens,
+			TotalTokens:      promptTokens + completionTokens,
+		}
 	}
-	fullTextResponse.Usage = usage
+	fullTextResponse.Usage = *usage
 	jsonResponse, err := json.Marshal(fullTextResponse)
 	if err != nil {
 		return openai.ErrorWrapper(err, "marshal_response_body_failed", http.StatusInternalServerError), nil
@@ -397,7 +436,7 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 	c.Writer.Header().Set("Content-Type", "application/json")
 	c.Writer.WriteHeader(resp.StatusCode)
 	_, err = c.Writer.Write(jsonResponse)
-	return nil, &usage
+	return nil, usage
 }
 
 func EmbeddingHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCode, *model.Usage) {

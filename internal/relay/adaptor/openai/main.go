@@ -102,6 +102,7 @@ func StreamHandler(c *gin.Context, resp *http.Response, relayMode int) (*model.E
 		return ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), "", nil
 	}
 
+	usage.NormalizeCacheDetails()
 	return nil, responseText, usage
 }
 
@@ -319,5 +320,6 @@ func Handler(c *gin.Context, resp *http.Response, promptTokens int, modelName st
 			TotalTokens:      promptTokens + completionTokens,
 		}
 	}
+	textResponse.Usage.NormalizeCacheDetails()
 	return nil, &textResponse.Usage
 }
