@@ -2,6 +2,7 @@ package channel
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 
 	"github.com/yeying-community/router/common/config"
@@ -78,6 +79,7 @@ func ListPage(page int, pageSize int, keyword string, status string) ([]*model.C
 	}
 	channels := make([]*model.Channel, 0, pageSize)
 	if err := query.
+		Order("CASE WHEN status = " + strconv.Itoa(model.ChannelStatusEnabled) + " THEN 0 ELSE 1 END asc").
 		Order("created_time desc").
 		Limit(pageSize).
 		Offset((page - 1) * pageSize).
@@ -85,7 +87,7 @@ func ListPage(page int, pageSize int, keyword string, status string) ([]*model.C
 		Find(&channels).Error; err != nil {
 		return nil, 0, err
 	}
-	if err := model.HydrateChannelsWithModels(model.DB, channels); err != nil {
+	if err := model.HydrateChannelsWithModelCapabilitiesWithDB(model.DB, channels); err != nil {
 		return nil, 0, err
 	}
 	return channels, total, nil
@@ -217,6 +219,9 @@ func Insert(channel *model.Channel) error {
 		if err := model.ReplaceChannelModelsWithDB(tx, channel.Id, channel.GetChannelModels()); err != nil {
 			return err
 		}
+		if err := model.SeedChannelDefaultEndpointPoliciesWithDB(tx, channel.Id); err != nil {
+			return err
+		}
 		return model.EnsureChannelTestModelWithDB(tx, channel.Id)
 	})
 	if err != nil {
@@ -327,6 +332,9 @@ func Update(channel *model.Channel) error {
 	if err := model.HydrateChannelWithTests(model.DB, channel); err != nil {
 		return err
 	}
+	if err := model.EnsureChannelFreeCoverageWithDB(model.DB, channel.Id); err != nil {
+		return err
+	}
 	return channel.UpdateGroupModelChannels()
 }
 
@@ -370,6 +378,9 @@ func UpdateModels(channelID string, rows []model.ChannelModel) error {
 	if err := model.HydrateChannelWithTests(model.DB, channel); err != nil {
 		return err
 	}
+	if err := model.EnsureChannelFreeCoverageWithDB(model.DB, normalizedChannelID); err != nil {
+		return err
+	}
 	return channel.UpdateGroupModelChannels()
 }
 
@@ -381,8 +392,12 @@ func UpdateModelPublish(channelID string, modelName string, publishEnabled bool,
 	if err := model.SetChannelModelPublishEnabledWithDB(model.DB, normalizedChannelID, modelName, publishEnabled, publishedModel, operator); err != nil {
 		return err
 	}
+	return refreshChannelGroupModelChannels(normalizedChannelID)
+}
+
+func refreshChannelGroupModelChannels(channelID string) error {
 	channel := &model.Channel{}
-	if err := model.DB.First(channel, "id = ?", normalizedChannelID).Error; err != nil {
+	if err := model.DB.First(channel, "id = ?", channelID).Error; err != nil {
 		return err
 	}
 	if err := model.HydrateChannelWithModels(model.DB, channel); err != nil {

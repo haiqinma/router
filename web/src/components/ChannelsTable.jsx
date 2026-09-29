@@ -12,7 +12,6 @@ import {
   withCardLabels,
 } from '../helpers';
 
-import { ITEMS_PER_PAGE } from '../constants';
 import {
   CHANNEL_LIST_COLUMN_WIDTHS,
   CHANNEL_LIST_TABLE_MIN_WIDTH,
@@ -23,7 +22,7 @@ import {
 } from './ProvidersManager.helpers.jsx';
 import { normalizeProviderIdentifier } from '../pages/Channel/ChannelForm.helpers';
 import useBatchRowActions from '../hooks/useBatchRowActions';
-import useUrlState, { parseListPageSize } from '../hooks/useUrlState';
+import useUrlState from '../hooks/useUrlState';
 import {
   AppButton,
   AppEmpty,
@@ -33,7 +32,6 @@ import {
   AppInputNumber,
   AppFormActions,
   AppModal,
-  AppPagination,
   AppPopconfirm,
   AppPopover,
   AppSelect,
@@ -41,7 +39,6 @@ import {
   AppSwitch,
   AppTable,
   AppTableActionButton,
-  AppTag,
   AppTooltip,
 } from '../router-ui';
 
@@ -61,37 +58,13 @@ function renderTimestamp(timestamp) {
   return <>{timestamp2string(timestamp)}</>;
 }
 
-// 渠道账务列:展示最新快照的额度摘要,并在余额偏低/耗尽时加醒目标记。
-// 供给侧余额不足会导致该渠道全部请求失败,故在列表直接暴露,复用账务 tab
-// 已有的 low/depleted 文案与配色。
-function renderChannelBilling(summary, channel, t) {
-  const level = (channel?.billing_level || '').toString().trim().toLowerCase();
-  const text = (summary || '').toString().trim();
-  const hasSummary = text && text !== '-';
-  const tag =
-    level === 'depleted' ? (
-      <AppTag color='red'>
-        {t('channel.edit.billing.quota_table.status_depleted')}
-      </AppTag>
-    ) : level === 'low' ? (
-      <AppTag color='orange'>
-        {t('channel.edit.billing.quota_table.status_low')}
-      </AppTag>
-    ) : null;
-  if (!hasSummary && !tag) {
-    return <span className='router-text-muted'>-</span>;
-  }
-  return (
-    <div className='router-block-gap-xs'>
-      <span className={hasSummary ? undefined : 'router-text-muted'}>
-        {hasSummary ? text : '-'}
-      </span>
-      {tag}
-    </div>
-  );
-}
-
 const MAX_VENDOR_ICONS = 3;
+
+// 渠道有界且量小:后端单页上限 100(maxChannelListPageSize),前端按此上限
+// 循环把全部渠道翻完,渲染成单张可滚动表,免去运营频繁翻页;MAX_FETCH_PAGES
+// 作为防跑飞的硬顶(最多 5000 条)。
+const CHANNEL_LIST_FETCH_PAGE_SIZE = 100;
+const CHANNEL_LIST_MAX_FETCH_PAGES = 50;
 
 // Render the distinct model vendors a channel serves as brand icons. Beyond a
 // small cap the overflow folds into a "+N" chip that reveals the full list on
@@ -180,29 +153,18 @@ const ChannelsTable = ({ embedded = false }) => {
   const batchActions = useBatchRowActions();
   const { isSelecting: isBatchSelecting, selectedCount: batchSelectedCount } = batchActions;
   const [
-    { status: statusFilter, keyword: searchKeyword, pageSize, page: activePage },
+    { status: statusFilter, keyword: searchKeyword },
     patchQuery,
   ] = useUrlState({
     status: { param: 'status', default: 'all' },
     keyword: { param: 'q', default: '' },
-    pageSize: {
-      param: 'page_size',
-      default: ITEMS_PER_PAGE,
-      parse: parseListPageSize,
-    },
-    // 分页位置入 URL:列表↔详情往返(from=pathname+search)后能回到原页,
-    // 而非退回第 1 页。page 刻意不进拉取 effect 依赖(翻页由 onPaginationChange
-    // 自己 fetch),仅作展示与恢复的单一真源。
-    page: {
-      param: 'page',
-      default: 1,
-      parse: (raw) => (Number(raw) > 0 ? Number(raw) : 1),
-    },
   });
   const currentPagePath = `${location.pathname}${location.search}${location.hash}`;
+  // 默认不设客户端排序,交由服务端 ORDER BY(活跃渠道优先,再按创建时间倒序)决定;
+  // 全量已加载,点列头即对整表排序(antd 客户端排序覆盖全部行)。
   const [tableSorter, setTableSorter] = useState({
-    columnKey: 'created_time',
-    order: 'descend',
+    columnKey: null,
+    order: null,
   });
 
   const processChannelData = useCallback((channel) => {
@@ -218,31 +180,44 @@ const ChannelsTable = ({ embedded = false }) => {
   }, []);
 
   const loadChannels = useCallback(
-    async ({ page = 1, keyword = '', status = 'all', pageSize: size = ITEMS_PER_PAGE } = {}) => {
-      const normalizedPage = Number(page) > 0 ? Number(page) : 1;
-      const normalizedSize = Number(size) > 0 ? Number(size) : ITEMS_PER_PAGE;
+    async ({ keyword = '', status = 'all' } = {}) => {
       const normalizedKeyword = (keyword || '').toString().trim();
       const normalizedStatus = (status || 'all').toString().trim().toLowerCase();
+      const statusParam = normalizedStatus === 'all' ? '' : normalizedStatus;
       try {
-        const res = await API.get('/api/v1/admin/channels/', {
-          params: {
-            page: normalizedPage,
-            page_size: normalizedSize,
-            keyword: normalizedKeyword,
-            status: normalizedStatus === 'all' ? '' : normalizedStatus,
-          },
-        });
-        const { success, message, data } = res.data;
-        if (success) {
-          setLoadError(false);
+        const collected = [];
+        let total = 0;
+        // 后端单页上限 100,这里按上限逐页翻完,把全部渠道一次性载入前端。
+        for (let page = 1; page <= CHANNEL_LIST_MAX_FETCH_PAGES; page += 1) {
+          // eslint-disable-next-line no-await-in-loop
+          const res = await API.get('/api/v1/admin/channels/', {
+            params: {
+              page,
+              page_size: CHANNEL_LIST_FETCH_PAGE_SIZE,
+              keyword: normalizedKeyword,
+              status: statusParam,
+            },
+          });
+          const { success, message, data } = res.data;
+          if (!success) {
+            setLoadError(true);
+            showError(message);
+            return;
+          }
           const items = Array.isArray(data?.items) ? data.items : [];
-          setChannels(items.map(processChannelData));
-          const total = Number(data?.total || 0);
-          setTotalChannels(Number.isFinite(total) && total >= 0 ? total : 0);
-        } else {
-          setLoadError(true);
-          showError(message);
+          collected.push(...items);
+          const parsedTotal = Number(data?.total || 0);
+          total =
+            Number.isFinite(parsedTotal) && parsedTotal >= 0
+              ? parsedTotal
+              : collected.length;
+          if (items.length === 0 || collected.length >= total) {
+            break;
+          }
         }
+        setLoadError(false);
+        setChannels(collected.map(processChannelData));
+        setTotalChannels(total);
       } catch (error) {
         setLoadError(true);
         showError(error?.message || String(error));
@@ -255,43 +230,23 @@ const ChannelsTable = ({ embedded = false }) => {
 
   useEffect(() => {
     setLoading(true);
-    // Refetch on mount and whenever the status filter or page size changes,
-    // honoring the keyword and page already in the URL (so a refresh / shared
-    // link / return-from-detail restores the filtered list at its page).
-    // Keyword typing updates the URL but must not retrigger a fetch here — that
-    // stays on Enter — so searchKeyword is read but deliberately not a
-    // dependency. activePage is likewise read (not a dep): status/pageSize
-    // changes always reset page to 1 via their handlers, and plain page nav
-    // fetches in onPaginationChange, so it must not refire here.
-    loadChannels({ page: activePage, keyword: searchKeyword, status: statusFilter, pageSize })
+    // Refetch on mount and whenever the status filter changes, honoring the
+    // keyword already in the URL (so a refresh / shared link / return-from-detail
+    // restores the filtered list). Keyword typing updates the URL but must not
+    // retrigger a fetch here — that stays on Enter — so searchKeyword is read but
+    // deliberately not a dependency. The full list is loaded in one pass, so
+    // there is no page to track.
+    loadChannels({ keyword: searchKeyword, status: statusFilter })
       .then()
       .catch((reason) => {
         showError(reason);
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, pageSize, loadChannels]);
-
-  const onPaginationChange = (e, { activePage, pageSize: nextSize }) => {
-    const size = Number(nextSize) > 0 ? Number(nextSize) : pageSize;
-    if (size !== pageSize) {
-      // Page-size change: writing the URL retriggers the effect above, which
-      // reloads page 1 at the new size — so don't also fetch here.
-      patchQuery({ pageSize: size, page: 1 });
-      return;
-    }
-    (async () => {
-      const nextPage = Number(activePage) > 0 ? Number(activePage) : 1;
-      setLoading(true);
-      await loadChannels({ page: nextPage, keyword: searchKeyword, status: statusFilter, pageSize });
-      // Mirror the page to the URL for display + restore; page isn't an effect
-      // dep, so this doesn't re-fetch on top of the load above.
-      patchQuery({ page: nextPage });
-    })();
-  };
+  }, [statusFilter, loadChannels]);
 
   const refresh = async () => {
     setLoading(true);
-    await loadChannels({ page: activePage, keyword: searchKeyword, status: statusFilter, pageSize });
+    await loadChannels({ keyword: searchKeyword, status: statusFilter });
   };
 
   const manageChannel = async (id, action, value) => {
@@ -345,7 +300,7 @@ const ChannelsTable = ({ embedded = false }) => {
       if (success) {
         showSuccess(t('channel.messages.operation_success'));
         setLoading(true);
-        await loadChannels({ page: activePage, keyword: searchKeyword, status: statusFilter, pageSize });
+        await loadChannels({ keyword: searchKeyword, status: statusFilter });
       } else {
         if (res?.data?.data?.code === 'channel_disable_blocked') {
           setDisableBlockedImpact(res?.data?.data?.impact || null);
@@ -428,9 +383,9 @@ const ChannelsTable = ({ embedded = false }) => {
       }
       batchActions.exit();
       setLoading(true);
-      await loadChannels({ page: activePage, keyword: searchKeyword, status: statusFilter, pageSize });
+      await loadChannels({ keyword: searchKeyword, status: statusFilter });
     },
-    [activePage, batchActions, batchRunning, loadChannels, searchKeyword, statusFilter, t],
+    [batchActions, batchRunning, loadChannels, searchKeyword, statusFilter, t],
   );
 
   // Batch delete by looping per-row DELETE. The backend has no batch delete
@@ -481,8 +436,8 @@ const ChannelsTable = ({ embedded = false }) => {
     }
     batchActions.exit();
     setLoading(true);
-    await loadChannels({ page: activePage, keyword: searchKeyword, status: statusFilter, pageSize });
-  }, [activePage, batchActions, batchRunning, loadChannels, searchKeyword, statusFilter, t]);
+    await loadChannels({ keyword: searchKeyword, status: statusFilter });
+  }, [batchActions, batchRunning, loadChannels, searchKeyword, statusFilter, t]);
 
   const statusTooltipText = (status, t) => {
     switch (status) {
@@ -545,8 +500,7 @@ const ChannelsTable = ({ embedded = false }) => {
     setSearching(true);
     setLoading(true);
     try {
-      await loadChannels({ page: 1, keyword: searchKeyword, status: statusFilter, pageSize });
-      patchQuery({ page: 1 });
+      await loadChannels({ keyword: searchKeyword, status: statusFilter });
     } catch (error) {
       showError(error?.message || String(error));
       setLoading(false);
@@ -634,6 +588,11 @@ const ChannelsTable = ({ embedded = false }) => {
               ]
         }
         title={embedded ? undefined : t('header.channel')}
+        meta={
+          totalChannels > 0
+            ? t('channel.table.total', { count: totalChannels })
+            : undefined
+        }
         actions={
           <div className='router-list-toolbar-actions'>
             <AppButton
@@ -737,7 +696,7 @@ const ChannelsTable = ({ embedded = false }) => {
             <AppSelect
               className='router-section-select'
               value={statusFilter}
-              onChange={(_, { value }) => patchQuery({ status: value, page: 1 })}
+              onChange={(_, { value }) => patchQuery({ status: value })}
               options={[
                 { value: 'all', label: t('channel.filter.status_all') },
                 { value: 'enabled', label: t('channel.table.status_enabled') },
@@ -759,7 +718,7 @@ const ChannelsTable = ({ embedded = false }) => {
             <AppButton
               className='router-section-button'
               disabled={statusFilter === 'all' && searchKeyword === ''}
-              onClick={() => patchQuery({ status: 'all', keyword: '', page: 1 })}
+              onClick={() => patchQuery({ status: 'all', keyword: '' })}
             >
               {t('common.clear_filters')}
             </AppButton>
@@ -772,6 +731,7 @@ const ChannelsTable = ({ embedded = false }) => {
           <AppTable
             className='router-hover-table router-list-table router-table-fit-page router-table-cardify'
           pagination={false}
+          sticky
           scroll={{ x: CHANNEL_LIST_TABLE_MIN_WIDTH }}
           rowKey={(channel) => channel.id}
           onChange={handleTableChange}
@@ -885,14 +845,6 @@ const ChannelsTable = ({ embedded = false }) => {
             sortOrder:
               tableSorter.columnKey === 'capabilities' ? tableSorter.order : null,
             render: (value) => renderCapabilities(value, t),
-          },
-          {
-            title: t('channel.table.billing'),
-            dataIndex: 'billing_summary',
-            key: 'billing',
-            width: CHANNEL_LIST_COLUMN_WIDTHS.billing,
-            ellipsis: true,
-            render: (value, channel) => renderChannelBilling(value, channel, t),
           },
           {
             title: t('channel.table.priority'),
@@ -1020,16 +972,6 @@ const ChannelsTable = ({ embedded = false }) => {
           </div>
         </div>
       </AppModal>
-      <div className='router-pagination-wrap'>
-        <AppPagination
-          className='router-page-pagination'
-          activePage={activePage}
-          onPageChange={onPaginationChange}
-          siblingRange={1}
-          total={totalChannels}
-          pageSize={pageSize}
-        />
-      </div>
     </>
   );
 };

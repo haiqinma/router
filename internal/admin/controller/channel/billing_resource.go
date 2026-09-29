@@ -31,6 +31,7 @@ type channelBillingProfileData struct {
 	ChannelID          string            `json:"channel_id"`
 	Enabled            bool              `json:"enabled"`
 	BillingSource      string            `json:"billing_source"`
+	CostTrackingMode   string            `json:"cost_tracking_mode"`
 	BillingCredentials map[string]string `json:"billing_credentials"`
 	ActionCapabilities []string          `json:"action_capabilities"`
 }
@@ -106,6 +107,7 @@ func isSupportedBillingResourceType(value string) bool {
 
 type channelBillingProfileUpdateRequest struct {
 	BillingSource      string            `json:"billing_source"`
+	CostTrackingMode   string            `json:"cost_tracking_mode"`
 	BillingCredentials map[string]string `json:"billing_credentials"`
 }
 
@@ -159,6 +161,7 @@ func buildChannelBillingProfileData(channelRow *model.Channel, profile model.Cha
 		ChannelID:          strings.TrimSpace(channelRow.Id),
 		Enabled:            profile.Enabled,
 		BillingSource:      normalizeChannelBillingSource(profile.BillingSource),
+		CostTrackingMode:   model.NormalizeChannelCostTrackingMode(profile.CostTrackingMode),
 		BillingCredentials: sanitizeBillingCredentialMap(fetchConfig.BillingCredentials),
 		ActionCapabilities: profile.ParseActionCapabilities(),
 	}
@@ -568,6 +571,8 @@ func UpdateChannelBillingProfile(c *gin.Context) {
 	}
 	profileRow.Enabled = true
 	profileRow.BillingSource = nextSource
+	nextMode := model.NormalizeChannelCostTrackingMode(req.CostTrackingMode)
+	profileRow.CostTrackingMode = nextMode
 	nextConfig := map[string]any{
 		"billing_credentials": billingCredentials,
 	}
@@ -579,6 +584,14 @@ func UpdateChannelBillingProfile(c *gin.Context) {
 	profileRow.ActionCapabilities = marshalLogJSON(capabilities)
 	savedRow, err := model.SaveChannelBillingProfileWithDB(model.DB, profileRow)
 	if err != nil {
+		logChannelAdminWarn(c, "update_billing_profile", stringField("channel_id", channelID), stringField("reason", err.Error()))
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	// Bring auto-managed zero-cost batches in line with the chosen mode: free
+	// ensures global zero-cost coverage; untracked/actual disable it. Idempotent, so
+	// it also refreshes coverage when the channel's models changed.
+	if err := model.ReconcileChannelCostTrackingModeWithDB(model.DB, channelID, savedRow.CostTrackingMode); err != nil {
 		logChannelAdminWarn(c, "update_billing_profile", stringField("channel_id", channelID), stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
 		return

@@ -91,6 +91,7 @@ import {
   normalizeAsyncTaskStatus,
   normalizeBaseURL,
   normalizeChannelBillingProfile,
+  normalizeChannelCostTrackingModeValue,
   normalizeChannelEndpointPolicyRows,
   normalizeChannelEndpointRows,
   normalizeChannelIdentifier,
@@ -356,6 +357,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
   const pendingRefreshTaskIdRef = useRef('');
   const pendingRefreshSignatureRef = useRef('');
   const pendingRefreshBeforeCountRef = useRef(0);
+  const pendingRefreshBeforeModelsRef = useRef([]);
   const pendingBillingRefreshTaskIdRef = useRef('');
   const deferredModelSearchKeyword = useDeferredValue(modelSearchKeyword);
   const currentProtocolOption = useMemo(() => {
@@ -751,6 +753,54 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     },
     [getProviderOwnersForModel, providerModelDetailsIndex]
   );
+  const getEffectivePriceForModel = useCallback(
+    (row, field) => {
+      const override = normalizePriceOverrideValue(row?.[field]);
+      if (override !== null) {
+        return override;
+      }
+      const owners = getProviderOwnersForModel(row);
+      const keys = buildProviderLookupKeys(row);
+      let resolved = null;
+      owners.some((providerId) => {
+        const providerDetails = providerModelDetailsIndex[providerId] || {};
+        const detail = keys.map((key) => providerDetails[key]).find(Boolean);
+        if (!detail) {
+          return false;
+        }
+        const base = Number(detail?.[field] || 0);
+        if (base > 0) {
+          resolved = base;
+          return true;
+        }
+        return false;
+      });
+      return resolved;
+    },
+    [getProviderOwnersForModel, providerModelDetailsIndex]
+  );
+  const getEffectivePriceMetaForModel = useCallback(
+    (row) => {
+      const owners = getProviderOwnersForModel(row);
+      const keys = buildProviderLookupKeys(row);
+      let matched = null;
+      owners.some((providerId) => {
+        const providerDetails = providerModelDetailsIndex[providerId] || {};
+        const detail = keys.map((key) => providerDetails[key]).find(Boolean);
+        if (detail) {
+          matched = detail;
+          return true;
+        }
+        return false;
+      });
+      const overrideUnit = (row?.price_unit || '').toString().trim();
+      const priceUnit =
+        overrideUnit || (matched?.price_unit || '').toString().trim();
+      const currency = (matched?.currency || '').toString().trim();
+      return { price_unit: priceUnit, currency };
+    },
+    [getProviderOwnersForModel, providerModelDetailsIndex]
+  );
   const getProviderCandidateEndpointsForModel = useCallback(
     (row) => {
       const providerId = resolvePreferredProviderForModel(row);
@@ -830,13 +880,24 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
   const openComplexPricingModal = useCallback(
     (row) => {
       const details = getComplexPricingDetailsForModel(row);
+      const meta = getEffectivePriceMetaForModel(row);
       setComplexPricingModalData({
         model: row?.upstream_model || row?.model || '',
+        base: {
+          input_price: getEffectivePriceForModel(row, 'input_price'),
+          output_price: getEffectivePriceForModel(row, 'output_price'),
+          price_unit: meta.price_unit,
+          currency: meta.currency,
+        },
         details,
       });
       setComplexPricingModalOpen(true);
     },
-    [getComplexPricingDetailsForModel]
+    [
+      getComplexPricingDetailsForModel,
+      getEffectivePriceForModel,
+      getEffectivePriceMetaForModel,
+    ]
   );
   const closeComplexPricingModal = useCallback(() => {
     setComplexPricingModalOpen(false);
@@ -1966,6 +2027,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
           channel_id: (channelId || '').toString().trim(),
           enabled: true,
           billing_source: 'manual',
+          cost_tracking_mode: 'untracked',
           billing_credentials: {},
           action_capabilities: [],
         }),
@@ -2018,6 +2080,9 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
         `/api/v1/admin/channel/${targetChannelId}/billing/profile`,
         {
           billing_source: billingSource,
+          cost_tracking_mode: normalizeChannelCostTrackingModeValue(
+            detailBillingDraft.cost_tracking_mode
+          ),
           billing_credentials: billingCredentials,
         }
       );
@@ -2272,6 +2337,13 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
         )
           ? inputs.channel_models.length
           : 0;
+        pendingRefreshBeforeModelsRef.current = Array.isArray(
+          inputs.channel_models,
+        )
+          ? inputs.channel_models
+              .map((row) => (row?.model || '').toString().trim())
+              .filter((name) => name !== '')
+          : [];
         setModelsSyncError('');
         if (!silent) {
           showSuccess(t('channel.messages.operation_success'));
@@ -3454,16 +3526,30 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
               if (pendingRefreshSignatureRef.current !== '') {
                 setVerifiedModelSignature(pendingRefreshSignatureRef.current);
               }
+              const afterModels = Array.isArray(runtimeState?.channelModels)
+                ? runtimeState.channelModels
+                : [];
               const totalCount = Array.isArray(runtimeState?.channelModels)
-                ? runtimeState.channelModels.length
+                ? afterModels.length
                 : pendingRefreshBeforeCountRef.current;
-              const addedCount = Math.max(
-                0,
-                totalCount - pendingRefreshBeforeCountRef.current,
+              const beforeModelSet = new Set(
+                pendingRefreshBeforeModelsRef.current,
               );
+              let addedCount = 0;
+              let staleCount = 0;
+              afterModels.forEach((row) => {
+                const modelName = (row?.model || '').toString().trim();
+                if (modelName !== '' && !beforeModelSet.has(modelName)) {
+                  addedCount += 1;
+                }
+                if ((row?.sync_status || '').toString().trim() === 'not_returned') {
+                  staleCount += 1;
+                }
+              });
               showSuccess(
                 t('channel.edit.messages.sync_models_result', {
                   added: addedCount,
+                  stale: staleCount,
                   total: totalCount,
                 }),
               );
@@ -3476,6 +3562,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
             }
             pendingRefreshSignatureRef.current = '';
             pendingRefreshBeforeCountRef.current = 0;
+            pendingRefreshBeforeModelsRef.current = [];
           }
           const billingRefreshTaskId = pendingBillingRefreshTaskIdRef.current;
           if (billingRefreshTaskId !== '') {
@@ -4241,10 +4328,13 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
                 getComplexPricingDetailsForModel={
                   getComplexPricingDetailsForModel
                 }
+                getEffectivePriceForModel={getEffectivePriceForModel}
+                getEffectivePriceMetaForModel={getEffectivePriceMetaForModel}
                 openComplexPricingModal={openComplexPricingModal}
                 normalizeChannelModelType={normalizeChannelModelType}
                 onUpdatePublishedModelName={updateChannelModelPublishedName}
                 onUpdatePublish={updateChannelModelPublish}
+                onNavigateTab={goToDetailTab}
                 publishMutatingModel={publishMutatingModel}
                 publishReadonly={detailPublishReadonly}
               />

@@ -60,7 +60,7 @@ stop() {
   fi
 
   kill "$pid"
-  for _ in {1..50}; do
+  for _ in {1..150}; do
     if ! kill -0 "$pid" 2>/dev/null; then
       break
     fi

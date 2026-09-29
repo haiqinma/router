@@ -2072,10 +2072,40 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 			},
 		},
 		{
+			Version:     "202609281200_refresh_official_provider_catalog",
+			Description: "refresh official model additions, retired aliases, and verified pricing from the September 28 catalog review",
+			Up: func(tx *gorm.DB) error {
+				return upsertProviderMigrationProvidersWithDB(tx, "openai", "anthropic", "deepseek", "qwen")
+			},
+		},
+		{
 			Version:     "202609281000_api_token_sort_indexes",
 			Description: "add created_time and updated_time indexes on api_tokens for token list ordering",
 			Up: func(tx *gorm.DB) error {
 				return ensureTokenSortIndexesWithDB(tx)
+			},
+		},
+		{
+			Version:     "202609281100_channel_list_indexes",
+			Description: "add status and created_time indexes on channels for channel list filter and ordering",
+			Up: func(tx *gorm.DB) error {
+				return ensureChannelListIndexesWithDB(tx)
+			},
+		},
+		{
+			Version:     "202609291200_channel_cost_tracking_mode",
+			Description: "add cost_tracking_mode to channel billing profiles and backfill from existing procurement batches",
+			Up: func(tx *gorm.DB) error {
+				if err := tx.AutoMigrate(&ChannelBillingProfile{}); err != nil {
+					return err
+				}
+				if tx.Dialector.Name() == "postgres" {
+					if err := tx.Exec(`ALTER TABLE ` + ChannelBillingProfilesTableName +
+						` ADD COLUMN IF NOT EXISTS cost_tracking_mode varchar(64) NOT NULL DEFAULT 'untracked'`).Error; err != nil {
+						return err
+					}
+				}
+				return backfillChannelCostTrackingModeWithDB(tx)
 			},
 		},
 	}

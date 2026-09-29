@@ -378,6 +378,67 @@ func HydrateChannelsWithModels(db *gorm.DB, channels []*Channel) error {
 	return nil
 }
 
+// HydrateChannelWithModelCapabilitiesWithDB 是 HydrateChannelWithModels 的轻量版:
+// 仅加载能力所需的 channel_models 行(model/type/selected),跳过端点状态、测试支持、
+// 价格组件与发布状态解析。仅用于渠道列表(只展示 capabilities),避免为一页渠道额外
+// 拉端点/测试/价格三张表。
+func HydrateChannelsWithModelCapabilitiesWithDB(db *gorm.DB, channels []*Channel) error {
+	if db == nil {
+		return fmt.Errorf("database handle is nil")
+	}
+	channelIDs := make([]string, 0, len(channels))
+	normalizedChannels := make([]*Channel, 0, len(channels))
+	for _, channel := range channels {
+		if channel == nil {
+			continue
+		}
+		channel.Id = strings.TrimSpace(channel.Id)
+		if channel.Id == "" {
+			channel.SetSelectedModelIDs(nil)
+			channel.SetAvailableModelIDs(nil)
+			channel.SetChannelModels(nil)
+			continue
+		}
+		channelIDs = append(channelIDs, channel.Id)
+		normalizedChannels = append(normalizedChannels, channel)
+	}
+	if len(normalizedChannels) == 0 {
+		return nil
+	}
+	rowsByChannelID, err := loadChannelModelCapabilityRowsByChannelIDs(db, channelIDs)
+	if err != nil {
+		return err
+	}
+	for _, channel := range normalizedChannels {
+		applyChannelModelRows(channel, rowsByChannelID[channel.Id])
+	}
+	return nil
+}
+
+func loadChannelModelCapabilityRowsByChannelIDs(db *gorm.DB, channelIDs []string) (map[string][]ChannelModel, error) {
+	rowsByChannelID := make(map[string][]ChannelModel)
+	normalizedIDs := normalizeTrimmedValuesPreserveOrder(channelIDs)
+	if len(normalizedIDs) == 0 {
+		return rowsByChannelID, nil
+	}
+	rows := make([]ChannelModel, 0)
+	if err := db.
+		Select("channel_id", "model", "type", "selected", "sort_order").
+		Where("channel_id IN ?", normalizedIDs).
+		Order("channel_id asc, sort_order asc, model asc").
+		Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		normalizeChannelModelRow(&row)
+		if row.ChannelId == "" || row.Model == "" {
+			continue
+		}
+		rowsByChannelID[row.ChannelId] = append(rowsByChannelID[row.ChannelId], row)
+	}
+	return rowsByChannelID, nil
+}
+
 func ListSelectedChannelModelIDsByChannelIDWithDB(db *gorm.DB, channelID string) ([]string, error) {
 	rows, err := listChannelModelRowsByChannelIDWithDB(db, channelID)
 	if err != nil {
@@ -629,7 +690,16 @@ func SetChannelModelPublishEnabledWithDB(db *gorm.DB, channelID string, modelNam
 				return fmt.Errorf("%s", channelModelPublishBlockedMessage(status))
 			}
 			row = loadChannelModelPriceComponentsForPublishCheck(tx, row)
-			if err := validateChannelModelPublishBilling(row); err != nil {
+			channelProtocol, err := loadChannelProtocolByChannelIDWithDB(tx, normalizedChannelID)
+			if err != nil {
+				return err
+			}
+			pricing, pricingErr := ResolveChannelModelPricing(channelProtocol, []ChannelModel{row}, row.Model)
+			if pricingErr != nil {
+				if err := validateChannelModelPublishBilling(row); err != nil {
+					return err
+				}
+			} else if err := validateResolvedChannelModelPublishBilling(pricing); err != nil {
 				return err
 			}
 			duplicateCount := int64(0)
@@ -641,9 +711,9 @@ func SetChannelModelPublishEnabledWithDB(db *gorm.DB, channelID string, modelNam
 			if duplicateCount > 0 {
 				return fmt.Errorf("发布名称 %s 已被该渠道其他模型使用，请先取消原模型发布", normalizedPublishedModel)
 			}
-			if err := ValidateChannelModelProcurementCostReadyWithDB(tx, row); err != nil {
-				return err
-			}
+			// 采购成本不再作为发布硬门:缺成本只影响毛利核算,不影响能否对外服务。
+			// 发布仍受服务就绪(状态门)与销售价(零价资损)约束,采购成本改由发布页/
+			// 分组页的"成本未记录"告警提示,可事后补录或标记零成本。
 		}
 		now := helper.GetTimestamp()
 		updates := map[string]any{
@@ -683,27 +753,30 @@ func loadChannelModelPriceComponentsForPublishCheck(db *gorm.DB, row ChannelMode
 }
 
 func validateChannelModelPublishBilling(row ChannelModel) error {
-	if normalizeModelType(row.Type, row.Model) != ProviderModelTypeImage {
+	return validateResolvedChannelModelPublishBilling(resolvedPricingFromChannelModelRow(row))
+}
+
+func validateResolvedChannelModelPublishBilling(pricing ResolvedModelPricing) error {
+	if normalizeModelType(pricing.Type, pricing.Model) != ProviderModelTypeImage {
 		// 非图片模型:发布前必须配置正的销售价,否则等同零价供给会造成资损。
-		if !channelModelHasPositiveSellPrice(resolvedPricingFromChannelModelRow(row)) {
-			return fmt.Errorf("模型 %s 未配置销售价(输入价与输出价均为空或为 0),零价发布会造成资损,请先在模型价格中填写有效售价", strings.TrimSpace(row.Model))
+		if !channelModelHasPositiveSellPrice(pricing) {
+			return fmt.Errorf("模型 %s 未配置销售价(输入价与输出价均为空或为 0),零价发布会造成资损,请先在模型价格中填写有效售价", strings.TrimSpace(pricing.Model))
 		}
 		return nil
 	}
-	pricing := resolvedPricingFromChannelModelRow(row)
 	switch strings.TrimSpace(strings.ToLower(pricing.PriceUnit)) {
 	case ProviderPriceUnitPerImage, ProviderPriceUnitPerRequest, ProviderPriceUnitPerTask:
 		return nil
 	case ProviderPriceUnitPer1KTokens, ProviderPriceUnitPer1KChars, "":
 		if !supportsPublishableTraditionalImageTokenBilling(pricing) {
-			return fmt.Errorf("图片模型 %s 使用 token 计费但当前传统图片端点不支持可靠本地估算，不能发布；请改为按张/按次计价或补齐明确支持的图片 token 计费规则", strings.TrimSpace(row.Model))
+			return fmt.Errorf("图片模型 %s 使用 token 计费但当前传统图片端点不支持可靠本地估算，不能发布；请改为按张/按次计价或补齐明确支持的图片 token 计费规则", strings.TrimSpace(pricing.Model))
 		}
 		if err := validatePublishableTraditionalImageTokenPricing(pricing); err != nil {
 			return err
 		}
 		return nil
 	default:
-		return fmt.Errorf("图片模型 %s 的计价单位 %s 暂不支持发布", strings.TrimSpace(row.Model), strings.TrimSpace(row.PriceUnit))
+		return fmt.Errorf("图片模型 %s 的计价单位 %s 暂不支持发布", strings.TrimSpace(pricing.Model), strings.TrimSpace(pricing.PriceUnit))
 	}
 }
 
@@ -1170,6 +1243,26 @@ func ListChannelModelRowsPageWithDB(db *gorm.DB, channelID string, page int, pag
 
 func ListChannelModelRowsByChannelIDWithDB(db *gorm.DB, channelID string) ([]ChannelModel, error) {
 	return listChannelModelRowsByChannelIDWithDB(db, channelID)
+}
+
+// CountChannelModelsByChannelIDWithDB returns the total channel_models rows and how
+// many are selected for a channel, so callers can report counts without a full
+// channel hydration (GetByID).
+func CountChannelModelsByChannelIDWithDB(db *gorm.DB, channelID string) (total int64, selected int64, err error) {
+	if db == nil {
+		return 0, 0, fmt.Errorf("database handle is nil")
+	}
+	normalizedChannelID := strings.TrimSpace(channelID)
+	if normalizedChannelID == "" {
+		return 0, 0, nil
+	}
+	if err = db.Model(&ChannelModel{}).Where("channel_id = ?", normalizedChannelID).Count(&total).Error; err != nil {
+		return 0, 0, err
+	}
+	if err = db.Model(&ChannelModel{}).Where("channel_id = ? AND selected = ?", normalizedChannelID, true).Count(&selected).Error; err != nil {
+		return 0, 0, err
+	}
+	return total, selected, nil
 }
 
 func buildChannelModelListQueryWithDB(db *gorm.DB, channelID string, keyword string) *gorm.DB {

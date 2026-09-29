@@ -121,6 +121,25 @@ func HasReturnedChannelModelSyncResultWithDB(db *gorm.DB, channelID string, mode
 	return found && returned, nil
 }
 
+// ChannelModelSyncReturnedFromRows resolves the same returned status as
+// GetChannelModelSyncReturnStatusWithDB but against pre-loaded sync rows, so
+// callers listing a page of models avoid a per-row query.
+func ChannelModelSyncReturnedFromRows(syncRows []ChannelModelSyncResult, modelName string, upstreamModel string) bool {
+	upstreamCandidate := normalizeChannelModelSyncUpstreamCandidate(modelName, upstreamModel)
+	if upstreamCandidate == "" {
+		return false
+	}
+	for _, row := range syncRows {
+		if strings.TrimSpace(row.UpstreamModel) != upstreamCandidate {
+			continue
+		}
+		if row.Returned {
+			return true
+		}
+	}
+	return false
+}
+
 func GetChannelModelSyncReturnStatusWithDB(db *gorm.DB, channelID string, modelName string, upstreamModel string) (bool, bool, error) {
 	if db == nil {
 		return false, false, fmt.Errorf("database handle is nil")

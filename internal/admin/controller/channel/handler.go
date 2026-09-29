@@ -3,7 +3,6 @@ package channel
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -148,35 +147,6 @@ func buildChannelCircuitBreakerListItem(row model.ChannelCircuitBreakerState) *c
 	}
 }
 
-func summarizeChannelBillingSnapshot(snapshot model.ChannelBillingSnapshot) (string, int64, int) {
-	items := model.NormalizeChannelBillingSnapshotItems(snapshot.Items)
-	if len(items) == 0 {
-		return "-", snapshot.CreatedAt, 0
-	}
-	parts := make([]string, 0, len(items))
-	for index, item := range items {
-		if index >= 2 {
-			parts = append(parts, fmt.Sprintf("+%d", len(items)-index))
-			break
-		}
-		label := strings.TrimSpace(item.QuotaLabel)
-		if label == "" {
-			label = strings.TrimSpace(item.QuotaType)
-		}
-		if label == "" {
-			label = "quota"
-		}
-		amountText := strconv.FormatFloat(item.Amount, 'f', -1, 64)
-		currency := strings.TrimSpace(item.Currency)
-		if currency != "" {
-			parts = append(parts, fmt.Sprintf("%s %s %s", label, amountText, currency))
-			continue
-		}
-		parts = append(parts, fmt.Sprintf("%s %s", label, amountText))
-	}
-	return strings.Join(parts, " / "), snapshot.CreatedAt, len(items)
-}
-
 func collectChannelCapabilities(channel *model.Channel) []string {
 	if channel == nil {
 		return []string{}
@@ -240,14 +210,6 @@ func listChannelsPage(page int, pageSize int, keyword string, status string) (ch
 	for _, row := range rows {
 		channelIDs = append(channelIDs, strings.TrimSpace(row.Id))
 	}
-	latestSnapshots, err := model.ListLatestChannelBillingSnapshotsByChannelIDsWithDB(model.DB, channelIDs)
-	if err != nil {
-		return channelListPageData{}, err
-	}
-	latestSnapshotMap := make(map[string]model.ChannelBillingSnapshot, len(latestSnapshots))
-	for _, snapshot := range latestSnapshots {
-		latestSnapshotMap[strings.TrimSpace(snapshot.ChannelId)] = snapshot
-	}
 	circuitRows, err := model.ListChannelCircuitBreakerStatesByChannelIDsWithDB(model.DB, channelIDs)
 	if err != nil {
 		return channelListPageData{}, err
@@ -262,12 +224,6 @@ func listChannelsPage(page int, pageSize int, keyword string, status string) (ch
 	}
 	for _, row := range rows {
 		item := buildChannelListItem(row)
-		if snapshot, ok := latestSnapshotMap[strings.TrimSpace(row.Id)]; ok {
-			item.BillingSummary, item.BillingSnapshotAt, item.BillingQuotaItemCount = summarizeChannelBillingSnapshot(snapshot)
-			item.BillingLevel = model.ChannelBillingLevelFromSnapshot(snapshot)
-		} else {
-			item.BillingSummary = "-"
-		}
 		if circuitRow, ok := circuitByChannelID[strings.TrimSpace(row.Id)]; ok {
 			item.CircuitBreaker = buildChannelCircuitBreakerListItem(circuitRow)
 		}

@@ -1926,6 +1926,31 @@ html[data-theme='dark'] .router-topup-return-next-hint {
     color: #0958d9 !important;
 }
 
+.router-provider-model-price-line {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.router-ui-button.router-price-detail-icon-button {
+    width: 22px !important;
+    min-width: 22px !important;
+    height: 22px !important;
+    min-height: 22px !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 4px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #8c8c8c !important;
+}
+
+.router-ui-button.router-price-detail-icon-button:hover,
+.router-ui-button.router-price-detail-icon-button:focus-visible {
+    background: rgba(22, 119, 255, 0.08) !important;
+    color: #1677ff !important;
+}
+
 .router-inline-number-input {
     width: 72px;
 }
@@ -5315,6 +5340,16 @@ html[data-theme='dark'] .router-workspace-start-checklist-status {
 
 .router-block-gap-xs {
     margin-bottom: 8px;
+}
+
+.router-detail-subtable-caption {
+    margin: 12px 0 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.router-detail-subtable-caption:first-child {
+    margin-top: 0;
 }
 
 .router-block-gap-md {

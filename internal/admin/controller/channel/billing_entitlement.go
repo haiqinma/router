@@ -414,6 +414,11 @@ func maybeNotifyChannelBillingRefreshFailure(channel *model.Channel, profile mod
 	if eventType == "" || title == "" || content == "" {
 		return nil
 	}
+	// 「刷新失败」类账务告警性价比不高:上游临时抖动/网络波动就会触发,噪音大而信息量低。
+	// 这里直接不生成该类告警;「套餐到期」「响应异常」等可执行告警仍照常产生。
+	if eventType == model.ChannelBillingAlertTypeRefreshFailed {
+		return nil
+	}
 	alertKey := fmt.Sprintf("%s::%d", buildChannelBillingRefreshFailureAlertKey(channel, profile), streakStartAt)
 	shouldSkip, err := shouldSkipExistingBillingAlert(channel.Id, eventType, alertKey, today)
 	if err != nil {

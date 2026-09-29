@@ -626,6 +626,7 @@
     "search": "Search channels by identifier...",
     "table": {
       "empty_cta": "No channels yet. Add one to start routing models.",
+      "total": "{{count}} channels",
       "id": "Channel Identifier",
       "name": "Channel",
       "group": "Group",
@@ -824,6 +825,8 @@
         "model_details": "Model Details",
         "model_details_placeholder": "[{\"model\":\"gpt-4o-mini\",\"type\":\"text\",\"input_price\":0.00015,\"output_price\":0.0006,\"price_unit\":\"per_1k_tokens\",\"currency\":\"USD\"}]",
         "pricing_detail_title": "Complex Pricing Details",
+        "pricing_detail_base_caption": "Base price",
+        "pricing_detail_components_caption": "Additional charges",
         "cancel": "Back",
         "cancel_create": "Cancel",
         "confirm": "Confirm"
@@ -888,22 +891,14 @@
         "publish_success": "Model published",
         "unpublish_success": "Model unpublished",
         "update_failed": "Failed to update publish status",
+        "filter_label": "Publish status",
+        "filter_all": "All ({{count}})",
+        "go_to_fix": "Go fix",
         "published_model_required": "Published name is required",
-        "configure_procurement": "Configure procurement",
         "unpublish_confirm": "Unpublish this model? It will stop participating in runtime routing.",
         "table": {
           "published_model": "Published Name",
-          "check": "Publish Check",
-          "procurement": "Cost Readiness",
           "actions": "Actions"
-        },
-        "procurement_status": {
-          "ready": "Ready",
-          "missing": "Missing batch",
-          "estimated": "Estimated only",
-          "exhausted": "Capacity exhausted",
-          "expired": "Batch expired",
-          "unit_mismatch": "Unit mismatch"
         },
         "check_status": {
           "selectable": "Enable it in the Models tab first",
@@ -927,11 +922,22 @@
         "profile_update_success": "Billing profile updated",
         "profile_update_failed": "Failed to update billing profile",
         "refresh_now": "Refresh",
-        "latest_refresh_failed": "Latest billing refresh failed: {{message}}",
-        "latest_refresh_failed_unknown": "Billing service returned an error",
         "latest_snapshot_at": "Latest Refresh",
         "current_quotas_title": "Entitlement Status",
         "billing_source": "Billing Source",
+        "cost_tracking_mode": {
+          "label": "Cost Tracking",
+          "options": {
+            "untracked": "Untracked",
+            "free": "Free",
+            "actual": "Record actual cost"
+          },
+          "hint": {
+            "untracked": "Cost is not tracked for this channel; its requests are excluded from the margin report (honestly marked as untracked).",
+            "free": "Upstream is free; cost counted as 0 with auto-managed zero-cost batches, so margin is computed at full amount.",
+            "actual": "Record actual cost via procurement batches; models missing a batch are flagged on the group page to add cost."
+          }
+        },
         "updated_at": "Updated At",
         "manual_update_title": "Add Purchase Record",
         "manual_purchase_title": "Purchase Info",
@@ -1423,6 +1429,8 @@
         "pricing_detail_title": "Complex Pricing Details",
         "pricing_detail_model": "Model: {{model}}",
         "pricing_detail_empty": "No complex pricing details for this model",
+        "pricing_detail_base_caption": "Base price",
+        "pricing_detail_components_caption": "Additional charges",
         "editor": {
           "info_title": "Model Info",
           "status_title": "Model Status",
@@ -1500,6 +1508,7 @@
         "stale": "Connection info, model selection, or endpoint changed. Please run model tests again.",
         "untested": "The current endpoint has not been tested yet.",
         "latest_result_from_endpoint": "Current endpoint is untested. Showing latest test result from endpoint: {{endpoint}}.",
+        "failure_reason": "Failure reason: {{reason}}",
         "status": {
           "pending": "Pending",
           "running": "Running",
@@ -1536,7 +1545,7 @@
         "load_failed": "Failed to load channel",
         "channel_not_found": "This channel does not exist or has been deleted. Returned to the channel list.",
         "fetch_models_failed": "Failed to fetch models",
-        "sync_models_result": "Sync complete: {{added}} added, {{total}} total",
+        "sync_models_result": "Sync complete: {{added}} added, {{stale}} no longer returned by upstream, {{total}} total",
         "models_empty": "No available models were returned",
         "model_config_invalid": "Invalid model configuration. Check model name emptiness or duplicates, and ensure price overrides are non-negative.",
         "blocked_selected_models": "Saving validates the whole channel. These enabled models currently block the save: {{models}}. Disable them first, or sync models again and confirm the latest upstream return.",
@@ -1685,6 +1694,8 @@
       "channel_billing_ratio": "Group Channel Sell Ratio",
       "model_channel_billing_ratio": "Model Channel Sell Ratio",
       "model_channel_billing_ratio_short": "Model Sell Ratio",
+      "model_channel_cost_missing": "Cost not recorded",
+      "model_channel_cost_missing_hint": "This channel model has no procurement cost recorded, so gross margin can't be computed yet. Use the channel publish page to mark it zero-cost or record the actual cost.",
       "channel_count": "Channel Count",
       "model_channels": "Channels",
       "model_search_placeholder": "Search model or channel",

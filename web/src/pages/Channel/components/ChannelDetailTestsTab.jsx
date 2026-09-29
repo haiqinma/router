@@ -12,6 +12,7 @@ import {
   AppTable,
   AppTableActionButton,
   AppTag,
+  AppTooltip,
 } from '../../../router-ui';
 
 const normalizeRecentTestStatus = (value) => {
@@ -674,11 +675,37 @@ const ChannelDetailTestsTab = ({
                         : effectiveStatus === 'untested'
                           ? undefined
                           : 'red';
-                return (
+                const failureReason =
+                  effectiveStatus !== 'success' &&
+                  effectiveStatus !== 'running' &&
+                  effectiveStatus !== 'pending' &&
+                  effectiveStatus !== 'untested'
+                    ? (
+                        item?.message ||
+                        row?.endpoint_last_test_error ||
+                        row?.last_test_error ||
+                        ''
+                      )
+                        .toString()
+                        .trim()
+                    : '';
+                const recentTestTag = (
                   <AppTag color={tagColor} className='router-tag'>
                     {t(`channel.edit.model_tester.status.${effectiveStatus}`)}
                   </AppTag>
                 );
+                if (failureReason) {
+                  return (
+                    <AppTooltip
+                      title={t('channel.edit.model_tester.failure_reason', {
+                        reason: failureReason,
+                      })}
+                    >
+                      <span className='router-nowrap'>{recentTestTag}</span>
+                    </AppTooltip>
+                  );
+                }
+                return recentTestTag;
               },
             },
             {
