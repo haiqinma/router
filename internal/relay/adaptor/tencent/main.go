@@ -148,8 +148,9 @@ func streamResponseTencent2OpenAI(TencentResponse *ChatResponse) *openai.ChatCom
 	return &response
 }
 
-func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCode, string) {
+func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCode, *model.Usage, string) {
 	var responseText string
+	var usage *model.Usage
 	scanner := bufio.NewScanner(resp.Body)
 	scanner.Split(bufio.ScanLines)
 
@@ -167,6 +168,15 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 		if err != nil {
 			logger.SysError("error unmarshalling stream response: " + err.Error())
 			continue
+		}
+
+		// 混元流式在末 chunk 携带真实 Usage,取到即用,覆盖前值。
+		if tencentResponse.Usage.TotalTokens != 0 {
+			usage = &model.Usage{
+				PromptTokens:     tencentResponse.Usage.PromptTokens,
+				CompletionTokens: tencentResponse.Usage.CompletionTokens,
+				TotalTokens:      tencentResponse.Usage.TotalTokens,
+			}
 		}
 
 		response := streamResponseTencent2OpenAI(&tencentResponse)
@@ -188,10 +198,10 @@ func StreamHandler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusC
 
 	err := resp.Body.Close()
 	if err != nil {
-		return openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), ""
+		return openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError), nil, ""
 	}
 
-	return nil, responseText
+	return nil, usage, responseText
 }
 
 func Handler(c *gin.Context, resp *http.Response) (*model.ErrorWithStatusCode, *model.Usage) {
