@@ -59,6 +59,7 @@ const ChannelDetailPublishTab = ({
   t,
   channelModels,
   getComplexPricingDetailsForModel,
+  getEffectivePriceForModel,
   openComplexPricingModal,
   normalizeChannelModelType,
   onUpdatePublishedModelName,
@@ -133,10 +134,7 @@ const ChannelDetailPublishTab = ({
     return publishRows.filter((row) => normalizePublishStatus(row) === statusFilter);
   }, [publishRows, statusFilter]);
 
-  const hasPositiveSellPrice = (row) => {
-    if (Number(row?.input_price || 0) > 0 || Number(row?.output_price || 0) > 0) {
-      return true;
-    }
+  const modelHasComplexPricing = (row) => {
     const complexPricingDetails = getComplexPricingDetailsForModel(row);
     return complexPricingDetails.some((detail) =>
       (detail.price_components || []).some(
@@ -147,15 +145,18 @@ const ChannelDetailPublishTab = ({
     );
   };
 
+  const hasPositiveSellPrice = (row) => {
+    if (
+      Number(getEffectivePriceForModel(row, 'input_price') || 0) > 0 ||
+      Number(getEffectivePriceForModel(row, 'output_price') || 0) > 0
+    ) {
+      return true;
+    }
+    return modelHasComplexPricing(row);
+  };
+
   const renderPrice = (row, field) => {
-    const complexPricingDetails = getComplexPricingDetailsForModel(row);
-    const hasComplexPricing = complexPricingDetails.some((detail) =>
-      (detail.price_components || []).some(
-        (component) =>
-          Number(component[field] || 0) > 0,
-      ),
-    );
-    if (hasComplexPricing) {
+    if (modelHasComplexPricing(row)) {
       return (
         <AppButton
           type='button'
@@ -166,11 +167,8 @@ const ChannelDetailPublishTab = ({
         </AppButton>
       );
     }
-    const price = row?.[field];
-    const hasPrice =
-      price !== null &&
-      price !== undefined &&
-      price !== '';
+    const price = getEffectivePriceForModel(row, field);
+    const hasPrice = price !== null && price !== undefined && price !== '';
     if (!hasPrice) {
       return <span className='router-nowrap'>-</span>;
     }

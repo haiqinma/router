@@ -753,6 +753,32 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     },
     [getProviderOwnersForModel, providerModelDetailsIndex]
   );
+  const getEffectivePriceForModel = useCallback(
+    (row, field) => {
+      const override = normalizePriceOverrideValue(row?.[field]);
+      if (override !== null) {
+        return override;
+      }
+      const owners = getProviderOwnersForModel(row);
+      const keys = buildProviderLookupKeys(row);
+      let resolved = null;
+      owners.some((providerId) => {
+        const providerDetails = providerModelDetailsIndex[providerId] || {};
+        const detail = keys.map((key) => providerDetails[key]).find(Boolean);
+        if (!detail) {
+          return false;
+        }
+        const base = Number(detail?.[field] || 0);
+        if (base > 0) {
+          resolved = base;
+          return true;
+        }
+        return false;
+      });
+      return resolved;
+    },
+    [getProviderOwnersForModel, providerModelDetailsIndex]
+  );
   const getProviderCandidateEndpointsForModel = useCallback(
     (row) => {
       const providerId = resolvePreferredProviderForModel(row);
@@ -4269,6 +4295,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
                 getComplexPricingDetailsForModel={
                   getComplexPricingDetailsForModel
                 }
+                getEffectivePriceForModel={getEffectivePriceForModel}
                 openComplexPricingModal={openComplexPricingModal}
                 normalizeChannelModelType={normalizeChannelModelType}
                 onUpdatePublishedModelName={updateChannelModelPublishedName}
