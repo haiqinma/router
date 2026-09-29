@@ -219,6 +219,9 @@ func Insert(channel *model.Channel) error {
 		if err := model.ReplaceChannelModelsWithDB(tx, channel.Id, channel.GetChannelModels()); err != nil {
 			return err
 		}
+		if err := model.SeedChannelDefaultEndpointPoliciesWithDB(tx, channel.Id); err != nil {
+			return err
+		}
 		return model.EnsureChannelTestModelWithDB(tx, channel.Id)
 	})
 	if err != nil {

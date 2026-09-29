@@ -17,7 +17,15 @@ const (
 
 	ChannelEndpointPolicyTemplateCustomRequestPolicy     = "CUSTOM_REQUEST_POLICY"
 	ChannelEndpointPolicyTemplateOverrideEndpointBaseURL = "OVERRIDE_ENDPOINT_BASE_URL"
+	ChannelEndpointPolicyTemplateImageURLToBase64        = "IMAGE_URL_TO_BASE64"
 	ChannelEndpointPolicyActionImageURLToBase64          = "image_url_to_base64"
+
+	// ChannelEndpointPolicySourceAutoDefault 标记新建渠道时自动种下的默认端点策略,
+	// 便于与手工配置区分。用户删除后不会被重新种上(仅在渠道创建时种一次)。
+	ChannelEndpointPolicySourceAutoDefault = "auto-default"
+
+	channelEndpointPolicyDefaultMediaMaxBytes int64 = 5 * 1024 * 1024
+	channelEndpointPolicyDefaultTimeoutMs     int   = 10 * 1000
 )
 
 type ChannelModelEndpointPolicy struct {
@@ -347,4 +355,110 @@ func UpsertChannelModelEndpointPolicyWithDB(dbHandle *gorm.DB, row ChannelModelE
 		InitChannelCache()
 	}
 	return normalized, nil
+}
+
+// BuildDefaultImageURLToBase64Policy 构造一条默认启用的「图片 URL 转 Base64」端点策略,
+// 其请求策略与前端 IMAGE_URL_TO_BASE64 模板保持一致,可被 relay 侧直接消费。
+func BuildDefaultImageURLToBase64Policy(channelID string, modelName string, endpoint string) (ChannelModelEndpointPolicy, error) {
+	capabilities, err := json.Marshal(ChannelModelEndpointCapabilities{InputImageBase64: true})
+	if err != nil {
+		return ChannelModelEndpointPolicy{}, err
+	}
+	requestPolicy, err := json.Marshal(ChannelModelEndpointRequestPolicy{
+		Actions: []ChannelModelEndpointPolicyAction{
+			{
+				Type: ChannelEndpointPolicyActionImageURLToBase64,
+				InputTypes: []string{
+					"anthropic.image_url",
+					"openai.image_url",
+					"openai.input_image",
+				},
+				Limits: &ChannelModelEndpointPolicyActionLimit{
+					MaxBytes:  channelEndpointPolicyDefaultMediaMaxBytes,
+					TimeoutMs: channelEndpointPolicyDefaultTimeoutMs,
+					AllowedContentTypes: []string{
+						"image/png",
+						"image/jpeg",
+						"image/webp",
+						"image/gif",
+					},
+				},
+				Reason: "convert image url to base64 for upstream compatibility",
+			},
+		},
+	})
+	if err != nil {
+		return ChannelModelEndpointPolicy{}, err
+	}
+	return ChannelModelEndpointPolicy{
+		ChannelId:     strings.TrimSpace(channelID),
+		Model:         strings.TrimSpace(modelName),
+		Endpoint:      NormalizeRequestedChannelModelEndpoint(endpoint),
+		Enabled:       true,
+		TemplateKey:   ChannelEndpointPolicyTemplateImageURLToBase64,
+		Capabilities:  string(capabilities),
+		RequestPolicy: string(requestPolicy),
+		Reason:        "默认转换：上游可能仅稳定支持 base64 图片输入，由 Router 侧统一转换",
+		Source:        ChannelEndpointPolicySourceAutoDefault,
+	}, nil
+}
+
+// SeedChannelDefaultEndpointPoliciesWithDB 在新建渠道时为其所有已声明端点种下默认的
+// 「图片 URL 转 Base64」策略。使用 OnConflict DoNothing 保证幂等且绝不覆盖已有策略,
+// 因此用户后续删除某条默认策略不会被重新种上。空端点渠道不产生任何行。
+func SeedChannelDefaultEndpointPoliciesWithDB(db *gorm.DB, channelID string) error {
+	if db == nil {
+		return fmt.Errorf("database handle is nil")
+	}
+	normalizedChannelID := strings.TrimSpace(channelID)
+	if normalizedChannelID == "" {
+		return nil
+	}
+	endpointRows, err := listChannelModelEndpointRowsByChannelIDWithDB(db, normalizedChannelID)
+	if err != nil {
+		return err
+	}
+	if len(endpointRows) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(endpointRows))
+	payloads := make([]ChannelModelEndpointPolicy, 0, len(endpointRows))
+	for _, endpointRow := range endpointRows {
+		modelName := strings.TrimSpace(endpointRow.Model)
+		endpoint := NormalizeRequestedChannelModelEndpoint(endpointRow.Endpoint)
+		if modelName == "" || endpoint == "" {
+			continue
+		}
+		key := modelName + "\x00" + endpoint
+		if _, ok := seen[key]; ok {
+			continue
+		}
+		seen[key] = struct{}{}
+		row, buildErr := BuildDefaultImageURLToBase64Policy(normalizedChannelID, modelName, endpoint)
+		if buildErr != nil {
+			return buildErr
+		}
+		NormalizeChannelModelEndpointPolicyRow(&row)
+		row.ID = strings.ReplaceAll(random.GetUUID(), "-", "")
+		row.UpdatedAt = helper.GetTimestamp()
+		payloads = append(payloads, row)
+	}
+	if len(payloads) == 0 {
+		return nil
+	}
+	if err := db.Clauses(clause.OnConflict{
+		Columns: []clause.Column{
+			{Name: "channel_id"},
+			{Name: "model"},
+			{Name: "endpoint"},
+			{Name: "template_key"},
+		},
+		DoNothing: true,
+	}).Create(&payloads).Error; err != nil {
+		return err
+	}
+	if config.MemoryCacheEnabled {
+		InitChannelCache()
+	}
+	return nil
 }
