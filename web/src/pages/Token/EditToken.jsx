@@ -106,10 +106,10 @@ const EditToken = ({ admin = false } = {}) => {
   const allModelValues = modelOptions.map((option) => option.value);
 
   const routePolicyOptions = [
-    { value: 'personal_first', label: '个人优先，套餐兜底' },
+    { value: 'personal_first', label: '个人优先，社区服务回退' },
     { value: 'personal_only', label: '仅个人供应商' },
-    { value: 'community_only', label: '仅社区套餐' },
-    { value: 'community_first', label: '套餐优先' },
+    { value: 'community_only', label: '仅社区服务' },
+    { value: 'community_first', label: '社区服务优先' },
   ];
   const hasAvailableModels = allModelValues.length > 0;
   const formatEntitlementSourceLabel = useCallback(
@@ -1100,7 +1100,7 @@ const EditToken = ({ admin = false } = {}) => {
                   {renderModelScopeControls(false)}
                 </div>
                 <AppFormRow>
-                  <AppField label='默认模型路由' hint='模型级规则优先于此设置'>
+                  <AppField label='默认模型路由' hint='模型规则可调整优先级；仅个人或仅社区不会被模型规则放宽'>
                     <AppSelect
                       className='router-section-dropdown'
                       name='route_policy'
@@ -1307,7 +1307,7 @@ const EditToken = ({ admin = false } = {}) => {
                     </AppField>
                   </AppFormRow>
                   <AppFormRow>
-                    <AppField label='默认模型路由' hint='模型级规则优先于此设置'>
+                    <AppField label='默认模型路由' hint='模型规则可调整优先级；仅个人或仅社区不会被模型规则放宽'>
                       <AppSelect
                         className='router-section-dropdown'
                         name='route_policy'

@@ -144,8 +144,10 @@ func TestNewLogAddsAmountFields(t *testing.T) {
 func TestNewPublicLogOmitsRoutingTopology(t *testing.T) {
 	row := &model.Log{
 		Id:               "l1",
-		RouteDecision:    `{"candidate_channel_ids":["channel-1"]}`,
+		RouteDecision:    `{"candidate_channel_ids":["channel-1"],"source":"personal_provider","source_policy":"personal_first"}`,
 		FallbackAttempts: `[{"channel_id":"channel-1"}]`,
+		UpstreamSource:   "community_package",
+		FallbackCount:    1,
 	}
 	view := NewPublicLog(row)
 	if view == nil {
@@ -156,6 +158,13 @@ func TestNewPublicLogOmitsRoutingTopology(t *testing.T) {
 	}
 	if row.RouteDecision == "" || row.FallbackAttempts == "" {
 		t.Fatalf("NewPublicLog mutated source row: %+v", row)
+	}
+	if view.RoutingSummary == nil || view.RoutingSummary.InitialSource != "personal_provider" || view.RoutingSummary.ActualSource != "community_package" || view.RoutingSummary.SourcePolicy != "personal_first" {
+		t.Fatalf("public routing summary = %#v", view.RoutingSummary)
+	}
+	direct := NewPublicLog(&model.Log{Id: "l2", UpstreamSource: "personal_provider"})
+	if direct.RoutingSummary == nil || direct.RoutingSummary.InitialSource != "personal_provider" {
+		t.Fatalf("direct public routing summary = %#v", direct.RoutingSummary)
 	}
 }
 

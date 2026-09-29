@@ -17,14 +17,14 @@ import {
   AppTag,
   AppTextarea,
 } from '../../router-ui';
-import { API, showError, showSuccess } from '../../helpers';
+import { API, showError, showSuccess, timestamp2string } from '../../helpers';
 import './index.css';
 
 const POLICY_OPTIONS = [
-  { value: 'personal_first', label: '个人优先，套餐兜底' },
+  { value: 'personal_first', label: '个人优先，社区服务回退' },
   { value: 'personal_only', label: '仅个人供应商' },
-  { value: 'community_only', label: '仅社区套餐' },
-  { value: 'community_first', label: '套餐优先' },
+  { value: 'community_only', label: '仅社区服务' },
+  { value: 'community_first', label: '社区服务优先' },
 ];
 
 const PROTOCOL_OPTIONS = [
@@ -52,6 +52,7 @@ function PersonalRouting() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [verifyingConnectionID, setVerifyingConnectionID] = useState('');
   const [form] = AppForm.useForm();
   const [routeForm] = AppForm.useForm();
 
@@ -148,6 +149,21 @@ function PersonalRouting() {
     } catch (error) { showError(error?.message || '移除个人供应商失败'); }
   };
 
+  const verifyConnection = async (row) => {
+    setVerifyingConnectionID(row.id);
+    try {
+      const response = await API.post(`/api/v1/public/personal-provider/connections/${row.id}/verify`);
+      if (!response.data?.success) throw new Error(response.data?.message);
+      showSuccess('连接和 API Key 验证通过');
+      load().then();
+    } catch (error) {
+      showError(error?.message || '验证个人供应商失败');
+      load().then();
+    } finally {
+      setVerifyingConnectionID('');
+    }
+  };
+
   const saveRoute = async () => {
     try {
       const values = await routeForm.validateFields();
@@ -175,9 +191,17 @@ function PersonalRouting() {
     { title: '协议', dataIndex: 'protocol', width: 150, render: (value) => <AppTag>{PROTOCOL_OPTIONS.find((item) => item.value === value)?.label || value}</AppTag> },
     { title: '模型范围', dataIndex: 'models', render: (models) => <span className='personal-routing-models'>{Array.isArray(models) ? models.join(', ') : '-'}</span> },
     { title: '优先级', dataIndex: 'priority', width: 92, align: 'right' },
+    {
+      title: '连接验证', dataIndex: 'last_checked_at', width: 176,
+      render: (_, row) => {
+        if (!row.last_checked_at) return <AppTag color='grey'>未验证</AppTag>;
+        if (row.last_check_ok) return <div className='personal-routing-verification'><AppTag color='green'>已验证</AppTag><span>{timestamp2string(row.last_checked_at)}</span></div>;
+        return <div className='personal-routing-verification'><AppTag color='red' title={row.last_check_error || '验证失败'}>验证失败</AppTag><span title={row.last_check_error || ''}>{row.last_check_error || timestamp2string(row.last_checked_at)}</span></div>;
+      },
+    },
     { title: '状态', dataIndex: 'status', width: 90, render: (value, row) => <AppSwitch checked={value === 1} onChange={(_, detail) => toggleConnection(row, detail.checked)} /> },
-    { title: '操作', key: 'actions', width: 128, render: (_, row) => <div className='personal-routing-actions'><AppButton type='text' onClick={() => openEdit(row)}>编辑</AppButton><AppButton type='text' danger onClick={() => deleteConnection(row)}>移除</AppButton></div> },
-  ], []);
+    { title: '操作', key: 'actions', width: 190, render: (_, row) => <div className='personal-routing-actions'><AppButton type='text' loading={verifyingConnectionID === row.id} onClick={() => verifyConnection(row)}>测试连接</AppButton><AppButton type='text' onClick={() => openEdit(row)}>编辑</AppButton><AppButton type='text' danger onClick={() => deleteConnection(row)}>移除</AppButton></div> },
+  ], [verifyingConnectionID]);
 
   const routeColumns = useMemo(() => [
     { title: '模型', dataIndex: 'model' },
@@ -186,14 +210,16 @@ function PersonalRouting() {
   ], []);
 
   const providers = <AppSection className='personal-routing-section' title='我的供应商' extra={<AppButton color='blue' icon={<AppIcon name='plus' />} onClick={openCreate}>添加供应商</AppButton>}>
-    <AppTable rowKey='id' columns={connectionColumns} dataSource={connections} loading={loading} scroll={{ x: 980 }} locale={{ emptyText: <AppEmpty>还没有个人供应商</AppEmpty> }} />
+      <p className='personal-routing-section-hint'>测试连接只验证上游地址和 API Key，不会发起模型推理请求或消耗模型额度。修改协议、地址或 API Key 后需要重新验证。</p>
+      <AppTable rowKey='id' columns={connectionColumns} dataSource={connections} loading={loading} scroll={{ x: 1120 }} locale={{ emptyText: <AppEmpty>还没有个人供应商</AppEmpty> }} />
   </AppSection>;
 
   const modelRoutes = <div className='personal-routing-stack'>
-    <AppSection title='个人路由额度'>
-      <div className='personal-routing-quota'><div><strong>{quota?.used_requests ?? 0}</strong><span>{quota?.period || '-'} 已使用请求</span></div><p>当前为免费用量统计。套餐权益额度和后续服务费将在独立计费规则中启用。</p></div>
+    <AppSection title='个人来源用量'>
+      <div className='personal-routing-quota'><div><strong>{quota?.used_requests ?? 0}</strong><span>{quota?.period || '-'} 已使用请求</span></div><p>当前仅展示个人来源调用次数，不是套餐限额或收费项目。</p></div>
     </AppSection>
     <AppSection title='模型路由规则'>
+      <p className='personal-routing-section-hint'>模型规则可指定来源优先级或收紧来源范围；API Token 设置为“仅个人供应商”或“仅社区服务”时，模型规则不能放宽该限制。</p>
       <AppForm form={routeForm} layout='vertical' className='personal-routing-rule-form'>
         <AppField label='模型' required><AppForm.Item name='model' rules={[{ required: true, message: '请选择模型' }]} noStyle><AppSelect options={routeModelOptions} search placeholder='选择当前账号可用模型' /></AppForm.Item></AppField>
         <AppField label='策略' required><AppForm.Item name='route_policy' initialValue='personal_first' noStyle><AppSelect options={POLICY_OPTIONS} /></AppForm.Item></AppField>

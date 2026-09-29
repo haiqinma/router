@@ -2314,7 +2314,7 @@
         "failure_summary": "本次请求最终失败，最后尝试渠道为 {{channel}}，请求模型为 {{model}}，经历 {{fallbackCount}} 次 fallback。",
         "user_summary": "本次请求使用发布模型 {{model}}，经历 {{fallbackCount}} 次 fallback，估算来源为 {{source}}，结算模式为 {{settlement}}。",
         "user_failure_summary": "本次请求最终失败，请求模型为 {{model}}，经历 {{fallbackCount}} 次 fallback。",
-        "user_source_summary": "本次请求按 {{policy}} 发起，初始来源为{{initialSource}}，实际来源为{{actualSource}}，经历 {{fallbackCount}} 次 fallback。社区服务调用按套餐或余额结算。",
+        "user_source_summary": "本次请求按 {{policy}} 发起，初始来源为 {{initialSource}}，实际来源为 {{actualSource}}，经历 {{fallbackCount}} 次 fallback。社区服务调用按套餐或余额结算。",
         "attempt_title": "第 {{attempt}} 次尝试",
         "outcome": {
           "succeeded": "成功",
@@ -2360,7 +2360,7 @@
           "policy": {
             "personal_first": "个人优先，社区服务回退",
             "personal_only": "仅个人供应商",
-            "community_only": "仅社区套餐",
+            "community_only": "仅社区服务",
             "community_first": "社区服务优先",
             "unknown": "未记录"
           },

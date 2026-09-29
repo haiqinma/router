@@ -123,6 +123,15 @@ function renderProcurementCostStatus(value, t) {
 
 function renderRouteExplanationSummary(log, t, isAdminPage) {
   if (!log) return '-';
+  if (!isAdminPage && log?.routing_summary) {
+    const summary = log.routing_summary;
+    return t('log.detail.route.user_source_summary', {
+      policy: t(`log.detail.route.user_sources.policy.${summary.source_policy || 'unknown'}`),
+      initialSource: t(`log.detail.route.user_sources.source.${summary.initial_source || 'unknown'}`),
+      actualSource: t(`log.detail.route.user_sources.source.${summary.actual_source || 'unknown'}`),
+      fallbackCount: Number(summary.fallback_count || 0),
+    });
+  }
   const channel = isAdminPage ? renderText(log.channel_name || log.channel) : '-';
   const model = renderText(
     isAdminPage ? getLogActualModelName(log) : getLogPublicModelName(log),
@@ -899,6 +908,32 @@ const LogDetail = () => {
           value: renderText(publicModelName),
         },
       ];
+      if (!isAdminPage && log?.routing_summary) {
+        const summary = log.routing_summary;
+        items.push(
+          {
+            key: 'source_policy',
+            label: t('log.detail.route.user_sources.fields.source_policy'),
+            value: t(`log.detail.route.user_sources.policy.${summary.source_policy || 'unknown'}`),
+          },
+          {
+            key: 'initial_source',
+            label: t('log.detail.route.user_sources.fields.initial_source'),
+            value: t(`log.detail.route.user_sources.source.${summary.initial_source || 'unknown'}`),
+          },
+          {
+            key: 'actual_source',
+            label: t('log.detail.route.user_sources.fields.actual_source'),
+            value: t(`log.detail.route.user_sources.source.${summary.actual_source || 'unknown'}`),
+          },
+          {
+            key: 'personal_provider',
+            label: t('log.detail.route.user_sources.fields.personal_provider'),
+            value: renderText(summary.personal_provider_name),
+            visible: Boolean(summary.personal_provider_name),
+          },
+        );
+      }
       if (isAdminPage) {
         items.push(
           {

@@ -2,6 +2,9 @@
 .personal-routing-stack { display: grid; gap: 16px; }
 .personal-routing-connection-name { display: grid; gap: 3px; min-width: 0; }
 .personal-routing-connection-name span, .personal-routing-models { color: var(--ant-color-text-secondary); font-size: 12px; overflow-wrap: anywhere; }
+.personal-routing-section-hint { color: var(--ant-color-text-secondary); font-size: 13px; line-height: 1.6; margin: 0 0 14px; }
+.personal-routing-verification { display: grid; gap: 4px; min-width: 0; }
+.personal-routing-verification span { color: var(--ant-color-text-secondary); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .personal-routing-actions { display: inline-flex; gap: 2px; }
 .personal-routing-quota { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 56px; }
 .personal-routing-quota div { display: grid; gap: 2px; }

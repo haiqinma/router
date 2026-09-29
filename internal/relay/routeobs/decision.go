@@ -13,6 +13,7 @@ import (
 // The final channel is filled when the request is logged, after any retries.
 type RouteDecision struct {
 	Source              string                  `json:"source"`
+	SourcePolicy        string                  `json:"source_policy,omitempty"`
 	GroupID             string                  `json:"group_id"`
 	Model               string                  `json:"model"`
 	Endpoint            string                  `json:"endpoint"`
@@ -49,6 +50,7 @@ func SetRouteDecision(c *gin.Context, decision RouteDecision) {
 		}
 	}
 	decision.Source = strings.TrimSpace(decision.Source)
+	decision.SourcePolicy = strings.TrimSpace(c.GetString(ctxkey.PersonalRoutePolicy))
 	decision.GroupID = strings.TrimSpace(decision.GroupID)
 	decision.Model = strings.TrimSpace(decision.Model)
 	decision.Endpoint = strings.TrimSpace(decision.Endpoint)

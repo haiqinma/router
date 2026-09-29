@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -10,8 +11,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
+	"net/url"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/yeying-community/router/common/client"
 	"github.com/yeying-community/router/common/config"
@@ -54,6 +58,9 @@ type PersonalProviderConnection struct {
 	CreatedAt            int64    `json:"created_at" gorm:"bigint;not null;index"`
 	UpdatedAt            int64    `json:"updated_at" gorm:"bigint;not null;index"`
 	CredentialConfigured bool     `json:"credential_configured" gorm:"-"`
+	LastCheckedAt        int64    `json:"last_checked_at" gorm:"bigint;not null;default:0"`
+	LastCheckOK          bool     `json:"last_check_ok" gorm:"not null;default:false"`
+	LastCheckError       string   `json:"last_check_error" gorm:"type:text;not null;default:''"`
 }
 
 func (PersonalProviderConnection) TableName() string { return PersonalProviderConnectionsTableName }
@@ -373,6 +380,11 @@ func UpdatePersonalProviderConnection(connection *PersonalProviderConnection, cr
 	if err := connection.persistModels(); err != nil {
 		return err
 	}
+	existing := &PersonalProviderConnection{}
+	if err := DB.Where("id = ? AND user_id = ?", connection.Id, connection.UserId).First(existing).Error; err != nil {
+		return err
+	}
+	endpointChanged := existing.Protocol != connection.Protocol || existing.BaseURL != connection.BaseURL || credential != nil
 	updates := map[string]any{"name": connection.Name, "protocol": connection.Protocol, "base_url": connection.BaseURL, "models_json": connection.ModelsJSON, "priority": connection.Priority, "status": connection.Status, "updated_at": helper.GetTimestamp()}
 	if credential != nil {
 		if strings.TrimSpace(*credential) == "" {
@@ -383,6 +395,14 @@ func UpdatePersonalProviderConnection(connection *PersonalProviderConnection, cr
 			return err
 		}
 		updates["credential_encrypted"] = encrypted
+	}
+	if endpointChanged {
+		// A test result belongs to the exact endpoint and credential that was
+		// probed. Renaming, reprioritising, or enabling a connection does not
+		// invalidate it; changing the endpoint, protocol, or key does.
+		updates["last_checked_at"] = int64(0)
+		updates["last_check_ok"] = false
+		updates["last_check_error"] = ""
 	}
 	result := DB.Model(&PersonalProviderConnection{}).Where("id = ? AND user_id = ?", connection.Id, connection.UserId).Updates(updates)
 	if result.Error != nil {
@@ -447,9 +467,144 @@ func ResolvePersonalRoutePolicy(userID string, token *Token, modelName string) s
 	}
 	row := PersonalModelRoute{}
 	if err := DB.Select("route_policy").Where("user_id = ? AND model = ?", strings.TrimSpace(userID), strings.TrimSpace(modelName)).First(&row).Error; err == nil {
-		policy = NormalizePersonalRoutePolicy(row.RoutePolicy)
+		modelPolicy := NormalizePersonalRoutePolicy(row.RoutePolicy)
+		// A Token can carry a hard source boundary. A user-level model rule is
+		// allowed to narrow a flexible Token policy, but never to widen a Token
+		// that was deliberately issued as personal_only or community_only.
+		if policy != PersonalRoutePolicyPersonalOnly && policy != PersonalRoutePolicyCommunityOnly {
+			policy = modelPolicy
+		}
 	}
 	return policy
+}
+
+const personalProviderVerificationTimeout = 12 * time.Second
+
+var doPersonalProviderVerificationRequest = client.DoPersonalProviderRequest
+
+// VerifyPersonalProviderConnection probes the protocol's model catalogue. It
+// validates the stored endpoint and credential without sending an inference
+// request, so a verification never consumes model tokens by design.
+func VerifyPersonalProviderConnection(userID string, id string) (*PersonalProviderConnection, error) {
+	connection, err := GetPersonalProviderConnection(userID, id)
+	if err != nil {
+		return nil, err
+	}
+	credential, err := decryptPersonalProviderCredential(connection.CredentialEncrypted)
+	if err == nil {
+		err = verifyPersonalProviderCredential(connection, credential)
+	}
+	now := helper.GetTimestamp()
+	updates := map[string]any{"last_checked_at": now, "last_check_ok": err == nil, "last_check_error": ""}
+	if err != nil {
+		updates["last_check_error"] = truncatePersonalProviderCheckError(err.Error())
+	}
+	if updateErr := DB.Model(&PersonalProviderConnection{}).
+		Where("id = ? AND user_id = ?", connection.Id, connection.UserId).
+		Updates(updates).Error; updateErr != nil {
+		return nil, updateErr
+	}
+	connection.LastCheckedAt = now
+	connection.LastCheckOK = err == nil
+	connection.LastCheckError = fmt.Sprint(updates["last_check_error"])
+	if err != nil {
+		return connection, err
+	}
+	return connection, nil
+}
+
+func verifyPersonalProviderCredential(connection *PersonalProviderConnection, credential string) error {
+	endpoint, err := personalProviderVerificationEndpoint(connection)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), personalProviderVerificationTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return fmt.Errorf("无法创建个人供应商验证请求: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+	switch connection.Protocol {
+	case "anthropic":
+		req.Header.Set("x-api-key", credential)
+		req.Header.Set("anthropic-version", "2023-06-01")
+	case "gemini":
+		req.Header.Set("x-goog-api-key", credential)
+	default:
+		req.Header.Set("Authorization", "Bearer "+credential)
+	}
+	resp, err := doPersonalProviderVerificationRequest(req)
+	if err != nil {
+		return fmt.Errorf("无法连接个人供应商: %w", err)
+	}
+	defer resp.Body.Close()
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden {
+			return errors.New("个人供应商拒绝了 API Key，请检查凭据权限或轮换 API Key")
+		}
+		return fmt.Errorf("个人供应商验证失败：上游返回 HTTP %d", resp.StatusCode)
+	}
+	return nil
+}
+
+func personalProviderVerificationEndpoint(connection *PersonalProviderConnection) (string, error) {
+	if connection == nil {
+		return "", errors.New("个人供应商连接不能为空")
+	}
+	baseURL := strings.TrimSpace(connection.BaseURL)
+	if baseURL == "" {
+		switch connection.Protocol {
+		case "openai":
+			baseURL = "https://api.openai.com/v1"
+		case "anthropic":
+			baseURL = "https://api.anthropic.com/v1"
+		case "gemini":
+			baseURL = "https://generativelanguage.googleapis.com/v1beta"
+		case "ali":
+			baseURL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+		case "deepseek":
+			baseURL = "https://api.deepseek.com"
+		default:
+			return "", errors.New("个人供应商协议不受支持")
+		}
+	}
+	parsed, err := url.Parse(baseURL)
+	if err != nil {
+		return "", fmt.Errorf("个人供应商 Base URL 无效: %w", err)
+	}
+	path := strings.TrimRight(parsed.Path, "/")
+	switch connection.Protocol {
+	case "openai", "anthropic":
+		if !strings.HasSuffix(path, "/v1") {
+			path += "/v1"
+		}
+	case "gemini":
+		if !strings.Contains(path, "/v1") {
+			path += "/v1beta"
+		}
+	case "ali":
+		if !strings.Contains(path, "/compatible-mode/v1") {
+			path += "/compatible-mode/v1"
+		}
+	case "deepseek":
+		// DeepSeek exposes its catalogue at the service root /models endpoint.
+	default:
+		return "", errors.New("个人供应商协议不受支持")
+	}
+	parsed.Path = strings.TrimRight(path, "/") + "/models"
+	parsed.RawQuery = ""
+	parsed.Fragment = ""
+	return parsed.String(), nil
+}
+
+func truncatePersonalProviderCheckError(value string) string {
+	value = strings.TrimSpace(value)
+	if len(value) <= 512 {
+		return value
+	}
+	return value[:512]
 }
 
 func ListPersonalProviderChannelsForModel(userID string, modelName string) ([]*Channel, error) {

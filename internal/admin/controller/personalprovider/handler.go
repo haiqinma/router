@@ -31,7 +31,7 @@ func connectionOutput(row *model.PersonalProviderConnection) gin.H {
 	if row == nil {
 		return nil
 	}
-	return gin.H{"id": row.Id, "name": row.Name, "protocol": row.Protocol, "base_url": row.BaseURL, "models": row.Models, "priority": row.Priority, "status": row.Status, "created_at": row.CreatedAt, "updated_at": row.UpdatedAt, "credential_configured": row.CredentialConfigured}
+	return gin.H{"id": row.Id, "name": row.Name, "protocol": row.Protocol, "base_url": row.BaseURL, "models": row.Models, "priority": row.Priority, "status": row.Status, "created_at": row.CreatedAt, "updated_at": row.UpdatedAt, "credential_configured": row.CredentialConfigured, "last_checked_at": row.LastCheckedAt, "last_check_ok": row.LastCheckOK, "last_check_error": row.LastCheckError}
 }
 
 func ListConnections(c *gin.Context) {
@@ -109,6 +109,19 @@ func DeleteConnection(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": ""})
+}
+
+func VerifyConnection(c *gin.Context) {
+	row, err := model.VerifyPersonalProviderConnection(c.GetString(ctxkey.Id), c.Param("id"))
+	if err != nil {
+		if row == nil {
+			respondConnectionError(c, err)
+			return
+		}
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error(), "data": connectionOutput(row)})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": connectionOutput(row)})
 }
 
 func ListModelRoutes(c *gin.Context) {
