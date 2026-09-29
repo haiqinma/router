@@ -87,11 +87,7 @@ func Handler(c *gin.Context, awsCli *bedrockruntime.Client, modelName string) (*
 
 	openaiResp := anthropic.ResponseClaude2OpenAI(claudeResponse)
 	openaiResp.Model = modelName
-	usage := relaymodel.Usage{
-		PromptTokens:     claudeResponse.Usage.InputTokens,
-		CompletionTokens: claudeResponse.Usage.OutputTokens,
-		TotalTokens:      claudeResponse.Usage.InputTokens + claudeResponse.Usage.OutputTokens,
-	}
+	usage := anthropic.ClaudeUsageToOpenAIUsage(claudeResponse.Usage)
 	openaiResp.Usage = usage
 
 	c.JSON(http.StatusOK, openaiResp)
@@ -136,7 +132,7 @@ func StreamHandler(c *gin.Context, awsCli *bedrockruntime.Client) (*relaymodel.E
 	defer stream.Close()
 
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
-	var usage relaymodel.Usage
+	var claudeUsage anthropic.Usage
 	var id string
 	var lastToolCallChoice openai.ChatCompletionsStreamResponseChoice
 
@@ -158,8 +154,10 @@ func StreamHandler(c *gin.Context, awsCli *bedrockruntime.Client) (*relaymodel.E
 
 			response, meta := anthropic.StreamResponseClaude2OpenAI(claudeResp)
 			if meta != nil {
-				usage.PromptTokens += meta.Usage.InputTokens
-				usage.CompletionTokens += meta.Usage.OutputTokens
+				claudeUsage.InputTokens += meta.Usage.InputTokens
+				claudeUsage.OutputTokens += meta.Usage.OutputTokens
+				claudeUsage.CacheReadInputTokens += meta.Usage.CacheReadInputTokens
+				claudeUsage.CacheCreationInputTokens += meta.Usage.CacheCreationInputTokens
 				if len(meta.Id) > 0 { // only message_start has an id, otherwise it's a finish_reason event.
 					id = fmt.Sprintf("chatcmpl-%s", meta.Id)
 					return true
@@ -202,5 +200,6 @@ func StreamHandler(c *gin.Context, awsCli *bedrockruntime.Client) (*relaymodel.E
 		}
 	})
 
+	usage := anthropic.ClaudeUsageToOpenAIUsage(claudeUsage)
 	return nil, &usage
 }

@@ -60,12 +60,8 @@ func relayMessagesResponse(c *gin.Context, resp *http.Response) (*model.Usage, *
 	if err := json.Unmarshal(responseBody, &claudeResponse); err != nil {
 		return nil, openai.ErrorWrapper(err, "unmarshal_response_body_failed", http.StatusInternalServerError)
 	}
-	usage := &model.Usage{
-		PromptTokens:     claudeResponse.Usage.InputTokens,
-		CompletionTokens: claudeResponse.Usage.OutputTokens,
-		TotalTokens:      claudeResponse.Usage.InputTokens + claudeResponse.Usage.OutputTokens,
-	}
-	return usage, nil
+	usage := ClaudeUsageToOpenAIUsage(claudeResponse.Usage)
+	return &usage, nil
 }
 
 func relayMessagesStreamResponse(c *gin.Context, resp *http.Response) (*model.Usage, *model.ErrorWithStatusCode) {
@@ -86,7 +82,7 @@ func relayMessagesStreamResponse(c *gin.Context, resp *http.Response) (*model.Us
 		return 0, nil, nil
 	})
 
-	usage := &model.Usage{}
+	var claudeUsage Usage
 	for scanner.Scan() {
 		line := scanner.Text()
 		if _, err := c.Writer.Write([]byte(line + "\n")); err != nil {
@@ -107,20 +103,10 @@ func relayMessagesStreamResponse(c *gin.Context, resp *http.Response) (*model.Us
 			continue
 		}
 		if claudeResponse.Message != nil {
-			if claudeResponse.Message.Usage.InputTokens > usage.PromptTokens {
-				usage.PromptTokens = claudeResponse.Message.Usage.InputTokens
-			}
-			if claudeResponse.Message.Usage.OutputTokens > usage.CompletionTokens {
-				usage.CompletionTokens = claudeResponse.Message.Usage.OutputTokens
-			}
+			accumulateClaudeUsage(&claudeUsage, claudeResponse.Message.Usage)
 		}
 		if claudeResponse.Usage != nil {
-			if claudeResponse.Usage.InputTokens > usage.PromptTokens {
-				usage.PromptTokens = claudeResponse.Usage.InputTokens
-			}
-			if claudeResponse.Usage.OutputTokens > usage.CompletionTokens {
-				usage.CompletionTokens = claudeResponse.Usage.OutputTokens
-			}
+			accumulateClaudeUsage(&claudeUsage, *claudeResponse.Usage)
 		}
 	}
 	if err := scanner.Err(); err != nil {
@@ -129,6 +115,23 @@ func relayMessagesStreamResponse(c *gin.Context, resp *http.Response) (*model.Us
 	if err := resp.Body.Close(); err != nil {
 		return nil, openai.ErrorWrapper(err, "close_response_body_failed", http.StatusInternalServerError)
 	}
-	usage.TotalTokens = usage.PromptTokens + usage.CompletionTokens
-	return usage, nil
+	usage := ClaudeUsageToOpenAIUsage(claudeUsage)
+	return &usage, nil
+}
+
+// accumulateClaudeUsage 按字段取最大值合并流式用量:input_tokens 与缓存量出现在
+// message_start,output_tokens 的最终值出现在 message_delta,各字段取 max 即可覆盖。
+func accumulateClaudeUsage(acc *Usage, u Usage) {
+	if u.InputTokens > acc.InputTokens {
+		acc.InputTokens = u.InputTokens
+	}
+	if u.OutputTokens > acc.OutputTokens {
+		acc.OutputTokens = u.OutputTokens
+	}
+	if u.CacheReadInputTokens > acc.CacheReadInputTokens {
+		acc.CacheReadInputTokens = u.CacheReadInputTokens
+	}
+	if u.CacheCreationInputTokens > acc.CacheCreationInputTokens {
+		acc.CacheCreationInputTokens = u.CacheCreationInputTokens
+	}
 }
