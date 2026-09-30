@@ -140,6 +140,7 @@ func SetApiRouter(engine *gin.Engine) {
 			personalProviderRoute.POST("/connections", personalprovider.CreateConnection)
 			personalProviderRoute.GET("/connections/:id", personalprovider.GetConnection)
 			personalProviderRoute.PUT("/connections/:id", personalprovider.UpdateConnection)
+			personalProviderRoute.POST("/connections/:id/verify", personalprovider.VerifyConnection)
 			personalProviderRoute.DELETE("/connections/:id", personalprovider.DeleteConnection)
 			personalProviderRoute.GET("/model-routes", personalprovider.ListModelRoutes)
 			personalProviderRoute.PUT("/model-routes", personalprovider.UpsertModelRoute)

@@ -1,6 +1,7 @@
 package presenter
 
 import (
+	"encoding/json"
 	"strings"
 
 	"github.com/yeying-community/router/internal/admin/model"
@@ -263,9 +264,21 @@ func NewLogStatistics(rows []*model.LogStatistic) []*LogStatistic {
 
 type Log struct {
 	*model.Log
-	ChargeAmount              int64 `json:"charge_amount"`
-	UserDailyChargeAmount     int   `json:"user_daily_charge_amount"`
-	UserEmergencyChargeAmount int   `json:"user_emergency_charge_amount"`
+	ChargeAmount              int64                 `json:"charge_amount"`
+	UserDailyChargeAmount     int                   `json:"user_daily_charge_amount"`
+	UserEmergencyChargeAmount int                   `json:"user_emergency_charge_amount"`
+	RoutingSummary            *PublicRoutingSummary `json:"routing_summary,omitempty"`
+}
+
+// PublicRoutingSummary is deliberately limited to the calling user's own
+// source choice and settlement outcome. It never contains community channel
+// IDs, candidate lists, endpoint topology, or upstream error bodies.
+type PublicRoutingSummary struct {
+	SourcePolicy         string `json:"source_policy,omitempty"`
+	InitialSource        string `json:"initial_source,omitempty"`
+	ActualSource         string `json:"actual_source,omitempty"`
+	PersonalProviderName string `json:"personal_provider_name,omitempty"`
+	FallbackCount        int    `json:"fallback_count"`
 }
 
 func NewLog(row *model.Log) *Log {
@@ -296,7 +309,43 @@ func NewPublicLog(row *model.Log) *Log {
 	copy := *row
 	copy.RouteDecision = ""
 	copy.FallbackAttempts = ""
-	return NewLog(&copy)
+	view := NewLog(&copy)
+	view.RoutingSummary = newPublicRoutingSummary(row)
+	return view
+}
+
+func newPublicRoutingSummary(row *model.Log) *PublicRoutingSummary {
+	if row == nil {
+		return nil
+	}
+	summary := &PublicRoutingSummary{
+		ActualSource:         strings.TrimSpace(row.UpstreamSource),
+		PersonalProviderName: strings.TrimSpace(row.PersonalProviderName),
+		FallbackCount:        row.FallbackCount,
+	}
+	var decision struct {
+		Source       string `json:"source"`
+		SourcePolicy string `json:"source_policy"`
+	}
+	if raw := strings.TrimSpace(row.RouteDecision); raw != "" && json.Unmarshal([]byte(raw), &decision) == nil {
+		summary.SourcePolicy = strings.TrimSpace(decision.SourcePolicy)
+		switch strings.TrimSpace(decision.Source) {
+		case "personal_provider", "personal_provider_fallback":
+			summary.InitialSource = model.PersonalProviderSourceType
+		default:
+			summary.InitialSource = "community_package"
+		}
+	}
+	if summary.FallbackCount == 0 && summary.ActualSource != "" {
+		// A direct request has no source transition. This also keeps summaries
+		// accurate for pinned or explicitly selected channels, whose internal
+		// decision source is not a user-facing supply category.
+		summary.InitialSource = summary.ActualSource
+	}
+	if summary.ActualSource == "" && summary.InitialSource == "" && summary.FallbackCount == 0 {
+		return nil
+	}
+	return summary
 }
 
 func NewPublicLogs(rows []*model.Log) []*Log {

@@ -65,7 +65,112 @@ func latestChannelHealthSignal(db *gorm.DB, logDB *gorm.DB, row model.ChannelMod
 	return result, nil
 }
 
-func enqueueDueChannelHealthProbes(db *gorm.DB, logDB *gorm.DB, now int64, limit int, enqueue func(string, string) (bool, error)) (int, error) {
+func channelHealthProbeEndpointMatchesModel(row model.ChannelModel, endpointModel string) bool {
+	normalizedEndpointModel := strings.TrimSpace(endpointModel)
+	if normalizedEndpointModel == "" {
+		return false
+	}
+	for _, candidate := range model.NormalizeProviderLookupCandidates(row.Model, row.UpstreamModel) {
+		if candidate == normalizedEndpointModel {
+			return true
+		}
+	}
+	return false
+}
+
+// selectChannelHealthProbeEndpoint keeps automatic probes aligned with the
+// endpoint capabilities that are actually enabled for the channel. The
+// channel model's endpoint is only a preference; it must not bypass either
+// channel endpoint state or the provider catalog.
+func selectChannelHealthProbeEndpoint(db *gorm.DB, row model.ChannelModel) (string, error) {
+	if db == nil {
+		return "", nil
+	}
+	channelID := strings.TrimSpace(row.ChannelId)
+	candidates := model.NormalizeProviderLookupCandidates(row.Model, row.UpstreamModel)
+	if channelID == "" || len(candidates) == 0 {
+		return "", nil
+	}
+
+	enabledRows, err := model.ListEnabledChannelModelEndpointsByCandidatesWithDB(db, channelID, candidates...)
+	if err != nil {
+		return "", err
+	}
+	enabledEndpoints := make([]string, 0, len(enabledRows))
+	seenEnabled := make(map[string]struct{}, len(enabledRows))
+	for _, endpointRow := range enabledRows {
+		if !channelHealthProbeEndpointMatchesModel(row, endpointRow.Model) {
+			continue
+		}
+		endpoint := model.NormalizeRequestedChannelModelEndpoint(endpointRow.Endpoint)
+		if endpoint == "" {
+			continue
+		}
+		if _, ok := seenEnabled[endpoint]; ok {
+			continue
+		}
+		seenEnabled[endpoint] = struct{}{}
+		enabledEndpoints = append(enabledEndpoints, endpoint)
+	}
+	if len(enabledEndpoints) == 0 {
+		return "", nil
+	}
+
+	provider := model.NormalizeGroupModelProviderValue(row.Provider)
+	if provider == "" {
+		providerByModel, err := model.LoadUniqueProviderMapByModelsWithDB(db, candidates)
+		if err != nil {
+			return "", err
+		}
+		provider = model.ResolveProviderFromModelMap(providerByModel, row.UpstreamModel, row.Model)
+	}
+	if provider == "" {
+		return "", nil
+	}
+
+	endpointMap, err := model.LoadProviderModelEndpointMapByModelsWithDB(db, provider, candidates)
+	if err != nil {
+		return "", err
+	}
+	officialEndpoints := make([]string, 0)
+	for _, candidate := range candidates {
+		allowed, ok := endpointMap[candidate]
+		if !ok {
+			continue
+		}
+		officialEndpoints = allowed
+		break
+	}
+	if len(officialEndpoints) == 0 {
+		return "", nil
+	}
+	officialSet := make(map[string]struct{}, len(officialEndpoints))
+	for _, endpoint := range officialEndpoints {
+		normalized := model.NormalizeRequestedChannelModelEndpoint(endpoint)
+		if normalized != "" {
+			officialSet[normalized] = struct{}{}
+		}
+	}
+	compatibleEndpoints := make([]string, 0, len(enabledEndpoints))
+	for _, endpoint := range enabledEndpoints {
+		if _, ok := officialSet[endpoint]; ok {
+			compatibleEndpoints = append(compatibleEndpoints, endpoint)
+		}
+	}
+	if len(compatibleEndpoints) == 0 {
+		return "", nil
+	}
+
+	preferred := model.NormalizeRequestedChannelModelEndpoint(row.Endpoint)
+	for _, endpoint := range compatibleEndpoints {
+		if endpoint == preferred {
+			return endpoint, nil
+		}
+	}
+	return compatibleEndpoints[0], nil
+}
+
+func enqueueDueChannelHealthProbes(db *gorm.DB, logDB *gorm.DB, now int64, limit int, enqueue func(string, string, string) (bool, error)) (int, error) {
 	if db == nil || enqueue == nil {
 		return 0, nil
 	}
@@ -106,7 +211,15 @@ func enqueueDueChannelHealthProbes(db *gorm.DB, logDB *gorm.DB, now int64, limit
 		if !due {
 			continue
 		}
-		createdNow, err := enqueue(strings.TrimSpace(row.ChannelId), strings.TrimSpace(row.Model))
+		endpoint, err := selectChannelHealthProbeEndpoint(db, row)
+		if err != nil {
+			logger.SysError("failed to select channel health probe endpoint: " + err.Error())
+			continue
+		}
+		if endpoint == "" {
+			continue
+		}
+		createdNow, err := enqueue(strings.TrimSpace(row.ChannelId), strings.TrimSpace(row.Model), endpoint)
 		if err != nil {
 			logger.SysError("failed to enqueue channel health probe: " + err.Error())
 			continue
@@ -119,13 +232,13 @@ func enqueueDueChannelHealthProbes(db *gorm.DB, logDB *gorm.DB, now int64, limit
 }
 
 func runChannelHealthProbeScan() {
-	created, err := enqueueDueChannelHealthProbes(model.DB, model.LOG_DB, time.Now().Unix(), channelHealthProbeBatchSize, func(channelID string, modelID string) (bool, error) {
+	created, err := enqueueDueChannelHealthProbes(model.DB, model.LOG_DB, time.Now().Unix(), channelHealthProbeBatchSize, func(channelID string, modelID string, endpoint string) (bool, error) {
 		_, createdCount, _, err := CreateChannelModelTestTasks(
 			channelID,
 			"health_probe",
-			modelID,
-			[]string{modelID},
+			"",
 			nil,
+			[]channelModelTestTargetItem{{Model: modelID, Endpoint: endpoint}},
 			"health-probe",
 			"",
 			"",

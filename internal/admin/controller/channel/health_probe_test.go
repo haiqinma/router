@@ -15,10 +15,30 @@ func newChannelHealthProbeTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
-	if err := db.AutoMigrate(&model.ChannelModel{}, &model.ChannelTest{}, &model.Log{}); err != nil {
+	if err := db.AutoMigrate(&model.ChannelModel{}, &model.ChannelModelEndpoint{}, &model.ProviderModel{}, &model.ChannelTest{}, &model.Log{}); err != nil {
 		t.Fatalf("auto migrate: %v", err)
 	}
 	return db
+}
+
+func addHealthProbeEndpointFixture(t *testing.T, db *gorm.DB, channelID string, modelID string, provider string, endpoint string) {
+	t.Helper()
+	if err := db.Create(&model.ProviderModel{
+		Provider:           provider,
+		Model:              modelID,
+		Tags:               model.ProviderModelTagText,
+		SupportedEndpoints: endpoint,
+	}).Error; err != nil {
+		t.Fatalf("create provider model: %v", err)
+	}
+	if err := db.Create(&model.ChannelModelEndpoint{
+		ChannelId: channelID,
+		Model:     modelID,
+		Endpoint:  endpoint,
+		Enabled:   true,
+	}).Error; err != nil {
+		t.Fatalf("create channel model endpoint: %v", err)
+	}
 }
 
 func TestEnqueueDueChannelHealthProbesUsesTrafficAndSilence(t *testing.T) {
@@ -32,18 +52,19 @@ func TestEnqueueDueChannelHealthProbesUsesTrafficAndSilence(t *testing.T) {
 	if err := db.Create(&rows).Error; err != nil {
 		t.Fatalf("create channel models: %v", err)
 	}
+	addHealthProbeEndpointFixture(t, db, "stale", "gpt-stale", "openai", model.ChannelModelEndpointChat)
 	if err := db.Create(&model.Log{Id: "recent-log", Type: model.LogTypeConsume, ChannelId: "recent", RequestModelName: "gpt-recent", CreatedAt: now - 60}).Error; err != nil {
 		t.Fatalf("create recent log: %v", err)
 	}
 	createdTargets := make([]string, 0)
-	created, err := enqueueDueChannelHealthProbes(db, db, now, 10, func(channelID string, modelID string) (bool, error) {
-		createdTargets = append(createdTargets, channelID+":"+modelID)
+	created, err := enqueueDueChannelHealthProbes(db, db, now, 10, func(channelID string, modelID string, endpoint string) (bool, error) {
+		createdTargets = append(createdTargets, channelID+":"+modelID+":"+endpoint)
 		return true, nil
 	})
 	if err != nil {
 		t.Fatalf("enqueue probes: %v", err)
 	}
-	if created != 1 || len(createdTargets) != 1 || createdTargets[0] != "stale:gpt-stale" {
+	if created != 1 || len(createdTargets) != 1 || createdTargets[0] != "stale:gpt-stale:/v1/chat/completions" {
 		t.Fatalf("created=%d targets=%v, want stale target", created, createdTargets)
 	}
 }
@@ -55,10 +76,14 @@ func TestEnqueueDueChannelHealthProbesRetriesFailureAfterBackoff(t *testing.T) {
 	if err := db.Create(&row).Error; err != nil {
 		t.Fatalf("create channel model: %v", err)
 	}
+	addHealthProbeEndpointFixture(t, db, "failed", "gpt-failed", "openai", model.ChannelModelEndpointChat)
 	if err := db.Create(&model.Log{Id: "failed-log", Type: model.LogTypeRelayFailure, ChannelId: "failed", RequestModelName: "gpt-failed", RelayErrorCode: "upstream_unavailable", CreatedAt: now - int64(20*time.Minute/time.Second)}).Error; err != nil {
 		t.Fatalf("create failure log: %v", err)
 	}
-	created, err := enqueueDueChannelHealthProbes(db, db, now, 10, func(channelID string, modelID string) (bool, error) {
+	created, err := enqueueDueChannelHealthProbes(db, db, now, 10, func(channelID string, modelID string, endpoint string) (bool, error) {
+		if endpoint != model.ChannelModelEndpointChat {
+			t.Fatalf("endpoint=%q, want %q", endpoint, model.ChannelModelEndpointChat)
+		}
 		return true, nil
 	})
 	if err != nil {
@@ -66,6 +91,78 @@ func TestEnqueueDueChannelHealthProbesRetriesFailureAfterBackoff(t *testing.T) {
 	}
 	if created != 1 {
 		t.Fatalf("created=%d, want 1", created)
+	}
+}
+
+func TestSelectChannelHealthProbeEndpointUsesEnabledOfficialEndpoint(t *testing.T) {
+	db := newChannelHealthProbeTestDB(t)
+	row := model.ChannelModel{
+		ChannelId:     "qwen-channel",
+		Model:         "qwen3.8-omni-flash",
+		UpstreamModel: "qwen3.8-omni-flash",
+		Provider:      "qwen",
+		Type:          model.ProviderModelTypeText,
+		Endpoint:      model.ChannelModelEndpointResponses,
+	}
+	if err := db.Create(&model.ProviderModel{
+		Provider:           "qwen",
+		Model:              row.Model,
+		Tags:               model.ProviderModelTagText,
+		SupportedEndpoints: model.ChannelModelEndpointChat,
+	}).Error; err != nil {
+		t.Fatalf("create provider model: %v", err)
+	}
+	if err := db.Create(&model.ChannelModelEndpoint{
+		ChannelId: "qwen-channel",
+		Model:     row.Model,
+		Endpoint:  model.ChannelModelEndpointChat,
+		Enabled:   true,
+	}).Error; err != nil {
+		t.Fatalf("create enabled endpoint: %v", err)
+	}
+
+	endpoint, err := selectChannelHealthProbeEndpoint(db, row)
+	if err != nil {
+		t.Fatalf("select endpoint: %v", err)
+	}
+	if endpoint != model.ChannelModelEndpointChat {
+		t.Fatalf("endpoint=%q, want %q", endpoint, model.ChannelModelEndpointChat)
+	}
+}
+
+func TestSelectChannelHealthProbeEndpointRequiresOfficialIntersection(t *testing.T) {
+	db := newChannelHealthProbeTestDB(t)
+	row := model.ChannelModel{
+		ChannelId:     "qwen-channel",
+		Model:         "qwen3.8-omni-flash",
+		UpstreamModel: "qwen3.8-omni-flash",
+		Provider:      "qwen",
+		Type:          model.ProviderModelTypeText,
+		Endpoint:      model.ChannelModelEndpointResponses,
+	}
+	if err := db.Create(&model.ProviderModel{
+		Provider:           "qwen",
+		Model:              row.Model,
+		Tags:               model.ProviderModelTagText,
+		SupportedEndpoints: model.ChannelModelEndpointChat,
+	}).Error; err != nil {
+		t.Fatalf("create provider model: %v", err)
+	}
+	if err := db.Create(&model.ChannelModelEndpoint{
+		ChannelId: "qwen-channel",
+		Model:     row.Model,
+		Endpoint:  model.ChannelModelEndpointResponses,
+		Enabled:   true,
+	}).Error; err != nil {
+		t.Fatalf("create enabled endpoint: %v", err)
+	}
+
+	endpoint, err := selectChannelHealthProbeEndpoint(db, row)
+	if err != nil {
+		t.Fatalf("select endpoint: %v", err)
+	}
+	if endpoint != "" {
+		t.Fatalf("endpoint=%q, want empty for no official intersection", endpoint)
 	}
 }
 

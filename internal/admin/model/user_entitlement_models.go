@@ -18,11 +18,13 @@ const (
 )
 
 // EntitlementUnavailableError means the user cannot currently obtain a
-// group-backed entitlement for the requested model. The underlying source may
-// be an expired package or an exhausted balance lot, so callers must not claim
-// that the model is unconfigured.
+// group-backed entitlement for the requested model. ModelUnavailable is set
+// only when the model is no longer present in any enabled group, which lets
+// callers distinguish a retired model from an expired package or exhausted
+// balance lot.
 type EntitlementUnavailableError struct {
-	Model string
+	Model            string
+	ModelUnavailable bool
 }
 
 func (e *EntitlementUnavailableError) Error() string {
@@ -469,6 +471,27 @@ func BuildUserEntitlementModels(ctx context.Context, userID string) (UserEntitle
 	return BuildUserEntitlementModelsWithDB(ctx, DB, userID)
 }
 
+func hasEnabledGroupModelWithDB(db *gorm.DB, modelName string) (bool, error) {
+	if db == nil {
+		return false, fmt.Errorf("database handle is nil")
+	}
+	candidates := NormalizeProviderLookupCandidates(modelName)
+	if len(candidates) == 0 {
+		return false, nil
+	}
+
+	var count int64
+	err := db.Table(GroupModelsTableName+" AS gm").
+		Joins(`JOIN groups AS g ON g.id = gm."group" AND g.enabled = ?`, true).
+		Where("gm.enabled = ?", true).
+		Where("gm.model IN ?", candidates).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
 func ResolveUserEntitlementGroupForModelWithDB(ctx context.Context, db *gorm.DB, userID string, modelName string) (string, *UserEntitlementSource, error) {
 	normalizedModel := strings.TrimSpace(modelName)
 	if normalizedModel == "" {
@@ -484,7 +507,14 @@ func ResolveUserEntitlementGroupForModelWithDB(ctx context.Context, db *gorm.DB,
 	}
 	sources := payload.ByModel[normalizedModel]
 	if len(sources) == 0 {
-		return "", nil, &EntitlementUnavailableError{Model: normalizedModel}
+		modelAvailable, err := hasEnabledGroupModelWithDB(db, normalizedModel)
+		if err != nil {
+			return "", nil, err
+		}
+		return "", nil, &EntitlementUnavailableError{
+			Model:            normalizedModel,
+			ModelUnavailable: !modelAvailable,
+		}
 	}
 	source := sources[0]
 	return source.GroupID, &source, nil

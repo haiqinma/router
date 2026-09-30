@@ -39,7 +39,8 @@ type Token struct {
 	UsedRequestCount      int64   `json:"used_request_count" gorm:"bigint;default:0"`
 	Models                *string `json:"models" gorm:"type:text"`
 	// RoutePolicy is the default source policy for models allowed by this token.
-	// A per-model rule owned by the same user takes precedence at relay time.
+	// A per-model rule can choose a stricter source boundary or a preference,
+	// but cannot relax personal_only or community_only on this token.
 	RoutePolicy string  `json:"route_policy" gorm:"type:varchar(32);not null;default:'personal_first'"`
 	Subnet      *string `json:"subnet" gorm:"default:''"`
 }

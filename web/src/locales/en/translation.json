@@ -1238,6 +1238,26 @@
         "editor": {
           "base_url": "Dedicated Access Address",
           "base_url_placeholder": "Leave empty to inherit the model API base URL"
+        },
+        "batch": {
+          "selected_count": "{{count}} selected",
+          "select_required": "Select at least one endpoint first.",
+          "enable_selected": "Enable Selected ({{count}})",
+          "disable_selected": "Disable Selected ({{count}})",
+          "enable_done": "Enabled {{success}}, failed {{failed}}, skipped {{skipped}}.",
+          "disable_done": "Disabled {{success}}, failed {{failed}}.",
+          "apply_policy": "Apply Policy ({{count}})",
+          "apply_policy_done": "Applied {{success}}, failed {{failed}}.",
+          "clear_policies_selected": "Clear Policies ({{count}})",
+          "clear_policies_confirm": "Clear all policies on the selected {{count}} endpoint(s)? These rules take effect immediately once removed.",
+          "clear_policies_none": "The selected endpoints have no policies to clear.",
+          "clear_policies_done": "Cleared {{success}} policies, failed {{failed}}.",
+          "apply_modal": {
+            "title": "Batch Apply Endpoint Policy",
+            "hint": "Pick a policy template to apply to every selected endpoint. A template with the same key overwrites the existing policy of that kind on each endpoint, without creating duplicates.",
+            "target_summary": "Will apply to the {{count}} selected endpoint(s).",
+            "apply": "Apply"
+          }
         }
       },
       "endpoint_policies": {
@@ -2294,6 +2314,7 @@
         "failure_summary": "This request ultimately failed. The last attempted channel was {{channel}}, requested model {{model}}, after {{fallbackCount}} fallback(s).",
         "user_summary": "This request used published model {{model}}, after {{fallbackCount}} fallback(s), using estimate source {{source}} and settlement mode {{settlement}}.",
         "user_failure_summary": "This request ultimately failed. Requested model {{model}}, after {{fallbackCount}} fallback(s).",
+        "user_source_summary": "This request started with {{policy}}. The initial source was {{initialSource}}, the actual source was {{actualSource}}, with {{fallbackCount}} fallback(s). Community calls are billed through the package or balance.",
         "attempt_title": "Attempt {{attempt}}",
         "outcome": {
           "succeeded": "Succeeded",
@@ -2328,6 +2349,26 @@
           "fallback_count": "Fallback Count",
           "relay_error": "Final Error",
           "fallback_attempts": "Fallback Attempts"
+        },
+        "user_sources": {
+          "fields": {
+            "source_policy": "Effective source policy",
+            "initial_source": "Initial source",
+            "actual_source": "Actual source",
+            "personal_provider": "Personal provider"
+          },
+          "policy": {
+            "personal_first": "Personal first, community fallback",
+            "personal_only": "Personal provider only",
+            "community_only": "Community package only",
+            "community_first": "Community first",
+            "unknown": "Not recorded"
+          },
+          "source": {
+            "personal_provider": "Personal provider",
+            "community_package": "Community service",
+            "unknown": "Not recorded"
+          }
         },
         "decision": {
           "source": {

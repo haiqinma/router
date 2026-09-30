@@ -2,11 +2,40 @@ package model
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
+
+func TestResolveUserEntitlementGroupMarksModelUnavailableWhenNotInAnyEnabledGroup(t *testing.T) {
+	db := newUserEntitlementModelsTestDB(t)
+	seedEntitlementGroup(t, db, "group-active", "Active Group", "gpt-5.5")
+
+	_, _, err := ResolveUserEntitlementGroupForModelWithDB(context.Background(), db, "user-1", "gpt-5.4")
+	var entitlementErr *EntitlementUnavailableError
+	if !errors.As(err, &entitlementErr) {
+		t.Fatalf("error=%v, want EntitlementUnavailableError", err)
+	}
+	if !entitlementErr.ModelUnavailable {
+		t.Fatalf("ModelUnavailable=false, want true")
+	}
+}
+
+func TestResolveUserEntitlementGroupKeepsUserEntitlementFailureAsAvailableModel(t *testing.T) {
+	db := newUserEntitlementModelsTestDB(t)
+	seedEntitlementGroup(t, db, "group-active", "Active Group", "gpt-5.4")
+
+	_, _, err := ResolveUserEntitlementGroupForModelWithDB(context.Background(), db, "user-1", "gpt-5.4")
+	var entitlementErr *EntitlementUnavailableError
+	if !errors.As(err, &entitlementErr) {
+		t.Fatalf("error=%v, want EntitlementUnavailableError", err)
+	}
+	if entitlementErr.ModelUnavailable {
+		t.Fatalf("ModelUnavailable=true, want false for a model still in an enabled group")
+	}
+}
 
 func newUserEntitlementModelsTestDB(t *testing.T) *gorm.DB {
 	t.Helper()

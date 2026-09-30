@@ -68,6 +68,13 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 			},
 		},
 		{
+			Version:     "202609291130_personal_provider_connection_health",
+			Description: "add personal provider connection verification health fields",
+			Up: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&PersonalProviderConnection{})
+			},
+		},
+		{
 			Version:     "202608081100_identity_passkey_login",
 			Description: "add wallet identity passkey PKCE login sessions",
 			Up: func(tx *gorm.DB) error {

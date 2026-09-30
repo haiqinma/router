@@ -1238,6 +1238,26 @@
         "editor": {
           "base_url": "独立访问地址",
           "base_url_placeholder": "留空时继承模型访问地址"
+        },
+        "batch": {
+          "selected_count": "已选 {{count}} 个端点",
+          "select_required": "请先勾选要操作的端点。",
+          "enable_selected": "启用所选 ({{count}})",
+          "disable_selected": "禁用所选 ({{count}})",
+          "enable_done": "已启用 {{success}} 个，失败 {{failed}} 个，跳过 {{skipped}} 个。",
+          "disable_done": "已禁用 {{success}} 个，失败 {{failed}} 个。",
+          "apply_policy": "套用策略 ({{count}})",
+          "apply_policy_done": "已套用 {{success}} 个，失败 {{failed}} 个。",
+          "clear_policies_selected": "清除策略 ({{count}})",
+          "clear_policies_confirm": "确认清除所选 {{count}} 个端点上的全部策略？清除后这些规则将立即失效。",
+          "clear_policies_none": "所选端点没有可清除的策略。",
+          "clear_policies_done": "已清除 {{success}} 条策略，失败 {{failed}} 条。",
+          "apply_modal": {
+            "title": "批量套用端点策略",
+            "hint": "选择一个策略模板，将其套用到所有勾选的端点。同名模板会覆盖端点上已有的同类策略，不会产生重复。",
+            "target_summary": "将套用到已选的 {{count}} 个端点。",
+            "apply": "套用"
+          }
         }
       },
       "endpoint_policies": {
@@ -2294,6 +2314,7 @@
         "failure_summary": "本次请求最终失败，最后尝试渠道为 {{channel}}，请求模型为 {{model}}，经历 {{fallbackCount}} 次 fallback。",
         "user_summary": "本次请求使用发布模型 {{model}}，经历 {{fallbackCount}} 次 fallback，估算来源为 {{source}}，结算模式为 {{settlement}}。",
         "user_failure_summary": "本次请求最终失败，请求模型为 {{model}}，经历 {{fallbackCount}} 次 fallback。",
+        "user_source_summary": "本次请求按 {{policy}} 发起，初始来源为 {{initialSource}}，实际来源为 {{actualSource}}，经历 {{fallbackCount}} 次 fallback。社区服务调用按套餐或余额结算。",
         "attempt_title": "第 {{attempt}} 次尝试",
         "outcome": {
           "succeeded": "成功",
@@ -2328,6 +2349,26 @@
           "fallback_count": "Fallback 次数",
           "relay_error": "最终错误",
           "fallback_attempts": "Fallback 尝试"
+        },
+        "user_sources": {
+          "fields": {
+            "source_policy": "生效来源策略",
+            "initial_source": "初始来源",
+            "actual_source": "实际来源",
+            "personal_provider": "个人供应商"
+          },
+          "policy": {
+            "personal_first": "个人优先，社区服务回退",
+            "personal_only": "仅个人供应商",
+            "community_only": "仅社区服务",
+            "community_first": "社区服务优先",
+            "unknown": "未记录"
+          },
+          "source": {
+            "personal_provider": "个人供应商",
+            "community_package": "社区服务",
+            "unknown": "未记录"
+          }
         },
         "decision": {
           "source": {

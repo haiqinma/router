@@ -1,7 +1,9 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   AppAlert,
+  AppButton,
   AppDetailSection,
+  AppFilterHeader,
   AppIcon,
   AppPopconfirm,
   AppSwitch,
@@ -9,6 +11,7 @@ import {
   AppTableActionButton,
   AppTooltip,
 } from '../../../router-ui';
+import ChannelEndpointBatchPolicyModal from './ChannelEndpointBatchPolicyModal';
 
 const formatTimestamp = (value) => {
   const timestamp = Number(value || 0);
@@ -32,6 +35,16 @@ const resolvePolicyTemplateLabel = (t, templateKey) => {
   }
 };
 
+const buildEmptyBatchPolicyDraft = () => ({
+  template_key: '',
+  access_base_url: '',
+  enabled: true,
+  reason: '',
+  capabilities: '',
+  request_policy: '',
+  response_policy: '',
+});
+
 const ChannelDetailEndpointsTab = ({
   t,
   columnWidths,
@@ -50,7 +63,183 @@ const ChannelDetailEndpointsTab = ({
   endpointPolicyDeletingKey,
   removeEndpointPolicy = () => {},
   openEndpointPolicyEditor,
+  endpointBatchMutating = false,
+  handleBatchUpdateEndpointCapabilities = () => {},
+  handleBatchClearEndpointPolicies = () => {},
+  handleBatchApplyEndpointPolicy = () => {},
+  endpointPolicyTemplates = [],
 }) => {
+  const [batchRowKeys, setBatchRowKeys] = useState([]);
+  const [applyModalOpen, setApplyModalOpen] = useState(false);
+  const [applyDraft, setApplyDraft] = useState(buildEmptyBatchPolicyDraft);
+  const [selectedApplyTemplate, setSelectedApplyTemplate] = useState('');
+
+  const batchRows = useMemo(() => {
+    const selectedKeySet = new Set(batchRowKeys);
+    return channelEndpoints.filter((row) =>
+      selectedKeySet.has(buildChannelEndpointKey(row.model, row.endpoint)),
+    );
+  }, [batchRowKeys, buildChannelEndpointKey, channelEndpoints]);
+
+  const batchBusy = endpointBatchMutating;
+  const batchCount = batchRows.length;
+
+  const clearSelection = () => setBatchRowKeys([]);
+
+  const runBatchToggle = async (enabled) => {
+    const ok = await handleBatchUpdateEndpointCapabilities(batchRows, enabled);
+    if (ok) {
+      clearSelection();
+    }
+  };
+
+  const runBatchClearPolicies = async () => {
+    const ok = await handleBatchClearEndpointPolicies(batchRows);
+    if (ok) {
+      clearSelection();
+    }
+  };
+
+  const templateOptions = useMemo(
+    () =>
+      (Array.isArray(endpointPolicyTemplates) ? endpointPolicyTemplates : []).map(
+        (template) => ({
+          key: template.value,
+          value: template.value,
+          text: template.text,
+        }),
+      ),
+    [endpointPolicyTemplates],
+  );
+
+  const applyBatchTemplate = (templateValue) => {
+    const nextValue = (templateValue || '').toString();
+    if (nextValue === '') {
+      setSelectedApplyTemplate('');
+      setApplyDraft((prev) => ({
+        ...buildEmptyBatchPolicyDraft(),
+        enabled: prev.enabled,
+      }));
+      return;
+    }
+    const template = (
+      Array.isArray(endpointPolicyTemplates) ? endpointPolicyTemplates : []
+    ).find((item) => item.value === nextValue);
+    if (!template) {
+      return;
+    }
+    setSelectedApplyTemplate(nextValue);
+    setApplyDraft((prev) => ({
+      ...prev,
+      ...template.buildDraft(prev),
+      template_key: nextValue,
+    }));
+  };
+
+  const openApplyModal = () => {
+    setApplyDraft(buildEmptyBatchPolicyDraft());
+    setSelectedApplyTemplate('');
+    setApplyModalOpen(true);
+  };
+
+  const closeApplyModal = () => {
+    if (batchBusy) {
+      return;
+    }
+    setApplyModalOpen(false);
+    setApplyDraft(buildEmptyBatchPolicyDraft());
+    setSelectedApplyTemplate('');
+  };
+
+  const runBatchApply = async () => {
+    const ok = await handleBatchApplyEndpointPolicy(batchRows, applyDraft);
+    if (ok) {
+      setApplyModalOpen(false);
+      setApplyDraft(buildEmptyBatchPolicyDraft());
+      setSelectedApplyTemplate('');
+      clearSelection();
+    }
+  };
+
+  const tableRowSelection = {
+    selectedRowKeys: batchRowKeys,
+    getCheckboxProps: () => ({ disabled: batchBusy }),
+    onChange: (keys) => setBatchRowKeys(Array.isArray(keys) ? keys : []),
+  };
+
+  const renderBatchToolbar = () => (
+    <AppFilterHeader
+      className='router-toolbar-compact'
+      actions={
+        <>
+          <span className='router-toolbar-meta'>
+            {t('channel.edit.endpoint_capabilities.batch.selected_count', {
+              count: batchCount,
+            })}
+          </span>
+          <AppButton
+            type='button'
+            color='blue'
+            className='router-page-button'
+            loading={batchBusy}
+            disabled={batchCount === 0 || batchBusy || endpointCapabilityReadonly}
+            onClick={() => runBatchToggle(true)}
+          >
+            {t('channel.edit.endpoint_capabilities.batch.enable_selected', {
+              count: batchCount,
+            })}
+          </AppButton>
+          <AppButton
+            type='button'
+            className='router-page-button'
+            loading={batchBusy}
+            disabled={batchCount === 0 || batchBusy || endpointCapabilityReadonly}
+            onClick={() => runBatchToggle(false)}
+          >
+            {t('channel.edit.endpoint_capabilities.batch.disable_selected', {
+              count: batchCount,
+            })}
+          </AppButton>
+          <AppButton
+            type='button'
+            className='router-page-button'
+            disabled={batchCount === 0 || batchBusy || endpointPolicyReadonly}
+            onClick={openApplyModal}
+          >
+            {t('channel.edit.endpoint_capabilities.batch.apply_policy', {
+              count: batchCount,
+            })}
+          </AppButton>
+          <AppPopconfirm
+            title={t(
+              'channel.edit.endpoint_capabilities.batch.clear_policies_confirm',
+              { count: batchCount },
+            )}
+            okButtonProps={{ danger: true }}
+            okText={t('common.confirm')}
+            cancelText={t('common.cancel')}
+            onConfirm={runBatchClearPolicies}
+            disabled={batchCount === 0 || batchBusy || endpointPolicyReadonly}
+          >
+            <span>
+              <AppButton
+                type='button'
+                color='red'
+                className='router-page-button'
+                loading={batchBusy}
+                disabled={batchCount === 0 || batchBusy || endpointPolicyReadonly}
+              >
+                {t(
+                  'channel.edit.endpoint_capabilities.batch.clear_policies_selected',
+                  { count: batchCount },
+                )}
+              </AppButton>
+            </span>
+          </AppPopconfirm>
+        </>
+      }
+    />
+  );
   const buildDisableInfo = (row) => {
     const parts = [];
     const disabledBy = (row?.disabled_by || '').toString().trim();
@@ -93,10 +282,12 @@ const ChannelDetailEndpointsTab = ({
           className='router-section-message'
           title={t('channel.edit.endpoint_capabilities.hint')}
         />
+        {renderBatchToolbar()}
         <AppTable
           className='router-detail-table router-channel-endpoint-capability-table'
           pagination={false}
           scroll={{ x: 680 }}
+          rowSelection={tableRowSelection}
           locale={{
             emptyText: channelEndpointsLoading
               ? t('channel.edit.endpoint_capabilities.loading')
@@ -148,6 +339,7 @@ const ChannelDetailEndpointsTab = ({
                 const disabled =
                   endpointCapabilityReadonly ||
                   isMutating ||
+                  batchBusy ||
                   (!!blockedReason && row.enabled !== true);
                 return (
                   <AppSwitch
@@ -223,6 +415,7 @@ const ChannelDetailEndpointsTab = ({
                               disabled={
                                 endpointPolicyReadonly ||
                                 deleting ||
+                                batchBusy ||
                                 policyID === ''
                               }
                             >
@@ -233,6 +426,7 @@ const ChannelDetailEndpointsTab = ({
                                   disabled={
                                     endpointPolicyReadonly ||
                                     deleting ||
+                                    batchBusy ||
                                     policyID === ''
                                   }
                                 >
@@ -261,7 +455,7 @@ const ChannelDetailEndpointsTab = ({
                 <AppTableActionButton
                   icon='plus'
                   title={t('channel.edit.endpoint_policies.add_action')}
-                  disabled={endpointPolicyReadonly}
+                  disabled={endpointPolicyReadonly || batchBusy}
                   onClick={() => openEndpointPolicyEditor(row)}
                 />
               ),
@@ -279,6 +473,19 @@ const ChannelDetailEndpointsTab = ({
           </div>
         )}
       </div>
+      <ChannelEndpointBatchPolicyModal
+        t={t}
+        open={applyModalOpen}
+        onClose={closeApplyModal}
+        saving={batchBusy}
+        targetCount={batchCount}
+        templateOptions={templateOptions}
+        selectedTemplate={selectedApplyTemplate}
+        applyTemplate={applyBatchTemplate}
+        draft={applyDraft}
+        setDraft={setApplyDraft}
+        onApply={runBatchApply}
+      />
     </AppDetailSection>
   );
 };
