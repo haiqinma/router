@@ -441,10 +441,15 @@ func Distribute() func(c *gin.Context) {
 			statusCode := http.StatusServiceUnavailable
 			errorCode := "request_aborted"
 			reason := "entitlement_resolution_failed"
-			if errors.As(groupErr, new(*model.EntitlementUnavailableError)) {
+			var entitlementErr *model.EntitlementUnavailableError
+			if errors.As(groupErr, &entitlementErr) {
 				statusCode = http.StatusForbidden
 				errorCode = "entitlement_unavailable"
 				reason = "entitlement_unavailable"
+				if entitlementErr.ModelUnavailable {
+					c.Set(ctxkey.RelayModelUnavailable, true)
+					reason = "model_unavailable"
+				}
 			}
 			c.Set(ctxkey.RelayErrorCode, errorCode)
 			logger.RelayWarnf(ctx, "DISTRIBUTE decision=abort reason=%s user_id=%s model=%s endpoint=%s status=%d error=%q", reason, userId, requestModel, c.Request.URL.Path, statusCode, groupErr.Error())

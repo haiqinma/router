@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -51,6 +52,8 @@ func RelayLogger() gin.HandlerFunc {
 			String("error", c.GetString(ctxkey.RelayError))
 
 		switch {
+		case shouldWarnForUnavailableModel(c, status):
+			logger.RelayWarnf(c.Request.Context(), end.Build())
 		case c.GetString(ctxkey.RelayTermination) != "":
 			logger.RelayWarnf(c.Request.Context(), end.Build())
 		case status >= 500 || c.GetString(ctxkey.RelayError) != "":
@@ -61,6 +64,14 @@ func RelayLogger() gin.HandlerFunc {
 			logger.RelayInfof(c.Request.Context(), end.Build())
 		}
 	}
+}
+
+func shouldWarnForUnavailableModel(c *gin.Context, status int) bool {
+	if c == nil || status != http.StatusForbidden {
+		return false
+	}
+	return c.GetBool(ctxkey.RelayModelUnavailable) &&
+		c.GetString(ctxkey.RelayErrorCode) == "entitlement_unavailable"
 }
 
 func relayModeName(path string) string {

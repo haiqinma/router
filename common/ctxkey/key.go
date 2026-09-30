@@ -38,6 +38,7 @@ const (
 	RelayError                  = "relay_error"
 	RelayErrorType              = "relay_error_type"
 	RelayErrorCode              = "relay_error_code"
+	RelayModelUnavailable       = "relay_model_unavailable"
 	RelayTermination            = "relay_termination"
 	ProviderRoutingPolicy       = "provider_routing_policy"
 	PersonalProviderID          = "personal_provider_id"
