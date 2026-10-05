@@ -186,6 +186,7 @@ const ChannelDetailOverviewTab = ({
   onSaveBillingProfile,
   onRefreshBilling,
   channelID,
+  onNavigateTab,
 }) => {
   const billingReadonly = !detailBillingEditing || billingSubmitting;
   const selectedBillingSource = detailBillingEditing
@@ -481,6 +482,11 @@ const ChannelDetailOverviewTab = ({
         billingError={billingError}
         billingSubmitting={billingSubmitting}
         onRefreshBilling={onRefreshBilling}
+        onViewProcurement={
+          typeof onNavigateTab === 'function'
+            ? () => onNavigateTab('procurement')
+            : undefined
+        }
         timestamp2string={timestamp2string}
         channelID={channelID}
       />

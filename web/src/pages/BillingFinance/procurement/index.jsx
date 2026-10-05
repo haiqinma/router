@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -186,11 +186,30 @@ function BillingProcurementReport({ embedded = false }) {
   const [retryItems, setRetryItems] = useState([]);
   const [retryLoading, setRetryLoading] = useState(false);
   const [retryingLogID, setRetryingLogID] = useState('');
-  const channelProcurementPath = useCallback((channelID) => {
-    const params = new URLSearchParams(location.search);
-    params.set('channel_id', String(channelID || ''));
-    return `${location.pathname}?${params.toString()}`;
-  }, [location.pathname, location.search]);
+  const channelProcurementPath = useCallback(
+    (channelID) =>
+      `/admin/channel/detail/${encodeURIComponent(
+        String(channelID || '')
+      )}?tab=procurement`,
+    []
+  );
+  // Legacy bookmarks pointed per-channel procurement at the finance tab
+  // (`?tab=procurement&channel_id=…`). That drill now lives in the channel
+  // detail tab, so redirect those old links on mount.
+  const legacyChannelRedirectedRef = useRef(false);
+  useEffect(() => {
+    if (legacyChannelRedirectedRef.current) {
+      return;
+    }
+    legacyChannelRedirectedRef.current = true;
+    const bookmarkedChannelID = new URLSearchParams(location.search).get(
+      'channel_id'
+    );
+    if (bookmarkedChannelID) {
+      navigate(channelProcurementPath(bookmarkedChannelID), { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const managedChannelLabel = useMemo(() => {
     const selected = channelOptions.find(
       (item) => String(item?.value || '') === managedChannelID,

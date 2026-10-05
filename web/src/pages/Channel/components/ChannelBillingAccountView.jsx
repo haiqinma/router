@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import {
   AppButton,
   AppDetailSection,
@@ -50,8 +49,8 @@ const ChannelBillingAccountView = ({
   billingError,
   billingSubmitting,
   onRefreshBilling,
+  onViewProcurement,
   timestamp2string,
-  channelID,
 }) => {
   const quotaItems = Array.isArray(billingSummary?.quota_items)
     ? billingSummary.quota_items
@@ -64,9 +63,15 @@ const ChannelBillingAccountView = ({
         titleTag='span'
         headerEnd={
           <div className='router-billing-quota-status-actions'>
-            <Link to={`/admin/finance?tab=procurement${channelID ? `&channel_id=${encodeURIComponent(channelID)}` : ''}`}>
-              {t('channel.edit.billing.view_procurement')}
-            </Link>
+            {typeof onViewProcurement === 'function' ? (
+              <AppButton
+                type='button'
+                className='router-inline-button'
+                onClick={onViewProcurement}
+              >
+                {t('channel.edit.billing.view_procurement')}
+              </AppButton>
+            ) : null}
             <span className='router-billing-snapshot-time'>
               {billingSummary?.latest_snapshot_at
                 ? timestamp2string(billingSummary.latest_snapshot_at)

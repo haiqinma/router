@@ -4560,6 +4560,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
                 onSaveBillingProfile={saveDetailBillingProfile}
                 onRefreshBilling={refreshChannelBillingNow}
                 channelID={channelId}
+                onNavigateTab={goToDetailTab}
               />
             )}
             {showStepTwo && inputs.protocol !== 'proxy' && (
