@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import UnitDropdown from '../../../components/UnitDropdown';
 import { showInfo } from '../../../helpers';
 import {
@@ -21,562 +20,44 @@ import {
   AppTag,
   AppTooltip,
 } from '../../../router-ui';
+import {
+  buildManualPurchaseRecord,
+  buildManualPurchaseRecordFromSnapshot,
+  buildManualQuotaItem,
+  buildManualQuotaItemFromSnapshotItem,
+  buildProcurementCostDraft,
+  ensureUnitOption,
+  entitlementTypeOptions,
+  entitlementTypePatch,
+  entitlementTypeValue,
+  formatNumberText,
+  formatProcurementCapacityText,
+  formatProcurementCostText,
+  formatProcurementResourceText,
+  formatProcurementScopeText,
+  formatProcurementSourceText,
+  formatProcurementUnitCostText,
+  formatUsageText,
+  isPurchaseCurrencyCNY,
+  MANUAL_CURRENCY_OPTIONS,
+  normalizeManualValidityInput,
+  procurementScopeOptions,
+  procurementStatusColor,
+  PROCUREMENT_CURRENCY_OPTIONS,
+  resolveManualAmountLabel,
+  resolveManualItemAmounts,
+  resolveManualResourceHint,
+  shouldShowManualAmountFields,
+  toUnixTimestamp,
+} from './channelBilling.helpers';
 
-const buildManualQuotaItem = () => ({
-  resource_type: 'quota',
-  quota_type: 'total',
-  quota_label: '',
-  limit_amount: null,
-  used_amount: 0,
-  remaining_amount: null,
-  currency: 'USD',
-  reset_at_input: '',
-  expires_at_input: '',
-  source_ref: 'manual',
-});
-
-const toDateTimeLocalValue = (date) => {
-  const pad = (value) => String(value).padStart(2, '0');
-  return [
-    date.getFullYear(),
-    '-',
-    pad(date.getMonth() + 1),
-    '-',
-    pad(date.getDate()),
-    'T',
-    pad(date.getHours()),
-    ':',
-    pad(date.getMinutes()),
-  ].join('');
-};
-
-const buildManualPurchaseRecord = () => ({
-  channel_id: '',
-  purchase_at_input: toDateTimeLocalValue(new Date()),
-  purchase_currency: 'CNY',
-  purchase_amount: null,
-  purchase_fx_rate: 1,
-  purchase_cost_amount: null,
-  entitlement_name: '',
-  event_type: 'purchase',
-  parent_snapshot_id: '',
-  old_batch_disposition: 'keep',
-  valid_from_input: '',
-  valid_until_input: '',
-});
-
-const MANUAL_CURRENCY_OPTIONS = ['USD', 'CNY', 'YYC'].map((value) => ({
-  value,
-  label: value,
-}));
-
-const PROCUREMENT_CURRENCY_OPTIONS = ['CNY', 'USD'].map((value) => ({
-  value,
-  label: value,
-}));
-
-const procurementScopeOptions = (t) => [
-  { value: 'global', label: t('channel.edit.billing.procurement_scopes.global') },
-  { value: 'model', label: t('channel.edit.billing.procurement_scopes.model') },
-];
-
-const ensureUnitOption = (options, value) => {
-  const normalized = (value || '').toString().trim().toUpperCase();
-  const items = Array.isArray(options) ? options : [];
-  if (!normalized || items.some((option) => option?.value === normalized)) {
-    return items;
-  }
-  return [...items, { value: normalized, label: normalized }];
-};
-
-const entitlementTypeOptions = (t) => [
-  { value: 'balance', label: t('channel.edit.billing.entitlement_types.balance') },
-  { value: 'credit', label: t('channel.edit.billing.entitlement_types.credit') },
-  { value: 'quota:daily', label: t('channel.edit.billing.entitlement_types.daily') },
-  { value: 'quota:weekly', label: t('channel.edit.billing.entitlement_types.weekly') },
-  { value: 'quota:monthly', label: t('channel.edit.billing.entitlement_types.monthly') },
-  { value: 'quota:total', label: t('channel.edit.billing.entitlement_types.total') },
-];
-
-const entitlementTypeValue = (item) => {
-  const resourceType = normalizeBillingValue(item?.resource_type) || 'quota';
-  if (resourceType !== 'quota') return resourceType;
-  return `quota:${normalizeBillingValue(item?.quota_type) || 'total'}`;
-};
-
-const entitlementTypePatch = (value) => {
-  const normalized = (value || 'quota:total').toString();
-  if (normalized.startsWith('quota:')) {
-    return { resource_type: 'quota', quota_type: normalized.slice(6) || 'total' };
-  }
-  return { resource_type: normalized, quota_type: normalized === 'plan' ? 'plan' : 'total' };
-};
-
-const formatAmountText = (item) => {
-  const amount = Number(item?.amount || 0);
-  const currency = (item?.currency || '').toString().trim();
-  if (currency !== '') {
-    return `${amount} ${currency}`;
-  }
-  return `${amount}`;
-};
-
-const normalizeBillingValue = (value) =>
-  (value || '').toString().trim().toLowerCase();
-
-const buildQuotaItemRowKey = (row) =>
-  [
-    row?.id || '',
-    row?.quota_label || '',
-    row?.quota_type || '',
-    row?.resource_type || '',
-    row?.billing_cycle || '',
-  ].join('-');
-
-const isPeriodicQuotaType = (quotaType) =>
-  ['daily', 'weekly', 'monthly'].includes(normalizeBillingValue(quotaType));
-
-const isPlanEntitlement = (item) =>
-  normalizeBillingValue(item?.resource_type) === 'plan';
-
-const isManualPlanItem = (item) =>
-  normalizeBillingValue(item?.resource_type) === 'plan';
-
-const isManualPeriodicItem = (item) =>
-  normalizeBillingValue(item?.resource_type) === 'quota' &&
-  isPeriodicQuotaType(item?.quota_type);
-
-const shouldShowManualAmountFields = (item) => !isManualPlanItem(item);
-
-const resolveManualResourceHint = (item, t) => {
-  const resourceType = normalizeBillingValue(item?.resource_type);
-  if (resourceType === 'plan') {
-    return t('channel.edit.billing.manual_resource_hints.plan');
-  }
-  if (resourceType === 'credit') {
-    return t('channel.edit.billing.manual_resource_hints.credit');
-  }
-  if (resourceType === 'balance') {
-    return t('channel.edit.billing.manual_resource_hints.balance');
-  }
-  if (resourceType === 'quota') {
-    const quotaType = normalizeBillingValue(item?.quota_type);
-    if (quotaType === 'daily' || quotaType === 'weekly' || quotaType === 'monthly') {
-      return t('channel.edit.billing.manual_resource_hints.periodic');
-    }
-    if (quotaType === 'total') {
-      return t('channel.edit.billing.manual_resource_hints.total');
-    }
-    return t('channel.edit.billing.manual_resource_hints.quota');
-  }
-  return t('channel.edit.billing.manual_resource_hints.default');
-};
-
-const resolveManualAmountLabel = (item, t) => {
-  const resourceType = normalizeBillingValue(item?.resource_type);
-  if (resourceType === 'plan') {
-    return t('channel.edit.billing.manual_quota_expires_at');
-  }
-  if (resourceType === 'balance') {
-    return t('channel.edit.billing.manual_balance_amount');
-  }
-  if (resourceType === 'credit') {
-    return t('channel.edit.billing.manual_credit_amount');
-  }
-  if (isManualPeriodicItem(item)) {
-    return t('channel.edit.billing.manual_periodic_quota_amount');
-  }
-  return t('channel.edit.billing.manual_quota_limit_amount');
-};
-
-const resolveManualItemAmounts = (item) => {
-  if (isManualPlanItem(item)) {
-    return {
-      amount: 0,
-      limit_amount: 0,
-      used_amount: 0,
-      remaining_amount: 0,
-    };
-  }
-  const limitAmount = Number(item?.limit_amount || 0);
-  const usedAmount = Number(item?.used_amount || 0);
-  let remainingAmount = Number(item?.remaining_amount || 0);
-  if (remainingAmount <= 0 && limitAmount > 0 && usedAmount >= 0) {
-    remainingAmount = Math.max(limitAmount - usedAmount, 0);
-  }
-  const amount = remainingAmount > 0 ? remainingAmount : limitAmount;
-  return {
-    amount,
-    limit_amount: limitAmount,
-    used_amount: usedAmount,
-    remaining_amount: remainingAmount,
-  };
-};
-
-const classifyEntitlementItem = (item, t) => {
-  const resourceType = normalizeBillingValue(item?.resource_type);
-  const quotaType = normalizeBillingValue(item?.quota_type);
-  if (resourceType === 'plan') {
-    return {
-      key: 'plan',
-      color: 'purple',
-      label: t('channel.edit.billing.entitlement_kinds.package'),
-    };
-  }
-  if (isPeriodicQuotaType(quotaType)) {
-    return {
-      key: 'periodic',
-      color: 'blue',
-      label: t(`channel.edit.billing.quota_types.${quotaType}`, {
-        defaultValue: quotaType,
-      }),
-    };
-  }
-  if (
-    resourceType === 'balance' ||
-    resourceType === 'credit' ||
-    quotaType === 'total'
-  ) {
-    return {
-      key: 'metered',
-      color: 'cyan',
-      label: t('channel.edit.billing.entitlement_kinds.metered'),
-    };
-  }
-  return {
-    key: 'custom',
-    color: 'default',
-    label: t('channel.edit.billing.entitlement_kinds.custom'),
-  };
-};
-
-const formatExpiresAtText = (item, timestamp2string, t) => {
-  const expiresAt = Number(item?.expires_at || 0);
-  if (expiresAt <= 0) {
-    return t('channel.edit.billing.no_expire');
-  }
-  return timestamp2string(expiresAt);
-};
-
-const formatValidityText = (item, timestamp2string, t) => {
-  const expiresAt = Number(item?.expires_at || 0);
-  const resetAt = Number(item?.reset_at || 0);
-  const parts = [];
-  if (expiresAt > 0) {
-    parts.push(
-      `${t('channel.edit.billing.quota_table.valid_until')}: ${timestamp2string(
-        expiresAt
-      )}`
-    );
-  }
-  if (resetAt > 0) {
-    parts.push(
-      `${t('channel.edit.billing.quota_table.next_reset')}: ${timestamp2string(
-        resetAt
-      )}`
-    );
-  }
-  if (parts.length === 0) {
-    return t('channel.edit.billing.no_expire');
-  }
-  return parts.join(' / ');
-};
-
-const formatUsageText = (item) => {
-  const remaining = Number(item?.remaining_amount || 0);
-  const limit = Number(item?.limit_amount || 0);
-  const currency = (item?.currency || '').toString().trim();
-  if (limit > 0) {
-    return `${remaining} / ${limit}${currency ? ` ${currency}` : ''}`;
-  }
-  return formatAmountText({
-    amount: remaining || item?.amount || 0,
-    currency,
-  });
-};
-
-const formatEntitlementUsageText = (item, t) => {
-  if (isPlanEntitlement(item)) {
-    return formatItemStatusText(item, t);
-  }
-  return formatUsageText(item);
-};
-
-const formatUsedText = (item) => {
-  if (isPlanEntitlement(item)) {
-    return '-';
-  }
-  const used = Number(item?.used_amount || 0);
-  const currency = (item?.currency || '').toString().trim();
-  if (used <= 0) {
-    return '-';
-  }
-  return `${used}${currency ? ` ${currency}` : ''}`;
-};
-
-const formatRemainingRatioText = (item) => {
-  if (isPlanEntitlement(item)) {
-    return '-';
-  }
-  const limit = Number(item?.limit_amount || 0);
-  const remaining = Number(item?.remaining_amount || 0);
-  if (!(limit > 0)) {
-    return '-';
-  }
-  return `${((remaining / limit) * 100).toFixed(2)}%`;
-};
-
-const formatItemStatusText = (item, t) => {
-  const status = (item?.status || '').toString().trim().toLowerCase();
-  switch (status) {
-    case 'low':
-      return t('channel.edit.billing.quota_table.status_low');
-    case 'depleted':
-      return t('channel.edit.billing.quota_table.status_depleted');
-    case 'expired':
-      return t('channel.edit.billing.quota_table.status_expired');
-    case 'active':
-    default:
-      return t('channel.edit.billing.quota_table.status_active');
-  }
-};
-
-const statusColor = (item) => {
-  const status = normalizeBillingValue(item?.status);
-  switch (status) {
-    case 'low':
-      return 'orange';
-    case 'depleted':
-    case 'expired':
-      return 'red';
-    case 'active':
-    default:
-      return 'green';
-  }
-};
-
-const renderEntitlementKind = (row, t) => {
-  const kind = classifyEntitlementItem(row, t);
-  return <AppTag color={kind.color}>{kind.label}</AppTag>;
-};
-
-const renderQuotaLabel = (value, row, t) => {
-  return (
-    value ||
-    t(`channel.edit.billing.quota_types.${row?.quota_type || 'custom'}`, {
-      defaultValue: row?.quota_type || '-',
-    })
-  );
-};
-
-const renderStatus = (row, t) => {
-  const status = normalizeBillingValue(row?.status);
-  if (!status || status === 'depleted') {
-    return '-';
-  }
-  return <AppTag color={statusColor(row)}>{formatItemStatusText(row, t)}</AppTag>;
-};
-
-const formatNumberText = (value, digits = 6) => {
-  const amount = Number(value || 0);
-  if (!Number.isFinite(amount)) {
-    return '-';
-  }
-  return Number(amount.toFixed(digits)).toString();
-};
-
-const formatProcurementCapacityText = (row, t) => {
-  const remaining = formatNumberText(row?.capacity_remaining, 6);
-  const effective = formatNumberText(
-    row?.capacity_effective || row?.capacity_total,
-    6
-  );
-  const unit = (row?.capacity_unit || '').toString().trim();
-  const resetCycle = normalizeBillingValue(row?.reset_cycle);
-  if (resetCycle && resetCycle !== 'none') {
-    const windowRemaining = formatNumberText(row?.window_remaining, 6);
-    const windowTotal = formatNumberText(row?.capacity_total, 6);
-    return t('channel.edit.billing.procurement_table.periodic_capacity', {
-      window: `${windowRemaining} / ${windowTotal}${unit ? ` ${unit}` : ''}`,
-      total: `${remaining} / ${effective}${unit ? ` ${unit}` : ''}`,
-    });
-  }
-  return `${remaining} / ${effective}${unit ? ` ${unit}` : ''}`;
-};
-
-const formatProcurementCostText = (row, t) => {
-  const source = (row?.cost_source || '').toString().trim();
-  const status = (row?.cost_status || '').toString().trim();
-  if (status === 'cost_unconfigured' || source === 'none' || source === '') {
-    return t('channel.edit.billing.procurement_table.cost_unconfigured');
-  }
-  if (Number(row?.cost_per_unit_amount || 0) <= 0) {
-    return t('channel.edit.billing.procurement_table.constraint_only');
-  }
-  return `${formatNumberText(row?.purchase_cost_amount, 6)} CNY`;
-};
-
-const formatProcurementUnitCostText = (row) => {
-  const unit = (row?.capacity_unit || '').toString().trim();
-  const value = formatNumberText(row?.cost_per_unit_amount, 8);
-  if (value === '-') {
-    return '-';
-  }
-  return unit ? `${value} CNY/${unit}` : `${value} CNY`;
-};
-
-const formatProcurementScopeText = (row, t) => {
-  const scopeType = normalizeBillingValue(row?.scope_type || 'global') || 'global';
-  const scopeValue = (row?.scope_value || '').toString().trim();
-  if (scopeType === 'model') {
-    return scopeValue || '-';
-  }
-  return t('channel.edit.billing.procurement_scopes.global');
-};
-
-const formatProcurementResourceText = (row, t) => {
-  const resourceType = normalizeBillingValue(row?.resource_type);
-  const quotaType = normalizeBillingValue(row?.quota_type);
-  const resourceLabel = t(
-    `channel.edit.billing.resource_types.${resourceType || 'unknown'}`,
-    { defaultValue: resourceType || '-' }
-  );
-  const quotaLabel =
-    quotaType && quotaType !== resourceType
-      ? t(`channel.edit.billing.quota_types.${quotaType}`, {
-          defaultValue: quotaType,
-        })
-      : '';
-  return quotaLabel ? `${resourceLabel} / ${quotaLabel}` : resourceLabel;
-};
-
-const formatProcurementSourceText = (row) => {
-  const sourceRef = (row?.source_ref || '').toString().trim();
-  const snapshotID = (row?.source_snapshot_id || '').toString().trim();
-  if (sourceRef !== '') {
-    return sourceRef;
-  }
-  if (snapshotID !== '') {
-    return snapshotID.slice(0, 8);
-  }
-  return '-';
-};
-
-const procurementStatusColor = (status) => {
-  switch ((status || '').toString().trim()) {
-    case 'active':
-      return 'green';
-    case 'cost_unconfigured':
-      return 'orange';
-    case 'exhausted':
-    case 'expired':
-      return 'red';
-    case 'disabled':
-      return 'default';
-    default:
-      return 'default';
-  }
-};
-
-const buildProcurementCostDraft = (row) => ({
-  purchase_currency:
-    (row?.purchase_currency || 'CNY').toString().trim() || 'CNY',
-  purchase_amount: Number(row?.purchase_amount || 0),
-  purchase_fx_rate: Number(row?.purchase_fx_rate || 1) || 1,
-  purchase_cost_amount: Number(row?.purchase_cost_amount || 0),
-  capacity_effective: Number(
-    row?.capacity_effective || row?.capacity_total || 0
-  ),
-  cost_source:
-    (row?.cost_source || 'actual').toString().trim() === 'none'
-      ? 'actual'
-      : (row?.cost_source || 'actual').toString().trim(),
-  cost_status: 'active',
-  scope_type: (row?.scope_type || 'global').toString().trim() || 'global',
-  scope_value: (row?.scope_value || '').toString().trim(),
-});
-
-const toUnixTimestamp = (value) => {
-  const normalized = (value || '').toString().trim();
-  if (normalized === '') {
-    return 0;
-  }
-  const parsed = new Date(normalized);
-  const millis = parsed.getTime();
-  if (!Number.isFinite(millis) || Number.isNaN(millis)) {
-    return 0;
-  }
-  return Math.floor(millis / 1000);
-};
-
-const toDateTimeLocalValueFromTimestamp = (value) => {
-  const timestamp = Number(value || 0);
-  if (timestamp <= 0) {
-    return '';
-  }
-  return toDateTimeLocalValue(new Date(timestamp * 1000));
-};
-
-const normalizeManualValidityInput = (value, defaultTime, forceDefaultTime = false) => {
-  const normalized = (value || '').toString().trim();
-  if (normalized === '') {
-    return '';
-  }
-  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
-    return `${normalized}T${defaultTime}`;
-  }
-  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(normalized)) {
-    if (forceDefaultTime) {
-      return `${normalized.slice(0, 10)}T${defaultTime}`;
-    }
-    return normalized.length === 16
-      ? `${normalized}:${defaultTime.slice(-2)}`
-      : normalized;
-  }
-  return normalized;
-};
-
-const buildManualPurchaseRecordFromSnapshot = (row) => ({
-  channel_id: (row?.channel_id || '').toString().trim(),
-  purchase_at_input:
-    toDateTimeLocalValueFromTimestamp(row?.purchase_at) ||
-    buildManualPurchaseRecord().purchase_at_input,
-  purchase_currency:
-    (row?.purchase_currency || 'CNY').toString().trim().toUpperCase() || 'CNY',
-  purchase_amount: Number(row?.purchase_amount || 0),
-  purchase_fx_rate: Number(row?.purchase_fx_rate || 1) || 1,
-  purchase_cost_amount: Number(row?.purchase_cost_amount || 0),
-  entitlement_name: (row?.entitlement_name || '').toString(),
-  event_type: (row?.event_type || 'purchase').toString(),
-  parent_snapshot_id: (row?.parent_snapshot_id || '').toString(),
-  old_batch_disposition: (row?.old_batch_disposition || 'keep').toString(),
-  valid_from_input: toDateTimeLocalValueFromTimestamp(row?.valid_from),
-  valid_until_input: toDateTimeLocalValueFromTimestamp(row?.valid_until),
-});
-
-const buildManualQuotaItemFromSnapshotItem = (item) => ({
-  id: (item?.id || '').toString().trim(),
-  resource_type: (item?.resource_type || 'quota').toString().trim() || 'quota',
-  quota_type: (item?.quota_type || 'total').toString().trim() || 'total',
-  quota_label: (item?.quota_label || '').toString(),
-  amount: Number(item?.amount || item?.remaining_amount || 0),
-  limit_amount: Number(item?.limit_amount || item?.amount || 0),
-  used_amount: Number(item?.used_amount || 0),
-  remaining_amount: Number(item?.remaining_amount || item?.amount || 0),
-  currency: (item?.currency || 'USD').toString().trim() || 'USD',
-  reset_at_input: toDateTimeLocalValueFromTimestamp(item?.reset_at),
-  expires_at_input: toDateTimeLocalValueFromTimestamp(item?.expires_at),
-  source_ref: (item?.source_ref || 'manual').toString().trim() || 'manual',
-});
-
-const isPurchaseCurrencyCNY = (record) =>
-	(record?.purchase_currency || '').toString().trim().toUpperCase() === 'CNY';
-
-const ChannelDetailBillingTab = ({
+// Per-channel procurement workspace: manual purchase snapshots + procurement
+// batches (cost/status/consumptions). Pure presentational — all data/handlers
+// come from props. Shared by the channel detail procurement tab and the finance
+// aggregate report's (legacy) channel drill-down.
+const ChannelProcurementView = ({
   t,
-  billingSummary,
   billingLoading,
-  billingError,
   billingSnapshots,
   procurementBatches,
   billingReadonly,
@@ -588,7 +69,7 @@ const ChannelDetailBillingTab = ({
   onProcurementBatchStatusUpdate,
   onProcurementBatchConsumptionsLoad,
   timestamp2string,
-  viewMode = 'account',
+  billingError,
   channelID,
   manualChannelOptions = [],
   requireManualChannelSelect = false,
@@ -612,9 +93,7 @@ const ChannelDetailBillingTab = ({
     valid_from_input: false,
     valid_until_input: false,
   });
-  const [billingView, setBillingView] = useState(
-    viewMode === 'procurement' ? 'records' : 'overview'
-  );
+  const [billingView, setBillingView] = useState('records');
 
   const purchaseRecords = useMemo(
     () =>
@@ -624,9 +103,6 @@ const ChannelDetailBillingTab = ({
       ),
     [billingSnapshots]
   );
-  const quotaItems = Array.isArray(billingSummary?.quota_items)
-    ? billingSummary.quota_items
-    : [];
   const procurementRows = Array.isArray(procurementBatches)
     ? procurementBatches
     : [];
@@ -1316,7 +792,7 @@ const ChannelDetailBillingTab = ({
 
   return (
     <div className='router-billing-page'>
-      {viewMode === 'procurement' ? <div className='router-billing-workspace-toolbar'>
+      <div className='router-billing-workspace-toolbar'>
         {showProcurementBatches ? (
           <AppSegmented
             value={billingView}
@@ -1345,101 +821,8 @@ const ChannelDetailBillingTab = ({
             {t('common.refresh')}
           </AppButton>
         ) : null}
-      </div> : null}
-      {viewMode === 'procurement' ? <AppAlert type='info' showIcon className='router-section-message' title={t('channel.edit.billing.structure_hint')} /> : null}
-      {billingView === 'overview' && (
-        <AppDetailSection
-          title={t('channel.edit.billing.current_quotas_title')}
-          titleTag='span'
-          headerEnd={
-            <div className='router-billing-quota-status-actions'>
-              <Link to={`/admin/finance?tab=procurement${channelID ? `&channel_id=${encodeURIComponent(channelID)}` : ''}`}>
-                {t('channel.edit.billing.view_procurement')}
-              </Link>
-              <span className='router-billing-snapshot-time'>
-                {billingSummary?.latest_snapshot_at
-                  ? timestamp2string(billingSummary.latest_snapshot_at)
-                  : '-'}
-              </span>
-              {billingSummary?.refresh_supported ? (
-                <AppButton
-                  type='button'
-                  className='router-page-button'
-                  color='blue'
-                  loading={billingSubmitting}
-                  disabled={billingSubmitting}
-                  onClick={onRefreshBilling}
-                >
-                  {t('channel.edit.billing.refresh_now')}
-                </AppButton>
-              ) : null}
-            </div>
-          }
-        >
-          <AppTable
-            className='router-detail-table'
-            pagination={false}
-            loading={billingLoading}
-            dataSource={quotaItems}
-            rowKey={(row) => buildQuotaItemRowKey(row)}
-            columns={[
-              {
-                title: t('channel.edit.billing.quota_table.entitlement_kind'),
-                dataIndex: 'resource_type',
-                key: 'entitlement_kind',
-                width: 170,
-                render: (_, row) => renderEntitlementKind(row, t),
-              },
-              {
-                title: t('channel.edit.billing.quota_table.quota_label'),
-                dataIndex: 'quota_label',
-                key: 'quota_label',
-                width: 180,
-                render: (value, row) => renderQuotaLabel(value, row, t),
-              },
-              {
-                title: t('channel.edit.billing.quota_table.amount'),
-                dataIndex: 'remaining_amount',
-                key: 'remaining_amount',
-                width: 180,
-                render: (_, row) => formatEntitlementUsageText(row, t),
-              },
-              {
-                title: t('channel.edit.billing.quota_table.used_amount'),
-                dataIndex: 'used_amount',
-                key: 'used_amount',
-                width: 120,
-                render: (_, row) => formatUsedText(row),
-              },
-              {
-                title: t('channel.edit.billing.quota_table.remaining_ratio'),
-                dataIndex: 'limit_amount',
-                key: 'remaining_ratio',
-                width: 120,
-                render: (_, row) => formatRemainingRatioText(row),
-              },
-              {
-                title: t('channel.edit.billing.quota_table.validity'),
-                dataIndex: 'expires_at',
-                key: 'validity',
-                width: 260,
-                render: (_, row) =>
-                  formatValidityText(row, timestamp2string, t),
-              },
-              {
-                title: t('channel.edit.billing.quota_table.status'),
-                dataIndex: 'status',
-                key: 'status',
-                width: 100,
-                render: (_, row) => renderStatus(row, t),
-              },
-            ]}
-            locale={{
-              emptyText: t('channel.edit.billing.no_quota_items'),
-            }}
-          />
-        </AppDetailSection>
-      )}
+      </div>
+      <AppAlert type='info' showIcon className='router-section-message' title={t('channel.edit.billing.structure_hint')} />
       {billingView === 'records' && (
         <AppDetailSection
           className='router-billing-management-section'
@@ -1871,4 +1254,4 @@ const ChannelDetailBillingTab = ({
   );
 };
 
-export default ChannelDetailBillingTab;
+export default ChannelProcurementView;

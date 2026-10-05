@@ -17,7 +17,7 @@ import {
 import { API, showError, showInfo, showSuccess, timestamp2string, withCardLabels } from '../../../helpers';
 import { exportCSV } from '../../../helpers/csv';
 import { formatDecimalNumber } from '../../../helpers/render';
-import ChannelDetailBillingTab from '../../Channel/components/ChannelDetailBillingTab';
+import ChannelProcurementView from '../../Channel/components/ChannelProcurementView';
 import {
   AppButton,
   AppErrorState,
@@ -1381,7 +1381,7 @@ function BillingProcurementReport({ embedded = false }) {
               </AppButton>
             </div>
           ) : null}
-          <ChannelDetailBillingTab
+          <ChannelProcurementView
             t={t}
             billingSummary={null}
             billingLoading={procurementLoading}
@@ -1396,7 +1396,6 @@ function BillingProcurementReport({ embedded = false }) {
             onProcurementBatchStatusUpdate={(id, status) => updateBatch(id, 'status', { cost_status: status }, 'channel.edit.billing.procurement_status_update_success', 'channel.edit.billing.procurement_status_update_failed')}
             onProcurementBatchConsumptionsLoad={loadBatchConsumptions}
             timestamp2string={timestamp2string}
-            viewMode='procurement'
             channelID={managedChannelID}
             showProcurementBatches={false}
           />
