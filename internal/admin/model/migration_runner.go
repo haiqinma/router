@@ -75,6 +75,68 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 			},
 		},
 		{
+			Version:     "202610011000_open_model_supply_pilot",
+			Description: "add reviewed publishers, independently configured model services, offers, and audit logs",
+			Up: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(
+					&Publisher{},
+					&PublisherService{},
+					&PublisherServiceModel{},
+					&ServiceOffer{},
+					&PublisherAuditLog{},
+				)
+			},
+		},
+		{
+			Version:     "202610011100_publisher_offer_settlements",
+			Description: "add immutable community offer settlement snapshots and publisher payable facts",
+			Up: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&PublisherOfferSettlement{})
+			},
+		},
+		{
+			Version:     "202610011200_community_offer_model_routes",
+			Description: "add explicit consumer model routes for reviewed public community offers",
+			Up: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&CommunityOfferModelRoute{})
+			},
+		},
+		{
+			Version:     "202610021000_publisher_settlement_deliveries",
+			Description: "add durable cross-store delivery records for community publisher settlements",
+			Up: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&PublisherSettlementDelivery{})
+			},
+		},
+		{
+			Version:     "202610021100_publisher_settlement_delivery_snapshots",
+			Description: "freeze publisher service and commercial facts before settlement delivery",
+			Up: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&PublisherSettlementDelivery{})
+			},
+		},
+		{
+			Version:     "202610031000_publisher_settlement_delivery_cancellation",
+			Description: "record charged quota and manual compensation facts for stale settlement deliveries",
+			Up: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&PublisherSettlementDelivery{})
+			},
+		},
+		{
+			Version:     "202610031100_publisher_settlement_delivery_charge_confirmation",
+			Description: "separate planned community-offer quota from confirmed balance debit",
+			Up: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&PublisherSettlementDelivery{})
+			},
+		},
+		{
+			Version:     "202610051000_publisher_settlement_delivery_exceptions",
+			Description: "record and manually resolve cancellation contradictions without automatic financial changes",
+			Up: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&PublisherSettlementDelivery{})
+			},
+		},
+		{
 			Version:     "202608081100_identity_passkey_login",
 			Description: "add wallet identity passkey PKCE login sessions",
 			Up: func(tx *gorm.DB) error {

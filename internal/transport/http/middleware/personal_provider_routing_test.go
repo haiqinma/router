@@ -22,7 +22,7 @@ func newPersonalProviderRoutingTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
-	if err := db.AutoMigrate(&model.PersonalProviderConnection{}, &model.PersonalModelRoute{}); err != nil {
+	if err := db.AutoMigrate(&model.PersonalProviderConnection{}, &model.PersonalModelRoute{}, &model.CommunityOfferModelRoute{}); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	previousDB := model.DB

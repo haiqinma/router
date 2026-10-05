@@ -40,6 +40,16 @@ export const buildUserWorkspaceMenuItems = () => {
       icon: 'share alternate',
     },
     {
+      name: 'publisher_workspace.title',
+      to: '/workspace/publisher',
+      icon: 'cloud upload',
+    },
+    {
+      name: 'community_services.title',
+      to: '/workspace/community-services',
+      icon: 'cloud',
+    },
+    {
       name: 'topup.mine.quota',
       to: '/workspace/topup?tab=quota',
       icon: 'credit card',

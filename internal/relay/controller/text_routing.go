@@ -155,6 +155,21 @@ func resolveSelectedModelDirectTextEndpointSupport(meta *meta.Meta, row adminmod
 	if meta == nil {
 		return supportsChat, supportsResponses, supportsMessages
 	}
+	// Community offers are transient channels. Their endpoint declaration is
+	// reviewed with the offer and has no row in the administrator channel cache.
+	// Treat only that exact declaration as endpoint truth.
+	if strings.TrimSpace(meta.CommunityOfferID) != "" {
+		switch adminmodel.NormalizeRequestedChannelModelEndpoint(row.Endpoint) {
+		case adminmodel.ChannelModelEndpointChat:
+			return true, false, false
+		case adminmodel.ChannelModelEndpointResponses:
+			return false, true, false
+		case adminmodel.ChannelModelEndpointMessages:
+			return false, false, supportsMessagesUpstream(meta)
+		default:
+			return false, false, false
+		}
+	}
 	modelCandidates := []string{
 		strings.TrimSpace(row.Model),
 		strings.TrimSpace(row.UpstreamModel),
@@ -198,6 +213,10 @@ func resolveChannelTextUpstream(meta *meta.Meta, originModelName string, actualM
 	}
 	requestEndpoint := resolveRequestedTextEndpoint(meta)
 	if row, ok := adminmodel.FindSelectedChannelModelConfig(meta.ChannelModelConfigs, originModelName, actualModelName); ok {
+		if strings.TrimSpace(meta.CommunityOfferID) != "" && requestEndpoint == adminmodel.ChannelModelEndpointEmbeddings &&
+			adminmodel.NormalizeRequestedChannelModelEndpoint(row.Endpoint) == adminmodel.ChannelModelEndpointEmbeddings {
+			return relaymode.Embeddings, adminmodel.ChannelModelEndpointEmbeddings, nil
+		}
 		supportsChat, supportsResponses, supportsMessagesDirect := resolveSelectedModelDirectTextEndpointSupport(meta, row, originModelName, actualModelName)
 		supportsMessages := supportsMessagesDirect && supportsMessagesUpstream(meta)
 

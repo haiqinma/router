@@ -46,6 +46,7 @@ function parseModels(value) {
 function PersonalRouting() {
   const [connections, setConnections] = useState([]);
   const [routes, setRoutes] = useState([]);
+  const [communityOfferRoutes, setCommunityOfferRoutes] = useState([]);
   const [routeModelOptions, setRouteModelOptions] = useState([]);
   const [quota, setQuota] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -59,18 +60,21 @@ function PersonalRouting() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [connectionResponse, routeResponse, quotaResponse, modelsResponse] = await Promise.all([
+      const [connectionResponse, routeResponse, communityOfferRouteResponse, quotaResponse, modelsResponse] = await Promise.all([
         API.get('/api/v1/public/personal-provider/connections'),
         API.get('/api/v1/public/personal-provider/model-routes'),
+        API.get('/api/v1/public/community-offer-routing/model-routes'),
         API.get('/api/v1/public/personal-provider/routing-quota'),
         API.get('/api/v1/public/user/models/available'),
       ]);
       if (!connectionResponse.data?.success) throw new Error(connectionResponse.data?.message);
       if (!routeResponse.data?.success) throw new Error(routeResponse.data?.message);
+      if (!communityOfferRouteResponse.data?.success) throw new Error(communityOfferRouteResponse.data?.message);
       if (!quotaResponse.data?.success) throw new Error(quotaResponse.data?.message);
       if (!modelsResponse.data?.success) throw new Error(modelsResponse.data?.message);
       setConnections(Array.isArray(connectionResponse.data?.data) ? connectionResponse.data.data : []);
       setRoutes(Array.isArray(routeResponse.data?.data) ? routeResponse.data.data : []);
+      setCommunityOfferRoutes(Array.isArray(communityOfferRouteResponse.data?.data) ? communityOfferRouteResponse.data.data : []);
       setQuota(quotaResponse.data?.data || null);
       setRouteModelOptions((Array.isArray(modelsResponse.data?.data) ? modelsResponse.data.data : [])
         .map((model) => String(model || '').trim())
@@ -186,6 +190,15 @@ function PersonalRouting() {
     } catch (error) { showError(error?.message || '移除模型路由失败'); }
   };
 
+  const deleteCommunityOfferRoute = async (row) => {
+    try {
+      const response = await API.delete(`/api/v1/public/community-offer-routing/model-routes/${encodeURIComponent(row.model)}`);
+      if (!response.data?.success) throw new Error(response.data?.message);
+      showSuccess('社区报价路由已移除');
+      load().then();
+    } catch (error) { showError(error?.message || '移除社区报价路由失败'); }
+  };
+
   const connectionColumns = useMemo(() => [
     { title: '连接', dataIndex: 'name', width: 210, render: (value, row) => <div className='personal-routing-connection-name'><strong>{value}</strong><span>{row.base_url || '使用官方地址'}</span></div> },
     { title: '协议', dataIndex: 'protocol', width: 150, render: (value) => <AppTag>{PROTOCOL_OPTIONS.find((item) => item.value === value)?.label || value}</AppTag> },
@@ -208,6 +221,11 @@ function PersonalRouting() {
     { title: '路由策略', dataIndex: 'route_policy', render: (value) => POLICY_OPTIONS.find((item) => item.value === value)?.label || value },
     { title: '操作', width: 96, render: (_, row) => <AppButton type='text' danger onClick={() => deleteRoute(row)}>移除</AppButton> },
   ], []);
+  const communityOfferRouteColumns = useMemo(() => [
+    { title: '模型', dataIndex: 'model' },
+    { title: '固定社区报价', dataIndex: 'offer_id', render: (value) => <span className='personal-routing-models'>{value}</span> },
+    { title: '操作', width: 96, render: (_, row) => <AppButton type='text' danger onClick={() => deleteCommunityOfferRoute(row)}>移除</AppButton> },
+  ], []);
 
   const providers = <AppSection className='personal-routing-section' title='我的供应商' extra={<AppButton color='blue' icon={<AppIcon name='plus' />} onClick={openCreate}>添加供应商</AppButton>}>
       <p className='personal-routing-section-hint'>测试连接只验证上游地址和 API Key，不会发起模型推理请求或消耗模型额度。修改协议、地址或 API Key 后需要重新验证。</p>
@@ -227,6 +245,10 @@ function PersonalRouting() {
       </AppForm>
       <AppTable rowKey='model' columns={routeColumns} dataSource={routes} loading={loading} pagination={false} locale={{ emptyText: <AppEmpty>未设置模型级规则，将使用 API Token 的默认策略</AppEmpty> }} />
     </AppSection>
+	<AppSection title='固定社区报价'>
+	  <p className='personal-routing-section-hint'>在“社区模型服务”中选择报价后，会在这里固定到对应模型。固定报价不会自动切换到其他发布者；移除后恢复 API Token 和模型规则定义的来源策略。</p>
+	  <AppTable rowKey='model' columns={communityOfferRouteColumns} dataSource={communityOfferRoutes} loading={loading} pagination={false} locale={{ emptyText: <AppEmpty>尚未为任何模型选择社区报价</AppEmpty> }} />
+	</AppSection>
   </div>;
 
   return <div className='dashboard-container personal-routing-page'>

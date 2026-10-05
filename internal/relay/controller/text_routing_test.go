@@ -130,6 +130,23 @@ func TestResolveChannelTextUpstreamOpenAIChatOnlyModelDownstreamResponsesRejecte
 	}
 }
 
+func TestResolveChannelTextUpstreamCommunityOfferEmbeddingsUsesDeclaredEndpoint(t *testing.T) {
+	meta := &meta.Meta{
+		Mode:             relaymode.Embeddings,
+		RequestURLPath:   adminmodel.ChannelModelEndpointEmbeddings,
+		CommunityOfferID: "offer-1",
+		ChannelModelConfigs: []adminmodel.ChannelModel{{
+			Model: "text-embedding-3-large", Type: adminmodel.ProviderModelTypeEmbedding,
+			Selected: true, PublishEnabled: true, PublishStatus: adminmodel.ChannelModelPublishStatusPublished,
+			Endpoint: adminmodel.ChannelModelEndpointEmbeddings,
+		}},
+	}
+	mode, endpoint, err := resolveChannelTextUpstream(meta, "text-embedding-3-large", "text-embedding-3-large")
+	if err != nil || mode != relaymode.Embeddings || endpoint != adminmodel.ChannelModelEndpointEmbeddings {
+		t.Fatalf("resolve community embeddings = mode=%d endpoint=%q err=%v", mode, endpoint, err)
+	}
+}
+
 func TestResolveChannelTextUpstreamRejectsWhenRequestedModelNotSelected(t *testing.T) {
 	meta := &meta.Meta{
 		Mode: relaymode.ChatCompletions,

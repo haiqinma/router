@@ -38,6 +38,11 @@ export const ADMIN_MENU_GROUPS = [
         badge: 'channel-alerts',
       },
       {
+        name: 'publisher_operations.title',
+        to: '/admin/publisher',
+        icon: 'cloud upload',
+      },
+      {
         name: 'header.group',
         to: '/admin/group',
         icon: 'group',

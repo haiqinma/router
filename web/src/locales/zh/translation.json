@@ -4678,6 +4678,15 @@
   "personal_routing": {
     "title": "我的供应商"
   },
+  "publisher_workspace": {
+    "title": "模型发布"
+  },
+  "publisher_operations": {
+    "title": "开放供给"
+  },
+  "community_services": {
+    "title": "社区模型服务"
+  },
   "not_found": {
     "title": "页面不存在",
     "description": "请检查你的浏览器地址是否正确",

@@ -4678,6 +4678,15 @@
   "personal_routing": {
     "title": "My providers"
   },
+  "publisher_workspace": {
+    "title": "Model publishing"
+  },
+  "publisher_operations": {
+    "title": "Open supply"
+  },
+  "community_services": {
+    "title": "Community services"
+  },
   "not_found": {
     "title": "Page not found",
     "description": "Please check whether the URL is correct.",

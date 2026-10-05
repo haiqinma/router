@@ -170,9 +170,31 @@ func RelayTextHelper(c *gin.Context) *model.ErrorWithStatusCode {
 	}
 	maxOutputTokens := resolveTextMaxOutputTokens(textRequest)
 	personalProviderRequest := strings.TrimSpace(meta.PersonalProviderID) != ""
+	communityOfferRequest := strings.TrimSpace(meta.CommunityOfferID) != ""
+	if communityOfferRequest {
+		// Reject an uncovered request before it reaches a third-party publisher.
+		preview, previewErr := adminmodel.QuotePublisherOfferSettlement(adminmodel.PublisherOfferSettlementInput{
+			RequestLogID: "preview", OfferID: meta.CommunityOfferID, ConsumerUserID: meta.UserId,
+			InputTokens: int64(promptTokens), OutputTokens: int64(maxOutputTokens),
+		})
+		if previewErr != nil {
+			return openai.ErrorWrapper(previewErr, "community_offer_unavailable", http.StatusServiceUnavailable)
+		}
+		reservedQuota, _, quotaErr := adminmodel.CommunityOfferQuotaForMicros(preview.ConsumerAmountMicros)
+		if quotaErr != nil {
+			return openai.ErrorWrapper(quotaErr, "community_offer_pricing_unavailable", http.StatusServiceUnavailable)
+		}
+		balance, balanceErr := adminmodel.GetEffectiveUserBalanceAmount(meta.UserId)
+		if balanceErr != nil {
+			return openai.ErrorWrapper(balanceErr, "community_offer_balance_unavailable", http.StatusInternalServerError)
+		}
+		if balance < reservedQuota {
+			return openai.ErrorWrapper(fmt.Errorf("账户余额不足以覆盖该社区报价的请求预算"), "community_offer_balance_insufficient", http.StatusForbidden)
+		}
+	}
 	preConsumedSnapshot := billing.BillingSnapshot{}
 	groupReservedQuota := int64(0)
-	if !personalProviderRequest {
+	if !personalProviderRequest && !communityOfferRequest {
 		preConsumedPricing := adminmodel.ResolveTextUsagePricing(pricing, upstreamPath, promptTokens, maxOutputTokens)
 		reservedTokens := policyResolution.Policy.ReserveTokens(promptTokens, maxOutputTokens)
 		preConsumedSnapshot, err = billing.ComputeTextPreConsumedBillingSnapshotWithReservedTokens(promptTokens, maxOutputTokens, reservedTokens, preConsumedPricing, groupRatio)

@@ -13,12 +13,16 @@ import (
 const (
 	UserBalanceLotsTableName = "user_balance_lots"
 
-	UserBalanceLotStatusActive   = "active"
-	UserBalanceLotStatusExhaust  = "exhausted"
-	UserBalanceLotStatusExpired  = "expired"
-	UserBalanceLotSourceTopup    = "topup_order"
-	UserBalanceLotSourceRedeem   = "redemption"
-	UserBalanceLotMaxValidityDay = 3650
+	UserBalanceLotStatusActive  = "active"
+	UserBalanceLotStatusExhaust = "exhausted"
+	UserBalanceLotStatusExpired = "expired"
+	UserBalanceLotSourceTopup   = "topup_order"
+	UserBalanceLotSourceRedeem  = "redemption"
+	// UserBalanceLotSourceCommunityOfferRefund is an idempotent corrective
+	// credit for a community-offer request that was charged but never gained a
+	// durable consumption log. SourceID is the request log ID.
+	UserBalanceLotSourceCommunityOfferRefund = "community_offer_refund"
+	UserBalanceLotMaxValidityDay             = 3650
 
 	UserBalanceLotQuotaCardKindTopup      = "topup"
 	UserBalanceLotQuotaCardKindRedemption = "redemption"
@@ -110,6 +114,8 @@ func normalizeUserBalanceLotSourceType(value string) string {
 		return UserBalanceLotSourceTopup
 	case UserBalanceLotSourceRedeem:
 		return UserBalanceLotSourceRedeem
+	case UserBalanceLotSourceCommunityOfferRefund:
+		return UserBalanceLotSourceCommunityOfferRefund
 	default:
 		return strings.TrimSpace(strings.ToLower(value))
 	}
@@ -117,7 +123,7 @@ func normalizeUserBalanceLotSourceType(value string) string {
 
 func normalizeUserBalanceLotSourceFilter(value string) string {
 	switch normalizeUserBalanceLotSourceType(value) {
-	case UserBalanceLotSourceTopup, UserBalanceLotSourceRedeem:
+	case UserBalanceLotSourceTopup, UserBalanceLotSourceRedeem, UserBalanceLotSourceCommunityOfferRefund:
 		return normalizeUserBalanceLotSourceType(value)
 	default:
 		return ""
@@ -441,7 +447,8 @@ func GetEffectiveUserBalanceAmountForGroupWithDB(db *gorm.DB, userID string, gro
 						  AND COALESCE(r.group_id, '') = ?
 					)
 				)
-			`, UserBalanceLotSourceTopup, TopupOrderBusinessBalance, normalizedGroupID, UserBalanceLotSourceRedeem, normalizedGroupID)
+				OR source_type = ?
+			`, UserBalanceLotSourceTopup, TopupOrderBusinessBalance, normalizedGroupID, UserBalanceLotSourceRedeem, normalizedGroupID, UserBalanceLotSourceCommunityOfferRefund)
 		}
 		return query.Scan(&balanceAmount).Error
 	})
@@ -502,7 +509,8 @@ func ConsumeUserBalanceLotsForGroupDetailedWithDB(db *gorm.DB, userID string, gr
 						  AND COALESCE(r.group_id, '') = ?
 					)
 				)
-			`, UserBalanceLotSourceTopup, TopupOrderBusinessBalance, normalizedGroupID, UserBalanceLotSourceRedeem, normalizedGroupID)
+				OR source_type = ?
+			`, UserBalanceLotSourceTopup, TopupOrderBusinessBalance, normalizedGroupID, UserBalanceLotSourceRedeem, normalizedGroupID, UserBalanceLotSourceCommunityOfferRefund)
 		}
 		rows := make([]UserBalanceLot, 0)
 		if err := query.Find(&rows).Error; err != nil {
