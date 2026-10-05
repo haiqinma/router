@@ -24,6 +24,7 @@ import ChannelDetailModelsTab from './components/ChannelDetailModelsTab';
 import ChannelDetailOverviewTab from './components/ChannelDetailOverviewTab';
 import ChannelDetailPublishTab from './components/ChannelDetailPublishTab';
 import ChannelDetailTestsTab from './components/ChannelDetailTestsTab';
+import ChannelProcurementView from './components/ChannelProcurementView';
 import ChannelAppendProviderModal from './components/ChannelAppendProviderModal';
 import ChannelComplexPricingModal from './components/ChannelComplexPricingModal';
 import ChannelModelEditorModal from './components/ChannelModelEditorModal';
@@ -436,6 +437,8 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     isDetailMode && activeDetailTab === 'endpoints';
   const showDetailTestsTab = isDetailMode && activeDetailTab === 'tests';
   const showDetailPublishTab = isDetailMode && activeDetailTab === 'publish';
+  const showDetailProcurementTab =
+    isDetailMode && activeDetailTab === 'procurement';
   const detailBasicReadonly = isDetailMode && !detailBasicEditing;
   const detailModelsEditing =
     isDetailMode && detailEditingModelKey.toString().trim() !== '';
@@ -466,6 +469,11 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
       key: 'publish',
       label: t('channel.edit.detail_tabs.publish'),
       disabled: isAnyDetailSectionEditing && activeDetailTab !== 'publish',
+    },
+    {
+      key: 'procurement',
+      label: t('channel.edit.detail_tabs.procurement'),
+      disabled: isAnyDetailSectionEditing && activeDetailTab !== 'procurement',
     },
   ];
   const detailBasicEditLocked =
@@ -1544,6 +1552,47 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     ]
   );
 
+  const refreshChannelProcurementState = useCallback(
+    async (targetChannelId) => {
+      const normalizedChannelId = (targetChannelId || '').toString().trim();
+      if (normalizedChannelId === '') {
+        return;
+      }
+      setChannelBillingLoading(true);
+      try {
+        const [snapshots, batches] = await Promise.all([
+          loadChannelBillingSnapshotsFromServer(normalizedChannelId),
+          loadChannelProcurementBatchesFromServer(normalizedChannelId),
+        ]);
+        setChannelBillingSnapshots(Array.isArray(snapshots) ? snapshots : []);
+        setChannelProcurementBatches(Array.isArray(batches) ? batches : []);
+        setChannelBillingError('');
+      } catch (error) {
+        setChannelBillingError(
+          error?.message || t('channel.edit.billing.load_failed')
+        );
+      } finally {
+        setChannelBillingLoading(false);
+      }
+    },
+    [
+      loadChannelBillingSnapshotsFromServer,
+      loadChannelProcurementBatchesFromServer,
+      t,
+    ]
+  );
+
+  useEffect(() => {
+    if (!isDetailMode || activeDetailTab !== 'procurement') {
+      return;
+    }
+    const targetChannelId = (channelId || '').toString().trim();
+    if (targetChannelId === '') {
+      return;
+    }
+    refreshChannelProcurementState(targetChannelId);
+  }, [isDetailMode, activeDetailTab, channelId, refreshChannelProcurementState]);
+
   const refreshChannelRuntimeState = useCallback(
     async (targetChannelId) => {
       const normalizedChannelId = (targetChannelId || '').toString().trim();
@@ -1858,6 +1907,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
           return false;
         }
         await refreshChannelBillingState(targetChannelId);
+        await refreshChannelProcurementState(targetChannelId);
         showSuccess(t('channel.edit.billing.manual_snapshot_success'));
         return true;
       } catch (error) {
@@ -1869,7 +1919,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
         setChannelBillingSubmitting(false);
       }
     },
-    [channelId, refreshChannelBillingState, t]
+    [channelId, refreshChannelBillingState, refreshChannelProcurementState, t]
   );
 
   const deleteChannelManualBillingSnapshot = useCallback(
@@ -1892,6 +1942,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
           return false;
         }
         await refreshChannelBillingState(targetChannelId);
+        await refreshChannelProcurementState(targetChannelId);
         showSuccess(t('channel.edit.billing.delete_purchase_record_success'));
         return true;
       } catch (error) {
@@ -1903,7 +1954,14 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
         setChannelBillingSubmitting(false);
       }
     },
-    [channelId, refreshChannelBillingState, showError, showSuccess, t]
+    [
+      channelId,
+      refreshChannelBillingState,
+      refreshChannelProcurementState,
+      showError,
+      showSuccess,
+      t,
+    ]
   );
 
   const updateChannelProcurementBatchCost = useCallback(
@@ -1940,6 +1998,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
           return false;
         }
         await refreshChannelBillingState(targetChannelId);
+        await refreshChannelProcurementState(targetChannelId);
         showSuccess(t('channel.edit.billing.procurement_update_success'));
         return true;
       } catch (error) {
@@ -1951,7 +2010,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
         setChannelBillingSubmitting(false);
       }
     },
-    [channelId, refreshChannelBillingState, t]
+    [channelId, refreshChannelBillingState, refreshChannelProcurementState, t]
   );
 
   const updateChannelProcurementBatchStatus = useCallback(
@@ -1978,6 +2037,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
           return false;
         }
         await refreshChannelBillingState(targetChannelId);
+        await refreshChannelProcurementState(targetChannelId);
         showSuccess(
           t('channel.edit.billing.procurement_status_update_success')
         );
@@ -1992,7 +2052,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
         setChannelBillingSubmitting(false);
       }
     },
-    [channelId, refreshChannelBillingState, t]
+    [channelId, refreshChannelBillingState, refreshChannelProcurementState, t]
   );
 
   const loadChannelProcurementBatchConsumptions = useCallback(
@@ -4644,6 +4704,32 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
                 onNavigateTab={goToDetailTab}
                 publishMutatingModel={publishMutatingModel}
                 publishReadonly={detailPublishReadonly}
+              />
+            )}
+            {showDetailProcurementTab && (
+              <ChannelProcurementView
+                t={t}
+                billingLoading={channelBillingLoading}
+                billingSnapshots={channelBillingSnapshots}
+                procurementBatches={channelProcurementBatches}
+                billingReadonly={false}
+                billingSubmitting={channelBillingSubmitting}
+                billingError={channelBillingError}
+                onRefreshBilling={() =>
+                  refreshChannelProcurementState(channelId)
+                }
+                onManualSnapshotUpdate={updateChannelManualBillingSnapshot}
+                onManualSnapshotDelete={deleteChannelManualBillingSnapshot}
+                onProcurementBatchCostUpdate={updateChannelProcurementBatchCost}
+                onProcurementBatchStatusUpdate={
+                  updateChannelProcurementBatchStatus
+                }
+                onProcurementBatchConsumptionsLoad={
+                  loadChannelProcurementBatchConsumptions
+                }
+                timestamp2string={timestamp2string}
+                channelID={channelId}
+                showProcurementBatches
               />
             )}
           </div>

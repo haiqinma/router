@@ -875,6 +875,7 @@
         "endpoints": "Endpoints",
         "tests": "Tests",
         "publish": "Publish",
+        "procurement": "Procurement",
         "billing": "Billing"
       },
       "publish": {

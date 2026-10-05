@@ -875,6 +875,7 @@
         "endpoints": "接口",
         "tests": "测试",
         "publish": "发布",
+        "procurement": "采购成本",
         "billing": "账务"
       },
       "publish": {

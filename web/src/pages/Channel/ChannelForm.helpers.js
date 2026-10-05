@@ -458,6 +458,7 @@ const DETAIL_TAB_KEYS = [
   'endpoints',
   'tests',
   'publish',
+  'procurement',
 ];
 
 const normalizeDetailTab = (value) => {
