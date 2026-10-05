@@ -60,7 +60,6 @@ import {
   CHANNEL_MODEL_PAGE_SIZE,
   CHANNEL_MODEL_TEST_GROUP_COLUMN_WIDTHS,
   CHANNEL_ORIGIN_INPUTS,
-  DEFAULT_IMAGE_EDIT_TEST_URL,
   deleteChannelEndpointPolicy,
   ENDPOINT_POLICY_TEMPLATE_OVERRIDE_BASE_URL,
   ENDPOINT_POLICY_TEMPLATES,
@@ -258,9 +257,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
   const [modelTestError, setModelTestError] = useState('');
   const [audioTestLanguage, setAudioTestLanguage] = useState('zh-CN');
   const [responsesTestMode, setResponsesTestMode] = useState('text');
-  const [imageEditTestURL, setImageEditTestURL] = useState(
-    DEFAULT_IMAGE_EDIT_TEST_URL
-  );
+  const [imageEditTestURL, setImageEditTestURL] = useState('');
   const [imageEditTestData, setImageEditTestData] = useState('');
   const [imageEditTestFileName, setImageEditTestFileName] = useState('');
   const handleImageEditTestFileChange = useCallback(

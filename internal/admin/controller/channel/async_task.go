@@ -85,7 +85,7 @@ func channelModelTestImageEditSignature(endpoint string, imageEditURL string, im
 		source = strings.TrimSpace(imageEditURL)
 	}
 	if source == "" {
-		source = defaultChannelImageEditTestURL
+		source = defaultChannelImageEditTestSource
 	}
 	sum := sha256.Sum256([]byte(source))
 	return fmt.Sprintf("image:%x", sum[:8])

@@ -1497,6 +1497,7 @@
         },
         "settings_audio_language": "Speech Test Language",
         "image_edit_source_url": "Image edit test source URL",
+        "image_edit_source_url_placeholder": "Leave blank to use the built-in test image",
         "image_edit_upload": "Upload image edit test source",
         "image_edit_uploaded": "Image uploaded",
         "image_edit_file_failed": "Failed to read image",

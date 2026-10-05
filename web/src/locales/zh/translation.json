@@ -1497,6 +1497,7 @@
         },
         "settings_audio_language": "语音测试语言",
         "image_edit_source_url": "图片编辑测试原图地址",
+        "image_edit_source_url_placeholder": "留空则使用内置测试图",
         "image_edit_upload": "上传图片编辑测试原图",
         "image_edit_uploaded": "已上传图片",
         "image_edit_file_failed": "读取图片失败",

@@ -3,9 +3,6 @@
 // state here; the only external dependency is the API client.
 import { API } from '../../helpers';
 
-const DEFAULT_IMAGE_EDIT_TEST_URL =
-  'https://webdav.yeying.pub/api/v1/public/share/03fed01d-6f6b-4ffc-9eb0-d53f21fc17d2/blue_blank.png';
-
 const normalizeModelId = (model) => {
   if (typeof model === 'string') return model;
   if (model && typeof model === 'object') {
@@ -2188,7 +2185,6 @@ export {
   CHANNEL_MODEL_TEST_GROUP_COLUMN_WIDTHS,
   CHANNEL_MODEL_TYPE_OPTIONS,
   CHANNEL_ORIGIN_INPUTS,
-  DEFAULT_IMAGE_EDIT_TEST_URL,
   defaultChannelModelEndpoint,
   deleteChannelEndpointPolicy,
   DETAIL_TAB_KEYS,
