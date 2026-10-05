@@ -8,7 +8,7 @@ import {
   AppSegmented,
   AppSelect,
 } from '../../../router-ui';
-import ChannelDetailBillingTab from './ChannelDetailBillingTab';
+import ChannelBillingAccountView from './ChannelBillingAccountView';
 import CopyButton from '../../../components/CopyButton';
 
 const normalizeBillingSourceValue = (source) => {
@@ -474,16 +474,14 @@ const ChannelDetailOverviewTab = ({
           {t('channel.edit.billing.credential_hint')}
         </div>
       </AppDetailSection>
-      <ChannelDetailBillingTab
+      <ChannelBillingAccountView
         t={t}
         billingSummary={billingSummary}
         billingLoading={billingLoading}
         billingError={billingError}
-        billingReadonly={!detailBillingEditing}
         billingSubmitting={billingSubmitting}
         onRefreshBilling={onRefreshBilling}
         timestamp2string={timestamp2string}
-        viewMode='account'
         channelID={channelID}
       />
     </>
