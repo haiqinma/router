@@ -14,10 +14,9 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { API, showError, showInfo, showSuccess, timestamp2string, withCardLabels } from '../../../helpers';
+import { API, showError, showSuccess, timestamp2string, withCardLabels } from '../../../helpers';
 import { exportCSV } from '../../../helpers/csv';
 import { formatDecimalNumber } from '../../../helpers/render';
-import ChannelProcurementView from '../../Channel/components/ChannelProcurementView';
 import {
   AppButton,
   AppErrorState,
@@ -175,14 +174,6 @@ function BillingProcurementReport({ embedded = false }) {
   const [healthLoading, setHealthLoading] = useState(false);
   const [report, setReport] = useState(() => normalizeReport({}));
   const [health, setHealth] = useState(() => normalizeHealth({}));
-  const [channelOptions, setChannelOptions] = useState([]);
-  const [managedChannelID, setManagedChannelID] = useState(
-    () => new URLSearchParams(location.search).get('channel_id') || '',
-  );
-  const [purchaseRecords, setPurchaseRecords] = useState([]);
-  const [procurementBatches, setProcurementBatches] = useState([]);
-  const [procurementLoading, setProcurementLoading] = useState(false);
-  const [procurementSubmitting, setProcurementSubmitting] = useState(false);
   const [retryItems, setRetryItems] = useState([]);
   const [retryLoading, setRetryLoading] = useState(false);
   const [retryingLogID, setRetryingLogID] = useState('');
@@ -210,159 +201,6 @@ function BillingProcurementReport({ embedded = false }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const managedChannelLabel = useMemo(() => {
-    const selected = channelOptions.find(
-      (item) => String(item?.value || '') === managedChannelID,
-    );
-    return selected?.text || managedChannelID;
-  }, [channelOptions, managedChannelID]);
-
-  const selectManagedChannel = useCallback((channelID, replace = false) => {
-    const normalizedChannelID = String(channelID || '').trim();
-    const searchParams = new URLSearchParams(location.search);
-    if (normalizedChannelID) {
-      searchParams.set('channel_id', normalizedChannelID);
-    } else {
-      searchParams.delete('channel_id');
-    }
-    const search = searchParams.toString();
-    setManagedChannelID(normalizedChannelID);
-    navigate(
-      {
-        pathname: location.pathname,
-        search: search ? `?${search}` : '',
-      },
-      { replace },
-    );
-  }, [location.pathname, location.search, navigate]);
-
-  const loadProcurementManagement = useCallback(async (channelID = managedChannelID) => {
-    const id = String(channelID || '').trim();
-    if (!id) {
-      setPurchaseRecords([]);
-      setProcurementBatches([]);
-      return;
-    }
-    setProcurementLoading(true);
-    try {
-      const [recordsResponse, batchesResponse] = await Promise.all([
-        API.get(`/api/v1/admin/channel/${encodeURIComponent(id)}/billing/snapshots`),
-        API.get(`/api/v1/admin/channel/${encodeURIComponent(id)}/billing/procurement-batches`),
-      ]);
-      if (!recordsResponse.data?.success) throw new Error(recordsResponse.data?.message);
-      if (!batchesResponse.data?.success) throw new Error(batchesResponse.data?.message);
-      setPurchaseRecords(Array.isArray(recordsResponse.data?.data?.items) ? recordsResponse.data.data.items : []);
-      setProcurementBatches(Array.isArray(batchesResponse.data?.data?.items) ? batchesResponse.data.data.items : []);
-    } catch (error) {
-      showError(error?.message || t('billing.procurement_report.messages.load_failed'));
-    } finally {
-      setProcurementLoading(false);
-    }
-  }, [managedChannelID, t]);
-
-  const savePurchaseRecord = useCallback(async (payload) => {
-    const targetChannelID = String(payload?.channel_id || managedChannelID || '').trim();
-    if (!targetChannelID) {
-      showInfo(t('channel.edit.billing.manual_channel_required'));
-      return false;
-    }
-    const items = (Array.isArray(payload?.items) ? payload.items : []).map((item) => ({
-      id: String(item?.id || '').trim(),
-      resource_type: String(item?.resource_type || '').trim(),
-      quota_type: String(item?.quota_type || '').trim(),
-      quota_label: String(item?.quota_label || '').trim(),
-      amount: Number(item?.amount || 0),
-      limit_amount: Number(item?.limit_amount || 0),
-      used_amount: Number(item?.used_amount || 0),
-      remaining_amount: Number(item?.remaining_amount || 0),
-      currency: String(item?.currency || '').trim(),
-      reset_at: Number(item?.reset_at || 0),
-      expires_at: Number(item?.expires_at || 0),
-      source_ref: String(item?.source_ref || '').trim(),
-    })).filter((item) => item.resource_type && (item.amount > 0 || item.limit_amount > 0 || item.remaining_amount > 0));
-    if (items.length === 0) {
-      showInfo(t('channel.edit.billing.manual_snapshot_invalid'));
-      return false;
-    }
-    setProcurementSubmitting(true);
-    try {
-      const recordID = String(payload?.id || '').trim();
-      const path = `/api/v1/admin/channel/${encodeURIComponent(targetChannelID)}/billing/snapshots${recordID ? `/${encodeURIComponent(recordID)}` : ''}`;
-      const requestPayload = {
-        id: recordID,
-        purchase_at: Number(payload?.purchase_at || 0),
-        purchase_currency: String(payload?.purchase_currency || '').trim(),
-        purchase_amount: Number(payload?.purchase_amount || 0),
-        purchase_fx_rate: Number(payload?.purchase_fx_rate || 0),
-        purchase_cost_amount: Number(payload?.purchase_cost_amount || 0),
-        entitlement_name: String(payload?.entitlement_name || '').trim(),
-        event_type: String(payload?.event_type || 'purchase').trim(),
-        parent_snapshot_id: String(payload?.parent_snapshot_id || '').trim(),
-        old_batch_disposition: String(payload?.old_batch_disposition || 'keep').trim(),
-        valid_from: Number(payload?.valid_from || 0),
-        valid_until: Number(payload?.valid_until || 0),
-        items,
-        message: String(payload?.message || '').trim(),
-      };
-      const response = recordID ? await API.put(path, requestPayload) : await API.post(path, requestPayload);
-      if (!response.data?.success) throw new Error(response.data?.message);
-      selectManagedChannel(targetChannelID, true);
-      await loadProcurementManagement(targetChannelID);
-      showSuccess(t('channel.edit.billing.manual_snapshot_success'));
-      return true;
-    } catch (error) {
-      showError(error?.message || t('channel.edit.billing.manual_snapshot_failed'));
-      return false;
-    } finally {
-      setProcurementSubmitting(false);
-    }
-  }, [loadProcurementManagement, managedChannelID, selectManagedChannel, t]);
-
-  const deletePurchaseRecord = useCallback(async (recordID) => {
-    if (!managedChannelID || !recordID) return false;
-    setProcurementSubmitting(true);
-    try {
-      const response = await API.delete(`/api/v1/admin/channel/${encodeURIComponent(managedChannelID)}/billing/snapshots/${encodeURIComponent(recordID)}`);
-      if (!response.data?.success) throw new Error(response.data?.message);
-      await loadProcurementManagement();
-      showSuccess(t('channel.edit.billing.delete_purchase_record_success'));
-      return true;
-    } catch (error) {
-      showError(error?.message || t('channel.edit.billing.delete_purchase_record_failed'));
-      return false;
-    } finally {
-      setProcurementSubmitting(false);
-    }
-  }, [loadProcurementManagement, managedChannelID, t]);
-
-  const updateBatch = useCallback(async (batchID, suffix, payload, successKey, failureKey) => {
-    if (!managedChannelID || !batchID) return false;
-    setProcurementSubmitting(true);
-    try {
-      const response = await API.put(`/api/v1/admin/channel/${encodeURIComponent(managedChannelID)}/billing/procurement-batches/${encodeURIComponent(batchID)}/${suffix}`, payload);
-      if (!response.data?.success) throw new Error(response.data?.message);
-      await loadProcurementManagement();
-      showSuccess(t(successKey));
-      return true;
-    } catch (error) {
-      showError(error?.message || t(failureKey));
-      return false;
-    } finally {
-      setProcurementSubmitting(false);
-    }
-  }, [loadProcurementManagement, managedChannelID, t]);
-
-  const loadBatchConsumptions = useCallback(async (batchID) => {
-    if (!managedChannelID || !batchID) return [];
-    try {
-      const response = await API.get(`/api/v1/admin/channel/${encodeURIComponent(managedChannelID)}/billing/procurement-batches/${encodeURIComponent(batchID)}/consumptions`);
-      if (!response.data?.success) throw new Error(response.data?.message);
-      return Array.isArray(response.data?.data?.items) ? response.data.data.items : [];
-    } catch (error) {
-      showError(error?.message || t('channel.edit.billing.procurement_consumptions_load_failed'));
-      return [];
-    }
-  }, [managedChannelID, t]);
 
   const loadRetries = useCallback(async () => {
     const startTimestamp = timestampFromDateTimeLocal(startAt);
@@ -374,7 +212,6 @@ function BillingProcurementReport({ embedded = false }) {
           start_at: startTimestamp,
           end_at: endTimestamp,
           group_id: groupID,
-          channel_id: managedChannelID,
           provider,
           model,
           limit: 50,
@@ -394,7 +231,7 @@ function BillingProcurementReport({ embedded = false }) {
     } finally {
       setRetryLoading(false);
     }
-  }, [endAt, groupID, managedChannelID, model, provider, startAt, t]);
+  }, [endAt, groupID, model, provider, startAt, t]);
 
   const loadGroups = async () => {
     try {
@@ -438,7 +275,6 @@ function BillingProcurementReport({ embedded = false }) {
           group_by: groupBy,
           cost_scope: costScope,
           group_id: groupID,
-          channel_id: managedChannelID,
           provider,
           model,
         },
@@ -555,12 +391,6 @@ function BillingProcurementReport({ embedded = false }) {
       }
     };
     loadProviders().then();
-    API.get('/api/v1/admin/channels/', { params: { page: 1, page_size: 500 } })
-      .then((response) => {
-        const items = response.data?.success && Array.isArray(response.data?.data?.items) ? response.data.data.items : [];
-        setChannelOptions(items.map((item) => ({ key: item.id, value: String(item.id), text: item.name || String(item.id) })));
-      })
-      .catch((error) => showError(error?.message || t('common.load_failed')));
 
     // Populate the model dropdown from the logs options endpoint so the model
     // filter becomes a searchable picker instead of free text. Empty/failed
@@ -584,10 +414,6 @@ function BillingProcurementReport({ embedded = false }) {
   }, []);
 
   useEffect(() => {
-    setManagedChannelID(new URLSearchParams(location.search).get('channel_id') || '');
-  }, [location.search]);
-
-  useEffect(() => {
     const params = new URLSearchParams();
     const startTimestamp = timestampFromDateTimeLocal(startAt);
     const endTimestamp = timestampFromDateTimeLocal(endAt);
@@ -596,7 +422,6 @@ function BillingProcurementReport({ embedded = false }) {
     params.set('group_by', groupBy);
     params.set('cost_scope', costScope);
     if (groupID) params.set('group_id', groupID);
-    if (managedChannelID) params.set('channel_id', managedChannelID);
     if (provider) params.set('provider', provider);
     if (model) params.set('model', model);
     if (initialContext.returnTo) params.set('return_to', initialContext.returnTo);
@@ -605,19 +430,12 @@ function BillingProcurementReport({ embedded = false }) {
     const currentTab = new URLSearchParams(location.search).get('tab');
     if (currentTab) params.set('tab', currentTab);
     navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true });
-  }, [costScope, endAt, groupBy, groupID, initialContext.returnTo, location.pathname, managedChannelID, model, navigate, provider, startAt]);
+  }, [costScope, endAt, groupBy, groupID, initialContext.returnTo, location.pathname, model, navigate, provider, startAt]);
 
   useEffect(() => {
-    loadProcurementManagement().then();
-  }, [loadProcurementManagement]);
-
-  useEffect(() => {
-    if (managedChannelID) {
-      return;
-    }
     loadReport().then();
     loadRetries().then();
-  }, [groupBy, costScope, groupID, managedChannelID, model, provider, loadRetries]);
+  }, [groupBy, costScope, groupID, model, provider, loadRetries]);
 
   // 8 summary cards were collapsed into a single headline + side stats.
   // The two big numbers on the left are gross profit + margin (actionable);
@@ -999,29 +817,15 @@ function BillingProcurementReport({ embedded = false }) {
   return (
     <div className={`${embedded ? '' : 'dashboard-container '}billing-procurement-report-page`}>
       <AppFilterHeader
-        breadcrumbs={embedded ? undefined : (managedChannelID
-          ? [
-              ...baseBreadcrumbs,
-              {
-                key: 'procurement-report',
-                label: t('billing.procurement_report.title'),
-                onClick: () => selectManagedChannel('', true),
-              },
-              {
-                key: 'procurement-channel',
-                label: managedChannelLabel || managedChannelID,
-                active: true,
-              },
-            ]
-          : [
-              ...baseBreadcrumbs,
-              {
-                key: 'procurement-report',
-                label: t('billing.procurement_report.title'),
-                active: true,
-              },
-            ])}
-        actions={!managedChannelID ? (
+        breadcrumbs={embedded ? undefined : [
+          ...baseBreadcrumbs,
+          {
+            key: 'procurement-report',
+            label: t('billing.procurement_report.title'),
+            active: true,
+          },
+        ]}
+        actions={
           <>
             <AppButton
               className='router-page-button'
@@ -1059,8 +863,8 @@ function BillingProcurementReport({ embedded = false }) {
               {t('common.refresh')}
             </AppButton>
           </>
-        ) : null}
-        query={!managedChannelID ? (
+        }
+        query={
           <div className='billing-procurement-report-filters'>
             <AppSegmented
               className='billing-procurement-report-segmented'
@@ -1126,23 +930,11 @@ function BillingProcurementReport({ embedded = false }) {
               placeholder={t('billing.procurement_report.filters.model')}
               onChange={(e, { value }) => setModel((value || '').toString())}
             />
-            <AppSelect
-              className='router-section-input billing-procurement-report-group-select'
-              clearable
-              search
-              options={channelOptions}
-              value={managedChannelID}
-              placeholder={t('billing.procurement_report.filters.channel')}
-              onChange={(e, { value }) =>
-                selectManagedChannel((value || '').toString())
-              }
-            />
           </div>
-        ) : null}
+        }
       />
-      <AppSpin spinning={managedChannelID ? procurementLoading : loading}>
-        {!managedChannelID ? (
-          loadError ? (
+      <AppSpin spinning={loading}>
+        {loadError ? (
             <AppErrorState
               message={t('billing.procurement_report.messages.load_failed')}
               onRetry={() => loadReport().then()}
@@ -1386,40 +1178,7 @@ function BillingProcurementReport({ embedded = false }) {
           </div>
         ) : null}
           </div>
-          )
-        ) : null}
-        {managedChannelID ? (
-          <div className='billing-procurement-report-detail'>
-          {embedded ? (
-            <div className='billing-procurement-report-managed-back'>
-              <AppButton
-                size='small'
-                onClick={() => selectManagedChannel('', true)}
-              >
-                {`← ${t('common.back')}`}
-              </AppButton>
-            </div>
-          ) : null}
-          <ChannelProcurementView
-            t={t}
-            billingSummary={null}
-            billingLoading={procurementLoading}
-            billingSnapshots={purchaseRecords}
-            procurementBatches={procurementBatches}
-            billingReadonly={false}
-            billingSubmitting={procurementSubmitting}
-            onRefreshBilling={() => loadProcurementManagement().then()}
-            onManualSnapshotUpdate={savePurchaseRecord}
-            onManualSnapshotDelete={deletePurchaseRecord}
-            onProcurementBatchCostUpdate={(id, payload) => updateBatch(id, 'cost', payload, 'channel.edit.billing.procurement_update_success', 'channel.edit.billing.procurement_update_failed')}
-            onProcurementBatchStatusUpdate={(id, status) => updateBatch(id, 'status', { cost_status: status }, 'channel.edit.billing.procurement_status_update_success', 'channel.edit.billing.procurement_status_update_failed')}
-            onProcurementBatchConsumptionsLoad={loadBatchConsumptions}
-            timestamp2string={timestamp2string}
-            channelID={managedChannelID}
-            showProcurementBatches={false}
-          />
-          </div>
-        ) : null}
+          )}
       </AppSpin>
     </div>
   );
