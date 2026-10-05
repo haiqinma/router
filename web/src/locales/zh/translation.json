@@ -2084,6 +2084,9 @@
       "unit": "$"
     },
     "delete": "删除",
+    "all": "全部",
+    "other": "其他",
+    "unassigned": "未分配",
     "session_expired": "登录已过期，请重新登录",
     "rate_limit": "请求次数过多，请稍后再试",
     "server_error": "服务器内部错误，请联系管理员",

@@ -2084,6 +2084,9 @@
       "unit": "$"
     },
     "delete": "Delete",
+    "all": "All",
+    "other": "Other",
+    "unassigned": "Unassigned",
     "session_expired": "Your session has expired. Please sign in again.",
     "rate_limit": "Too many requests. Please try again later.",
     "server_error": "Server error. Please contact the administrator.",
