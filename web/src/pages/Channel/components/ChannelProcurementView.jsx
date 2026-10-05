@@ -5,21 +5,19 @@ import {
   AppAlert,
   AppButton,
   AppCompact,
-  AppDetailSection,
   AppField,
   AppFormActions,
   AppFormRow,
   AppInput,
   AppInputNumber,
   AppModal,
-  AppPopconfirm,
   AppSegmented,
   AppSelect,
-  AppTable,
-  AppTableActionButton,
-  AppTag,
   AppTooltip,
 } from '../../../router-ui';
+import ConsumptionModal from './ConsumptionModal';
+import ProcurementBatchTable from './ProcurementBatchTable';
+import SnapshotRecordsTable from './SnapshotRecordsTable';
 import {
   buildManualPurchaseRecord,
   buildManualPurchaseRecordFromSnapshot,
@@ -30,19 +28,10 @@ import {
   entitlementTypeOptions,
   entitlementTypePatch,
   entitlementTypeValue,
-  formatNumberText,
-  formatProcurementCapacityText,
-  formatProcurementCostText,
-  formatProcurementResourceText,
-  formatProcurementScopeText,
-  formatProcurementSourceText,
-  formatProcurementUnitCostText,
-  formatUsageText,
   isPurchaseCurrencyCNY,
   MANUAL_CURRENCY_OPTIONS,
   normalizeManualValidityInput,
   procurementScopeOptions,
-  procurementStatusColor,
   PROCUREMENT_CURRENCY_OPTIONS,
   resolveManualAmountLabel,
   resolveManualItemAmounts,
@@ -824,283 +813,29 @@ const ChannelProcurementView = ({
       </div>
       <AppAlert type='info' showIcon className='router-section-message' title={t('channel.edit.billing.structure_hint')} />
       {billingView === 'records' && (
-        <AppDetailSection
-          className='router-billing-management-section'
-          title={t('channel.edit.billing.snapshots_title')}
-          titleTag='span'
-        >
-          <div className='router-billing-subsection-header'>
-            <div>
-              <div className='router-billing-subsection-description'>
-                {t('channel.edit.billing.snapshots_hint')}
-              </div>
-            </div>
-          </div>
-          <AppTable
-            className='router-detail-table'
-            pagination={false}
-            loading={billingLoading}
-            dataSource={purchaseRecords}
-            rowKey={(row) => row.id}
-            columns={[
-              {
-                title: t('channel.edit.billing.snapshot_table.purchase_at'),
-                dataIndex: 'purchase_at',
-                key: 'purchase_at',
-                width: 180,
-                render: (value) => (value ? timestamp2string(value) : '-'),
-              },
-              {
-                title: t('channel.edit.billing.snapshot_table.purchase_amount'),
-                key: 'purchase_amount',
-                width: 130,
-                render: (_, row) =>
-                  row?.purchase_amount
-                    ? `${formatNumberText(row.purchase_amount, 6)} ${
-                        row.purchase_currency || ''
-                      }`.trim()
-                    : '-',
-              },
-              {
-                title: t('channel.edit.billing.snapshot_table.purchase_cost_amount'),
-                dataIndex: 'purchase_cost_amount',
-                key: 'purchase_cost_amount',
-                width: 130,
-                render: (value) =>
-                  Number(value || 0) > 0
-                    ? `${formatNumberText(value, 6)} CNY`
-                    : '-',
-              },
-              {
-                title: t('channel.edit.billing.snapshot_table.entitlement_name'),
-                dataIndex: 'entitlement_name',
-                key: 'entitlement_name',
-                width: 180,
-                render: (value) => value || '-',
-              },
-              {
-                title: t('channel.edit.billing.snapshot_table.validity'),
-                key: 'validity',
-                width: 330,
-                render: (_, row) => {
-                  const start = Number(row?.valid_from || 0) > 0
-                    ? timestamp2string(row.valid_from)
-                    : t('channel.edit.billing.validity_immediate');
-                  const end = Number(row?.valid_until || 0) > 0
-                    ? timestamp2string(row.valid_until)
-                    : t('channel.edit.billing.no_expire');
-                  return `${start} - ${end}`;
-                },
-              },
-              {
-                title: t('channel.edit.billing.snapshot_table.quota_items'),
-                dataIndex: 'items',
-                key: 'items',
-                render: (items) =>
-                  Array.isArray(items) && items.length > 0
-                    ? items
-                        .map(
-                          (row) =>
-                            `${
-                              row.quota_label || row.quota_type
-                            }: ${formatUsageText(row)}`
-                        )
-                        .join(' / ')
-                    : '-',
-              },
-              {
-                title: t('channel.edit.billing.snapshot_table.message'),
-                dataIndex: 'message',
-                key: 'message',
-                render: (value) => value || '-',
-              },
-              {
-                title: t('channel.edit.billing.snapshot_table.actions'),
-                key: 'actions',
-                width: 110,
-                render: (_, row) => (
-                  <div className='router-table-actions-icon-compact'>
-                    <AppTableActionButton
-                      title={t('channel.edit.billing.edit_purchase_record')}
-                      icon='edit'
-                      disabled={billingReadonly || billingSubmitting}
-                      onClick={() => openEditManualModal(row)}
-                    />
-                    <AppPopconfirm
-                      title={t(
-                        'channel.edit.billing.delete_purchase_record_confirm'
-                      )}
-                      okText={t('common.confirm')}
-                      cancelText={t('common.cancel')}
-                      onConfirm={() => deleteManualSnapshot(row)}
-                    >
-                      <span>
-                        <AppTableActionButton
-                          title={t(
-                            'channel.edit.billing.delete_purchase_record'
-                          )}
-                          icon='trash'
-                          color='red'
-                          disabled={billingReadonly || billingSubmitting}
-                        />
-                      </span>
-                    </AppPopconfirm>
-                  </div>
-                ),
-              },
-            ]}
-          />
-        </AppDetailSection>
+        <SnapshotRecordsTable
+          t={t}
+          purchaseRecords={purchaseRecords}
+          billingLoading={billingLoading}
+          billingReadonly={billingReadonly}
+          billingSubmitting={billingSubmitting}
+          timestamp2string={timestamp2string}
+          onEditRecord={openEditManualModal}
+          onDeleteRecord={deleteManualSnapshot}
+        />
       )}
       {showProcurementBatches && billingView === 'batches' && (
-        <AppDetailSection className='router-billing-management-section'
-          title={t('channel.edit.billing.procurement_title')} titleTag='span'>
-          <div className='router-billing-subsection-header'>
-            <div>
-              <div className='router-billing-subsection-description'>
-                {t('channel.edit.billing.procurement_hint')}
-              </div>
-            </div>
-          </div>
-          <AppTable
-            className='router-detail-table'
-            pagination={false}
-            loading={billingLoading}
-            dataSource={procurementRows}
-            rowKey={(row) => row.id}
-            columns={[
-              {
-                title: t('channel.edit.billing.procurement_table.resource'),
-                dataIndex: 'resource_type',
-                key: 'resource',
-                width: 190,
-                render: (_, row) => formatProcurementResourceText(row, t),
-              },
-              {
-                title: t('channel.edit.billing.procurement_table.source'),
-                dataIndex: 'source_ref',
-                key: 'source',
-                width: 150,
-                render: (_, row) => formatProcurementSourceText(row),
-              },
-              {
-                title: t('channel.edit.billing.procurement_table.capacity'),
-                dataIndex: 'capacity_remaining',
-                key: 'capacity',
-                width: 220,
-                render: (_, row) => formatProcurementCapacityText(row, t),
-              },
-              {
-                title: t('channel.edit.billing.procurement_table.cost'),
-                dataIndex: 'purchase_cost_amount',
-                key: 'cost',
-                width: 150,
-                render: (_, row) => formatProcurementCostText(row, t),
-              },
-              {
-                title: t('channel.edit.billing.procurement_table.unit_cost'),
-                dataIndex: 'cost_per_unit_amount',
-                key: 'unit_cost',
-                width: 180,
-                render: (_, row) => formatProcurementUnitCostText(row),
-              },
-              {
-                title: t('channel.edit.billing.procurement_table.scope'),
-                key: 'scope',
-                width: 160,
-                render: (_, row) => formatProcurementScopeText(row, t),
-              },
-              {
-                title: t('channel.edit.billing.procurement_table.expire_at'),
-                dataIndex: 'expire_at',
-                key: 'expire_at',
-                width: 180,
-                render: (value) =>
-                  Number(value || 0) > 0 ? timestamp2string(value) : '-',
-              },
-              {
-                title: t('channel.edit.billing.procurement_table.status'),
-                dataIndex: 'cost_status',
-                key: 'cost_status',
-                width: 120,
-                render: (value) => (
-                  <AppTag color={procurementStatusColor(value)}>
-                    {t(
-                      `channel.edit.billing.procurement_status.${
-                        value || 'unknown'
-                      }`,
-                      {
-                        defaultValue: value || '-',
-                      }
-                    )}
-                  </AppTag>
-                ),
-              },
-              {
-                title: t('channel.edit.billing.procurement_table.actions'),
-                key: 'actions',
-                width: 150,
-                render: (_, row) => (
-                  <div className='router-table-actions-icon-compact'>
-                    <AppTableActionButton
-                      title={t(
-                        'channel.edit.billing.procurement_view_consumptions'
-                      )}
-                      icon='eye'
-                      disabled={billingSubmitting}
-                      onClick={() => openConsumptionModal(row)}
-                    />
-                    <AppTableActionButton
-                      title={t('channel.edit.billing.procurement_edit_cost')}
-                      icon='edit'
-                      disabled={billingReadonly || billingSubmitting}
-                      onClick={() => openCostModal(row)}
-                    />
-                    {(row?.cost_status || '').toString().trim() ===
-                    'disabled' ? (
-                      <AppPopconfirm
-                        title={t(
-                          'channel.edit.billing.procurement_restore_confirm'
-                        )}
-                        okText={t('common.confirm')}
-                        cancelText={t('common.cancel')}
-                        onConfirm={() =>
-                          updateProcurementBatchStatus(row, 'active')
-                        }
-                      >
-                        <AppTableActionButton
-                          title={t('channel.edit.billing.procurement_restore')}
-                          icon='check'
-                          disabled={billingReadonly || billingSubmitting}
-                        />
-                      </AppPopconfirm>
-                    ) : (
-                      <AppPopconfirm
-                        title={t(
-                          'channel.edit.billing.procurement_disable_confirm'
-                        )}
-                        okText={t('common.confirm')}
-                        cancelText={t('common.cancel')}
-                        onConfirm={() =>
-                          updateProcurementBatchStatus(row, 'disabled')
-                        }
-                      >
-                        <AppTableActionButton
-                          title={t('channel.edit.billing.procurement_disable')}
-                          icon='close'
-                          disabled={billingReadonly || billingSubmitting}
-                        />
-                      </AppPopconfirm>
-                    )}
-                  </div>
-                ),
-              },
-            ]}
-            locale={{
-              emptyText: t('channel.edit.billing.no_procurement_batches'),
-            }}
-          />
-        </AppDetailSection>
+        <ProcurementBatchTable
+          t={t}
+          procurementRows={procurementRows}
+          billingLoading={billingLoading}
+          billingReadonly={billingReadonly}
+          billingSubmitting={billingSubmitting}
+          timestamp2string={timestamp2string}
+          onViewConsumptions={openConsumptionModal}
+          onEditCost={openCostModal}
+          onUpdateStatus={updateProcurementBatchStatus}
+        />
       )}
       <div>
         <AppModal
@@ -1163,87 +898,15 @@ const ChannelProcurementView = ({
         >
           {renderProcurementCostForm()}
         </AppModal>
-        <AppModal
-          size='large'
+        <ConsumptionModal
+          t={t}
           open={consumptionModalOpen}
           onClose={closeConsumptionModal}
-          title={t('channel.edit.billing.procurement_consumptions_title', {
-            batch:
-              viewingProcurementBatch?.source_ref ||
-              viewingProcurementBatch?.id ||
-              '-',
-          })}
-        >
-          <AppTable
-            className='router-detail-table'
-            pagination={false}
-            loading={consumptionLoading}
-            dataSource={consumptionRows}
-            rowKey={(row) => row.id}
-            columns={[
-              {
-                title: t(
-                  'channel.edit.billing.procurement_consumption_table.request_log'
-                ),
-                dataIndex: 'request_log_id',
-                key: 'request_log_id',
-                width: 220,
-                render: (value) => value || '-',
-              },
-              {
-                title: t(
-                  'channel.edit.billing.procurement_consumption_table.quantity'
-                ),
-                dataIndex: 'consumed_quantity',
-                key: 'consumed_quantity',
-                width: 150,
-                render: (value, row) =>
-                  `${formatNumberText(value, 6)} ${
-                    row?.capacity_unit || ''
-                  }`.trim(),
-              },
-              {
-                title: t(
-                  'channel.edit.billing.procurement_consumption_table.unit_cost'
-                ),
-                dataIndex: 'unit_cost_amount',
-                key: 'unit_cost_amount',
-                width: 150,
-                render: (value) => `${formatNumberText(value, 8)} CNY`,
-              },
-              {
-                title: t(
-                  'channel.edit.billing.procurement_consumption_table.cost'
-                ),
-                dataIndex: 'consumed_cost_amount',
-                key: 'consumed_cost_amount',
-                width: 150,
-                render: (value) => `${formatNumberText(value, 6)} CNY`,
-              },
-              {
-                title: t(
-                  'channel.edit.billing.procurement_consumption_table.truth_mode'
-                ),
-                dataIndex: 'settlement_truth_mode',
-                key: 'settlement_truth_mode',
-                render: (value) => value || '-',
-              },
-              {
-                title: t(
-                  'channel.edit.billing.procurement_consumption_table.created_at'
-                ),
-                dataIndex: 'created_at',
-                key: 'created_at',
-                width: 180,
-                render: (value) =>
-                  Number(value || 0) > 0 ? timestamp2string(value) : '-',
-              },
-            ]}
-            locale={{
-              emptyText: t('channel.edit.billing.no_procurement_consumptions'),
-            }}
-          />
-        </AppModal>
+          loading={consumptionLoading}
+          rows={consumptionRows}
+          batch={viewingProcurementBatch}
+          timestamp2string={timestamp2string}
+        />
         {billingError && (
           <div className='router-error-text router-error-text-top'>
             {billingError}
