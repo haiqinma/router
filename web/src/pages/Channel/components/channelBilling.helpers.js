@@ -31,8 +31,73 @@ export const toDateTimeLocalValue = (date) => {
   ].join('');
 };
 
-export const buildManualPurchaseRecord = () => ({
+// 采购主要两类:充值(预付余额,按量扣减,通常不设有效期)/ 订阅(按周期购买,
+// 有生效/到期日期)。purchase_kind 只是弹窗 UI 态,用来决定默认值与字段显隐,不入
+// 提交 payload。
+export const DEFAULT_PURCHASE_KIND = 'recharge';
+export const PURCHASE_KINDS = ['recharge', 'subscription'];
+
+// 某采购类型下单条权益项的默认资源/额度类型。
+export const purchaseKindItemDefaults = (kind) =>
+  kind === 'subscription'
+    ? { resource_type: 'quota', quota_type: 'monthly' }
+    : { resource_type: 'balance', quota_type: 'total' };
+
+// 切换采购类型时,保留已填的额度/币种,仅改资源与额度类型。
+export const applyPurchaseKindToItem = (item, kind) => ({
+  ...(item || buildManualQuotaItem()),
+  ...purchaseKindItemDefaults(kind),
+});
+
+// 编辑态由记录反推采购类型:带有效期或周期额度 → 订阅;否则按充值处理。
+export const inferPurchaseKind = (record, items) => {
+  const hasValidity =
+    toUnixTimestamp(record?.valid_from_input) > 0 ||
+    toUnixTimestamp(record?.valid_until_input) > 0;
+  const list = Array.isArray(items) ? items : [];
+  const hasPeriodic = list.some((item) => isManualPeriodicItem(item));
+  if (hasValidity || hasPeriodic) {
+    return 'subscription';
+  }
+  return 'recharge';
+};
+
+// 记录是否用到高级能力 → 编辑态需默认展开高级区:非「新购」变更类型、升级、
+// 多条权益项、或充值却带了有效期(简表单默认对充值隐藏有效期)。
+export const recordUsesAdvanced = (record, items) => {
+  const list = Array.isArray(items) ? items : [];
+  const eventType = normalizeBillingValue(record?.event_type) || 'purchase';
+  if (eventType !== 'purchase') {
+    return true;
+  }
+  if (list.length > 1) {
+    return true;
+  }
+  const kind = inferPurchaseKind(record, list);
+  if (kind === 'recharge') {
+    const hasValidity =
+      toUnixTimestamp(record?.valid_from_input) > 0 ||
+      toUnixTimestamp(record?.valid_until_input) > 0;
+    if (hasValidity) {
+      return true;
+    }
+  }
+  const [first] = list;
+  if (first) {
+    const defaults = purchaseKindItemDefaults(kind);
+    if (
+      normalizeBillingValue(first.resource_type) !== defaults.resource_type ||
+      normalizeBillingValue(first.quota_type) !== defaults.quota_type
+    ) {
+      return true;
+    }
+  }
+  return false;
+};
+
+export const buildManualPurchaseRecord = (kind = DEFAULT_PURCHASE_KIND) => ({
   channel_id: '',
+  purchase_kind: kind,
   purchase_at_input: toDateTimeLocalValue(new Date()),
   purchase_currency: 'CNY',
   purchase_amount: null,
@@ -489,6 +554,15 @@ export const normalizeManualValidityInput = (value, defaultTime, forceDefaultTim
 
 export const buildManualPurchaseRecordFromSnapshot = (row) => ({
   channel_id: (row?.channel_id || '').toString().trim(),
+  purchase_kind: inferPurchaseKind(
+    {
+      valid_from_input: toDateTimeLocalValueFromTimestamp(row?.valid_from),
+      valid_until_input: toDateTimeLocalValueFromTimestamp(row?.valid_until),
+    },
+    Array.isArray(row?.items)
+      ? row.items.map((item) => buildManualQuotaItemFromSnapshotItem(item))
+      : []
+  ),
   purchase_at_input:
     toDateTimeLocalValueFromTimestamp(row?.purchase_at) ||
     buildManualPurchaseRecord().purchase_at_input,

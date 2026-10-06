@@ -941,6 +941,16 @@
         },
         "updated_at": "Updated At",
         "manual_update_title": "Add Purchase Record",
+        "purchase_kind": "Procurement type",
+        "purchase_kinds": {
+          "recharge": "Recharge",
+          "subscription": "Subscription"
+        },
+        "purchase_kind_hints": {
+          "recharge": "Recharge: prepay a balance drawn down by usage; usually no validity window.",
+          "subscription": "Subscription: bought per period with a start/end date (usually whole days at 00:00:00)."
+        },
+        "advanced_options": "Advanced options",
         "manual_purchase_title": "Purchase Info",
         "procurement_event_type": "Procurement change",
         "procurement_events": {

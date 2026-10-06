@@ -13,12 +13,14 @@ import ProcurementBatchTable from './ProcurementBatchTable';
 import ProcurementCostForm from './ProcurementCostForm';
 import SnapshotRecordsTable from './SnapshotRecordsTable';
 import {
+  applyPurchaseKindToItem,
   buildManualPurchaseRecord,
   buildManualPurchaseRecordFromSnapshot,
   buildManualQuotaItem,
   buildManualQuotaItemFromSnapshotItem,
   buildProcurementCostDraft,
   normalizeManualValidityInput,
+  recordUsesAdvanced,
   resolveManualItemAmounts,
   toUnixTimestamp,
 } from './channelBilling.helpers';
@@ -65,6 +67,7 @@ const ChannelProcurementView = ({
     valid_from_input: false,
     valid_until_input: false,
   });
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [billingView, setBillingView] = useState('records');
 
   const purchaseRecords = useMemo(
@@ -118,6 +121,23 @@ const ChannelProcurementView = ({
     }));
   };
 
+  // 切换采购类型:同步首条权益项的资源/额度类型;充值回到「新购」并丢弃升级关联。
+  const changePurchaseKind = (kind) => {
+    setManualPurchaseRecord((prev) => ({
+      ...prev,
+      purchase_kind: kind,
+      ...(kind === 'recharge'
+        ? { event_type: 'purchase', parent_snapshot_id: '', old_batch_disposition: 'keep' }
+        : {}),
+    }));
+    setManualItems((prev) => {
+      const list = prev.length > 0 ? prev : [buildManualQuotaItem()];
+      return list.map((item, index) =>
+        index === 0 ? applyPurchaseKindToItem(item, kind) : item
+      );
+    });
+  };
+
   const updateManualValidityInput = (field, value, defaultTime) => {
     const firstTouch = manualValidityTouched[field] !== true;
     updateManualPurchaseRecord({
@@ -148,29 +168,33 @@ const ChannelProcurementView = ({
       valid_from_input: false,
       valid_until_input: false,
     });
+    setAdvancedOpen(false);
     setManualMessage('');
-    setManualItems([buildManualQuotaItem()]);
+    setManualItems([
+      applyPurchaseKindToItem(buildManualQuotaItem(), buildManualPurchaseRecord().purchase_kind),
+    ]);
     setManualModalOpen(true);
   };
 
   const openEditManualModal = (row) => {
     setEditingPurchaseRecord(row);
-    setManualPurchaseRecord({
+    const nextRecord = {
       ...buildManualPurchaseRecordFromSnapshot(row),
-      channel_id:
-        (row?.channel_id || channelID || '').toString().trim(),
-    });
+      channel_id: (row?.channel_id || channelID || '').toString().trim(),
+    };
+    setManualPurchaseRecord(nextRecord);
     setManualValidityTouched({
       valid_from_input: true,
       valid_until_input: true,
     });
     setManualMessage((row?.message || '').toString());
     const items = Array.isArray(row?.items) ? row.items : [];
-    setManualItems(
+    const nextItems =
       items.length > 0
         ? items.map((item) => buildManualQuotaItemFromSnapshotItem(item))
-        : [buildManualQuotaItem()]
-    );
+        : [applyPurchaseKindToItem(buildManualQuotaItem(), nextRecord.purchase_kind)];
+    setManualItems(nextItems);
+    setAdvancedOpen(recordUsesAdvanced(nextRecord, nextItems));
     setManualModalOpen(true);
   };
 
@@ -398,8 +422,11 @@ const ChannelProcurementView = ({
             parentPurchaseOptions={parentPurchaseOptions}
             manualChannelOptions={manualChannelOptions}
             requireManualChannelSelect={requireManualChannelSelect}
+            advancedOpen={advancedOpen}
             billingReadonly={billingReadonly}
             billingSubmitting={billingSubmitting}
+            onChangePurchaseKind={changePurchaseKind}
+            onToggleAdvanced={() => setAdvancedOpen((prev) => !prev)}
             onUpdateManualPurchaseRecord={updateManualPurchaseRecord}
             onUpdateManualValidityInput={updateManualValidityInput}
             onAppendManualItem={appendManualItem}
