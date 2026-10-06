@@ -408,10 +408,21 @@ func responseStateConflict(c *gin.Context) bool {
 	return conflict
 }
 
+// requestBodyIsForm 判断请求体是否为表单编码（multipart/form-data 或
+// x-www-form-urlencoded）。这类请求（如 /v1/images/edits、音频转写）无法携带
+// JSON 路由策略，直接按默认策略处理，避免把 multipart 边界当 JSON 解析报错。
+func requestBodyIsForm(c *gin.Context) bool {
+	contentType := strings.ToLower(strings.TrimSpace(c.GetHeader("Content-Type")))
+	return strings.HasPrefix(contentType, "multipart/form-data") ||
+		strings.HasPrefix(contentType, "application/x-www-form-urlencoded")
+}
+
 func Distribute() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
-		if rawBody, bodyErr := common.GetRequestBody(c); bodyErr != nil {
+		if requestBodyIsForm(c) {
+			c.Set(ctxkey.ProviderRoutingPolicy, routing.DefaultPolicy())
+		} else if rawBody, bodyErr := common.GetRequestBody(c); bodyErr != nil {
 			abortWithMessage(c, http.StatusBadRequest, "读取请求体失败")
 			return
 		} else if policy, policyErr := routing.ParseRequestPolicy(rawBody); policyErr != nil {
