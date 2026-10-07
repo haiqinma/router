@@ -1437,9 +1437,9 @@ html[data-theme='dark'] .router-topup-return-next-hint {
 }
 
 .router-ui-select.router-section-input-unit-dropdown {
-    flex: 0 0 72px;
-    width: 72px;
-    min-width: 72px;
+    flex: 0 0 88px;
+    width: 88px;
+    min-width: 88px;
     margin: 0 !important;
 }
 
