@@ -34,6 +34,12 @@ type channelBillingProfileData struct {
 	CostTrackingMode   string            `json:"cost_tracking_mode"`
 	BillingCredentials map[string]string `json:"billing_credentials"`
 	ActionCapabilities []string          `json:"action_capabilities"`
+	// CostMissingModelCount is how many of the channel's published models have no
+	// covering procurement cost under the current cost tracking mode. It is only
+	// ever > 0 in actual mode (untracked resolves to untracked, free carries
+	// auto-managed zero-cost batches), surfacing the downstream "cost missing"
+	// signal right where cost_tracking_mode is set.
+	CostMissingModelCount int `json:"cost_missing_model_count"`
 }
 
 type channelBillingListData[T any] struct {
@@ -167,6 +173,43 @@ func buildChannelBillingProfileData(channelRow *model.Channel, profile model.Cha
 	}
 }
 
+// countChannelCostMissingModels counts the channel's published models whose
+// procurement readiness is neither ready nor untracked under the given cost
+// tracking mode — i.e. models whose cost is unrecorded so margin cannot be
+// computed. "Published" uses the persisted PublishEnabled + PublishedAt columns
+// (IsChannelModelPublished relies on the transient PublishStatus, which is not
+// stored on table rows). Mirrors the readiness resolution in
+// buildChannelModelListData (model_list.go).
+func countChannelCostMissingModels(channelID string, mode string) (int, error) {
+	normalizedChannelID := strings.TrimSpace(channelID)
+	if normalizedChannelID == "" {
+		return 0, nil
+	}
+	// untracked never records cost by design, so nothing is "missing".
+	if model.NormalizeChannelCostTrackingMode(mode) == model.ChannelCostTrackingModeUntracked {
+		return 0, nil
+	}
+	rows, err := model.ListChannelModelRowsByChannelIDWithDB(model.DB, normalizedChannelID)
+	if err != nil {
+		return 0, err
+	}
+	batches, err := model.ListAllChannelProcurementBatchesByChannelIDWithDB(model.DB, normalizedChannelID)
+	if err != nil {
+		return 0, err
+	}
+	count := 0
+	for _, row := range rows {
+		if !row.PublishEnabled || row.PublishedAt <= 0 {
+			continue
+		}
+		readiness := model.ResolveChannelModelProcurementReadinessForMode(row, batches, mode)
+		if readiness.Status != model.ProcurementReadinessReady && readiness.Status != model.ProcurementReadinessUntracked {
+			count++
+		}
+	}
+	return count, nil
+}
+
 func attachManualPurchaseCostToSnapshotBatches(tx *gorm.DB, snapshotID string, purchaseCurrency string, purchaseAmount float64, purchaseFXRate float64, purchaseCostAmount float64) error {
 	normalizedSnapshotID := strings.TrimSpace(snapshotID)
 	if normalizedSnapshotID == "" || purchaseCostAmount <= 0 {
@@ -294,10 +337,16 @@ func GetChannelBillingProfile(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
 		return
 	}
+	data := buildChannelBillingProfileData(channelRow, profile)
+	if count, countErr := countChannelCostMissingModels(channelID, data.CostTrackingMode); countErr != nil {
+		logChannelAdminWarn(c, "get_billing_profile_cost_missing", stringField("channel_id", channelID), stringField("reason", countErr.Error()))
+	} else {
+		data.CostMissingModelCount = count
+	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
-		"data":    buildChannelBillingProfileData(channelRow, profile),
+		"data":    data,
 	})
 }
 

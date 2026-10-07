@@ -932,17 +932,25 @@
         "current_quotas_title": "权益项状态",
         "billing_source": "账务来源",
         "cost_tracking_mode": {
-          "label": "成本跟踪方式",
+          "label": "成本核算",
+          "tooltip": "决定该渠道请求是否计入毛利报表,以及成本如何取值。",
           "options": {
-            "untracked": "不跟踪",
+            "untracked": "不核算",
             "free": "免费",
-            "actual": "记录实际成本"
+            "actual": "实际成本"
+          },
+          "consequence": {
+            "untracked": "不计入毛利报表",
+            "free": "成本按 0 计,毛利按满额",
+            "actual": "按采购批次核算"
           },
           "hint": {
-            "untracked": "不核算该渠道成本，相关请求不计入毛利报表(如实标记为未跟踪)。",
+            "untracked": "不核算该渠道成本,相关请求不计入毛利报表(如实标记为未跟踪)。",
             "free": "上游免费,成本按 0 计,自动维护零成本采购批次,毛利按满额核算。",
             "actual": "按采购批次记录实际成本,缺批次的模型会在分组页提示补录成本。"
-          }
+          },
+          "missing_cost": "{{count}} 个模型缺成本",
+          "missing_cost_hint": "这些模型未记录采购成本,毛利暂不可算;可在模型页补录采购成本或标记零成本。"
         },
         "updated_at": "更新时间",
         "manual_update_title": "新增采购记录",

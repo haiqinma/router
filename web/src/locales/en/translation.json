@@ -932,17 +932,25 @@
         "current_quotas_title": "Entitlement Status",
         "billing_source": "Billing Source",
         "cost_tracking_mode": {
-          "label": "Cost Tracking",
+          "label": "Cost Accounting",
+          "tooltip": "Determines whether this channel's requests count toward the margin report, and how cost is valued.",
           "options": {
             "untracked": "Untracked",
             "free": "Free",
-            "actual": "Record actual cost"
+            "actual": "Actual cost"
+          },
+          "consequence": {
+            "untracked": "Excluded from the margin report",
+            "free": "Cost counted as 0, margin at full amount",
+            "actual": "Accounted via procurement batches"
           },
           "hint": {
             "untracked": "Cost is not tracked for this channel; its requests are excluded from the margin report (honestly marked as untracked).",
             "free": "Upstream is free; cost counted as 0 with auto-managed zero-cost batches, so margin is computed at full amount.",
             "actual": "Record actual cost via procurement batches; models missing a batch are flagged on the group page to add cost."
-          }
+          },
+          "missing_cost": "{{count}} models missing cost",
+          "missing_cost_hint": "These models have no recorded procurement cost, so margin can't be computed yet; add procurement cost or mark zero-cost on the model page."
         },
         "updated_at": "Updated At",
         "manual_update_title": "Add Purchase Record",

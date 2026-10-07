@@ -4036,6 +4036,20 @@ html[data-theme='dark'] .router-provider-brand-monogram {
     flex-direction: column;
 }
 
+.router-cost-mode-readonly {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-height: 32px;
+}
+
+.router-cost-mode-consequence {
+    color: var(--router-text-muted, rgba(0, 0, 0, 0.45));
+    font-size: 12px;
+    line-height: 1.5;
+}
+
 .router-checkbox-block {
     margin-bottom: 12px;
 }
