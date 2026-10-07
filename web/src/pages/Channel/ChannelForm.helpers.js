@@ -220,6 +220,13 @@ function resolveEffectiveProtocolFromInputs(inputs) {
 }
 
 function isEffectiveVolcengineRealtimeProtocol(inputs) {
+  // The Realtime App ID / Resource ID block (volc.speech.dialog) is specific to
+  // the Volcengine voice WebSocket API. Other providers (e.g. Aliyun/QianWen) may
+  // also expose a /v1/realtime model, so gate on the effective protocol too —
+  // otherwise their realtime models wrongly surface the Volcengine-only fields.
+  if (resolveEffectiveProtocolFromInputs(inputs) !== VOLCENGINE_STANDARD_PROTOCOL) {
+    return false;
+  }
   return hasVolcengineRealtimeChannelModel(inputs?.channel_models, inputs?.protocol);
 }
 
