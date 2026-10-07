@@ -93,6 +93,7 @@ func LoadProviderModelDetailsMapForProviders(db *gorm.DB, providers []string) (m
 			PriceUnit:          strings.TrimSpace(strings.ToLower(row.PriceUnit)),
 			Currency:           strings.TrimSpace(strings.ToUpper(row.Currency)),
 			Source:             strings.TrimSpace(strings.ToLower(row.Source)),
+			SourceURL:          strings.TrimSpace(row.SourceURL),
 			UpdatedAt:          row.UpdatedAt,
 		}
 		specification, err := ParseProviderModelSpecification(row.Specification)
@@ -198,6 +199,7 @@ func BuildProviderModelStoreRows(provider string, details []ProviderModelDetail,
 			PriceUnit:          detail.PriceUnit,
 			Currency:           detail.Currency,
 			Source:             detail.Source,
+			SourceURL:          strings.TrimSpace(detail.SourceURL),
 			UpdatedAt:          updatedAt,
 		})
 		for _, component := range NormalizeProviderModelPriceComponents(detail.PriceComponents) {

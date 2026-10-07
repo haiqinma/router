@@ -53,6 +53,7 @@ type publicProviderModelDetail struct {
 	PriceUnit          string                            `json:"price_unit,omitempty"`
 	Currency           string                            `json:"currency,omitempty"`
 	Source             string                            `json:"source,omitempty"`
+	SourceURL          string                            `json:"source_url,omitempty"`
 }
 
 type publicProviderModelItem struct {
@@ -75,6 +76,7 @@ type appendProviderModelRequest struct {
 	PriceUnit          string   `json:"price_unit,omitempty"`
 	Currency           string   `json:"currency,omitempty"`
 	Source             string   `json:"source,omitempty"`
+	SourceURL          string   `json:"source_url,omitempty"`
 }
 
 type updateProviderModelBillingPolicyRequest struct {
@@ -545,6 +547,7 @@ func listPublicProviderModels() ([]publicProviderModelItem, error) {
 				PriceUnit:          detail.PriceUnit,
 				Currency:           detail.Currency,
 				Source:             detail.Source,
+				SourceURL:          detail.SourceURL,
 			})
 		}
 		result = append(result, publicProviderModelItem{
@@ -838,6 +841,7 @@ func appendModelToProviderItem(id string, req appendProviderModelRequest) (provi
 		PriceUnit:          strings.TrimSpace(strings.ToLower(req.PriceUnit)),
 		Currency:           strings.TrimSpace(strings.ToUpper(req.Currency)),
 		Source:             strings.TrimSpace(strings.ToLower(req.Source)),
+		SourceURL:          strings.TrimSpace(req.SourceURL),
 		UpdatedAt:          now,
 	}
 	if detail.Model == "" {

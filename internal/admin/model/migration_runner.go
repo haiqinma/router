@@ -2177,6 +2177,13 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return backfillChannelCostTrackingModeWithDB(tx)
 			},
 		},
+		{
+			Version:     "202610071200_qwen_pricing_source_url",
+			Description: "backfill auditable source URLs on Qwen pricing rows by currency and correct qwen3.8-max international price",
+			Up: func(tx *gorm.DB) error {
+				return refreshQwenPricingSourceURLWithDB(tx)
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }

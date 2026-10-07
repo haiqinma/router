@@ -231,6 +231,7 @@ func upsertProviderMigrationSeedsWithDB(db *gorm.DB, providers []string) error {
 					"price_unit",
 					"currency",
 					"source",
+					"source_url",
 					"updated_at",
 				}),
 			}).Create(&modelRows).Error; err != nil {

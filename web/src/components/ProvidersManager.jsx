@@ -45,6 +45,7 @@ import {
   buildConditionString,
   formatProviderPriceCellValue,
   renderProviderPriceCell,
+  renderProviderSourceUrlCell,
 } from './ProvidersManager.helpers';
 
 const ProvidersManager = () => {
@@ -2003,6 +2004,26 @@ const ProvidersManager = () => {
                 />
               </AppField>
             </AppFormRow>
+            <AppFormRow className='router-provider-model-detail-form-row'>
+              <AppField
+                className='router-provider-model-detail-field-wide'
+                label={t('channel.providers.price_component_table.source_url')}
+              >
+                <AppInput
+                  className='router-section-input'
+                  value={detail.source_url ?? ''}
+                  onChange={(e, { value }) =>
+                    setModelDetailField(
+                      setDetailModelsValue,
+                      detailModelsDraft,
+                      detailEditingModelIndex,
+                      'source_url',
+                      value || '',
+                    )
+                  }
+                />
+              </AppField>
+            </AppFormRow>
           </div>
           <div className='router-block-top-md'>
             <AppFilterHeader
@@ -3051,6 +3072,12 @@ const ProvidersManager = () => {
               key: 'currency',
               render: (value) => value || 'USD',
             },
+            {
+              title: t('channel.providers.price_component_table.source_url'),
+              dataIndex: 'source_url',
+              key: 'source_url',
+              render: (value) => renderProviderSourceUrlCell(value),
+            },
           ]}
         />
         <div className='router-detail-subtable-caption router-muted'>
@@ -3115,7 +3142,7 @@ const ProvidersManager = () => {
               title: t('channel.providers.price_component_table.source_url'),
               dataIndex: 'source_url',
               key: 'source_url',
-              render: (value) => value || '-',
+              render: (value) => renderProviderSourceUrlCell(value),
             },
           ]}
         />

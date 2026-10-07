@@ -554,6 +554,7 @@ const createEmptyModelDetail = (model = '') => {
     price_unit: defaultPriceUnitByType(t, model),
     currency: 'USD',
     source: 'manual',
+    source_url: '',
     updated_at: 0,
     price_components: [],
   };
@@ -587,6 +588,8 @@ const normalizeModelDetails = (details) => {
       typeof item.source === 'string' && item.source.trim() !== ''
         ? item.source.trim().toLowerCase()
         : 'manual';
+    const sourceUrl =
+      typeof item.source_url === 'string' ? item.source_url.trim() : '';
     const status =
       typeof item.status === 'string' && item.status.trim() !== ''
         ? item.status.trim().toLowerCase()
@@ -616,6 +619,7 @@ const normalizeModelDetails = (details) => {
       price_unit: priceUnit,
       currency,
       source,
+      source_url: sourceUrl,
       updated_at: Number.isInteger(updatedAt) && updatedAt > 0 ? updatedAt : 0,
       price_components: normalizePriceComponents(item.price_components),
     });
@@ -887,6 +891,26 @@ const renderProviderPriceCell = (detail, field, t, openPricingDetail) => {
 const isComponentBasedPricing = (detail) =>
   Array.isArray(detail?.price_components) && detail.price_components.length > 0;
 
+// Render a pricing source URL as a clickable, audit-friendly external link. Falls
+// back to '-' when empty so columns stay aligned.
+const renderProviderSourceUrlCell = (value) => {
+  const url = typeof value === 'string' ? value.trim() : '';
+  if (!url) {
+    return '-';
+  }
+  return (
+    <a
+      href={url}
+      target='_blank'
+      rel='noopener noreferrer'
+      className='router-source-link router-monospace-value'
+      title={url}
+    >
+      {url}
+    </a>
+  );
+};
+
 const summarizeModelPriceUnit = (detail, t) => {
   if (isComponentBasedPricing(detail)) {
     return '-';
@@ -958,6 +982,7 @@ export {
   formatProviderPriceCellValue,
   formatProviderPriceMeta,
   renderProviderPriceCell,
+  renderProviderSourceUrlCell,
   isComponentBasedPricing,
   summarizeModelPriceUnit,
   hasComplexInputPricing,
