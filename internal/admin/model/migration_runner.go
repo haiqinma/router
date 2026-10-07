@@ -2198,6 +2198,13 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return unifyQwenPricingToCNYWithDB(tx)
 			},
 		},
+		{
+			Version:     "202610091200_openai_gpt61sol_provider_catalog",
+			Description: "upsert openai provider migration rows for gpt-6.1-sol pricing (official: $2/1M input, $10/1M output)",
+			Up: func(tx *gorm.DB) error {
+				return upsertProviderMigrationProvidersWithDB(tx, "openai")
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }
