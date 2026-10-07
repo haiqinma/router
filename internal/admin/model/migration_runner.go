@@ -2184,6 +2184,13 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return refreshQwenPricingSourceURLWithDB(tx)
 			},
 		},
+		{
+			Version:     "202610081200_qwen_pricing_cny_unify",
+			Description: "unify Qwen pricing to CNY with a provider-level pricing_url, clear per-model source URLs to inherit it, and catalog qwen-image-3.0",
+			Up: func(tx *gorm.DB) error {
+				return unifyQwenPricingToCNYWithDB(tx)
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }

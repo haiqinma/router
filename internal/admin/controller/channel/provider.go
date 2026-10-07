@@ -27,6 +27,7 @@ type providerItem struct {
 	ModelDetails []model.ProviderModelDetail `json:"model_details,omitempty"`
 	BaseURL      string                      `json:"base_url,omitempty"`
 	OfficialURL  string                      `json:"official_url,omitempty"`
+	PricingURL   string                      `json:"pricing_url,omitempty"`
 	SortOrder    int                         `json:"sort_order,omitempty"`
 	Source       string                      `json:"source,omitempty"`
 	CreatedAt    int64                       `json:"created_at,omitempty"`
@@ -464,6 +465,7 @@ func buildProviderItems(rows []model.Provider) ([]providerItem, error) {
 			ModelDetails: details,
 			BaseURL:      strings.TrimSpace(row.BaseURL),
 			OfficialURL:  strings.TrimSpace(row.OfficialURL),
+			PricingURL:   strings.TrimSpace(row.PricingURL),
 			SortOrder:    normalizeProviderSortOrder(row.SortOrder),
 			Source:       strings.TrimSpace(strings.ToLower(row.Source)),
 			CreatedAt:    row.CreatedAt,
@@ -631,6 +633,10 @@ func normalizeProviderUpsertItem(db *gorm.DB, providerID string, item providerIt
 	if officialURL == "" && existing != nil {
 		officialURL = strings.TrimSpace(existing.OfficialURL)
 	}
+	pricingURL := strings.TrimSpace(item.PricingURL)
+	if pricingURL == "" && existing != nil {
+		pricingURL = strings.TrimSpace(existing.PricingURL)
+	}
 
 	detailInput := make([]model.ProviderModelDetail, 0, len(item.ModelDetails)+len(item.Models))
 	detailInput = append(detailInput, item.ModelDetails...)
@@ -673,6 +679,7 @@ func normalizeProviderUpsertItem(db *gorm.DB, providerID string, item providerIt
 		ModelDetails: details,
 		BaseURL:      baseURL,
 		OfficialURL:  officialURL,
+		PricingURL:   pricingURL,
 		SortOrder:    sortOrder,
 		Source:       source,
 		CreatedAt: func() int64 {
@@ -729,6 +736,7 @@ func saveProviderItem(item providerItem, create bool) (providerItem, error) {
 		Name:        strings.TrimSpace(normalized.Name),
 		BaseURL:     strings.TrimSpace(normalized.BaseURL),
 		OfficialURL: strings.TrimSpace(normalized.OfficialURL),
+		PricingURL:  strings.TrimSpace(normalized.PricingURL),
 		SortOrder:   normalized.SortOrder,
 		Source:      strings.TrimSpace(strings.ToLower(normalized.Source)),
 		CreatedAt:   normalized.CreatedAt,
@@ -746,6 +754,7 @@ func saveProviderItem(item providerItem, create bool) (providerItem, error) {
 				"name":         providerRow.Name,
 				"base_url":     providerRow.BaseURL,
 				"official_url": providerRow.OfficialURL,
+				"pricing_url":  providerRow.PricingURL,
 				"sort_order":   providerRow.SortOrder,
 				"source":       providerRow.Source,
 				"updated_at":   providerRow.UpdatedAt,

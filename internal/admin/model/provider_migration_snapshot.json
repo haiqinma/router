@@ -5985,6 +5985,7 @@
     "Name": "QianWen",
     "BaseURL": "https://dashscope.aliyuncs.com",
     "OfficialURL": "https://help.aliyun.com/zh/model-studio/models",
+    "PricingURL": "https://help.aliyun.com/zh/model-studio/model-pricing",
     "SortOrder": 135,
     "ModelDetails": [
       {
@@ -6001,7 +6002,7 @@
         "price_unit": "per_1k_tokens",
         "currency": "CNY",
         "source": "migration",
-        "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000
       },
       {
@@ -6023,7 +6024,7 @@
         "price_unit": "per_1k_tokens",
         "currency": "CNY",
         "source": "migration",
-        "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000,
         "price_components": [
           {
@@ -6034,7 +6035,7 @@
             "price_unit": "per_1k_tokens",
             "currency": "CNY",
             "source": "migration",
-            "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+            "source_url": "",
             "sort_order": 10
           },
           {
@@ -6045,7 +6046,7 @@
             "price_unit": "per_1k_tokens",
             "currency": "CNY",
             "source": "migration",
-            "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+            "source_url": "",
             "sort_order": 20
           },
           {
@@ -6056,7 +6057,7 @@
             "price_unit": "per_1k_tokens",
             "currency": "CNY",
             "source": "migration",
-            "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+            "source_url": "",
             "sort_order": 30
           },
           {
@@ -6067,7 +6068,7 @@
             "price_unit": "per_1k_tokens",
             "currency": "CNY",
             "source": "migration",
-            "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+            "source_url": "",
             "sort_order": 40
           }
         ],
@@ -6121,7 +6122,7 @@
         "price_unit": "per_1k_tokens",
         "currency": "CNY",
         "source": "migration",
-        "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000,
         "tags": [
           "vision",
@@ -6177,7 +6178,7 @@
         "price_unit": "per_1k_tokens",
         "currency": "CNY",
         "source": "migration",
-        "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000,
         "tags": [
           "vision",
@@ -6233,7 +6234,7 @@
         "price_unit": "per_1k_tokens",
         "currency": "CNY",
         "source": "migration",
-        "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000,
         "tags": [
           "vision",
@@ -6289,7 +6290,7 @@
         "price_unit": "per_1k_tokens",
         "currency": "CNY",
         "source": "migration",
-        "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000,
         "tags": [
           "vision",
@@ -6345,7 +6346,7 @@
         "price_unit": "per_1k_tokens",
         "currency": "CNY",
         "source": "migration",
-        "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000
       },
       {
@@ -6362,7 +6363,7 @@
         "price_unit": "per_1k_tokens",
         "currency": "CNY",
         "source": "migration",
-        "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000
       },
       {
@@ -6379,7 +6380,7 @@
         "price_unit": "per_1k_tokens",
         "currency": "CNY",
         "source": "migration",
-        "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000
       },
       {
@@ -6396,7 +6397,7 @@
         "price_unit": "per_1k_tokens",
         "currency": "CNY",
         "source": "migration",
-        "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000
       },
       {
@@ -6413,7 +6414,7 @@
         "price_unit": "per_1k_tokens",
         "currency": "CNY",
         "source": "migration",
-        "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000
       },
       {
@@ -6430,7 +6431,7 @@
         "price_unit": "per_1k_tokens",
         "currency": "CNY",
         "source": "migration",
-        "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000
       },
       {
@@ -6447,7 +6448,7 @@
         "price_unit": "per_1k_tokens",
         "currency": "CNY",
         "source": "migration",
-        "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000
       },
       {
@@ -6464,7 +6465,7 @@
         "price_unit": "per_1k_tokens",
         "currency": "CNY",
         "source": "migration",
-        "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000
       },
       {
@@ -6481,7 +6482,7 @@
         "price_unit": "per_1k_tokens",
         "currency": "CNY",
         "source": "migration",
-        "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000
       },
       {
@@ -6498,7 +6499,7 @@
         "price_unit": "per_1k_tokens",
         "currency": "CNY",
         "source": "migration",
-        "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000
       },
       {
@@ -6578,7 +6579,7 @@
         "price_unit": "per_image",
         "currency": "CNY",
         "source": "migration",
-        "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000
       },
       {
@@ -6658,7 +6659,7 @@
         "price_unit": "per_image",
         "currency": "CNY",
         "source": "migration",
-        "source_url": "https://help.aliyun.com/zh/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000
       },
       {
@@ -6670,12 +6671,12 @@
           "/v1/chat/completions",
           "/v1/responses"
         ],
-        "input_price": 0.00165,
-        "output_price": 0.004951,
+        "input_price": 0.0025,
+        "output_price": 0.01,
         "price_unit": "per_1k_tokens",
-        "currency": "USD",
+        "currency": "CNY",
         "source": "migration",
-        "source_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000
       },
       {
@@ -6687,12 +6688,12 @@
           "/v1/chat/completions",
           "/v1/responses"
         ],
-        "input_price": 0.00015,
-        "output_price": 0.00047,
+        "input_price": 0.001,
+        "output_price": 0.003,
         "price_unit": "per_1k_tokens",
-        "currency": "USD",
+        "currency": "CNY",
         "source": "migration",
-        "source_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000
       },
       {
@@ -6708,12 +6709,28 @@
         "supported_endpoints": [
           "/v1/chat/completions"
         ],
-        "input_price": 0.00015,
-        "output_price": 0.00047,
+        "input_price": 0.0018,
+        "output_price": 0.0069,
         "price_unit": "per_1k_tokens",
-        "currency": "USD",
+        "currency": "CNY",
         "source": "migration",
-        "source_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+        "source_url": "",
+        "updated_at": 1700000000
+      },
+      {
+        "model": "qwen-image-3.0",
+        "type": "image",
+        "status": "active",
+        "description": "Qwen Image 3.0 是阿里云百炼当前提供的图像生成模型。",
+        "supported_endpoints": [
+          "/v1/images/generations",
+          "/v1/images/edits"
+        ],
+        "input_price": 0.18,
+        "price_unit": "per_image",
+        "currency": "CNY",
+        "source": "migration",
+        "source_url": "",
         "updated_at": 1700000000
       },
       {
@@ -6724,21 +6741,21 @@
         "supported_endpoints": [
           "/v1/images/generations"
         ],
-        "input_price": 0.04,
+        "input_price": 0.25,
         "price_unit": "per_image",
-        "currency": "USD",
+        "currency": "CNY",
         "source": "migration",
-        "source_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+        "source_url": "",
         "updated_at": 1700000000,
         "price_components": [
           {
             "component": "image_generation",
             "condition": "size=2k",
-            "input_price": 0.075,
+            "input_price": 0.5,
             "price_unit": "per_image",
-            "currency": "USD",
+            "currency": "CNY",
             "source": "migration",
-            "source_url": "https://www.alibabacloud.com/help/en/model-studio/model-pricing",
+            "source_url": "",
             "sort_order": 20
           }
         ]

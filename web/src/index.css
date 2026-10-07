@@ -1951,6 +1951,23 @@ html[data-theme='dark'] .router-topup-return-next-hint {
     color: #1677ff !important;
 }
 
+.router-price-source-icon-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    color: #8c8c8c;
+    text-decoration: none;
+}
+
+.router-price-source-icon-link:hover,
+.router-price-source-icon-link:focus-visible {
+    background: rgba(22, 119, 255, 0.08);
+    color: #1677ff;
+}
+
 .router-inline-number-input {
     width: 72px;
 }

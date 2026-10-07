@@ -104,6 +104,7 @@ type ProviderSeed struct {
 	Name         string
 	BaseURL      string
 	OfficialURL  string
+	PricingURL   string
 	SortOrder    int
 	ModelDetails []ProviderModelDetail
 }

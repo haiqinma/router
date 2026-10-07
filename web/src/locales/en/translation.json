@@ -713,6 +713,7 @@
     "providers": {
       "title": "Providers",
       "search": "Search provider, name, model...",
+      "price_source_link": "View price source",
       "fetch": {
         "provider": "Provider",
         "base_url": "Base URL",
@@ -818,6 +819,10 @@
         "base_url_placeholder": "Leave empty to use official default URL",
         "official_url": "Official URL",
         "official_url_placeholder": "Official pricing or model documentation page",
+        "pricing_url": "Price Source",
+        "pricing_url_placeholder": "Provider-level default price source; models inherit it unless overridden",
+        "source_url_override": "Price Source (override, blank = inherit)",
+        "source_url_inherit_placeholder": "Leave blank to inherit the provider price source",
         "key": "API Key",
         "key_placeholder": "Used when fetching models from provider API",
         "models": "Models (one per line, or comma-separated)",

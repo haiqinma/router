@@ -6,6 +6,7 @@ type Provider struct {
 	Name        string `json:"name" gorm:"type:varchar(128);default:''"`
 	BaseURL     string `json:"base_url" gorm:"column:base_url;type:text"`
 	OfficialURL string `json:"official_url" gorm:"column:official_url;type:text"`
+	PricingURL  string `json:"pricing_url" gorm:"column:pricing_url;type:varchar(512);default:''"`
 	SortOrder   int    `json:"sort_order" gorm:"column:sort_order;type:int;not null;default:1000"`
 	Source      string `json:"source" gorm:"type:varchar(32);default:'manual'"`
 	CreatedAt   int64  `json:"created_at" gorm:"bigint"`

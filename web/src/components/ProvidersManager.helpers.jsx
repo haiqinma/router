@@ -644,6 +644,7 @@ const createEmptyRow = () => ({
   name: '',
   base_url: '',
   official_url: '',
+  pricing_url: '',
   model_details: [],
   source: 'manual',
   created_at: 0,
@@ -658,6 +659,7 @@ const toEditableRows = (items) => {
     name: item?.name || '',
     base_url: item?.base_url || '',
     official_url: item?.official_url || '',
+    pricing_url: item?.pricing_url || '',
     model_details: detailsFromCatalogItem(item),
     source: item?.source || 'manual',
     created_at: item?.created_at || 0,
@@ -860,17 +862,38 @@ const formatProviderPriceMeta = (detail) => {
   return parts.join(' / ');
 };
 
-const renderProviderPriceCell = (detail, field, t, openPricingDetail) => {
+const renderProviderPriceCell = (detail, field, t, openPricingDetail, pricingUrl) => {
   const hasDetail =
     field === 'input_price'
       ? hasComplexInputPricing(detail)
       : hasComplexOutputPricing(detail);
   const priceText = formatProviderPriceCellValue(detail?.[field]);
   const metaText = priceText === '-' ? '' : formatProviderPriceMeta(detail);
+  // Effective price source: a model-level source_url overrides the provider-level
+  // default (pricing_url). Shown as a persistent link icon on the input column so
+  // every model exposes its origin, not only the ones with a detail popup.
+  const sourceUrl =
+    (typeof detail?.source_url === 'string' && detail.source_url.trim()) ||
+    (typeof pricingUrl === 'string' && pricingUrl.trim()) ||
+    '';
+  const showSourceLink = field === 'input_price' && !!sourceUrl;
   return (
     <div className='router-provider-model-price-cell'>
       <div className='router-provider-model-price-line'>
         <span className='router-monospace-value'>{priceText}</span>
+        {showSourceLink ? (
+          <AppTooltip title={t('channel.providers.price_source_link')}>
+            <a
+              href={sourceUrl}
+              target='_blank'
+              rel='noopener noreferrer'
+              className='router-price-source-icon-link'
+              aria-label={t('channel.providers.price_source_link')}
+            >
+              <AppIcon name='global' />
+            </a>
+          </AppTooltip>
+        ) : null}
         {hasDetail ? (
           <AppTooltip title={t('channel.providers.model_detail_table.detail')}>
             <AppButton
