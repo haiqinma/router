@@ -69,11 +69,11 @@ func TestUnifyQwenPricingToCNYWithDB(t *testing.T) {
 	}
 
 	// USD models converted to their CNY list prices.
-	if row := loadModel("qwen3.8-max"); row.InputPrice != 0.0025 || row.OutputPrice != 0.01 {
-		t.Fatalf("qwen3.8-max price = %v/%v, want 0.0025/0.01", row.InputPrice, row.OutputPrice)
+	if row := loadModel("qwen3.8-max"); row.InputPrice != 0.012 || row.OutputPrice != 0.036 {
+		t.Fatalf("qwen3.8-max price = %v/%v, want 0.012/0.036", row.InputPrice, row.OutputPrice)
 	}
-	if row := loadModel("qwen3.8-flash"); row.InputPrice != 0.001 || row.OutputPrice != 0.003 {
-		t.Fatalf("qwen3.8-flash price = %v/%v, want 0.001/0.003", row.InputPrice, row.OutputPrice)
+	if row := loadModel("qwen3.8-flash"); row.InputPrice != 0.0008 || row.OutputPrice != 0.0027 {
+		t.Fatalf("qwen3.8-flash price = %v/%v, want 0.0008/0.0027", row.InputPrice, row.OutputPrice)
 	}
 	if row := loadModel("qwen-image-3.0-pro"); row.InputPrice != 0.25 || row.PriceUnit != ProviderPriceUnitPerImage {
 		t.Fatalf("qwen-image-3.0-pro = %v %q, want 0.25 per_image", row.InputPrice, row.PriceUnit)

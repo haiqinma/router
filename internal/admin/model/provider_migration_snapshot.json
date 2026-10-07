@@ -6671,8 +6671,8 @@
           "/v1/chat/completions",
           "/v1/responses"
         ],
-        "input_price": 0.0025,
-        "output_price": 0.01,
+        "input_price": 0.012,
+        "output_price": 0.036,
         "price_unit": "per_1k_tokens",
         "currency": "CNY",
         "source": "migration",
@@ -6688,8 +6688,8 @@
           "/v1/chat/completions",
           "/v1/responses"
         ],
-        "input_price": 0.001,
-        "output_price": 0.003,
+        "input_price": 0.0008,
+        "output_price": 0.0027,
         "price_unit": "per_1k_tokens",
         "currency": "CNY",
         "source": "migration",
@@ -6709,8 +6709,8 @@
         "supported_endpoints": [
           "/v1/chat/completions"
         ],
-        "input_price": 0.0018,
-        "output_price": 0.0069,
+        "input_price": 0.0008,
+        "output_price": 0.0027,
         "price_unit": "per_1k_tokens",
         "currency": "CNY",
         "source": "migration",

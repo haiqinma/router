@@ -70,18 +70,19 @@ func unifyQwenPricingToCNYWithDB(db *gorm.DB) error {
 		return err
 	}
 
-	// Convert the four previously USD-priced models to China mainland CNY list
-	// prices. The qwen3.8 series lacks a reliably published China price, so these
-	// are best-effort values kept auditable through the inherited zh link.
+	// Convert the four previously USD-priced models to China mainland (华北2/北京)
+	// CNY list prices from the official Alibaba Model Studio pricing page. The
+	// qwen3.8 text models are priced per 1M tokens on the site (0.8/2.7 for
+	// flash & omni-flash, 12/36 for max), stored here as per_1k_tokens.
 	for _, correction := range []struct {
 		model       string
 		inputPrice  float64
 		outputPrice float64
 		priceUnit   string
 	}{
-		{model: "qwen3.8-max", inputPrice: 0.0025, outputPrice: 0.01, priceUnit: ProviderPriceUnitPer1KTokens},
-		{model: "qwen3.8-flash", inputPrice: 0.001, outputPrice: 0.003, priceUnit: ProviderPriceUnitPer1KTokens},
-		{model: "qwen3.8-omni-flash", inputPrice: 0.0018, outputPrice: 0.0069, priceUnit: ProviderPriceUnitPer1KTokens},
+		{model: "qwen3.8-max", inputPrice: 0.012, outputPrice: 0.036, priceUnit: ProviderPriceUnitPer1KTokens},
+		{model: "qwen3.8-flash", inputPrice: 0.0008, outputPrice: 0.0027, priceUnit: ProviderPriceUnitPer1KTokens},
+		{model: "qwen3.8-omni-flash", inputPrice: 0.0008, outputPrice: 0.0027, priceUnit: ProviderPriceUnitPer1KTokens},
 		{model: "qwen-image-3.0-pro", inputPrice: 0.25, outputPrice: 0, priceUnit: ProviderPriceUnitPerImage},
 	} {
 		if err := db.Model(&ProviderModel{}).
