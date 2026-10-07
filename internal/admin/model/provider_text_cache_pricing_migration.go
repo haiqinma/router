@@ -43,6 +43,10 @@ var providerTextCachePricingRules = []providerTextCachePricingRule{
 	{Provider: "openai", Model: "gpt-5.6-sol", CacheReadRate: 0.1, CacheWriteRate: 1.25, SourceURL: providerTextCachePricingOpenAIURL},
 	{Provider: "openai", Model: "gpt-5.6-terra", CacheReadRate: 0.1, CacheWriteRate: 1.25, SourceURL: providerTextCachePricingOpenAIURL},
 	{Provider: "openai", Model: "gpt-5.6-luna", CacheReadRate: 0.1, CacheWriteRate: 1.25, SourceURL: providerTextCachePricingOpenAIURL},
+	// gpt-6.1-sol publishes a lower cached-input rate than the rest of the family:
+	// cached input is 5% of the uncached input ($0.10 vs $2.00 per 1M), while
+	// cache writes stay at 125% of the uncached input ($2.50 per 1M).
+	{Provider: "openai", Model: "gpt-6.1-sol", CacheReadRate: 0.05, CacheWriteRate: 1.25, SourceURL: providerTextCachePricingOpenAIURL},
 
 	// Anthropic prompt caching prices 5-minute cache writes at 1.25x input and
 	// cache hits at 0.1x input for the Claude models tracked here.

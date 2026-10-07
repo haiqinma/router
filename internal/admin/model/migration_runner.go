@@ -2205,6 +2205,13 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return upsertProviderMigrationProvidersWithDB(tx, "openai")
 			},
 		},
+		{
+			Version:     "202610091230_openai_gpt61sol_text_cache_pricing",
+			Description: "upsert gpt-6.1-sol text cache pricing components (official: $0.10/1M cached input, $2.50/1M cache writes)",
+			Up: func(tx *gorm.DB) error {
+				return upsertProviderTextCachePricingComponentsWithDB(tx)
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }

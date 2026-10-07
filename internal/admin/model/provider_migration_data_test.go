@@ -275,6 +275,18 @@ func TestUpsertProviderTextCachePricingComponentsWithDB(t *testing.T) {
 	}).Error; err != nil {
 		t.Fatalf("create openai gpt-5.6-sol provider model: %v", err)
 	}
+	if err := db.Create(&ProviderModel{
+		Provider:    "openai",
+		Model:       "gpt-6.1-sol",
+		Tags:        ProviderModelTypeText,
+		InputPrice:  0.002,
+		OutputPrice: 0.01,
+		PriceUnit:   ProviderPriceUnitPer1KTokens,
+		Currency:    ProviderPriceCurrencyUSD,
+		Source:      "migration",
+	}).Error; err != nil {
+		t.Fatalf("create openai gpt-6.1-sol provider model: %v", err)
+	}
 	if err := db.Create(&ProviderModelPriceComponent{
 		Provider:   "openai",
 		Model:      "gpt-5.4",
@@ -332,6 +344,37 @@ func TestUpsertProviderTextCachePricingComponentsWithDB(t *testing.T) {
 	}
 	if openAISolWrite.InputPrice != 0.01875 {
 		t.Fatalf("openai gpt-5.6-sol cache write input_price=%v, want 0.01875", openAISolWrite.InputPrice)
+	}
+
+	openAIGpt61SolRead := ProviderModelPriceComponent{}
+	if err := db.First(
+		&openAIGpt61SolRead,
+		"provider = ? AND model = ? AND component = ? AND condition = ?",
+		"openai",
+		"gpt-6.1-sol",
+		ProviderModelPriceComponentTextCacheRead,
+		"",
+	).Error; err != nil {
+		t.Fatalf("query openai gpt-6.1-sol cache read component: %v", err)
+	}
+	// Official: cached input $0.10/1M = 5% of the $2.00/1M uncached input.
+	if openAIGpt61SolRead.InputPrice != 0.0001 {
+		t.Fatalf("openai gpt-6.1-sol cache read input_price=%v, want 0.0001", openAIGpt61SolRead.InputPrice)
+	}
+	openAIGpt61SolWrite := ProviderModelPriceComponent{}
+	if err := db.First(
+		&openAIGpt61SolWrite,
+		"provider = ? AND model = ? AND component = ? AND condition = ?",
+		"openai",
+		"gpt-6.1-sol",
+		ProviderModelPriceComponentTextCacheWrite,
+		"",
+	).Error; err != nil {
+		t.Fatalf("query openai gpt-6.1-sol cache write component: %v", err)
+	}
+	// Official: cache writes $2.50/1M = 125% of the $2.00/1M uncached input.
+	if openAIGpt61SolWrite.InputPrice != 0.0025 {
+		t.Fatalf("openai gpt-6.1-sol cache write input_price=%v, want 0.0025", openAIGpt61SolWrite.InputPrice)
 	}
 
 	anthropicRead := ProviderModelPriceComponent{}
