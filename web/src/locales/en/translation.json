@@ -1248,6 +1248,8 @@
         },
         "batch": {
           "selected_count": "{{count}} selected",
+          "enter": "Batch Actions",
+          "cancel": "Exit Batch",
           "select_required": "Select at least one endpoint first.",
           "enable_selected": "Enable Selected ({{count}})",
           "disable_selected": "Disable Selected ({{count}})",

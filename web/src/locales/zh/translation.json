@@ -1248,6 +1248,8 @@
         },
         "batch": {
           "selected_count": "已选 {{count}} 个端点",
+          "enter": "批量操作",
+          "cancel": "退出批量",
           "select_required": "请先勾选要操作的端点。",
           "enable_selected": "启用所选 ({{count}})",
           "disable_selected": "禁用所选 ({{count}})",
