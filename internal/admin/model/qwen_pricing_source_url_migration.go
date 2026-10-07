@@ -25,6 +25,12 @@ func refreshQwenPricingSourceURLWithDB(db *gorm.DB) error {
 	}
 	now := helper.GetTimestamp()
 
+	// Versioned migrations run before the schema AutoMigrate pass, so make sure the
+	// source_url columns exist before backfilling them.
+	if err := db.AutoMigrate(&ProviderModel{}, &ProviderModelPriceComponent{}); err != nil {
+		return err
+	}
+
 	// Correct the qwen3.8-max international (USD) price before backfilling links,
 	// so the corrected row still receives its source URL below. Official overseas
 	// list price is $1.65 / $4.951 per 1M tokens (per_1k_tokens: 0.00165 / 0.004951).
