@@ -96,3 +96,43 @@ func TestRefreshProviderImageEditMaskCapabilityWithDB(t *testing.T) {
 		}
 	}
 }
+
+func TestRefreshProviderImageEditMaskCapabilityWithDBMigratesLegacyProviderModelSchema(t *testing.T) {
+	db, err := gorm.Open(sqlite.Open("file:"+t.Name()+"?mode=memory&cache=private"), &gorm.Config{})
+	if err != nil {
+		t.Fatalf("open sqlite: %v", err)
+	}
+	// This is the provider_models shape used before ProviderModel.SourceURL was
+	// introduced. The migration must add the column before creating wanx.
+	if err := db.Exec(`
+		CREATE TABLE provider_models (
+			provider varchar(64) NOT NULL,
+			model varchar(255) NOT NULL,
+			tags text DEFAULT '',
+			status varchar(32) NOT NULL DEFAULT 'active',
+			description text DEFAULT '',
+			specification text DEFAULT '',
+			is_deleted boolean NOT NULL DEFAULT false,
+			supported_endpoints text DEFAULT '',
+			input_price real DEFAULT 0,
+			output_price real DEFAULT 0,
+			price_unit varchar(64) DEFAULT 'per_1k_tokens',
+			currency varchar(16) DEFAULT 'USD',
+			source varchar(32) DEFAULT 'manual',
+			updated_at integer,
+			PRIMARY KEY (provider, model)
+		)`).Error; err != nil {
+		t.Fatalf("create legacy provider_models: %v", err)
+	}
+
+	if err := refreshProviderImageEditMaskCapabilityWithDB(db); err != nil {
+		t.Fatalf("refreshProviderImageEditMaskCapabilityWithDB() error = %v", err)
+	}
+	if !db.Migrator().HasColumn(ProviderModelsTableName, "source_url") {
+		t.Fatal("provider_models.source_url was not added")
+	}
+	var wanx ProviderModel
+	if err := db.Where("provider = ? AND model = ?", "qwen", "wanx2.1-imageedit").First(&wanx).Error; err != nil {
+		t.Fatalf("wanx2.1-imageedit should be created: %v", err)
+	}
+}

@@ -22,6 +22,13 @@ func refreshProviderImageEditMaskCapabilityWithDB(db *gorm.DB) error {
 	if db == nil {
 		return gorm.ErrInvalidDB
 	}
+	// Versioned migrations run before the normal schema synchronization pass.
+	// ProviderModel has gained fields over time (notably source_url), so make this
+	// migration safe to run against databases created by an older release before
+	// querying or inserting rows with the current struct.
+	if err := db.AutoMigrate(&ProviderModel{}); err != nil {
+		return err
+	}
 	entries := []providerImageMaskCatalogEntry{
 		{provider: "openai", models: []string{"dall-e-2", "gpt-image-1", "gpt-image-2"}},
 		{provider: "qwen", models: []string{"wanx2.1-imageedit"}, create: true},
