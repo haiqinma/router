@@ -44,6 +44,8 @@ func (a *Adaptor) GetRequestURL(meta *meta.Meta) (string, error) {
 	case relaymode.ImagesEdits:
 		if isQwenImageModel(meta.ActualModelName) {
 			fullRequestURL = fmt.Sprintf("%s/api/v1/services/aigc/multimodal-generation/generation", meta.BaseURL)
+		} else if IsWanxImageEditModel(meta.ActualModelName) {
+			fullRequestURL = fmt.Sprintf("%s/api/v1/services/aigc/image2image/image-synthesis", meta.BaseURL)
 		} else {
 			fullRequestURL = openaiadaptor.GetFullRequestURL(meta.BaseURL, meta.RequestURLPath, relaychannel.OpenAI)
 		}
@@ -60,6 +62,11 @@ func (a *Adaptor) SetupRequestHeader(c *gin.Context, req *http.Request, meta *me
 	adaptor.SetupCommonRequestHeader(c, req, meta)
 	if isQwenImageModel(meta.ActualModelName) && (meta.Mode == relaymode.ImagesGenerations || meta.Mode == relaymode.ImagesEdits) {
 		req.Header.Set("Content-Type", "application/json")
+	}
+	// 万相局部重绘走 image2image 异步接口：JSON 请求体 + 必须的异步头
+	if IsWanxImageEditModel(meta.ActualModelName) && meta.Mode == relaymode.ImagesEdits {
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-DashScope-Async", "enable")
 	}
 	if meta.IsStream {
 		req.Header.Set("Accept", "text/event-stream")
@@ -142,6 +149,13 @@ func isQwenImageModel(modelName string) bool {
 
 func IsQwenImageModel(modelName string) bool {
 	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(modelName)), "qwen-image")
+}
+
+// IsWanxImageEditModel 识别万相通用图像编辑模型（如 wanx2.1-imageedit），
+// 它走 image2image/image-synthesis 异步接口，支持 mask 局部重绘。
+func IsWanxImageEditModel(modelName string) bool {
+	lower := strings.ToLower(strings.TrimSpace(modelName))
+	return strings.HasPrefix(lower, "wanx") && strings.Contains(lower, "imageedit")
 }
 
 func QwenImageOutputCount(c *gin.Context) (int, bool) {

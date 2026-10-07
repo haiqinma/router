@@ -419,6 +419,15 @@ func getImageEditRequest(c *gin.Context) (*relaymodel.ImageRequest, *multipart.F
 	return imageRequest, form, nil
 }
 
+// rejectUnsupportedImageEditMask 用于指令式编辑模型（如 Qwen-Image-Edit）：上游没有
+// mask 入参，收到遮罩时明确报错，避免用户以为局部重绘生效了。
+func rejectUnsupportedImageEditMask(form *multipart.Form) error {
+	if form == nil || len(form.File["mask"]) == 0 {
+		return nil
+	}
+	return errors.New("该模型不支持遮罩局部重绘（指令式编辑），请移除遮罩或改用支持遮罩的模型")
+}
+
 func buildMultipartImageEditBody(form *multipart.Form, imageRequest *relaymodel.ImageRequest) (*bytes.Buffer, string, error) {
 	if form == nil {
 		return nil, "", errors.New("multipart form is required")
@@ -645,9 +654,24 @@ func RelayImageHelper(c *gin.Context, relayMode int) *relaymodel.ErrorWithStatus
 	var requestBody io.Reader
 	if relayMode == relaymode.ImagesEdits {
 		if meta.ChannelProtocol == relaychannel.Ali && aliadaptor.IsQwenImageModel(imageRequest.Model) {
+			// Qwen-Image-Edit 是指令式编辑，上游没有 mask 入参：明确拒绝而不是静默丢弃
+			if rejectErr := rejectUnsupportedImageEditMask(form); rejectErr != nil {
+				return openai.ErrorWrapper(rejectErr, "mask_not_supported", http.StatusBadRequest)
+			}
 			finalRequest, buildErr := aliadaptor.ConvertQwenImageEditRequest(*imageRequest, form)
 			if buildErr != nil {
 				return openai.ErrorWrapper(buildErr, "convert_image_request_failed", http.StatusInternalServerError)
+			}
+			jsonStr, buildErr := json.Marshal(finalRequest)
+			if buildErr != nil {
+				return openai.ErrorWrapper(buildErr, "marshal_image_request_failed", http.StatusInternalServerError)
+			}
+			c.Request.Header.Set("Content-Type", "application/json")
+			requestBody = bytes.NewBuffer(jsonStr)
+		} else if meta.ChannelProtocol == relaychannel.Ali && aliadaptor.IsWanxImageEditModel(imageRequest.Model) {
+			finalRequest, buildErr := aliadaptor.ConvertWanxImageEditRequest(*imageRequest, form)
+			if buildErr != nil {
+				return openai.ErrorWrapper(buildErr, "convert_image_request_failed", http.StatusBadRequest)
 			}
 			jsonStr, buildErr := json.Marshal(finalRequest)
 			if buildErr != nil {

@@ -2178,6 +2178,13 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 			},
 		},
 		{
+			Version:     "202610061200_image_edit_mask_capabilities",
+			Description: "declare mask support on /v1/images/edits for inpainting-capable image models and catalog wanx2.1-imageedit",
+			Up: func(tx *gorm.DB) error {
+				return refreshProviderImageEditMaskCapabilityWithDB(tx)
+			},
+		},
+		{
 			Version:     "202610071200_qwen_pricing_source_url",
 			Description: "backfill auditable source URLs on Qwen pricing rows by currency and correct qwen3.8-max international price",
 			Up: func(tx *gorm.DB) error {

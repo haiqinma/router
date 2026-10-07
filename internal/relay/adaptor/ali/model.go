@@ -49,6 +49,21 @@ type ImageRequest struct {
 	ResponseFormat string `json:"response_format,omitempty"`
 }
 
+// WanxImageEditRequest 对应 DashScope 万相通用图像编辑
+// POST /api/v1/services/aigc/image2image/image-synthesis（异步）。
+type WanxImageEditRequest struct {
+	Model string `json:"model"`
+	Input struct {
+		Function     string `json:"function"`
+		Prompt       string `json:"prompt"`
+		BaseImageURL string `json:"base_image_url"`
+		MaskImageURL string `json:"mask_image_url,omitempty"`
+	} `json:"input"`
+	Parameters struct {
+		N int `json:"n,omitempty"`
+	} `json:"parameters,omitempty"`
+}
+
 type QwenImageContent struct {
 	Text  string `json:"text,omitempty"`
 	Image string `json:"image,omitempty"`
