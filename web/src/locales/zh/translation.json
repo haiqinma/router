@@ -713,6 +713,7 @@
     "providers": {
       "title": "厂家管理",
       "search": "搜索厂家、名称、模型...",
+      "price_source_link": "查看价格来源",
       "fetch": {
         "provider": "厂家",
         "base_url": "Base URL",
@@ -818,6 +819,10 @@
         "base_url_placeholder": "留空时自动使用官方默认地址",
         "official_url": "官网地址",
         "official_url_placeholder": "用于记录模型和价格的官方来源页面",
+        "pricing_url": "价格来源",
+        "pricing_url_placeholder": "厂商级默认价格来源页面，模型未单独设置时继承此地址",
+        "source_url_override": "价格来源（覆盖，留空继承厂商）",
+        "source_url_inherit_placeholder": "留空继承厂商价格来源",
         "key": "API Key",
         "key_placeholder": "用于从厂家 API 拉取模型",
         "models": "模型列表（每行一个，或逗号分隔）",
@@ -875,6 +880,7 @@
         "endpoints": "接口",
         "tests": "测试",
         "publish": "发布",
+        "procurement": "采购成本",
         "billing": "账务"
       },
       "publish": {
@@ -940,6 +946,12 @@
         },
         "updated_at": "更新时间",
         "manual_update_title": "新增采购记录",
+        "purchase_kind": "采购类型",
+        "purchase_kinds": {
+          "recharge": "充值",
+          "subscription": "订阅"
+        },
+        "advanced_options": "高级选项",
         "manual_purchase_title": "采购信息",
         "procurement_event_type": "采购变更类型",
         "procurement_events": {
@@ -1241,6 +1253,8 @@
         },
         "batch": {
           "selected_count": "已选 {{count}} 个端点",
+          "enter": "批量操作",
+          "cancel": "退出批量",
           "select_required": "请先勾选要操作的端点。",
           "enable_selected": "启用所选 ({{count}})",
           "disable_selected": "禁用所选 ({{count}})",
@@ -1497,6 +1511,7 @@
         },
         "settings_audio_language": "语音测试语言",
         "image_edit_source_url": "图片编辑测试原图地址",
+        "image_edit_source_url_placeholder": "留空则使用内置测试图",
         "image_edit_upload": "上传图片编辑测试原图",
         "image_edit_uploaded": "已上传图片",
         "image_edit_file_failed": "读取图片失败",
@@ -2082,6 +2097,9 @@
       "unit": "$"
     },
     "delete": "删除",
+    "all": "全部",
+    "other": "其他",
+    "unassigned": "未分配",
     "session_expired": "登录已过期，请重新登录",
     "rate_limit": "请求次数过多，请稍后再试",
     "server_error": "服务器内部错误，请联系管理员",
@@ -4677,6 +4695,15 @@
   },
   "personal_routing": {
     "title": "我的供应商"
+  },
+  "publisher_workspace": {
+    "title": "模型发布"
+  },
+  "publisher_operations": {
+    "title": "开放供给"
+  },
+  "community_services": {
+    "title": "社区模型服务"
   },
   "not_found": {
     "title": "页面不存在",

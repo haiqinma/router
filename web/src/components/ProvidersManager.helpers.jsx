@@ -554,6 +554,7 @@ const createEmptyModelDetail = (model = '') => {
     price_unit: defaultPriceUnitByType(t, model),
     currency: 'USD',
     source: 'manual',
+    source_url: '',
     updated_at: 0,
     price_components: [],
   };
@@ -587,6 +588,8 @@ const normalizeModelDetails = (details) => {
       typeof item.source === 'string' && item.source.trim() !== ''
         ? item.source.trim().toLowerCase()
         : 'manual';
+    const sourceUrl =
+      typeof item.source_url === 'string' ? item.source_url.trim() : '';
     const status =
       typeof item.status === 'string' && item.status.trim() !== ''
         ? item.status.trim().toLowerCase()
@@ -616,6 +619,7 @@ const normalizeModelDetails = (details) => {
       price_unit: priceUnit,
       currency,
       source,
+      source_url: sourceUrl,
       updated_at: Number.isInteger(updatedAt) && updatedAt > 0 ? updatedAt : 0,
       price_components: normalizePriceComponents(item.price_components),
     });
@@ -640,6 +644,7 @@ const createEmptyRow = () => ({
   name: '',
   base_url: '',
   official_url: '',
+  pricing_url: '',
   model_details: [],
   source: 'manual',
   created_at: 0,
@@ -654,6 +659,7 @@ const toEditableRows = (items) => {
     name: item?.name || '',
     base_url: item?.base_url || '',
     official_url: item?.official_url || '',
+    pricing_url: item?.pricing_url || '',
     model_details: detailsFromCatalogItem(item),
     source: item?.source || 'manual',
     created_at: item?.created_at || 0,
@@ -856,17 +862,38 @@ const formatProviderPriceMeta = (detail) => {
   return parts.join(' / ');
 };
 
-const renderProviderPriceCell = (detail, field, t, openPricingDetail) => {
+const renderProviderPriceCell = (detail, field, t, openPricingDetail, pricingUrl) => {
   const hasDetail =
     field === 'input_price'
       ? hasComplexInputPricing(detail)
       : hasComplexOutputPricing(detail);
   const priceText = formatProviderPriceCellValue(detail?.[field]);
   const metaText = priceText === '-' ? '' : formatProviderPriceMeta(detail);
+  // Effective price source: a model-level source_url overrides the provider-level
+  // default (pricing_url). Shown as a persistent link icon on the input column so
+  // every model exposes its origin, not only the ones with a detail popup.
+  const sourceUrl =
+    (typeof detail?.source_url === 'string' && detail.source_url.trim()) ||
+    (typeof pricingUrl === 'string' && pricingUrl.trim()) ||
+    '';
+  const showSourceLink = field === 'input_price' && !!sourceUrl;
   return (
     <div className='router-provider-model-price-cell'>
       <div className='router-provider-model-price-line'>
         <span className='router-monospace-value'>{priceText}</span>
+        {showSourceLink ? (
+          <AppTooltip title={t('channel.providers.price_source_link')}>
+            <a
+              href={sourceUrl}
+              target='_blank'
+              rel='noopener noreferrer'
+              className='router-price-source-icon-link'
+              aria-label={t('channel.providers.price_source_link')}
+            >
+              <AppIcon name='global' />
+            </a>
+          </AppTooltip>
+        ) : null}
         {hasDetail ? (
           <AppTooltip title={t('channel.providers.model_detail_table.detail')}>
             <AppButton
@@ -886,6 +913,26 @@ const renderProviderPriceCell = (detail, field, t, openPricingDetail) => {
 
 const isComponentBasedPricing = (detail) =>
   Array.isArray(detail?.price_components) && detail.price_components.length > 0;
+
+// Render a pricing source URL as a clickable, audit-friendly external link. Falls
+// back to '-' when empty so columns stay aligned.
+const renderProviderSourceUrlCell = (value) => {
+  const url = typeof value === 'string' ? value.trim() : '';
+  if (!url) {
+    return '-';
+  }
+  return (
+    <a
+      href={url}
+      target='_blank'
+      rel='noopener noreferrer'
+      className='router-source-link router-monospace-value'
+      title={url}
+    >
+      {url}
+    </a>
+  );
+};
 
 const summarizeModelPriceUnit = (detail, t) => {
   if (isComponentBasedPricing(detail)) {
@@ -958,6 +1005,7 @@ export {
   formatProviderPriceCellValue,
   formatProviderPriceMeta,
   renderProviderPriceCell,
+  renderProviderSourceUrlCell,
   isComponentBasedPricing,
   summarizeModelPriceUnit,
   hasComplexInputPricing,

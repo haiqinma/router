@@ -45,6 +45,7 @@ import {
   buildConditionString,
   formatProviderPriceCellValue,
   renderProviderPriceCell,
+  renderProviderSourceUrlCell,
 } from './ProvidersManager.helpers';
 
 const ProvidersManager = () => {
@@ -740,6 +741,7 @@ const ProvidersManager = () => {
         OFFICIAL_PROVIDER_BASE_URLS[provider] ||
         '',
       official_url: (row.official_url || '').trim(),
+      pricing_url: (row.pricing_url || '').trim(),
       model_details: normalizeModelDetails(row.model_details || []),
       source: row.source || 'manual',
       updated_at: row.updated_at || 0,
@@ -804,6 +806,7 @@ const ProvidersManager = () => {
         OFFICIAL_PROVIDER_BASE_URLS[provider] ||
         '',
       official_url: (sourceRow.official_url || '').trim(),
+      pricing_url: (sourceRow.pricing_url || '').trim(),
       model_details: normalizeModelDetails(sourceRow.model_details || []),
       source: sourceRow.source || 'manual',
       updated_at: Math.floor(Date.now() / 1000),
@@ -820,6 +823,7 @@ const ProvidersManager = () => {
           OFFICIAL_PROVIDER_BASE_URLS[provider] ||
           '',
         official_url: (detailBasicDraft.official_url || '').trim(),
+        pricing_url: (detailBasicDraft.pricing_url || '').trim(),
       };
     }
     if (section === 'models') {
@@ -860,6 +864,7 @@ const ProvidersManager = () => {
         OFFICIAL_PROVIDER_BASE_URLS[provider] ||
         '',
       official_url: (createRow.official_url || '').trim(),
+      pricing_url: (createRow.pricing_url || '').trim(),
       model_details: normalizeModelDetails(createRow.model_details || []),
       source: createRow.source || 'manual',
       updated_at: Math.floor(Date.now() / 1000),
@@ -1686,14 +1691,14 @@ const ProvidersManager = () => {
               key: 'input_price',
               width: 124,
               render: (_, { detail }) =>
-                renderProviderPriceCell(detail, 'input_price', t, openPricingDetail),
+                renderProviderPriceCell(detail, 'input_price', t, openPricingDetail, row?.pricing_url),
             },
             {
               title: t('channel.providers.model_detail_table.output_price'),
               key: 'output_price',
               width: 124,
               render: (_, { detail }) =>
-                renderProviderPriceCell(detail, 'output_price', t, openPricingDetail),
+                renderProviderPriceCell(detail, 'output_price', t, openPricingDetail, row?.pricing_url),
             },
             {
               title: t('channel.providers.model_detail_table.actions'),
@@ -1998,6 +2003,30 @@ const ProvidersManager = () => {
                       detailEditingModelIndex,
                       'currency',
                       value ?? '',
+                    )
+                  }
+                />
+              </AppField>
+            </AppFormRow>
+            <AppFormRow className='router-provider-model-detail-form-row'>
+              <AppField
+                className='router-provider-model-detail-field-wide'
+                label={t('channel.providers.dialog.source_url_override')}
+              >
+                <AppInput
+                  className='router-section-input'
+                  placeholder={
+                    (detailModelsDraft.pricing_url || '').trim() ||
+                    t('channel.providers.dialog.source_url_inherit_placeholder')
+                  }
+                  value={detail.source_url ?? ''}
+                  onChange={(e, { value }) =>
+                    setModelDetailField(
+                      setDetailModelsValue,
+                      detailModelsDraft,
+                      detailEditingModelIndex,
+                      'source_url',
+                      value || '',
                     )
                   }
                 />
@@ -2611,6 +2640,33 @@ const ProvidersManager = () => {
                 )}
               </AppFormRow>
               <AppFormRow>
+                {basicEditing ? (
+                  <AppField label={t('channel.providers.dialog.pricing_url')}>
+                    <AppInput
+                      className='router-section-input'
+                      placeholder={t(
+                        'channel.providers.dialog.pricing_url_placeholder',
+                      )}
+                      value={detailBasicDraft.pricing_url}
+                      onChange={(e, { value }) =>
+                        setDetailBasicValue('pricing_url', value || '')
+                      }
+                    />
+                  </AppField>
+                ) : (
+                  <AppField
+                    label={t('channel.providers.dialog.pricing_url')}
+                    readOnly
+                  >
+                    <AppInput
+                      className='router-section-input'
+                      value={basicSourceRow.pricing_url || ''}
+                      readOnly
+                    />
+                  </AppField>
+                )}
+              </AppFormRow>
+              <AppFormRow>
                 <AppField label={t('channel.providers.table.source')} readOnly>
                   <AppInput
                     className='router-section-input'
@@ -2889,6 +2945,18 @@ const ProvidersManager = () => {
               }
             />
           </AppField>
+          <AppField label={t('channel.providers.dialog.pricing_url')}>
+            <AppInput
+              className='router-section-input'
+              placeholder={t(
+                'channel.providers.dialog.pricing_url_placeholder',
+              )}
+              value={createRow.pricing_url}
+              onChange={(e, { value }) =>
+                setCreateValue('pricing_url', value || '')
+              }
+            />
+          </AppField>
         </AppFormRow>
       </div>
 
@@ -3051,6 +3119,12 @@ const ProvidersManager = () => {
               key: 'currency',
               render: (value) => value || 'USD',
             },
+            {
+              title: t('channel.providers.price_component_table.source_url'),
+              dataIndex: 'source_url',
+              key: 'source_url',
+              render: (value) => renderProviderSourceUrlCell(value),
+            },
           ]}
         />
         <div className='router-detail-subtable-caption router-muted'>
@@ -3115,7 +3189,7 @@ const ProvidersManager = () => {
               title: t('channel.providers.price_component_table.source_url'),
               dataIndex: 'source_url',
               key: 'source_url',
-              render: (value) => value || '-',
+              render: (value) => renderProviderSourceUrlCell(value),
             },
           ]}
         />

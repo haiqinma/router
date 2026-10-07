@@ -44,4 +44,5 @@ const (
 	PersonalProviderID          = "personal_provider_id"
 	PersonalProviderName        = "personal_provider_name"
 	PersonalRoutePolicy         = "personal_route_policy"
+	CommunityOfferID            = "community_offer_id"
 )

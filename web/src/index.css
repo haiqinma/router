@@ -1437,9 +1437,9 @@ html[data-theme='dark'] .router-topup-return-next-hint {
 }
 
 .router-ui-select.router-section-input-unit-dropdown {
-    flex: 0 0 72px;
-    width: 72px;
-    min-width: 72px;
+    flex: 0 0 88px;
+    width: 88px;
+    min-width: 88px;
     margin: 0 !important;
 }
 
@@ -1949,6 +1949,23 @@ html[data-theme='dark'] .router-topup-return-next-hint {
 .router-ui-button.router-price-detail-icon-button:focus-visible {
     background: rgba(22, 119, 255, 0.08) !important;
     color: #1677ff !important;
+}
+
+.router-price-source-icon-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    color: #8c8c8c;
+    text-decoration: none;
+}
+
+.router-price-source-icon-link:hover,
+.router-price-source-icon-link:focus-visible {
+    background: rgba(22, 119, 255, 0.08);
+    color: #1677ff;
 }
 
 .router-inline-number-input {

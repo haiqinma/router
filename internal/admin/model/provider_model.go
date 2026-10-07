@@ -28,6 +28,7 @@ type ProviderModel struct {
 	PriceUnit          string  `json:"price_unit" gorm:"type:varchar(64);default:'per_1k_tokens'"`
 	Currency           string  `json:"currency" gorm:"type:varchar(16);default:'USD'"`
 	Source             string  `json:"source" gorm:"type:varchar(32);default:'manual'"`
+	SourceURL          string  `json:"source_url" gorm:"type:varchar(512);default:''"`
 	UpdatedAt          int64   `json:"updated_at" gorm:"bigint"`
 }
 
@@ -105,6 +106,7 @@ func ListActiveProviderModelDetailsWithDB(db *gorm.DB, provider string) ([]Provi
 			PriceUnit:          row.PriceUnit,
 			Currency:           row.Currency,
 			Source:             row.Source,
+			SourceURL:          strings.TrimSpace(row.SourceURL),
 			UpdatedAt:          row.UpdatedAt,
 		})
 	}

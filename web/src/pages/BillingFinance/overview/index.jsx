@@ -370,7 +370,7 @@ function BillingOverview({ embedded = false }) {
     { title: t('billing.overview.channels.columns.profit'), dataIndex: 'gross_profit_base_amount', width: 130, align: 'right', render: formatCNY },
     { title: t('billing.overview.channels.columns.margin'), dataIndex: 'gross_margin', width: 110, align: 'right', render: formatPercent },
     { title: t('billing.overview.channels.columns.coverage'), key: 'coverage', width: 130, align: 'right', render: (_, row) => formatPercent(Number(row.configured_cost_request_count || 0) / Math.max(Number(row.request_count || 0), 1)) },
-    { title: t('billing.overview.channels.columns.actions'), key: 'actions', width: 170, render: (_, row) => <div className='billing-overview-actions'><Link to={buildTarget('profit', { channel_id: row.dimension_key })}>{t('billing.overview.actions.profit')}</Link><Link to={buildTarget('procurement', { channel_id: row.dimension_key })}>{t('billing.overview.actions.procurement')}</Link></div> },
+    { title: t('billing.overview.channels.columns.actions'), key: 'actions', width: 170, render: (_, row) => <div className='billing-overview-actions'><Link to={buildTarget('profit', { channel_id: row.dimension_key })}>{t('billing.overview.actions.profit')}</Link><Link to={`/admin/channel/detail/${encodeURIComponent(String(row.dimension_key || ''))}?tab=procurement`}>{t('billing.overview.actions.procurement')}</Link></div> },
   ];
 
   const modelColumns = [

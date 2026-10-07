@@ -97,6 +97,12 @@ func Relay(c *gin.Context) {
 	go processChannelRelayError(ctx, userId, group, channelId, channelName, originalModel, requestPath, *bizErr)
 	traceID := c.GetString(helper.TraceIDKey)
 	retryAllRemainingCandidates := shouldRetryRemainingCandidates(bizErr)
+	// Community offers are an explicit consumer choice. Never turn an upstream
+	// failure into a silent switch to another offer, a package channel, or a
+	// personal key; the caller must see and change that choice deliberately.
+	if dbmodel.IsCommunityOfferChannelID(channelId) {
+		retryAllRemainingCandidates = false
+	}
 	personalRoutePolicy := dbmodel.NormalizePersonalRoutePolicy(c.GetString(ctxkey.PersonalRoutePolicy))
 	if personalRoutePolicy == dbmodel.PersonalRoutePolicyPersonalOnly {
 		retryAllRemainingCandidates = false
@@ -332,10 +338,20 @@ func buildRelayFailureLog(c *gin.Context, bizErr *model.ErrorWithStatusCode, ret
 		RelayErrorMessage:    strings.TrimSpace(bizErr.Error.Message),
 		ElapsedTime:          0,
 		IsStream:             false,
-		UpstreamSource:       map[bool]string{true: "personal_provider", false: "community_package"}[strings.TrimSpace(c.GetString(ctxkey.PersonalProviderID)) != ""],
+		UpstreamSource:       relayUpstreamSource(c),
 		PersonalProviderId:   strings.TrimSpace(c.GetString(ctxkey.PersonalProviderID)),
 		PersonalProviderName: strings.TrimSpace(c.GetString(ctxkey.PersonalProviderName)),
 	}
+}
+
+func relayUpstreamSource(c *gin.Context) string {
+	if c != nil && strings.TrimSpace(c.GetString(ctxkey.CommunityOfferID)) != "" {
+		return "community_offer"
+	}
+	if c != nil && strings.TrimSpace(c.GetString(ctxkey.PersonalProviderID)) != "" {
+		return "personal_provider"
+	}
+	return "community_package"
 }
 
 func appendFallbackFailureAttempt(c *gin.Context, attempt int, bizErr *model.ErrorWithStatusCode) {

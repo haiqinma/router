@@ -65,6 +65,7 @@ func replaceProviderSeedsToTable(db *gorm.DB, seeds []ProviderSeed) error {
 			Name:        strings.TrimSpace(seed.Name),
 			BaseURL:     strings.TrimSpace(seed.BaseURL),
 			OfficialURL: strings.TrimSpace(seed.OfficialURL),
+			PricingURL:  strings.TrimSpace(seed.PricingURL),
 			SortOrder:   normalizeProviderSortOrderValue(seed.SortOrder),
 			Source:      "migration",
 			CreatedAt: func() int64 {
@@ -161,6 +162,7 @@ func upsertProviderMigrationSeedsWithDB(db *gorm.DB, providers []string) error {
 			Name:        strings.TrimSpace(seed.Name),
 			BaseURL:     strings.TrimSpace(seed.BaseURL),
 			OfficialURL: strings.TrimSpace(seed.OfficialURL),
+			PricingURL:  strings.TrimSpace(seed.PricingURL),
 			SortOrder:   normalizeProviderSortOrderValue(seed.SortOrder),
 			Source:      "migration",
 			CreatedAt: func() int64 {
@@ -183,6 +185,7 @@ func upsertProviderMigrationSeedsWithDB(db *gorm.DB, providers []string) error {
 					"name",
 					"base_url",
 					"official_url",
+					"pricing_url",
 					"sort_order",
 					"source",
 					"updated_at",
@@ -231,6 +234,7 @@ func upsertProviderMigrationSeedsWithDB(db *gorm.DB, providers []string) error {
 					"price_unit",
 					"currency",
 					"source",
+					"source_url",
 					"updated_at",
 				}),
 			}).Create(&modelRows).Error; err != nil {

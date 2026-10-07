@@ -3,10 +3,12 @@ package controller
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/yeying-community/router/common/helper"
+	"github.com/yeying-community/router/common/random"
 
 	"github.com/gin-gonic/gin"
 
@@ -226,6 +228,10 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 		releaseRelayBillingPlan(ctx, billingPlan)
 		return
 	}
+	if strings.TrimSpace(meta.CommunityOfferID) != "" {
+		postConsumeCommunityOffer(ctx, usage, meta, textRequest)
+		return
+	}
 	groupRatio := billingRatio.EffectiveRatio
 	chargeUserBalance := billingPlan.ChargeUserBalance()
 	chargeTokenQuota := billingPlan.ChargeTokenQuota()
@@ -345,6 +351,97 @@ func postConsumeQuota(ctx context.Context, usage *relaymodel.Usage, meta *meta.M
 		model.UpdateChannelUsedQuota(meta.ChannelId, quota)
 	}
 	consumeTokenRequestCount(ctx, meta.TokenId, 1)
+}
+
+// postConsumeCommunityOffer is deliberately separate from package and
+// procurement billing. Community offer revenue is an amount owed to a third
+// party publisher, not a Router upstream purchase cost.
+func postConsumeCommunityOffer(ctx context.Context, usage *relaymodel.Usage, relayMeta *meta.Meta, textRequest *relaymodel.GeneralOpenAIRequest) {
+	if usage == nil || relayMeta == nil || textRequest == nil {
+		return
+	}
+	inputTokens := int64(usage.PromptTokens)
+	outputTokens := int64(usage.CompletionTokens)
+	if inputTokens+outputTokens <= 0 {
+		consumeTokenRequestCount(ctx, relayMeta.TokenId, 1)
+		return
+	}
+	requestLogID := random.GetUUID()
+	settlementInput := model.PublisherOfferSettlementInput{
+		RequestLogID: requestLogID, OfferID: relayMeta.CommunityOfferID, ConsumerUserID: relayMeta.UserId,
+		InputTokens: inputTokens, OutputTokens: outputTokens,
+	}
+	quote, err := model.QuotePublisherOfferSettlement(settlementInput)
+	if err != nil {
+		logger.Errorf(ctx, "community offer quote failed user_id=%s offer_id=%s err=%q", strings.TrimSpace(relayMeta.UserId), strings.TrimSpace(relayMeta.CommunityOfferID), err.Error())
+		return
+	}
+	quota, chargeRate, err := model.CommunityOfferQuotaForMicros(quote.ConsumerAmountMicros)
+	if err != nil {
+		logger.Errorf(ctx, "community offer quota conversion failed user_id=%s offer_id=%s err=%q", strings.TrimSpace(relayMeta.UserId), strings.TrimSpace(relayMeta.CommunityOfferID), err.Error())
+		return
+	}
+	delivery, err := model.PreparePublisherSettlementDeliveryForCharge(quote, quota, chargeRate)
+	if err != nil {
+		// Do this before touching a balance lot. Without a durable handoff we
+		// cannot safely create a charge that may lose its publisher payable.
+		logger.Errorf(ctx, "community offer settlement delivery prepare failed request_log_id=%s offer_id=%s err=%q", requestLogID, quote.OfferID, err.Error())
+		return
+	}
+	balanceSource := model.LogBillingSourceSnapshot{}
+	chargedQuota := int64(0)
+	if quota > 0 {
+		consumeResult, consumeErr := model.ConsumeUserBalanceLotsForGroupDetailed(relayMeta.UserId, "", quota)
+		if consumeErr != nil {
+			logger.Errorf(ctx, "community offer balance consume failed user_id=%s offer_id=%s quota=%d err=%q", strings.TrimSpace(relayMeta.UserId), strings.TrimSpace(relayMeta.CommunityOfferID), quota, consumeErr.Error())
+			return
+		}
+		chargedQuota = consumeResult.ConsumedAmount
+		if _, err := model.RecordPublisherSettlementDeliveryCharge(requestLogID, chargedQuota); err != nil {
+			logger.Errorf(ctx, "community offer charged quota snapshot failed request_log_id=%s offer_id=%s quota=%d err=%q", requestLogID, quote.OfferID, chargedQuota, err.Error())
+			return
+		}
+		if consumeResult.ConsumedAmount < quota {
+			logger.Errorf(ctx, "community offer balance coverage partial user_id=%s offer_id=%s consumed=%d expected=%d", strings.TrimSpace(relayMeta.UserId), strings.TrimSpace(relayMeta.CommunityOfferID), consumeResult.ConsumedAmount, quota)
+			return
+		}
+		balanceSource = consumeResult.LogBillingSourceSnapshot()
+	}
+	if quota == 0 {
+		if _, err := model.RecordPublisherSettlementDeliveryCharge(requestLogID, chargedQuota); err != nil {
+			logger.Errorf(ctx, "community offer zero quota snapshot failed request_log_id=%s offer_id=%s err=%q", requestLogID, quote.OfferID, err.Error())
+			return
+		}
+	}
+	entry := &model.Log{
+		Id: requestLogID, UserId: relayMeta.UserId, GroupId: "", ChannelId: relayMeta.ChannelId,
+		PromptTokens: usage.PromptTokens, CompletionTokens: usage.CompletionTokens, ModelName: textRequest.Model,
+		TokenName: relayMeta.TokenName, Quota: quota, IsStream: relayMeta.IsStream,
+		ElapsedTime:   helper.CalcElapsedTime(relayMeta.StartTime),
+		Content:       fmt.Sprintf("社区报价调用: offer=%s currency=%s consumer_amount_micros=%d platform_fee_micros=%d publisher_payable_micros=%d", delivery.OfferID, delivery.Currency, delivery.ConsumerAmountMicros, delivery.PlatformFeeAmountMicros, delivery.PublisherPayableMicros),
+		BillingSource: model.LogBillingSourceBalance, BillingSourceID: balanceSource.ID, BillingSourceName: balanceSource.Name, BillingSourceDetail: balanceSource.Detail,
+		BillingPriceUnit: "per_1m_tokens", BillingCurrency: model.BillingCurrencyCodeUSD, BillingPricingSource: "community_offer", BillingUsageSource: "upstream_usage",
+		BillingSettlementMode: "community_offer", BillingEffectiveRatio: 1, BillingChargeRate: chargeRate,
+		BillingInputQuantity: float64(inputTokens), BillingOutputQuantity: float64(outputTokens), BillingAmount: float64(delivery.ConsumerAmountMicros) / 1_000_000,
+		BillingChargeAmount: quota,
+	}
+	applyRouteObservabilityToLog(entry, relayMeta, textRequest.Model)
+	model.RecordConsumeLog(ctx, entry)
+	if _, err := model.MarkPublisherSettlementDeliveryReady(requestLogID); err != nil {
+		// The worker will retry readiness after it observes the log. A missing
+		// log intentionally remains prepared instead of fabricating an payable.
+		logger.Errorf(ctx, "community offer settlement delivery not ready request_log_id=%s offer_id=%s err=%q", requestLogID, quote.OfferID, err.Error())
+	} else if _, err := model.DeliverPublisherSettlement(requestLogID); err != nil {
+		logger.Errorf(ctx, "community offer settlement delivery failed request_log_id=%s offer_id=%s err=%q", requestLogID, quote.OfferID, err.Error())
+	}
+	if strings.TrimSpace(relayMeta.TokenId) != "" && quota > 0 {
+		if err := model.PostConsumeTokenQuota(relayMeta.TokenId, quota); err != nil {
+			logger.Errorf(ctx, "community offer token quota consume failed token_id=%s quota=%d err=%q", strings.TrimSpace(relayMeta.TokenId), quota, err.Error())
+		}
+	}
+	_ = model.CacheUpdateUserQuota(ctx, relayMeta.UserId)
+	model.UpdateUserUsedQuotaAndRequestCount(relayMeta.UserId, quota)
+	consumeTokenRequestCount(ctx, relayMeta.TokenId, 1)
 }
 
 func getMappedModelName(modelName string, mapping map[string]string) (string, bool) {

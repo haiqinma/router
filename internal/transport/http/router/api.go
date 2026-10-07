@@ -8,6 +8,7 @@ import (
 	auth "github.com/yeying-community/router/internal/admin/controller/auth"
 	adminbilling "github.com/yeying-community/router/internal/admin/controller/billing"
 	channel "github.com/yeying-community/router/internal/admin/controller/channel"
+	communityofferrouting "github.com/yeying-community/router/internal/admin/controller/communityofferrouting"
 	dashboard "github.com/yeying-community/router/internal/admin/controller/dashboard"
 	entitlement "github.com/yeying-community/router/internal/admin/controller/entitlement"
 	flow "github.com/yeying-community/router/internal/admin/controller/flow"
@@ -16,6 +17,7 @@ import (
 	option "github.com/yeying-community/router/internal/admin/controller/option"
 	personalprovider "github.com/yeying-community/router/internal/admin/controller/personalprovider"
 	plan "github.com/yeying-community/router/internal/admin/controller/plan"
+	publisher "github.com/yeying-community/router/internal/admin/controller/publisher"
 	task "github.com/yeying-community/router/internal/admin/controller/task"
 	token "github.com/yeying-community/router/internal/admin/controller/token"
 	topup "github.com/yeying-community/router/internal/admin/controller/topup"
@@ -146,6 +148,41 @@ func SetApiRouter(engine *gin.Engine) {
 			personalProviderRoute.PUT("/model-routes", personalprovider.UpsertModelRoute)
 			personalProviderRoute.DELETE("/model-routes/:model", personalprovider.DeleteModelRoute)
 			personalProviderRoute.GET("/routing-quota", personalprovider.RoutingQuota)
+		}
+
+		publisherRoute := publicRouter.Group("/publisher")
+		publisherRoute.Use(middleware.UserAuth())
+		{
+			publisherRoute.GET("/profile", publisher.GetProfile)
+			publisherRoute.PUT("/profile", publisher.UpdateProfile)
+			publisherRoute.POST("/applications", publisher.SubmitApplication)
+			publisherRoute.GET("/services", publisher.ListServices)
+			publisherRoute.POST("/services", publisher.CreateService)
+			publisherRoute.GET("/services/:id", publisher.GetService)
+			publisherRoute.PUT("/services/:id", publisher.UpdateService)
+			publisherRoute.DELETE("/services/:id", publisher.DeleteService)
+			publisherRoute.POST("/services/:id/verify", publisher.VerifyService)
+			publisherRoute.GET("/offers", publisher.ListOffers)
+			publisherRoute.POST("/offers", publisher.CreateOffer)
+			publisherRoute.PUT("/offers/:id", publisher.UpdateOffer)
+			publisherRoute.DELETE("/offers/:id", publisher.DeleteOffer)
+			publisherRoute.POST("/offers/:id/submit", publisher.SubmitOffer)
+			publisherRoute.GET("/settlements", publisher.ListSettlements)
+		}
+
+		modelServiceRoute := publicRouter.Group("/model-services")
+		modelServiceRoute.Use(middleware.UserAuth())
+		{
+			modelServiceRoute.GET("/offers", publisher.ListPublishedOffers)
+			modelServiceRoute.GET("/offers/:id", publisher.GetPublishedOffer)
+		}
+
+		communityOfferRoutingRoute := publicRouter.Group("/community-offer-routing")
+		communityOfferRoutingRoute.Use(middleware.UserAuth())
+		{
+			communityOfferRoutingRoute.GET("/model-routes", communityofferrouting.ListModelRoutes)
+			communityOfferRoutingRoute.PUT("/model-routes", communityofferrouting.UpsertModelRoute)
+			communityOfferRoutingRoute.DELETE("/model-routes/:model", communityofferrouting.DeleteModelRoute)
 		}
 
 		publicLogRoute := publicRouter.Group("/log")
@@ -470,6 +507,36 @@ func SetApiRouter(engine *gin.Engine) {
 			adminProviderRoute.GET("/:id", channel.GetProvider)
 			adminProviderRoute.PUT("/:id", channel.UpdateProvider)
 			adminProviderRoute.DELETE("/:id", channel.DeleteProvider)
+		}
+
+		adminPublisherRoute := adminRouter.Group("/publishers")
+		adminPublisherRoute.Use(middleware.AdminAuth())
+		{
+			adminPublisherRoute.GET("/", publisher.ListPublishers)
+			adminPublisherRoute.POST("/:id/approve", publisher.ApprovePublisher)
+			adminPublisherRoute.POST("/:id/restrict", publisher.RestrictPublisher)
+		}
+		adminPublisherServiceRoute := adminRouter.Group("/publisher-services")
+		adminPublisherServiceRoute.Use(middleware.AdminAuth())
+		{
+			adminPublisherServiceRoute.GET("/", publisher.ListAdminServices)
+			adminPublisherServiceRoute.POST("/:id/suspend", publisher.SuspendService)
+		}
+		adminOfferRoute := adminRouter.Group("/offers")
+		adminOfferRoute.Use(middleware.AdminAuth())
+		{
+			adminOfferRoute.GET("/review", publisher.ListAdminOffers)
+			adminOfferRoute.POST("/:id/approve", publisher.ApproveOffer)
+			adminOfferRoute.POST("/:id/reject", publisher.RejectOffer)
+		}
+		adminPublisherSettlementRoute := adminRouter.Group("/publisher-settlements")
+		adminPublisherSettlementRoute.Use(middleware.AdminAuth())
+		{
+			adminPublisherSettlementRoute.GET("/", publisher.ListAdminSettlements)
+			adminPublisherSettlementRoute.GET("/deliveries", publisher.ListAdminSettlementDeliveries)
+			adminPublisherSettlementRoute.POST("/deliveries/:request_log_id/retry", publisher.RetryAdminSettlementDelivery)
+			adminPublisherSettlementRoute.POST("/deliveries/:request_log_id/cancel", publisher.CancelAdminSettlementDelivery)
+			adminPublisherSettlementRoute.POST("/deliveries/:request_log_id/resolve", publisher.ResolveAdminSettlementDeliveryException)
 		}
 	}
 

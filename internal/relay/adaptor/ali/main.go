@@ -128,6 +128,45 @@ func ConvertQwenImageEditRequest(request model.ImageRequest, form *multipart.For
 	return &imageRequest, nil
 }
 
+// ConvertWanxImageEditRequest 把 OpenAI 风格的 /v1/images/edits（multipart）转换为
+// 万相通用图像编辑请求。带 mask 时使用 description_edit_with_mask 做局部重绘，
+// 并把 OpenAI 规范的遮罩（透明=重绘）转换为万相要求的黑白遮罩（白=编辑区）。
+func ConvertWanxImageEditRequest(request model.ImageRequest, form *multipart.Form) (*WanxImageEditRequest, error) {
+	if form == nil {
+		return nil, errors.New("multipart form is required")
+	}
+	files := form.File["image"]
+	if len(files) == 0 {
+		return nil, errors.New("image file is required")
+	}
+	baseDataURI, err := readMultipartImageDataURI(files[0])
+	if err != nil {
+		return nil, err
+	}
+
+	var imageRequest WanxImageEditRequest
+	imageRequest.Model = request.Model
+	imageRequest.Input.Prompt = request.Prompt
+	imageRequest.Input.BaseImageURL = baseDataURI
+	imageRequest.Input.Function = WanxImageEditFunctionDescriptionEdit
+	if masks := form.File["mask"]; len(masks) > 0 {
+		baseConfig, err := readMultipartImageConfig(files[0])
+		if err != nil {
+			return nil, fmt.Errorf("decode base image: %w", err)
+		}
+		maskDataURI, err := readMultipartWanxMaskDataURI(masks[0], baseConfig.Width, baseConfig.Height)
+		if err != nil {
+			return nil, fmt.Errorf("convert mask image: %w", err)
+		}
+		imageRequest.Input.Function = WanxImageEditFunctionDescriptionEditWithMask
+		imageRequest.Input.MaskImageURL = maskDataURI
+	}
+	if request.N > 0 {
+		imageRequest.Parameters.N = request.N
+	}
+	return &imageRequest, nil
+}
+
 func readMultipartImageDataURI(fileHeader *multipart.FileHeader) (string, error) {
 	if fileHeader == nil {
 		return "", errors.New("image file is required")
@@ -142,7 +181,8 @@ func readMultipartImageDataURI(fileHeader *multipart.FileHeader) (string, error)
 		return "", err
 	}
 	contentType := strings.TrimSpace(fileHeader.Header.Get("Content-Type"))
-	if contentType == "" {
+	// 部分客户端（及 Go 的 CreateFormFile）会把文件标成 octet-stream，按内容嗅探真实类型
+	if contentType == "" || contentType == "application/octet-stream" {
 		contentType = http.DetectContentType(data)
 	}
 	return fmt.Sprintf("data:%s;base64,%s", contentType, base64.StdEncoding.EncodeToString(data)), nil

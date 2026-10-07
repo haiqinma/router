@@ -713,6 +713,7 @@
     "providers": {
       "title": "Providers",
       "search": "Search provider, name, model...",
+      "price_source_link": "View price source",
       "fetch": {
         "provider": "Provider",
         "base_url": "Base URL",
@@ -818,6 +819,10 @@
         "base_url_placeholder": "Leave empty to use official default URL",
         "official_url": "Official URL",
         "official_url_placeholder": "Official pricing or model documentation page",
+        "pricing_url": "Price Source",
+        "pricing_url_placeholder": "Provider-level default price source; models inherit it unless overridden",
+        "source_url_override": "Price Source (override, blank = inherit)",
+        "source_url_inherit_placeholder": "Leave blank to inherit the provider price source",
         "key": "API Key",
         "key_placeholder": "Used when fetching models from provider API",
         "models": "Models (one per line, or comma-separated)",
@@ -875,6 +880,7 @@
         "endpoints": "Endpoints",
         "tests": "Tests",
         "publish": "Publish",
+        "procurement": "Procurement",
         "billing": "Billing"
       },
       "publish": {
@@ -940,6 +946,12 @@
         },
         "updated_at": "Updated At",
         "manual_update_title": "Add Purchase Record",
+        "purchase_kind": "Procurement type",
+        "purchase_kinds": {
+          "recharge": "Recharge",
+          "subscription": "Subscription"
+        },
+        "advanced_options": "Advanced options",
         "manual_purchase_title": "Purchase Info",
         "procurement_event_type": "Procurement change",
         "procurement_events": {
@@ -1241,6 +1253,8 @@
         },
         "batch": {
           "selected_count": "{{count}} selected",
+          "enter": "Batch Actions",
+          "cancel": "Exit Batch",
           "select_required": "Select at least one endpoint first.",
           "enable_selected": "Enable Selected ({{count}})",
           "disable_selected": "Disable Selected ({{count}})",
@@ -1497,6 +1511,7 @@
         },
         "settings_audio_language": "Speech Test Language",
         "image_edit_source_url": "Image edit test source URL",
+        "image_edit_source_url_placeholder": "Leave blank to use the built-in test image",
         "image_edit_upload": "Upload image edit test source",
         "image_edit_uploaded": "Image uploaded",
         "image_edit_file_failed": "Failed to read image",
@@ -2082,6 +2097,9 @@
       "unit": "$"
     },
     "delete": "Delete",
+    "all": "All",
+    "other": "Other",
+    "unassigned": "Unassigned",
     "session_expired": "Your session has expired. Please sign in again.",
     "rate_limit": "Too many requests. Please try again later.",
     "server_error": "Server error. Please contact the administrator.",
@@ -4677,6 +4695,15 @@
   },
   "personal_routing": {
     "title": "My providers"
+  },
+  "publisher_workspace": {
+    "title": "Model publishing"
+  },
+  "publisher_operations": {
+    "title": "Open supply"
+  },
+  "community_services": {
+    "title": "Community services"
   },
   "not_found": {
     "title": "Page not found",

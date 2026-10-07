@@ -22,6 +22,7 @@ import (
 	"github.com/yeying-community/router/internal/relay/responsestate"
 	"github.com/yeying-community/router/internal/relay/routeobs"
 	"github.com/yeying-community/router/internal/relay/routing"
+	"gorm.io/gorm"
 )
 
 type ModelRequest struct {
@@ -214,6 +215,8 @@ func selectPinnedResponsesChannel(c *gin.Context, userID string, userGroup strin
 	var err error
 	if model.IsPersonalProviderChannelID(channelID) {
 		channel, err = model.ResolvePersonalProviderChannel(userID, channelID)
+	} else if model.IsCommunityOfferChannelID(channelID) {
+		channel, err = model.ResolveCommunityOfferChannel(model.CommunityOfferIDFromChannelID(channelID), requestModel, requestPath)
 	} else {
 		channel, err = model.GetChannelById(channelID)
 	}
@@ -225,7 +228,7 @@ func selectPinnedResponsesChannel(c *gin.Context, userID string, userGroup strin
 		logger.RelayWarnf(c.Request.Context(), "DISTRIBUTE decision=miss reason=responses_route_channel_disabled user_id=%s group=%s response_id=%s channel_id=%s endpoint=%s", c.GetString(ctxkey.Id), userGroup, previousResponseID, channelID, requestPath)
 		return nil, false
 	}
-	if strings.TrimSpace(requestModel) != "" && !model.IsPersonalProviderChannelID(channelID) {
+	if strings.TrimSpace(requestModel) != "" && !model.IsPersonalProviderChannelID(channelID) && !model.IsCommunityOfferChannelID(channelID) {
 		channels, err := model.CacheListSatisfiedChannelsForRequest(userGroup, requestModel, requestPath)
 		if err != nil {
 			logger.RelayWarnf(c.Request.Context(), "DISTRIBUTE decision=miss reason=responses_route_validation_failed user_id=%s group=%s response_id=%s channel_id=%s model=%s endpoint=%s error=%q", c.GetString(ctxkey.Id), userGroup, previousResponseID, channelID, requestModel, requestPath, err.Error())
@@ -405,10 +408,21 @@ func responseStateConflict(c *gin.Context) bool {
 	return conflict
 }
 
+// requestBodyIsForm 判断请求体是否为表单编码（multipart/form-data 或
+// x-www-form-urlencoded）。这类请求（如 /v1/images/edits、音频转写）无法携带
+// JSON 路由策略，直接按默认策略处理，避免把 multipart 边界当 JSON 解析报错。
+func requestBodyIsForm(c *gin.Context) bool {
+	contentType := strings.ToLower(strings.TrimSpace(c.GetHeader("Content-Type")))
+	return strings.HasPrefix(contentType, "multipart/form-data") ||
+		strings.HasPrefix(contentType, "application/x-www-form-urlencoded")
+}
+
 func Distribute() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		ctx := c.Request.Context()
-		if rawBody, bodyErr := common.GetRequestBody(c); bodyErr != nil {
+		if requestBodyIsForm(c) {
+			c.Set(ctxkey.ProviderRoutingPolicy, routing.DefaultPolicy())
+		} else if rawBody, bodyErr := common.GetRequestBody(c); bodyErr != nil {
 			abortWithMessage(c, http.StatusBadRequest, "读取请求体失败")
 			return
 		} else if policy, policyErr := routing.ParseRequestPolicy(rawBody); policyErr != nil {
@@ -490,7 +504,7 @@ func Distribute() func(c *gin.Context) {
 				}
 			}
 			if pinnedChannelID, pinned, _ := lookupPinnedResponsesChannelID(c); pinned {
-				if !model.IsPersonalProviderChannelID(pinnedChannelID) {
+				if !model.IsPersonalProviderChannelID(pinnedChannelID) && !model.IsCommunityOfferChannelID(pinnedChannelID) {
 					if groupErr := resolveEntitlement(); groupErr != nil {
 						abortEntitlementResolution(groupErr)
 						return
@@ -513,6 +527,27 @@ func Distribute() func(c *gin.Context) {
 					recordRouteDecision(c, decision, userGroup, requestModel, c.Request.URL.Path, personalChannels, nil, selected, reason)
 				}
 				return selected, nil
+			}
+			// A community offer is never an automatic fallback candidate. A user
+			// must select it explicitly for this model, after which the request is
+			// fixed to that exact offer until the rule is removed or the offer is no
+			// longer healthy.
+			if channel == nil && personalSupported && personalPolicy != model.PersonalRoutePolicyPersonalOnly {
+				route, routeErr := model.GetCommunityOfferModelRoute(userId, requestModel)
+				if routeErr == nil {
+					channel, err = model.ResolveCommunityOfferChannel(route.OfferID, requestModel, c.Request.URL.Path)
+					if err != nil {
+						logger.RelayWarnf(ctx, "DISTRIBUTE decision=abort reason=community_offer_unavailable user_id=%s offer_id=%s model=%s endpoint=%s error=%q", userId, route.OfferID, requestModel, c.Request.URL.Path, err.Error())
+						abortWithMessage(c, http.StatusServiceUnavailable, "已选择的社区模型服务当前不可用，请在社区模型服务中重新选择")
+						return
+					}
+					c.Set(ctxkey.CommunityOfferID, route.OfferID)
+					recordRouteDecision(c, "community_offer", "", requestModel, c.Request.URL.Path, []*model.Channel{channel}, nil, channel, "explicit_offer")
+				} else if !errors.Is(routeErr, gorm.ErrRecordNotFound) {
+					logger.RelayWarnf(ctx, "DISTRIBUTE decision=community_offer_route_lookup_failed user_id=%s model=%s endpoint=%s error=%q", userId, requestModel, c.Request.URL.Path, routeErr.Error())
+					abortWithMessage(c, http.StatusInternalServerError, "读取社区模型路由失败")
+					return
+				}
 			}
 			if channel == nil && personalSupported && (personalPolicy == model.PersonalRoutePolicyPersonalFirst || personalPolicy == model.PersonalRoutePolicyPersonalOnly) {
 				channel, err = selectPersonalChannel("personal_provider", "personal_priority")
@@ -596,6 +631,11 @@ func SetupContextForSelectedChannel(c *gin.Context, channel *model.Channel, mode
 	} else {
 		c.Set(ctxkey.PersonalProviderID, "")
 		c.Set(ctxkey.PersonalProviderName, "")
+	}
+	if model.IsCommunityOfferChannelID(channel.Id) {
+		c.Set(ctxkey.CommunityOfferID, model.CommunityOfferIDFromChannelID(channel.Id))
+	} else {
+		c.Set(ctxkey.CommunityOfferID, "")
 	}
 	c.Set(ctxkey.ChannelModelConfigs, channel.GetSelectedChannelModels())
 	mapping := channel.GetModelMapping()

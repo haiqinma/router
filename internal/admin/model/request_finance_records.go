@@ -365,6 +365,12 @@ func RecordFinanceRecordsForLog(db *gorm.DB, row *Log) error {
 	if err := db.Clauses(clause.OnConflict{UpdateAll: true}).Create(&settlement).Error; err != nil {
 		return err
 	}
+	// A community offer produces a publisher payable recorded in the main
+	// commercial ledger. It is not Router procurement, so creating a
+	// ProcurementAttribution here would falsely represent it as platform cost.
+	if strings.TrimSpace(row.UpstreamSource) == "community_offer" {
+		return nil
+	}
 	attribution := procurementAttributionFromLog(row)
 	return db.Clauses(clause.OnConflict{UpdateAll: true}).Create(&attribution).Error
 }

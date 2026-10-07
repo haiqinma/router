@@ -69,6 +69,7 @@ const ChannelDetailEndpointsTab = ({
   handleBatchApplyEndpointPolicy = () => {},
   endpointPolicyTemplates = [],
 }) => {
+  const [batchMode, setBatchMode] = useState(false);
   const [batchRowKeys, setBatchRowKeys] = useState([]);
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [applyDraft, setApplyDraft] = useState(buildEmptyBatchPolicyDraft);
@@ -84,19 +85,22 @@ const ChannelDetailEndpointsTab = ({
   const batchBusy = endpointBatchMutating;
   const batchCount = batchRows.length;
 
-  const clearSelection = () => setBatchRowKeys([]);
+  const exitBatchMode = () => {
+    setBatchMode(false);
+    setBatchRowKeys([]);
+  };
 
   const runBatchToggle = async (enabled) => {
     const ok = await handleBatchUpdateEndpointCapabilities(batchRows, enabled);
     if (ok) {
-      clearSelection();
+      exitBatchMode();
     }
   };
 
   const runBatchClearPolicies = async () => {
     const ok = await handleBatchClearEndpointPolicies(batchRows);
     if (ok) {
-      clearSelection();
+      exitBatchMode();
     }
   };
 
@@ -157,86 +161,113 @@ const ChannelDetailEndpointsTab = ({
       setApplyModalOpen(false);
       setApplyDraft(buildEmptyBatchPolicyDraft());
       setSelectedApplyTemplate('');
-      clearSelection();
+      exitBatchMode();
     }
   };
 
-  const tableRowSelection = {
-    selectedRowKeys: batchRowKeys,
-    getCheckboxProps: () => ({ disabled: batchBusy }),
-    onChange: (keys) => setBatchRowKeys(Array.isArray(keys) ? keys : []),
-  };
+  const tableRowSelection = batchMode
+    ? {
+        selectedRowKeys: batchRowKeys,
+        getCheckboxProps: () => ({ disabled: batchBusy }),
+        onChange: (keys) => setBatchRowKeys(Array.isArray(keys) ? keys : []),
+      }
+    : undefined;
 
   const renderBatchToolbar = () => (
     <AppFilterHeader
       className='router-toolbar-compact'
       actions={
-        <>
-          <span className='router-toolbar-meta'>
-            {t('channel.edit.endpoint_capabilities.batch.selected_count', {
-              count: batchCount,
-            })}
-          </span>
-          <AppButton
-            type='button'
-            color='blue'
-            className='router-page-button'
-            loading={batchBusy}
-            disabled={batchCount === 0 || batchBusy || endpointCapabilityReadonly}
-            onClick={() => runBatchToggle(true)}
-          >
-            {t('channel.edit.endpoint_capabilities.batch.enable_selected', {
-              count: batchCount,
-            })}
-          </AppButton>
-          <AppButton
-            type='button'
-            className='router-page-button'
-            loading={batchBusy}
-            disabled={batchCount === 0 || batchBusy || endpointCapabilityReadonly}
-            onClick={() => runBatchToggle(false)}
-          >
-            {t('channel.edit.endpoint_capabilities.batch.disable_selected', {
-              count: batchCount,
-            })}
-          </AppButton>
-          <AppButton
-            type='button'
-            className='router-page-button'
-            disabled={batchCount === 0 || batchBusy || endpointPolicyReadonly}
-            onClick={openApplyModal}
-          >
-            {t('channel.edit.endpoint_capabilities.batch.apply_policy', {
-              count: batchCount,
-            })}
-          </AppButton>
-          <AppPopconfirm
-            title={t(
-              'channel.edit.endpoint_capabilities.batch.clear_policies_confirm',
-              { count: batchCount },
-            )}
-            okButtonProps={{ danger: true }}
-            okText={t('common.confirm')}
-            cancelText={t('common.cancel')}
-            onConfirm={runBatchClearPolicies}
-            disabled={batchCount === 0 || batchBusy || endpointPolicyReadonly}
-          >
-            <span>
-              <AppButton
-                type='button'
-                color='red'
-                className='router-page-button'
-                loading={batchBusy}
-                disabled={batchCount === 0 || batchBusy || endpointPolicyReadonly}
-              >
-                {t(
-                  'channel.edit.endpoint_capabilities.batch.clear_policies_selected',
-                  { count: batchCount },
-                )}
-              </AppButton>
+        batchMode ? (
+          <>
+            <span className='router-toolbar-meta'>
+              {t('channel.edit.endpoint_capabilities.batch.selected_count', {
+                count: batchCount,
+              })}
             </span>
-          </AppPopconfirm>
-        </>
+            <AppButton
+              type='button'
+              color='blue'
+              className='router-page-button'
+              loading={batchBusy}
+              disabled={batchCount === 0 || batchBusy || endpointCapabilityReadonly}
+              onClick={() => runBatchToggle(true)}
+            >
+              {t('channel.edit.endpoint_capabilities.batch.enable_selected', {
+                count: batchCount,
+              })}
+            </AppButton>
+            <AppButton
+              type='button'
+              className='router-page-button'
+              loading={batchBusy}
+              disabled={batchCount === 0 || batchBusy || endpointCapabilityReadonly}
+              onClick={() => runBatchToggle(false)}
+            >
+              {t('channel.edit.endpoint_capabilities.batch.disable_selected', {
+                count: batchCount,
+              })}
+            </AppButton>
+            <AppButton
+              type='button'
+              className='router-page-button'
+              disabled={batchCount === 0 || batchBusy || endpointPolicyReadonly}
+              onClick={openApplyModal}
+            >
+              {t('channel.edit.endpoint_capabilities.batch.apply_policy', {
+                count: batchCount,
+              })}
+            </AppButton>
+            <AppPopconfirm
+              title={t(
+                'channel.edit.endpoint_capabilities.batch.clear_policies_confirm',
+                { count: batchCount },
+              )}
+              okButtonProps={{ danger: true }}
+              okText={t('common.confirm')}
+              cancelText={t('common.cancel')}
+              onConfirm={runBatchClearPolicies}
+              disabled={batchCount === 0 || batchBusy || endpointPolicyReadonly}
+            >
+              <span>
+                <AppButton
+                  type='button'
+                  color='red'
+                  className='router-page-button'
+                  loading={batchBusy}
+                  disabled={batchCount === 0 || batchBusy || endpointPolicyReadonly}
+                >
+                  {t(
+                    'channel.edit.endpoint_capabilities.batch.clear_policies_selected',
+                    { count: batchCount },
+                  )}
+                </AppButton>
+              </span>
+            </AppPopconfirm>
+            <AppButton
+              type='button'
+              className='router-page-button'
+              disabled={batchBusy}
+              onClick={exitBatchMode}
+            >
+              {t('channel.edit.endpoint_capabilities.batch.cancel')}
+            </AppButton>
+          </>
+        ) : (
+          <AppButton
+            type='button'
+            className='router-page-button'
+            disabled={
+              (endpointCapabilityReadonly && endpointPolicyReadonly) ||
+              channelEndpoints.length === 0
+            }
+            onClick={() => {
+              setBatchRowKeys([]);
+              setBatchMode(true);
+            }}
+          >
+            {t('channel.edit.endpoint_capabilities.batch.enter')}
+          </AppButton>
+        )
       }
     />
   );

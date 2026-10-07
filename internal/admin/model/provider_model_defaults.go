@@ -41,6 +41,7 @@ const (
 	ProviderPriceUnitPerTask     = "per_task"
 
 	ProviderPriceCurrencyUSD = "USD"
+	ProviderPriceCurrencyCNY = "CNY"
 
 	ProviderModelPriceComponentText            = "text"
 	ProviderModelPriceComponentTextCacheRead   = "text_cache_read"
@@ -93,6 +94,7 @@ type ProviderModelDetail struct {
 	PriceUnit          string                              `json:"price_unit,omitempty"`
 	Currency           string                              `json:"currency,omitempty"`
 	Source             string                              `json:"source,omitempty"`
+	SourceURL          string                              `json:"source_url,omitempty"`
 	UpdatedAt          int64                               `json:"updated_at,omitempty"`
 	PriceComponents    []ProviderModelPriceComponentDetail `json:"price_components,omitempty"`
 }
@@ -102,6 +104,7 @@ type ProviderSeed struct {
 	Name         string
 	BaseURL      string
 	OfficialURL  string
+	PricingURL   string
 	SortOrder    int
 	ModelDetails []ProviderModelDetail
 }
@@ -158,6 +161,7 @@ func NormalizeProviderModelDetails(details []ProviderModelDetail) []ProviderMode
 			PriceUnit:          priceUnit,
 			Currency:           currency,
 			Source:             source,
+			SourceURL:          strings.TrimSpace(detail.SourceURL),
 			UpdatedAt:          detail.UpdatedAt,
 			PriceComponents:    NormalizeProviderModelPriceComponents(detail.PriceComponents),
 		}
@@ -195,6 +199,9 @@ func NormalizeProviderModelDetails(details []ProviderModelDetail) []ProviderMode
 				existing.OutputPrice = entry.OutputPrice
 			}
 			existing.Source = entry.Source
+			if existing.SourceURL == "" {
+				existing.SourceURL = entry.SourceURL
+			}
 			if entry.UpdatedAt > existing.UpdatedAt {
 				existing.UpdatedAt = entry.UpdatedAt
 			}

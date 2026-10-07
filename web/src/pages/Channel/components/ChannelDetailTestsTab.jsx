@@ -451,7 +451,7 @@ const ChannelDetailTestsTab = ({
                       fluid
                       value={imageEditTestURL || ''}
                       placeholder={t(
-                        'channel.edit.model_tester.image_edit_source_url',
+                        'channel.edit.model_tester.image_edit_source_url_placeholder',
                       )}
                       onChange={(e, { value }) =>
                         setImageEditTestURL((value || '').toString())

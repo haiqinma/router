@@ -77,6 +77,9 @@ const HelpDoc = lazy(() => import('./pages/HelpDoc'));
 const RouterGuideDoc = lazy(() => import('./pages/HelpDoc/RouterGuideDoc'));
 const WorkspaceStart = lazy(() => import('./pages/WorkspaceStart'));
 const PersonalRouting = lazy(() => import('./pages/PersonalRouting'));
+const PublisherWorkspace = lazy(() => import('./pages/PublisherWorkspace'));
+const PublisherOperations = lazy(() => import('./pages/PublisherOperations'));
+const CommunityServices = lazy(() => import('./pages/CommunityServices'));
 
 const APP_VERSION = import.meta.env.VITE_APP_VERSION || '';
 
@@ -669,6 +672,22 @@ function App() {
           }
         />
         <Route
+          path='/workspace/publisher'
+          element={
+            <Suspense fallback={<Loading />}>
+              <PublisherWorkspace />
+            </Suspense>
+          }
+        />
+        <Route
+          path='/workspace/community-services'
+          element={
+            <Suspense fallback={<Loading />}>
+              <CommunityServices />
+            </Suspense>
+          }
+        />
+        <Route
           path='/workspace/token/:id'
           element={
             <Suspense fallback={<Loading />}>
@@ -856,6 +875,14 @@ function App() {
         <Route
           path='/admin/provider'
           element={<Providers />}
+        />
+        <Route
+          path='/admin/publisher'
+          element={
+            <Suspense fallback={<Loading />}>
+              <PublisherOperations />
+            </Suspense>
+          }
         />
         <Route
           path='/admin/group'

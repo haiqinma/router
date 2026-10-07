@@ -1,0 +1,5 @@
+.publisher-operations-page { max-width: 1440px; }
+.publisher-operations-name { display: grid; gap: 3px; min-width: 0; }
+.publisher-operations-name span { color: var(--ant-color-text-secondary); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.publisher-operations-actions { display: inline-flex; gap: 2px; }
+.publisher-operations-monospace { font-family: var(--router-font-mono, ui-monospace, SFMono-Regular, Menlo, monospace); font-size: 12px; }

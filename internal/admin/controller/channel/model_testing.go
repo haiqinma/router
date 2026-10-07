@@ -37,8 +37,6 @@ import (
 	"gorm.io/gorm"
 )
 
-const defaultChannelImageEditTestURL = "https://webdav.yeying.pub/api/v1/public/share/03fed01d-6f6b-4ffc-9eb0-d53f21fc17d2/blue_blank.png"
-
 type imageEditTestInput struct {
 	URL     string
 	DataURI string
@@ -1499,7 +1497,8 @@ func resolveChannelImageEditTestImage(ctx context.Context, input imageEditTestIn
 
 	imageURL := strings.TrimSpace(input.URL)
 	if imageURL == "" {
-		imageURL = defaultChannelImageEditTestURL
+		// 未指定原图时使用内置图片,不发起任何网络请求,避免依赖外部域名。
+		return defaultChannelImageEditTestImage, defaultChannelImageEditTestImageName, nil
 	}
 	parsedURL, err := url.Parse(imageURL)
 	if err != nil || parsedURL.Scheme == "" || parsedURL.Host == "" {

@@ -29,6 +29,7 @@ import (
 	_ "github.com/yeying-community/router/internal/admin/repository/bootstrap"
 	billingsvc "github.com/yeying-community/router/internal/admin/service/billing"
 	notificationsvc "github.com/yeying-community/router/internal/admin/service/notification"
+	publishersvc "github.com/yeying-community/router/internal/admin/service/publisher"
 	topupsvc "github.com/yeying-community/router/internal/admin/service/topup"
 	"github.com/yeying-community/router/internal/relay/adaptor/openai"
 	"github.com/yeying-community/router/internal/transport/http/middleware"
@@ -98,6 +99,7 @@ func Run() {
 		topupsvc.StartTopupReconcileWorker()
 		notificationsvc.StartUserNotificationWorker()
 		billingsvc.StartProcurementRetryWorker()
+		publishersvc.StartPublisherSettlementDeliveryWorker()
 	}
 
 	// Initialize i18n

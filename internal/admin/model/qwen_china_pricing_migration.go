@@ -157,7 +157,6 @@ func refreshQwenChinaPricingWithDB(db *gorm.DB) error {
 		model string
 		price float64
 	}{
-		{model: "qwen-image-3.0-pro", price: 0},
 		{model: "qwen-image-edit-max", price: 0.5},
 		{model: "qwen-image-edit-plus", price: 0.2},
 		{model: "qwen-image-edit", price: 0.3},
