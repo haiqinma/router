@@ -261,6 +261,20 @@ const ChannelProcurementView = ({
     const purchaseCostAmount = purchaseCurrency === 'CNY'
       ? purchaseAmount
       : Number(manualPurchaseRecord.purchase_cost_amount || 0);
+    // 权益名称选填:留空时用「采购类型 + 采购日期」兜底(后端要求非空)。
+    const trimmedName = (manualPurchaseRecord.entitlement_name || '')
+      .toString()
+      .trim();
+    const entitlementName =
+      trimmedName ||
+      [
+        t(
+          `channel.edit.billing.purchase_kinds.${manualPurchaseRecord.purchase_kind || 'recharge'}`
+        ),
+        (manualPurchaseRecord.purchase_at_input || '').toString().slice(0, 10),
+      ]
+        .filter(Boolean)
+        .join(' ');
     const saved = await onManualSnapshotUpdate({
       channel_id: targetChannelID,
       id: editingPurchaseRecord?.id || '',
@@ -269,7 +283,7 @@ const ChannelProcurementView = ({
       purchase_amount: purchaseAmount,
       purchase_fx_rate: purchaseFXRate,
       purchase_cost_amount: purchaseCostAmount,
-      entitlement_name: manualPurchaseRecord.entitlement_name,
+      entitlement_name: entitlementName,
       event_type: manualPurchaseRecord.event_type,
       parent_snapshot_id: manualPurchaseRecord.parent_snapshot_id,
       old_batch_disposition: manualPurchaseRecord.old_batch_disposition,
