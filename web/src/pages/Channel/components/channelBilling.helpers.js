@@ -34,7 +34,7 @@ export const toDateTimeLocalValue = (date) => {
 // 采购主要两类:充值(预付余额,按量扣减,通常不设有效期)/ 订阅(按周期购买,
 // 有生效/到期日期)。purchase_kind 只是弹窗 UI 态,用来决定默认值与字段显隐,不入
 // 提交 payload。
-export const DEFAULT_PURCHASE_KIND = 'recharge';
+export const DEFAULT_PURCHASE_KIND = 'subscription';
 export const PURCHASE_KINDS = ['recharge', 'subscription'];
 
 // 某采购类型下单条权益项的默认资源/额度类型。

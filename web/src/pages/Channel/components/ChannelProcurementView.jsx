@@ -194,7 +194,10 @@ const ChannelProcurementView = ({
         ? items.map((item) => buildManualQuotaItemFromSnapshotItem(item))
         : [applyPurchaseKindToItem(buildManualQuotaItem(), nextRecord.purchase_kind)];
     setManualItems(nextItems);
-    setAdvancedOpen(recordUsesAdvanced(nextRecord, nextItems));
+    setAdvancedOpen(
+      recordUsesAdvanced(nextRecord, nextItems) ||
+        Boolean((row?.message || '').toString().trim())
+    );
     setManualModalOpen(true);
   };
 

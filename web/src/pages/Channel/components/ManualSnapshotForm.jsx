@@ -104,12 +104,6 @@ const ManualSnapshotForm = ({
           />
         </AppField>
       </AppFormRow>
-      <AppAlert
-        type='info'
-        showIcon
-        className='router-section-message'
-        title={t(`channel.edit.billing.purchase_kind_hints.${purchaseKind}`)}
-      />
       <div className='router-billing-manual-item-card'>
         <div className='router-billing-manual-item-header'>
           <div className='router-billing-manual-item-title'>
@@ -137,19 +131,6 @@ const ManualSnapshotForm = ({
               />
             </AppField>
           ) : null}
-          <AppField label={t('channel.edit.billing.manual_purchase_at')} required>
-            <AppInput
-              className='router-section-input'
-              type='datetime-local'
-              value={manualPurchaseRecord.purchase_at_input}
-              onChange={(e, { value }) =>
-                onUpdateManualPurchaseRecord({
-                  purchase_at_input: (value || '').toString(),
-                })
-              }
-              readOnly={inputReadOnly}
-            />
-          </AppField>
           <AppField label={t('channel.edit.billing.manual_purchase_currency')} required>
             <AppSelect
               className='router-section-input'
@@ -240,7 +221,7 @@ const ManualSnapshotForm = ({
           </div>
         </div>
         <AppFormRow>
-          <AppField label={t('channel.edit.billing.entitlement_name')} required>
+          <AppField label={t('channel.edit.billing.entitlement_name')}>
             <AppInput
               className='router-section-input'
               value={manualPurchaseRecord.entitlement_name}
@@ -296,6 +277,31 @@ const ManualSnapshotForm = ({
       </div>
       {advancedOpen ? (
         <>
+          <div className='router-billing-manual-item-card'>
+            <AppFormRow>
+              <AppField label={t('channel.edit.billing.manual_purchase_at')} required>
+                <AppInput
+                  className='router-section-input'
+                  type='datetime-local'
+                  value={manualPurchaseRecord.purchase_at_input}
+                  onChange={(e, { value }) =>
+                    onUpdateManualPurchaseRecord({
+                      purchase_at_input: (value || '').toString(),
+                    })
+                  }
+                  readOnly={inputReadOnly}
+                />
+              </AppField>
+              <AppField label={t('channel.edit.billing.message')}>
+                <AppInput
+                  className='router-section-input'
+                  value={manualMessage}
+                  onChange={(e, { value }) => onManualMessageChange((value || '').toString())}
+                  readOnly={inputReadOnly}
+                />
+              </AppField>
+            </AppFormRow>
+          </div>
           {!isEditing ? (
             <div className='router-billing-manual-item-card'>
               <AppFormRow>
@@ -456,16 +462,6 @@ const ManualSnapshotForm = ({
           ))}
         </>
       ) : null}
-      <AppFormRow>
-        <AppField label={t('channel.edit.billing.message')}>
-          <AppInput
-            className='router-section-input'
-            value={manualMessage}
-            onChange={(e, { value }) => onManualMessageChange((value || '').toString())}
-            readOnly={inputReadOnly}
-          />
-        </AppField>
-      </AppFormRow>
     </div>
   );
 };

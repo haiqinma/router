@@ -946,10 +946,6 @@
           "recharge": "充值",
           "subscription": "订阅"
         },
-        "purchase_kind_hints": {
-          "recharge": "充值:预付一笔余额,按量扣减,通常不设有效期。",
-          "subscription": "订阅:按周期购买,设置生效与到期日期(一般为整天 00:00:00)。"
-        },
         "advanced_options": "高级选项",
         "manual_purchase_title": "采购信息",
         "procurement_event_type": "采购变更类型",
