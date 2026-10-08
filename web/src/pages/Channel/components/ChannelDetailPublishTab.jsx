@@ -307,12 +307,14 @@ const ChannelDetailPublishTab = ({
       }
     >
       <div>
-        <AppAlert
-          type='info'
-          showIcon
-          className='router-section-message'
-          title={t('channel.edit.publish.hint')}
-        />
+        {publishedCount > 0 ? null : (
+          <AppAlert
+            type='info'
+            showIcon
+            className='router-section-message'
+            title={t('channel.edit.publish.hint')}
+          />
+        )}
         {publishedCount > 0 ? (
           <AppAlert
             type='success'
