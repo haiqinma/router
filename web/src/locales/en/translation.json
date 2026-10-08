@@ -880,7 +880,7 @@
         "endpoints": "Endpoints",
         "tests": "Tests",
         "publish": "Publish",
-        "procurement": "Procurement",
+        "procurement": "Cost & Procurement",
         "billing": "Billing"
       },
       "publish": {
@@ -922,7 +922,7 @@
         "title": "Billing",
         "hint": "This section shows standardized channel billing entitlements, not upstream-specific raw fields. The system tracks quotas, balances, credits, and plan validity as structured entitlement items, and uses those normalized fields for refresh, alerts, and future automation.",
         "load_failed": "Failed to load channel billing data",
-        "profile_title": "Billing Profile",
+        "profile_title": "Upstream Account",
         "billing_credentials": "Billing Credentials",
         "profile_update_success": "Billing profile updated",
         "profile_update_failed": "Failed to update billing profile",
