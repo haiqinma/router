@@ -880,7 +880,7 @@
         "endpoints": "Endpoints",
         "tests": "Tests",
         "publish": "Publish",
-        "procurement": "Procurement",
+        "procurement": "Cost & Procurement",
         "billing": "Billing"
       },
       "publish": {
@@ -922,8 +922,7 @@
         "title": "Billing",
         "hint": "This section shows standardized channel billing entitlements, not upstream-specific raw fields. The system tracks quotas, balances, credits, and plan validity as structured entitlement items, and uses those normalized fields for refresh, alerts, and future automation.",
         "load_failed": "Failed to load channel billing data",
-        "profile_title": "Billing Profile",
-        "profile_enabled": "Billing Enabled",
+        "profile_title": "Upstream Account",
         "billing_credentials": "Billing Credentials",
         "profile_update_success": "Billing profile updated",
         "profile_update_failed": "Failed to update billing profile",
@@ -932,17 +931,25 @@
         "current_quotas_title": "Entitlement Status",
         "billing_source": "Billing Source",
         "cost_tracking_mode": {
-          "label": "Cost Tracking",
+          "label": "Cost Accounting",
+          "tooltip": "Determines whether this channel's requests count toward the margin report, and how cost is valued.",
           "options": {
             "untracked": "Untracked",
             "free": "Free",
-            "actual": "Record actual cost"
+            "actual": "Actual cost"
+          },
+          "consequence": {
+            "untracked": "Excluded from the margin report",
+            "free": "Cost counted as 0, margin at full amount",
+            "actual": "Accounted via procurement batches"
           },
           "hint": {
             "untracked": "Cost is not tracked for this channel; its requests are excluded from the margin report (honestly marked as untracked).",
             "free": "Upstream is free; cost counted as 0 with auto-managed zero-cost batches, so margin is computed at full amount.",
             "actual": "Record actual cost via procurement batches; models missing a batch are flagged on the group page to add cost."
-          }
+          },
+          "missing_cost": "{{count}} models missing cost",
+          "missing_cost_hint": "These models have no recorded procurement cost, so margin can't be computed yet; add procurement cost or mark zero-cost on the model page."
         },
         "updated_at": "Updated At",
         "manual_update_title": "Add Purchase Record",

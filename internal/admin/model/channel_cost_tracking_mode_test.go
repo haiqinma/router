@@ -51,7 +51,6 @@ func TestSaveChannelBillingProfileRoundTripsCostTrackingMode(t *testing.T) {
 
 	saved, err := SaveChannelBillingProfileWithDB(db, ChannelBillingProfile{
 		ChannelId:        "channel-1",
-		Enabled:          true,
 		BillingSource:    ChannelBillingSourceManual,
 		CostTrackingMode: ChannelCostTrackingModeFree,
 	})
@@ -73,7 +72,6 @@ func TestSaveChannelBillingProfileRoundTripsCostTrackingMode(t *testing.T) {
 	// Empty/invalid mode normalizes to untracked on save.
 	saved2, err := SaveChannelBillingProfileWithDB(db, ChannelBillingProfile{
 		ChannelId:     "channel-1",
-		Enabled:       true,
 		BillingSource: ChannelBillingSourceManual,
 	})
 	if err != nil {

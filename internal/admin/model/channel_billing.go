@@ -187,7 +187,6 @@ func SaveChannelProviderUsageSyncStateWithDB(db *gorm.DB, row ChannelProviderUsa
 
 type ChannelBillingProfile struct {
 	ChannelId          string `json:"channel_id" gorm:"type:char(36);primaryKey"`
-	Enabled            bool   `json:"enabled" gorm:"not null"`
 	BillingSource      string `json:"billing_source" gorm:"column:billing_source;type:varchar(64);not null;default:'manual'"`
 	CostTrackingMode   string `json:"cost_tracking_mode" gorm:"column:cost_tracking_mode;type:varchar(64);not null;default:'untracked'"`
 	BillingConfig      string `json:"billing_config" gorm:"column:billing_config;type:text"`
@@ -864,7 +863,6 @@ func SaveChannelBillingProfileWithDB(db *gorm.DB, row ChannelBillingProfile) (Ch
 	normalized.UpdatedAt = now
 	if err := db.Where("channel_id = ?", normalized.ChannelId).
 		Assign(map[string]any{
-			"enabled":             normalized.Enabled,
 			"billing_source":      normalized.BillingSource,
 			"cost_tracking_mode":  normalized.CostTrackingMode,
 			"billing_config":      normalized.BillingConfig,
@@ -1217,7 +1215,6 @@ func BuildChannelBillingProfileFromChannelConfig(channel *Channel) (ChannelBilli
 	}
 	return ChannelBillingProfile{
 		ChannelId:          strings.TrimSpace(channel.Id),
-		Enabled:            true,
 		BillingSource:      ChannelBillingSourceManual,
 		CostTrackingMode:   ChannelCostTrackingModeUntracked,
 		BillingConfig:      marshalJSONString(channelBillingConfig{}),

@@ -1536,6 +1536,78 @@
         }
       },
       {
+        "model": "gpt-6.1-sol",
+        "type": "text",
+        "status": "active",
+        "description": "GPT-6.1 Sol 是 GPT-6 系列的旗舰通用模型，面向复杂推理、多模态理解与生产级任务。",
+        "supported_endpoints": [
+          "/v1/chat/completions",
+          "/v1/responses"
+        ],
+        "input_price": 0.002,
+        "output_price": 0.01,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "migration",
+        "updated_at": 1700000000,
+        "tags": [
+          "vision"
+        ],
+        "specification": {
+          "version": 1,
+          "endpoints": {
+            "/v1/chat/completions": {
+              "input_modalities": [
+                "image",
+                "text"
+              ],
+              "output_modalities": [
+                "text"
+              ],
+              "parameters": {
+                "detail": {
+                  "type": "enum",
+                  "allowed_values": [
+                    "auto",
+                    "high",
+                    "low",
+                    "original"
+                  ]
+                }
+              },
+              "constraints": {
+                "max_images": 1500,
+                "max_payload_size_mb": 512
+              }
+            },
+            "/v1/responses": {
+              "input_modalities": [
+                "image",
+                "text"
+              ],
+              "output_modalities": [
+                "text"
+              ],
+              "parameters": {
+                "detail": {
+                  "type": "enum",
+                  "allowed_values": [
+                    "auto",
+                    "high",
+                    "low",
+                    "original"
+                  ]
+                }
+              },
+              "constraints": {
+                "max_images": 1500,
+                "max_payload_size_mb": 512
+              }
+            }
+          }
+        }
+      },
+      {
         "model": "gpt-5.5-pro",
         "type": "text",
         "status": "active",

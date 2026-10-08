@@ -3,6 +3,47 @@
 // `router-ui` imports so both view components can consume it without widening the
 // UI-import surface. JSX renderers live in the view components that use them.
 
+// 成本核算口径(cost_tracking_mode)三挡:untracked 不核算 / free 免费 / actual
+// 实际成本。以下为挡位的规范化、选项与着色/文案 helper,供成本页的成本开关复用。
+export const COST_TRACKING_MODES = ['untracked', 'free', 'actual'];
+
+const COST_TRACKING_MODE_TAG_COLORS = {
+  untracked: 'default',
+  free: 'processing',
+  actual: 'success',
+};
+
+export const normalizeCostTrackingModeValue = (mode) => {
+  const normalized = (mode || '').toString().trim().toLowerCase();
+  return normalized === 'free' || normalized === 'actual'
+    ? normalized
+    : 'untracked';
+};
+
+export const buildCostTrackingModeOptions = (t) =>
+  COST_TRACKING_MODES.map((mode) => ({
+    value: mode,
+    label: t(`channel.edit.billing.cost_tracking_mode.options.${mode}`),
+  }));
+
+export const formatCostTrackingModeLabel = (t, mode) =>
+  t(
+    `channel.edit.billing.cost_tracking_mode.options.${normalizeCostTrackingModeValue(
+      mode
+    )}`
+  );
+
+export const formatCostTrackingConsequence = (t, mode) =>
+  t(
+    `channel.edit.billing.cost_tracking_mode.consequence.${normalizeCostTrackingModeValue(
+      mode
+    )}`
+  );
+
+export const costTrackingModeTagColor = (mode) =>
+  COST_TRACKING_MODE_TAG_COLORS[normalizeCostTrackingModeValue(mode)] ||
+  'default';
+
 export const buildManualQuotaItem = () => ({
   resource_type: 'quota',
   quota_type: 'total',

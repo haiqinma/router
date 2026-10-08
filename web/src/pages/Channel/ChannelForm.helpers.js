@@ -220,6 +220,13 @@ function resolveEffectiveProtocolFromInputs(inputs) {
 }
 
 function isEffectiveVolcengineRealtimeProtocol(inputs) {
+  // The Realtime App ID / Resource ID block (volc.speech.dialog) is specific to
+  // the Volcengine voice WebSocket API. Other providers (e.g. Aliyun/QianWen) may
+  // also expose a /v1/realtime model, so gate on the effective protocol too —
+  // otherwise their realtime models wrongly surface the Volcengine-only fields.
+  if (resolveEffectiveProtocolFromInputs(inputs) !== VOLCENGINE_STANDARD_PROTOCOL) {
+    return false;
+  }
   return hasVolcengineRealtimeChannelModel(inputs?.channel_models, inputs?.protocol);
 }
 
@@ -669,7 +676,6 @@ const normalizeChannelBillingSummary = (item) => {
   const billingSource = normalizeChannelBillingSourceValue(item.billing_source);
   return {
     channel_id: (item.channel_id || '').toString().trim(),
-    profile_enabled: item.profile_enabled === true,
     billing_source: billingSource,
     action_capabilities: Array.isArray(item.action_capabilities)
       ? item.action_capabilities
@@ -715,7 +721,6 @@ const normalizeChannelBillingProfile = (item) => {
   const billingSource = normalizeChannelBillingSourceValue(item.billing_source);
   return {
     channel_id: (item.channel_id || '').toString().trim(),
-    enabled: item.enabled === true,
     billing_source: billingSource,
     cost_tracking_mode: normalizeChannelCostTrackingModeValue(
       item.cost_tracking_mode
@@ -724,6 +729,7 @@ const normalizeChannelBillingProfile = (item) => {
     action_capabilities: Array.isArray(item.action_capabilities)
       ? item.action_capabilities
       : [],
+    cost_missing_model_count: Number(item.cost_missing_model_count || 0),
   };
 };
 

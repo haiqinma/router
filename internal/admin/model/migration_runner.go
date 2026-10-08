@@ -2198,6 +2198,32 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return unifyQwenPricingToCNYWithDB(tx)
 			},
 		},
+		{
+			Version:     "202610091200_openai_gpt61sol_provider_catalog",
+			Description: "upsert openai provider migration rows for gpt-6.1-sol pricing (official: $2/1M input, $10/1M output)",
+			Up: func(tx *gorm.DB) error {
+				return upsertProviderMigrationProvidersWithDB(tx, "openai")
+			},
+		},
+		{
+			Version:     "202610091230_openai_gpt61sol_text_cache_pricing",
+			Description: "upsert gpt-6.1-sol text cache pricing components (official: $0.10/1M cached input, $2.50/1M cache writes)",
+			Up: func(tx *gorm.DB) error {
+				return upsertProviderTextCachePricingComponentsWithDB(tx)
+			},
+		},
+		{
+			Version:     "202610101200_drop_channel_billing_profile_enabled",
+			Description: "drop the always-true, unused enabled column from channel_billing_profiles",
+			Up: func(tx *gorm.DB) error {
+				if tx.Migrator().HasColumn(&ChannelBillingProfile{}, "enabled") {
+					if err := tx.Migrator().DropColumn(&ChannelBillingProfile{}, "enabled"); err != nil {
+						return err
+					}
+				}
+				return nil
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }

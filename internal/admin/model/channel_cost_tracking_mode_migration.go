@@ -89,7 +89,6 @@ func upsertChannelCostTrackingModeWithDB(db *gorm.DB, channelID string, mode str
 	now := helper.GetTimestamp()
 	return db.Create(&ChannelBillingProfile{
 		ChannelId:        channelID,
-		Enabled:          true,
 		BillingSource:    ChannelBillingSourceManual,
 		CostTrackingMode: mode,
 		CreatedAt:        now,

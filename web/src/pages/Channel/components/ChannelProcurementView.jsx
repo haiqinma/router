@@ -6,6 +6,8 @@ import {
   AppFormActions,
   AppModal,
   AppSegmented,
+  AppTag,
+  AppTooltip,
 } from '../../../router-ui';
 import ConsumptionModal from './ConsumptionModal';
 import ManualSnapshotForm from './ManualSnapshotForm';
@@ -14,11 +16,14 @@ import ProcurementCostForm from './ProcurementCostForm';
 import SnapshotRecordsTable from './SnapshotRecordsTable';
 import {
   applyPurchaseKindToItem,
+  buildCostTrackingModeOptions,
   buildManualPurchaseRecord,
   buildManualPurchaseRecordFromSnapshot,
   buildManualQuotaItem,
   buildManualQuotaItemFromSnapshotItem,
   buildProcurementCostDraft,
+  formatCostTrackingConsequence,
+  normalizeCostTrackingModeValue,
   normalizeManualValidityInput,
   recordUsesAdvanced,
   resolveManualItemAmounts,
@@ -48,6 +53,10 @@ const ChannelProcurementView = ({
   manualChannelOptions = [],
   requireManualChannelSelect = false,
   showProcurementBatches = true,
+  costTrackingMode = null,
+  onCostTrackingModeChange,
+  costTrackingSubmitting = false,
+  costMissingModelCount = 0,
 }) => {
   const [manualPurchaseRecord, setManualPurchaseRecord] = useState(
     buildManualPurchaseRecord()
@@ -87,6 +96,16 @@ const ChannelProcurementView = ({
       value: item.id,
       label: `${item.entitlement_name || item.id} ${item.purchase_at ? timestamp2string(item.purchase_at) : ''}`.trim(),
     }));
+
+  // The cost-tracking control only renders when the parent supplies a mode (the
+  // channel detail cost tab). The finance report drill-down omits these props, so
+  // hasCostControl is false there and the procurement workspace shows unchanged.
+  const hasCostControl = costTrackingMode != null;
+  const effectiveCostMode = normalizeCostTrackingModeValue(costTrackingMode);
+  // Records/batches are the "actual cost" facts; untracked/free don't use them,
+  // so hide the whole workspace there and leave only the cost switch + its hint.
+  const showProcurementWorkspace =
+    !hasCostControl || effectiveCostMode === 'actual';
 
   const appendManualItem = () => {
     setManualItems((prev) => [...prev, buildManualQuotaItem()]);
@@ -343,7 +362,56 @@ const ChannelProcurementView = ({
 
   return (
     <div className='router-billing-page'>
-      <div className='router-billing-workspace-toolbar'>
+      {hasCostControl ? (
+        <div className='router-cost-mode-control'>
+          <div className='router-cost-mode-control-head'>
+            <AppTooltip
+              title={t('channel.edit.billing.cost_tracking_mode.tooltip')}
+            >
+              <span className='router-cost-mode-control-label'>
+                {t('channel.edit.billing.cost_tracking_mode.label')}
+              </span>
+            </AppTooltip>
+            <AppSegmented
+              value={effectiveCostMode}
+              onChange={(e, { value }) =>
+                typeof onCostTrackingModeChange === 'function'
+                  ? onCostTrackingModeChange(
+                      normalizeCostTrackingModeValue(value)
+                    )
+                  : undefined
+              }
+              options={buildCostTrackingModeOptions(t)}
+              disabled={billingReadonly || costTrackingSubmitting}
+            />
+            <span className='router-cost-mode-consequence'>
+              {formatCostTrackingConsequence(t, effectiveCostMode)}
+            </span>
+            {effectiveCostMode === 'actual' &&
+            Number(costMissingModelCount) > 0 ? (
+              <AppTag
+                className='router-tag'
+                color='orange'
+                title={t(
+                  'channel.edit.billing.cost_tracking_mode.missing_cost_hint'
+                )}
+              >
+                {t('channel.edit.billing.cost_tracking_mode.missing_cost', {
+                  count: Number(costMissingModelCount),
+                })}
+              </AppTag>
+            ) : null}
+          </div>
+          <div className='router-form-hint'>
+            {t(
+              `channel.edit.billing.cost_tracking_mode.hint.${effectiveCostMode}`
+            )}
+          </div>
+        </div>
+      ) : null}
+      {showProcurementWorkspace ? (
+        <>
+          <div className='router-billing-workspace-toolbar'>
         {showProcurementBatches ? (
           <AppSegmented
             value={billingView}
@@ -399,6 +467,8 @@ const ChannelProcurementView = ({
           onUpdateStatus={updateProcurementBatchStatus}
         />
       )}
+        </>
+      ) : null}
       <div>
         <AppModal
           size='large'
