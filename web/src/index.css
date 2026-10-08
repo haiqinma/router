@@ -4036,12 +4036,23 @@ html[data-theme='dark'] .router-provider-brand-monogram {
     flex-direction: column;
 }
 
-.router-cost-mode-readonly {
+.router-cost-mode-control {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 16px;
+}
+
+.router-cost-mode-control-head {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 12px;
     min-height: 32px;
+}
+
+.router-cost-mode-control-label {
+    font-weight: 500;
 }
 
 .router-cost-mode-consequence {

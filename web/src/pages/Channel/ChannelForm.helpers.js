@@ -729,6 +729,7 @@ const normalizeChannelBillingProfile = (item) => {
     action_capabilities: Array.isArray(item.action_capabilities)
       ? item.action_capabilities
       : [],
+    cost_missing_model_count: Number(item.cost_missing_model_count || 0),
   };
 };
 

@@ -2083,7 +2083,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
       setDetailBillingDraft((prev) => ({
         ...(prev || {
           channel_id: (channelId || '').toString().trim(),
-          enabled: true,
           billing_source: 'manual',
           cost_tracking_mode: 'untracked',
           billing_credentials: {},
@@ -2176,6 +2175,68 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     submitChannelBillingRefresh,
     t,
   ]);
+
+  // Immediate-save for the cost-tracking mode switch that lives on the cost tab.
+  // Unlike the overview edit flow it has no edit/cancel state: it reuses the
+  // already-loaded billing source + credentials and only changes the mode, then
+  // reloads the profile (for the accurate cost-missing count) and procurement
+  // facts (free/actual change the auto-managed batches).
+  const saveChannelCostTrackingMode = useCallback(
+    async (mode) => {
+      const targetChannelId = (channelId || '').toString().trim();
+      if (targetChannelId === '') {
+        return;
+      }
+      const billingSource = resolveChannelBillingSourceValue(
+        channelBillingProfile?.billing_source,
+        channelBillingAdapters
+      );
+      const credentialFields = resolveBillingAdapterCredentialFields(
+        billingSource,
+        channelBillingAdapters
+      );
+      const billingCredentials =
+        billingSource === 'manual'
+          ? {}
+          : filterBillingCredentialsByFields(
+              channelBillingProfile?.billing_credentials,
+              credentialFields
+            );
+      setChannelBillingSubmitting(true);
+      try {
+        const res = await API.put(
+          `/api/v1/admin/channel/${targetChannelId}/billing/profile`,
+          {
+            billing_source: billingSource,
+            cost_tracking_mode: normalizeChannelCostTrackingModeValue(mode),
+            billing_credentials: billingCredentials,
+          }
+        );
+        const { success, message } = res.data || {};
+        if (!success) {
+          showError(message || t('channel.edit.billing.profile_update_failed'));
+          return;
+        }
+        await refreshChannelBillingState(targetChannelId);
+        await refreshChannelProcurementState(targetChannelId);
+        showSuccess(t('channel.edit.billing.profile_update_success'));
+      } catch (error) {
+        showError(
+          error?.message || t('channel.edit.billing.profile_update_failed')
+        );
+      } finally {
+        setChannelBillingSubmitting(false);
+      }
+    },
+    [
+      channelId,
+      channelBillingProfile,
+      channelBillingAdapters,
+      refreshChannelBillingState,
+      refreshChannelProcurementState,
+      t,
+    ]
+  );
 
   const loadChannelById = useCallback(
     async (targetId, fromCreating = false) => {
@@ -4731,6 +4792,14 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
                 timestamp2string={timestamp2string}
                 channelID={channelId}
                 showProcurementBatches
+                costTrackingMode={
+                  channelBillingProfile?.cost_tracking_mode || 'untracked'
+                }
+                onCostTrackingModeChange={saveChannelCostTrackingMode}
+                costTrackingSubmitting={channelBillingSubmitting}
+                costMissingModelCount={
+                  channelBillingProfile?.cost_missing_model_count || 0
+                }
               />
             )}
           </div>

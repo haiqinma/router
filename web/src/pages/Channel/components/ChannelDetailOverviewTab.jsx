@@ -5,10 +5,7 @@ import {
   AppField,
   AppFormRow,
   AppInput,
-  AppSegmented,
   AppSelect,
-  AppTag,
-  AppTooltip,
 } from '../../../router-ui';
 import ChannelBillingAccountView from './ChannelBillingAccountView';
 import CopyButton from '../../../components/CopyButton';
@@ -62,45 +59,6 @@ const formatBillingSourceLabel = (t, source, adapters = []) => {
   }
   return normalizedSource;
 };
-
-const COST_TRACKING_MODES = ['untracked', 'free', 'actual'];
-
-const normalizeCostTrackingModeValue = (mode) => {
-  const normalized = (mode || '').toString().trim().toLowerCase();
-  return normalized === 'free' || normalized === 'actual'
-    ? normalized
-    : 'untracked';
-};
-
-const COST_TRACKING_MODE_TAG_COLORS = {
-  untracked: 'default',
-  free: 'processing',
-  actual: 'success',
-};
-
-const buildCostTrackingModeOptions = (t) =>
-  COST_TRACKING_MODES.map((mode) => ({
-    value: mode,
-    label: t(`channel.edit.billing.cost_tracking_mode.options.${mode}`),
-  }));
-
-const formatCostTrackingModeLabel = (t, mode) =>
-  t(
-    `channel.edit.billing.cost_tracking_mode.options.${normalizeCostTrackingModeValue(
-      mode
-    )}`
-  );
-
-const formatCostTrackingConsequence = (t, mode) =>
-  t(
-    `channel.edit.billing.cost_tracking_mode.consequence.${normalizeCostTrackingModeValue(
-      mode
-    )}`
-  );
-
-const costTrackingModeTagColor = (mode) =>
-  COST_TRACKING_MODE_TAG_COLORS[normalizeCostTrackingModeValue(mode)] ||
-  'default';
 
 const normalizeBillingCredentialFieldName = (name) =>
   (name || '').toString().trim().toLowerCase();
@@ -411,85 +369,6 @@ const ChannelDetailOverviewTab = ({
             )}
           </AppField>
         </AppFormRow>
-        <AppFormRow>
-          <AppField
-            label={
-              <AppTooltip
-                title={t('channel.edit.billing.cost_tracking_mode.tooltip')}
-              >
-                <span>
-                  {t('channel.edit.billing.cost_tracking_mode.label')}
-                </span>
-              </AppTooltip>
-            }
-          >
-            {detailBillingEditing ? (
-              <AppSegmented
-                className='router-section-input'
-                options={buildCostTrackingModeOptions(t)}
-                value={normalizeCostTrackingModeValue(
-                  detailBillingDraft?.cost_tracking_mode
-                )}
-                onChange={(e, { value }) =>
-                  onUpdateBillingProfileDraft({
-                    cost_tracking_mode: normalizeCostTrackingModeValue(value),
-                  })
-                }
-                disabled={billingSubmitting}
-              />
-            ) : (
-              <div className='router-cost-mode-readonly'>
-                <AppTag
-                  className='router-tag'
-                  color={costTrackingModeTagColor(
-                    billingProfile?.cost_tracking_mode
-                  )}
-                >
-                  {formatCostTrackingModeLabel(
-                    t,
-                    billingProfile?.cost_tracking_mode
-                  )}
-                </AppTag>
-                <span className='router-cost-mode-consequence'>
-                  {formatCostTrackingConsequence(
-                    t,
-                    billingProfile?.cost_tracking_mode
-                  )}
-                </span>
-                {normalizeCostTrackingModeValue(
-                  billingProfile?.cost_tracking_mode
-                ) === 'actual' &&
-                Number(billingProfile?.cost_missing_model_count) > 0 ? (
-                  <AppTag
-                    className='router-tag'
-                    color='orange'
-                    title={t(
-                      'channel.edit.billing.cost_tracking_mode.missing_cost_hint'
-                    )}
-                  >
-                    {t(
-                      'channel.edit.billing.cost_tracking_mode.missing_cost',
-                      {
-                        count: Number(
-                          billingProfile?.cost_missing_model_count
-                        ),
-                      }
-                    )}
-                  </AppTag>
-                ) : null}
-              </div>
-            )}
-          </AppField>
-        </AppFormRow>
-        {detailBillingEditing ? (
-          <div className='router-form-hint router-form-hint-section'>
-            {t(
-              `channel.edit.billing.cost_tracking_mode.hint.${normalizeCostTrackingModeValue(
-                detailBillingDraft?.cost_tracking_mode
-              )}`
-            )}
-          </div>
-        ) : null}
         {billingCredentialFields.length > 0 ? (
           <AppFormRow>
             {billingCredentialFields.map((field) => {
