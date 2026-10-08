@@ -2212,6 +2212,18 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return upsertProviderTextCachePricingComponentsWithDB(tx)
 			},
 		},
+		{
+			Version:     "202610101200_drop_channel_billing_profile_enabled",
+			Description: "drop the always-true, unused enabled column from channel_billing_profiles",
+			Up: func(tx *gorm.DB) error {
+				if tx.Migrator().HasColumn(&ChannelBillingProfile{}, "enabled") {
+					if err := tx.Migrator().DropColumn(&ChannelBillingProfile{}, "enabled"); err != nil {
+						return err
+					}
+				}
+				return nil
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }

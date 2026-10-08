@@ -17,7 +17,6 @@ import (
 
 type channelBillingSummaryData struct {
 	ChannelID             string                             `json:"channel_id"`
-	ProfileEnabled        bool                               `json:"profile_enabled"`
 	BillingSource         string                             `json:"billing_source"`
 	ActionCapabilities    []string                           `json:"action_capabilities"`
 	RefreshSupported      bool                               `json:"refresh_supported"`
@@ -29,7 +28,6 @@ type channelBillingSummaryData struct {
 
 type channelBillingProfileData struct {
 	ChannelID          string            `json:"channel_id"`
-	Enabled            bool              `json:"enabled"`
 	BillingSource      string            `json:"billing_source"`
 	CostTrackingMode   string            `json:"cost_tracking_mode"`
 	BillingCredentials map[string]string `json:"billing_credentials"`
@@ -149,7 +147,6 @@ func buildChannelBillingSummary(channelRow *model.Channel, profile model.Channel
 	capabilities := profile.ParseActionCapabilities()
 	summary := channelBillingSummaryData{
 		ChannelID:             strings.TrimSpace(channelRow.Id),
-		ProfileEnabled:        profile.Enabled,
 		BillingSource:         normalizeChannelBillingSource(profile.BillingSource),
 		ActionCapabilities:    capabilities,
 		RefreshSupported:      profile.HasCapability(model.ChannelBillingCapabilityRefreshBilling),
@@ -165,7 +162,6 @@ func buildChannelBillingProfileData(channelRow *model.Channel, profile model.Cha
 	fetchConfig := profile.ParseBillingConfig()
 	return channelBillingProfileData{
 		ChannelID:          strings.TrimSpace(channelRow.Id),
-		Enabled:            profile.Enabled,
 		BillingSource:      normalizeChannelBillingSource(profile.BillingSource),
 		CostTrackingMode:   model.NormalizeChannelCostTrackingMode(profile.CostTrackingMode),
 		BillingCredentials: sanitizeBillingCredentialMap(fetchConfig.BillingCredentials),
@@ -585,7 +581,6 @@ func UpdateChannelBillingProfile(c *gin.Context) {
 			if !ok {
 				profileRow = model.ChannelBillingProfile{
 					ChannelId:          channelID,
-					Enabled:            true,
 					BillingSource:      model.ChannelBillingSourceManual,
 					ActionCapabilities: "[]",
 				}
@@ -618,7 +613,6 @@ func UpdateChannelBillingProfile(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": fmt.Sprintf("账务凭据 %s 未配置", missingField)})
 		return
 	}
-	profileRow.Enabled = true
 	profileRow.BillingSource = nextSource
 	nextMode := model.NormalizeChannelCostTrackingMode(req.CostTrackingMode)
 	profileRow.CostTrackingMode = nextMode
