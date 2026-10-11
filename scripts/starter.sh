@@ -8,6 +8,8 @@ log_dir="${ROUTER_LOG_DIR:-$root_dir/logs}"
 pid_dir="$root_dir/run"
 pid_file="$pid_dir/router.pid"
 port="${ROUTER_PORT:-3011}"
+stop_timeout_seconds="${STOP_TIMEOUT_SECONDS:-30}"
+force_stop_timeout_seconds="${FORCE_STOP_TIMEOUT_SECONDS:-5}"
 
 ensure_dirs() {
   mkdir -p "$log_dir" "$pid_dir"
@@ -19,10 +21,17 @@ is_running() {
     local pid
     pid="$(cat "$pid_file")"
     if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
-      return 0
+      local state
+      state="$(ps -p "$pid" -o stat= 2>/dev/null | tr -d '[:space:]')"
+      [[ -n "$state" && "${state:0:1}" != "Z" ]] && return 0
     fi
   fi
   return 1
+}
+
+validate_stop_timeouts() {
+  [[ "$stop_timeout_seconds" =~ ^[0-9]+$ ]] || { echo "STOP_TIMEOUT_SECONDS must be a non-negative integer." >&2; exit 1; }
+  [[ "$force_stop_timeout_seconds" =~ ^[0-9]+$ ]] || { echo "FORCE_STOP_TIMEOUT_SECONDS must be a non-negative integer." >&2; exit 1; }
 }
 
 start() {
@@ -46,6 +55,7 @@ start() {
 }
 
 stop() {
+  validate_stop_timeouts
   if [[ ! -f "$pid_file" ]]; then
     echo "Router not running (pid file missing)."
     return 0
@@ -59,16 +69,29 @@ stop() {
     return 0
   fi
 
-  kill "$pid"
-  for _ in {1..150}; do
-    if ! kill -0 "$pid" 2>/dev/null; then
+  kill -TERM "$pid" 2>/dev/null || true
+  local waited=0
+  local stop_wait_limit=$((stop_timeout_seconds * 5))
+  while is_running; do
+    if (( waited >= stop_wait_limit )); then
       break
     fi
     sleep 0.2
+    waited=$((waited + 1))
   done
 
-  if kill -0 "$pid" 2>/dev/null; then
-    kill -9 "$pid" 2>/dev/null || true
+  if is_running; then
+    echo "Graceful stop timed out after ${stop_timeout_seconds}s; sending SIGKILL." >&2
+    kill -KILL "$pid" 2>/dev/null || true
+    waited=0
+    while is_running; do
+      if (( waited >= force_stop_timeout_seconds * 5 )); then
+        echo "Router process $pid did not exit after SIGKILL; refusing to start." >&2
+        return 1
+      fi
+      sleep 0.2
+      waited=$((waited + 1))
+    done
   fi
 
   rm -f "$pid_file"
@@ -76,7 +99,9 @@ stop() {
 }
 
 restart() {
-  stop
+  if ! stop; then
+    return 1
+  fi
   start
 }
 
