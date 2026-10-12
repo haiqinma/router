@@ -12,7 +12,7 @@
 | `scripts/package.sh` | 基于 Git tag 或远端 `main` 生成发布包 | 制作可分发版本包 |
 | `scripts/health-check.sh` | 检查 Router 存活、就绪和依赖状态 | 部署验收、启动等待、故障排查 |
 | `scripts/config_backup.sh` | 加密备份运行配置文件 | 版本升级成功后备份当前配置 |
-| `scripts/copy-for-upgrade.sh` | 升级时把当前配置复制到目标版本目录 | 新版本目录准备、配置迁移 |
+| `scripts/upgrade.sh` | 通过 `copy-config` 阶段把当前配置复制到目标版本目录 | 新版本目录准备、配置迁移和升级钩子 |
 | `scripts/sync.sh` | 将当前分支同步到上游分支并按配置推送 | Fork 仓库同步、日常开发同步 |
 | `scripts/pr.sh` | 辅助安装 GitHub CLI 并创建 Pull Request | 从当前分支向上游提交 PR |
 | `scripts/test_provider_latency.sh` | 测试 OpenAI 兼容接口的请求延迟 | 供应商链路连通性和延迟抽样 |
@@ -116,12 +116,12 @@ scripts/package.sh v1.2.3
 - `PACKAGE_REMOTE`：指定远端名称，默认 `origin`。
 - `KEEP_STAGE=1`：保留打包临时目录。
 
-### `scripts/copy-for-upgrade.sh`
+### `scripts/upgrade.sh` 的 `copy-config` 阶段
 
 用于升级过程中把当前版本配置复制到目标版本目录。
 
 ```bash
-scripts/copy-for-upgrade.sh /opt/deploy/router-v1.2.3
+bash scripts/upgrade.sh copy-config <current-dir> /opt/deploy/router-v1.2.3
 ```
 
 主要行为：
@@ -260,4 +260,4 @@ scripts/test_provider_latency.sh <domain> <key> <count> [model]
 特殊返回值：
 
 - `scripts/config_backup.sh`：当备份文件已存在并跳过时，返回 `255`。
-- `scripts/copy-for-upgrade.sh`：复制成功时返回 `0`，失败时返回非 `0`，供升级脚本调用判断。
+- `scripts/upgrade.sh copy-config`：复制成功时返回 `0`，失败时返回非 `0`，供统一升级器调用判断。
