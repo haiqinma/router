@@ -2238,6 +2238,13 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return tx.AutoMigrate(&ChannelModelCostRate{})
 			},
 		},
+		{
+			Version:     "202610131200_refresh_official_provider_catalog",
+			Description: "refresh official provider additions and lifecycle statuses verified against OpenAI and Anthropic catalogs on 2026-10-13",
+			Up: func(tx *gorm.DB) error {
+				return upsertProviderMigrationProvidersWithDB(tx, "openai", "anthropic")
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }

@@ -1040,6 +1040,22 @@
         }
       },
       {
+        "model": "gpt-5.2-pro",
+        "type": "text",
+        "status": "active",
+        "description": "GPT-5.2 Pro 是 OpenAI 面向高复杂度推理任务的专业模型。",
+        "supported_endpoints": [
+          "/v1/chat/completions",
+          "/v1/responses"
+        ],
+        "input_price": 0.021,
+        "output_price": 0.168,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "migration",
+        "updated_at": 1700000000
+      },
+      {
         "model": "gpt-5.2-codex",
         "type": "text",
         "status": "deprecated",
@@ -2701,6 +2717,60 @@
         }
       },
       {
+        "model": "o1-pro",
+        "type": "text",
+        "status": "active",
+        "description": "o1-pro 是 OpenAI 面向高难度推理任务的专业推理模型。",
+        "supported_endpoints": [
+          "/v1/chat/completions",
+          "/v1/responses"
+        ],
+        "input_price": 0.15,
+        "output_price": 0.6,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "migration",
+        "updated_at": 1700000000,
+        "tags": [
+          "reasoning"
+        ]
+      },
+      {
+        "model": "o3-pro",
+        "type": "text",
+        "status": "active",
+        "description": "o3-pro 是 OpenAI 面向高可靠复杂推理任务的专业模型。",
+        "supported_endpoints": [
+          "/v1/chat/completions",
+          "/v1/responses"
+        ],
+        "input_price": 0.02,
+        "output_price": 0.08,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "migration",
+        "updated_at": 1700000000,
+        "tags": [
+          "reasoning"
+        ]
+      },
+      {
+        "model": "gpt-4o-2024-05-13",
+        "type": "text",
+        "status": "deprecated",
+        "description": "GPT-4o 2024-05-13 快照已进入 OpenAI 下线周期，保留历史目录用于兼容和结算识别。",
+        "supported_endpoints": [
+          "/v1/chat/completions",
+          "/v1/responses"
+        ],
+        "input_price": 0.005,
+        "output_price": 0.015,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "migration",
+        "updated_at": 1700000000
+      },
+      {
         "model": "o4-mini",
         "type": "text",
         "status": "active",
@@ -2774,6 +2844,7 @@
         "model": "sora-2",
         "type": "video",
         "status": "deprecated",
+        "is_deleted": true,
         "description": "Sora 2 是 OpenAI 的视频生成模型，适合根据文本或多模态输入生成视频。",
         "supported_endpoints": [
           "/v1/videos"
@@ -2788,6 +2859,7 @@
         "model": "sora-2-pro",
         "type": "video",
         "status": "deprecated",
+        "is_deleted": true,
         "description": "Sora 2 Pro 是更高能力的视频生成模型，适合更复杂的视频生成任务。",
         "supported_endpoints": [
           "/v1/videos"
@@ -2897,6 +2969,24 @@
         "currency": "USD",
         "source": "migration",
         "updated_at": 1700000000
+      },
+      {
+        "model": "gpt-5.4-cyber",
+        "type": "text",
+        "status": "deprecated",
+        "is_deleted": true,
+        "description": "GPT-5.4-Cyber 已由 OpenAI 官网标记为 deprecated 并于 2026-10-01 从 API 下线；官方未在生命周期页给出 Router 可核验的标准价格。",
+        "supported_endpoints": [
+          "/v1/chat/completions",
+          "/v1/responses"
+        ],
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "migration",
+        "updated_at": 1700000000,
+        "tags": [
+          "reasoning"
+        ]
       },
       {
         "model": "gpt-realtime-2.1",
@@ -3513,7 +3603,7 @@
       {
         "model": "claude-sonnet-4-5-20250929",
         "type": "text",
-        "status": "active",
+        "status": "deprecated",
         "description": "Claude Sonnet 4.5 是均衡型 Claude 模型，适合大多数生产任务。",
         "supported_endpoints": [
           "/v1/messages"
@@ -3647,6 +3737,42 @@
         "currency": "USD",
         "source": "migration",
         "updated_at": 1700000000
+      },
+      {
+        "model": "claude-sonnet-5-5",
+        "type": "text",
+        "status": "active",
+        "description": "Claude Sonnet 5.5 是 Anthropic 面向日常任务、写作和代码工作的高性价比模型。",
+        "supported_endpoints": [
+          "/v1/messages"
+        ],
+        "input_price": 0.002,
+        "output_price": 0.01,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "migration",
+        "updated_at": 1700000000,
+        "tags": [
+          "vision"
+        ]
+      },
+      {
+        "model": "claude-haiku-5-5",
+        "type": "text",
+        "status": "active",
+        "description": "Claude Haiku 5.5 是 Anthropic 面向高并发、低延迟任务的轻量模型。",
+        "supported_endpoints": [
+          "/v1/messages"
+        ],
+        "input_price": 0.0001,
+        "output_price": 0.0005,
+        "price_unit": "per_1k_tokens",
+        "currency": "USD",
+        "source": "migration",
+        "updated_at": 1700000000,
+        "tags": [
+          "vision"
+        ]
       }
     ]
   },
