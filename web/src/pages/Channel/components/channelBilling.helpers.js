@@ -77,20 +77,74 @@ export const toDateTimeLocalValue = (date) => {
 // 提交 payload。
 export const DEFAULT_PURCHASE_KIND = 'subscription';
 export const PURCHASE_KINDS = ['recharge', 'subscription'];
+export const SUBSCRIPTION_QUOTA_TYPES = ['daily', 'weekly', 'monthly'];
 
-// 采购记录现在是纯成本输入:一笔采购 = 一个容量额度(单位成本 = 实付 / 容量)。
-// 两种采购类型都用非周期的总额度口径,不再按"订阅=按月周期额度"自动乘周期数,
-// 避免隐式放大容量、压低单位成本(见 docs/商业计费/成本与盈利核算标准.md §6)。
-export const purchaseKindItemDefaults = () => ({
+// 充值是一笔可消耗总额度;订阅是一组按日/周/月重置的周期约束。周期项
+// 仍由采购批次按同一 scope/unit 分组,不会把一笔采购成本重复计算多次。
+export const purchaseKindItemDefaults = (kind, quotaType = '') => ({
   resource_type: 'quota',
-  quota_type: 'total',
+  quota_type:
+    kind === 'subscription'
+      ? SUBSCRIPTION_QUOTA_TYPES.includes(normalizeBillingValue(quotaType))
+        ? normalizeBillingValue(quotaType)
+        : 'monthly'
+      : 'total',
 });
 
 // 切换采购类型时,保留已填的额度/币种,仅改资源与额度类型。
-export const applyPurchaseKindToItem = (item) => ({
+export const applyPurchaseKindToItem = (item, kind, quotaType = '') => ({
   ...(item || buildManualQuotaItem()),
-  ...purchaseKindItemDefaults(),
+  ...purchaseKindItemDefaults(kind, quotaType || item?.quota_type),
 });
+
+export const availableSubscriptionQuotaTypes = (items, currentIndex = -1) => {
+  const used = new Set(
+    (Array.isArray(items) ? items : [])
+      .filter((_, index) => index !== currentIndex)
+      .map((item) => normalizeBillingValue(item?.quota_type))
+      .filter((value) => SUBSCRIPTION_QUOTA_TYPES.includes(value))
+  );
+  return SUBSCRIPTION_QUOTA_TYPES.filter((value) => !used.has(value));
+};
+
+export const isSubscriptionPurchaseRecord = (record) => {
+  const items = Array.isArray(record?.items) ? record.items : [];
+  return (
+    Number(record?.valid_from || 0) > 0 ||
+    Number(record?.valid_until || 0) > 0 ||
+    items.some((item) => isManualPeriodicItem(item))
+  );
+};
+
+export const resolvePurchaseRecordValidFrom = (record) =>
+  Number(record?.valid_from || record?.purchase_at || record?.created_at || 0);
+
+export const buildUpgradeQuotaItemsFromSnapshot = (record) => {
+  const seen = new Set();
+  const items = (Array.isArray(record?.items) ? record.items : [])
+    .filter((item) => isManualPeriodicItem(item))
+    .filter((item) => {
+      const quotaType = normalizeBillingValue(item?.quota_type);
+      if (
+        !SUBSCRIPTION_QUOTA_TYPES.includes(quotaType) ||
+        seen.has(quotaType)
+      ) {
+        return false;
+      }
+      seen.add(quotaType);
+      return true;
+    })
+    .map((item) => ({
+      ...buildManualQuotaItem(),
+      resource_type: 'quota',
+      quota_type: normalizeBillingValue(item?.quota_type),
+      currency:
+        (item?.currency || 'USD').toString().trim().toUpperCase() || 'USD',
+    }));
+  return items.length > 0
+    ? items
+    : [applyPurchaseKindToItem(buildManualQuotaItem(), 'subscription')];
+};
 
 // 编辑态由记录反推采购类型:带有效期或周期额度 → 订阅;否则按充值处理。
 export const inferPurchaseKind = (record, items) => {
@@ -105,33 +159,16 @@ export const inferPurchaseKind = (record, items) => {
   return 'recharge';
 };
 
-// 记录是否用到高级能力 → 编辑态需默认展开高级区:非「新购」变更类型、升级、
-// 多条权益项、或充值却带了有效期(简表单默认对充值隐藏有效期)。
+// 高级区只保留采购时间、备注和旧数据兼容字段。核心采购动作与周期权益必须
+// 始终可见,不再因为折叠而隐藏真实业务语义。
 export const recordUsesAdvanced = (record, items) => {
   const list = Array.isArray(items) ? items : [];
-  const eventType = normalizeBillingValue(record?.event_type) || 'purchase';
-  if (eventType !== 'purchase') {
-    return true;
-  }
-  if (list.length > 1) {
-    return true;
-  }
   const kind = inferPurchaseKind(record, list);
   if (kind === 'recharge') {
     const hasValidity =
       toUnixTimestamp(record?.valid_from_input) > 0 ||
       toUnixTimestamp(record?.valid_until_input) > 0;
     if (hasValidity) {
-      return true;
-    }
-  }
-  const [first] = list;
-  if (first) {
-    const defaults = purchaseKindItemDefaults(kind);
-    if (
-      normalizeBillingValue(first.resource_type) !== defaults.resource_type ||
-      normalizeBillingValue(first.quota_type) !== defaults.quota_type
-    ) {
       return true;
     }
   }
@@ -165,7 +202,10 @@ export const PROCUREMENT_CURRENCY_OPTIONS = ['CNY', 'USD'].map((value) => ({
 }));
 
 export const procurementScopeOptions = (t) => [
-  { value: 'global', label: t('channel.edit.billing.procurement_scopes.global') },
+  {
+    value: 'global',
+    label: t('channel.edit.billing.procurement_scopes.global'),
+  },
   { value: 'model', label: t('channel.edit.billing.procurement_scopes.model') },
 ];
 
@@ -438,7 +478,8 @@ export const formatProcurementUnitCostText = (row) => {
 };
 
 export const formatProcurementScopeText = (row, t) => {
-  const scopeType = normalizeBillingValue(row?.scope_type || 'global') || 'global';
+  const scopeType =
+    normalizeBillingValue(row?.scope_type || 'global') || 'global';
   const scopeValue = (row?.scope_value || '').toString().trim();
   if (scopeType === 'model') {
     return scopeValue || '-';
@@ -529,7 +570,11 @@ export const toDateTimeLocalValueFromTimestamp = (value) => {
   return toDateTimeLocalValue(new Date(timestamp * 1000));
 };
 
-export const normalizeManualValidityInput = (value, defaultTime, forceDefaultTime = false) => {
+export const normalizeManualValidityInput = (
+  value,
+  defaultTime,
+  forceDefaultTime = false
+) => {
   const normalized = (value || '').toString().trim();
   if (normalized === '') {
     return '';

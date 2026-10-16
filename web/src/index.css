@@ -4914,6 +4914,17 @@ html[data-theme='dark'] .router-workspace-start-checklist-status {
     min-width: 0;
 }
 
+html[data-theme='dark'] .router-ui-modal .ant-modal-container,
+html[data-theme='dark'] .router-ui-modal .ant-modal-header,
+html[data-theme='dark'] .router-ui-modal .ant-modal-footer {
+    background: var(--router-surface, #111827);
+}
+
+html[data-theme='dark'] .router-ui-modal .ant-modal-title,
+html[data-theme='dark'] .router-ui-modal .ant-modal-close {
+    color: var(--router-text-primary, #f1f5f9);
+}
+
 .router-ui-field-label {
     display: flex;
     align-items: center;
@@ -4921,7 +4932,7 @@ html[data-theme='dark'] .router-workspace-start-checklist-status {
     margin-bottom: 6px;
     font-size: 0.92857143em;
     font-weight: 500;
-    color: rgba(31, 35, 41, 0.68);
+    color: var(--router-text-secondary, rgba(31, 35, 41, 0.68));
 }
 
 .router-ui-field-control {
@@ -6219,7 +6230,7 @@ html[data-theme='dark'] .router-workspace-start-checklist-status {
 
 .router-billing-manual-item-card {
     border: 1px solid rgba(34, 36, 38, 0.1);
-    border-radius: 12px;
+    border-radius: 6px;
     background: #fafbfc;
     padding: 12px;
     margin-bottom: 12px;
@@ -6271,6 +6282,143 @@ html[data-theme='dark'] .router-workspace-start-checklist-status {
     justify-content: flex-end;
 }
 
+.router-purchase-form {
+    display: grid;
+    gap: 18px;
+}
+
+.router-purchase-intent-grid {
+    display: grid;
+    grid-template-columns: minmax(160px, 0.75fr) minmax(320px, 1.5fr);
+    gap: 14px;
+    align-items: end;
+}
+
+.router-purchase-intent-grid .router-ui-segmented {
+    width: 100%;
+}
+
+.router-purchase-intent-grid > .router-ui-field,
+.router-purchase-upgrade-context,
+.router-purchase-form-section,
+.router-purchase-entitlement-row {
+    min-width: 0;
+}
+
+.router-purchase-upgrade-context {
+    display: grid;
+    gap: 10px;
+    padding: 12px 14px;
+    border-left: 3px solid var(--router-link, #2563eb);
+    background: var(--router-surface-muted, #f8fafc);
+}
+
+.router-purchase-upgrade-context > * {
+    min-width: 0;
+}
+
+.router-purchase-form-section {
+    padding-top: 14px;
+    border-top: 1px solid var(--router-border-subtle, rgba(15, 23, 42, 0.1));
+}
+
+.router-purchase-form-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.router-purchase-form-section-head h3 {
+    margin: 0;
+    color: var(--router-text-primary, #1f2937);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.5;
+    letter-spacing: 0;
+}
+
+.router-purchase-entitlement-list {
+    display: grid;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.router-purchase-entitlement-row {
+    display: grid;
+    grid-template-columns: minmax(140px, 0.75fr) minmax(240px, 1.5fr) 36px;
+    gap: 12px;
+    align-items: end;
+    padding: 12px;
+    border: 1px solid var(--router-border-subtle, rgba(15, 23, 42, 0.1));
+    border-radius: 6px;
+    background: var(--router-surface-muted, #f8fafc);
+}
+
+.router-purchase-entitlement-row-recharge {
+    grid-template-columns: minmax(240px, 1fr);
+    margin-top: 12px;
+}
+
+.router-purchase-entitlement-remove {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 36px;
+    min-height: 32px;
+}
+
+.router-purchase-entitlement-remove .router-ui-button {
+    width: 32px;
+    min-width: 32px;
+    height: 32px;
+    padding: 0;
+}
+
+.router-upgrade-validity-summary {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-left: 3px solid var(--router-link, #2563eb);
+    background: var(--router-surface-muted, #f8fafc);
+}
+
+.router-upgrade-validity-summary > div {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+}
+
+.router-upgrade-validity-summary span {
+    color: var(--router-text-muted, #6b7280);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.router-upgrade-validity-summary strong {
+    overflow-wrap: anywhere;
+    color: var(--router-text-primary, #1f2937);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.45;
+}
+
+.router-purchase-advanced-toggle {
+    display: flex;
+    justify-content: flex-start;
+}
+
+.router-purchase-form-section-advanced {
+    margin-top: -6px;
+}
+
+.router-icon-rotate-90 {
+    transform: rotate(90deg);
+}
+
 @media (max-width: 768px) {
     .router-billing-workspace-toolbar,
     .router-billing-subsection-header {
@@ -6280,6 +6428,65 @@ html[data-theme='dark'] .router-workspace-start-checklist-status {
 
     .router-billing-workspace-toolbar .router-ui-segmented {
         width: 100%;
+    }
+
+    .router-purchase-intent-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .router-purchase-intent-grid .ant-segmented-item-label {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 0;
+        min-height: 42px;
+        padding-inline: 4px;
+        font-size: 12px;
+        line-height: 1.25;
+        overflow-wrap: normal;
+        word-break: normal;
+        white-space: normal;
+    }
+
+    .router-purchase-intent-grid .ant-segmented-group {
+        width: 100%;
+    }
+
+    .router-purchase-intent-grid .ant-segmented-item {
+        flex: 1 1 0;
+        min-width: 0;
+    }
+
+    .router-ui-modal .router-purchase-form .router-ui-form-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .router-purchase-form-section-head {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .router-purchase-entitlement-row {
+        grid-template-columns: minmax(0, 1fr) 36px;
+    }
+
+    .router-purchase-entitlement-row > .router-ui-field:first-child,
+    .router-purchase-entitlement-row > .router-ui-field:nth-child(2) {
+        grid-column: 1;
+    }
+
+    .router-purchase-entitlement-remove {
+        grid-column: 2;
+        grid-row: 1 / span 2;
+        align-self: center;
+    }
+
+    .router-purchase-entitlement-row-recharge {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .router-upgrade-validity-summary {
+        grid-template-columns: minmax(0, 1fr);
     }
 
 }

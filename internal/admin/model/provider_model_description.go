@@ -43,6 +43,8 @@ func defaultProviderModelDeleted(provider string, modelName string) bool {
 	provider = strings.TrimSpace(strings.ToLower(provider))
 	modelName = strings.TrimSpace(strings.ToLower(modelName))
 	switch provider {
+	case "openai":
+		return modelName == "sora-2" || modelName == "sora-2-pro" || modelName == "gpt-5.4-cyber"
 	case "anthropic":
 		return modelName == "claude-3-5-haiku-20241022"
 	case "google":
@@ -63,6 +65,7 @@ func defaultProviderModelStatus(provider string, modelName string) string {
 		switch modelName {
 		case "codex-mini-latest",
 			"dall-e-3",
+			"gpt-4o-2024-05-13",
 			"gpt-4.1-nano",
 			"gpt-5-codex",
 			"gpt-5.1-codex",
@@ -73,14 +76,16 @@ func defaultProviderModelStatus(provider string, modelName string) string {
 			"gpt-image-1-mini",
 			"gpt-image-1.5",
 			"sora-2",
-			"sora-2-pro":
+			"sora-2-pro",
+			"gpt-5.4-cyber":
 			return ProviderModelStatusDeprecated
 		}
 	case "anthropic":
 		// https://platform.claude.com/docs/en/about-claude/model-deprecations
 		switch modelName {
 		case "claude-3-5-haiku-20241022",
-			"claude-opus-4-1-20250805":
+			"claude-opus-4-1-20250805",
+			"claude-sonnet-4-5-20250929":
 			return ProviderModelStatusDeprecated
 		}
 	case "deepseek":

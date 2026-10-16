@@ -51,7 +51,8 @@
   padding-right: 0 !important;
 }
 
-.workspace-models-segmented {
+.workspace-models-select {
+  width: 150px;
   max-width: 100%;
 }
 
@@ -151,6 +152,8 @@
 .workspace-model-tag,
 .workspace-model-endpoint-tag {
   max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .workspace-model-health-row {
@@ -398,8 +401,9 @@
     align-items: stretch;
   }
 
-  .workspace-models-segmented {
-    width: 100%;
+  .workspace-models-select {
+    flex: 1;
+    min-width: 0;
   }
 
   .workspace-models-legend {

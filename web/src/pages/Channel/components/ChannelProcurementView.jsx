@@ -17,17 +17,22 @@ import ProcurementCostForm from './ProcurementCostForm';
 import SnapshotRecordsTable from './SnapshotRecordsTable';
 import {
   applyPurchaseKindToItem,
+  availableSubscriptionQuotaTypes,
   buildCostTrackingModeOptions,
   buildManualPurchaseRecord,
   buildManualPurchaseRecordFromSnapshot,
   buildManualQuotaItem,
   buildManualQuotaItemFromSnapshotItem,
   buildProcurementCostDraft,
+  buildUpgradeQuotaItemsFromSnapshot,
   formatCostTrackingConsequence,
+  isSubscriptionPurchaseRecord,
   normalizeCostTrackingModeValue,
   normalizeManualValidityInput,
   recordUsesAdvanced,
+  resolvePurchaseRecordValidFrom,
   resolveManualItemAmounts,
+  toDateTimeLocalValueFromTimestamp,
   toUnixTimestamp,
 } from './channelBilling.helpers';
 
@@ -93,12 +98,18 @@ const ChannelProcurementView = ({
   const procurementRows = Array.isArray(procurementBatches)
     ? procurementBatches
     : [];
-  const parentPurchaseOptions = purchaseRecords
-    .filter((item) => item?.id && item.id !== editingPurchaseRecord?.id)
-    .map((item) => ({
-      value: item.id,
-      label: `${item.entitlement_name || item.id} ${item.purchase_at ? timestamp2string(item.purchase_at) : ''}`.trim(),
-    }));
+  const parentPurchaseRecords = purchaseRecords.filter(
+    (item) =>
+      item?.id &&
+      item.id !== editingPurchaseRecord?.id &&
+      isSubscriptionPurchaseRecord(item)
+  );
+  const parentPurchaseOptions = parentPurchaseRecords.map((item) => ({
+    value: item.id,
+    label: `${item.entitlement_name || item.id} ${
+      item.purchase_at ? timestamp2string(item.purchase_at) : ''
+    }`.trim(),
+  }));
 
   // The cost-tracking control only renders when the parent supplies a mode (the
   // channel detail cost tab). The finance report drill-down omits these props, so
@@ -111,13 +122,34 @@ const ChannelProcurementView = ({
     !hasCostControl || effectiveCostMode === 'actual';
 
   const appendManualItem = () => {
-    setManualItems((prev) => [...prev, buildManualQuotaItem()]);
+    setManualItems((prev) => {
+      if (manualPurchaseRecord.purchase_kind !== 'subscription') {
+        return prev;
+      }
+      const [quotaType] = availableSubscriptionQuotaTypes(prev);
+      if (!quotaType) {
+        return prev;
+      }
+      return [
+        ...prev,
+        applyPurchaseKindToItem(
+          buildManualQuotaItem(),
+          'subscription',
+          quotaType
+        ),
+      ];
+    });
   };
 
   const removeManualItem = (index) => {
     setManualItems((prev) => {
       if (prev.length <= 1) {
-        return [buildManualQuotaItem()];
+        return [
+          applyPurchaseKindToItem(
+            buildManualQuotaItem(),
+            manualPurchaseRecord.purchase_kind
+          ),
+        ];
       }
       return prev.filter((_, itemIndex) => itemIndex !== index);
     });
@@ -143,21 +175,63 @@ const ChannelProcurementView = ({
     }));
   };
 
-  // 切换采购类型:同步首条权益项的资源/额度类型;充值回到「新购」并丢弃升级关联。
+  // 切换采购类型时同步权益模型。充值只有一条总额度;订阅默认月额度。
   const changePurchaseKind = (kind) => {
     setManualPurchaseRecord((prev) => ({
       ...prev,
       purchase_kind: kind,
       ...(kind === 'recharge'
-        ? { event_type: 'purchase', parent_snapshot_id: '', old_batch_disposition: 'keep' }
+        ? {
+            event_type: 'purchase',
+            parent_snapshot_id: '',
+            old_batch_disposition: 'keep',
+          }
         : {}),
     }));
     setManualItems((prev) => {
       const list = prev.length > 0 ? prev : [buildManualQuotaItem()];
-      return list.map((item, index) =>
-        index === 0 ? applyPurchaseKindToItem(item) : item
-      );
+      if (kind === 'recharge') {
+        return [applyPurchaseKindToItem(list[0], 'recharge')];
+      }
+      return [applyPurchaseKindToItem(list[0], 'subscription')];
     });
+  };
+
+  const changeProcurementEvent = (eventType) => {
+    updateManualPurchaseRecord({
+      event_type: eventType,
+      parent_snapshot_id: '',
+      old_batch_disposition: 'keep',
+      ...(eventType === 'upgrade'
+        ? { valid_from_input: '', valid_until_input: '' }
+        : {}),
+    });
+    if (eventType === 'upgrade') {
+      setManualItems([
+        applyPurchaseKindToItem(buildManualQuotaItem(), 'subscription'),
+      ]);
+    }
+  };
+
+  const changeParentPurchaseRecord = (snapshotID) => {
+    const normalizedID = (snapshotID || '').toString().trim();
+    const parent = parentPurchaseRecords.find(
+      (item) => item.id === normalizedID
+    );
+    updateManualPurchaseRecord({
+      parent_snapshot_id: normalizedID,
+      old_batch_disposition: 'keep',
+      valid_from_input: toDateTimeLocalValueFromTimestamp(
+        resolvePurchaseRecordValidFrom(parent)
+      ),
+      valid_until_input: toDateTimeLocalValueFromTimestamp(parent?.valid_until),
+      ...(parent?.entitlement_name
+        ? { entitlement_name: parent.entitlement_name }
+        : {}),
+    });
+    if (parent) {
+      setManualItems(buildUpgradeQuotaItemsFromSnapshot(parent));
+    }
   };
 
   const updateManualValidityInput = (field, value, defaultTime) => {
@@ -193,7 +267,10 @@ const ChannelProcurementView = ({
     setAdvancedOpen(false);
     setManualMessage('');
     setManualItems([
-      applyPurchaseKindToItem(buildManualQuotaItem()),
+      applyPurchaseKindToItem(
+        buildManualQuotaItem(),
+        buildManualPurchaseRecord().purchase_kind
+      ),
     ]);
     setManualModalOpen(true);
   };
@@ -214,7 +291,12 @@ const ChannelProcurementView = ({
     const nextItems =
       items.length > 0
         ? items.map((item) => buildManualQuotaItemFromSnapshotItem(item))
-        : [applyPurchaseKindToItem(buildManualQuotaItem())];
+        : [
+            applyPurchaseKindToItem(
+              buildManualQuotaItem(),
+              nextRecord.purchase_kind
+            ),
+          ];
     setManualItems(nextItems);
     setAdvancedOpen(
       recordUsesAdvanced(nextRecord, nextItems) ||
@@ -277,12 +359,14 @@ const ChannelProcurementView = ({
       .toString()
       .trim()
       .toUpperCase();
-    const purchaseFXRate = purchaseCurrency === 'CNY'
-      ? 1
-      : Number(manualPurchaseRecord.purchase_fx_rate || 0);
-    const purchaseCostAmount = purchaseCurrency === 'CNY'
-      ? purchaseAmount
-      : Number(manualPurchaseRecord.purchase_cost_amount || 0);
+    const purchaseFXRate =
+      purchaseCurrency === 'CNY'
+        ? 1
+        : Number(manualPurchaseRecord.purchase_fx_rate || 0);
+    const purchaseCostAmount =
+      purchaseCurrency === 'CNY'
+        ? purchaseAmount
+        : Number(manualPurchaseRecord.purchase_cost_amount || 0);
     // 权益名称选填:留空时用「采购类型 + 采购日期」兜底(后端要求非空)。
     const trimmedName = (manualPurchaseRecord.entitlement_name || '')
       .toString()
@@ -291,7 +375,9 @@ const ChannelProcurementView = ({
       trimmedName ||
       [
         t(
-          `channel.edit.billing.purchase_kinds.${manualPurchaseRecord.purchase_kind || 'recharge'}`
+          `channel.edit.billing.purchase_kinds.${
+            manualPurchaseRecord.purchase_kind || 'recharge'
+          }`
         ),
         (manualPurchaseRecord.purchase_at_input || '').toString().slice(0, 10),
       ]
@@ -415,69 +501,85 @@ const ChannelProcurementView = ({
       {showProcurementWorkspace ? (
         <>
           <div className='router-billing-workspace-toolbar'>
-        {showProcurementBatches ? (
-          <AppSegmented
-            value={billingView}
-            onChange={(e, { value }) => setBillingView(value)}
-            options={[
-              { value: 'records', label: t('channel.edit.billing.snapshots_title') },
-              { value: 'batches', label: t('channel.edit.billing.procurement_title') },
-            ]}
+            {showProcurementBatches ? (
+              <AppSegmented
+                value={billingView}
+                onChange={(e, { value }) => setBillingView(value)}
+                options={[
+                  {
+                    value: 'records',
+                    label: t('channel.edit.billing.snapshots_title'),
+                  },
+                  {
+                    value: 'batches',
+                    label: t('channel.edit.billing.procurement_title'),
+                  },
+                ]}
+              />
+            ) : null}
+            {billingView === 'records' ||
+            (showProcurementBatches && billingView === 'batches') ? (
+              <AppButton
+                type='button'
+                className='router-page-button'
+                color='blue'
+                disabled={billingReadonly || billingSubmitting}
+                onClick={openCreateManualModal}
+              >
+                {t('channel.edit.billing.add_purchase_record')}
+              </AppButton>
+            ) : null}
+            {typeof onRefreshBilling === 'function' ? (
+              <AppButton
+                type='button'
+                className='router-page-button'
+                loading={billingLoading}
+                disabled={billingLoading || billingSubmitting}
+                onClick={onRefreshBilling}
+              >
+                {t('common.refresh')}
+              </AppButton>
+            ) : null}
+          </div>
+          <AppAlert
+            type='info'
+            showIcon
+            className='router-section-message'
+            title={t('channel.edit.billing.structure_hint')}
           />
-        ) : null}
-        {billingView === 'records' || (showProcurementBatches && billingView === 'batches') ? (
-          <AppButton type='button' className='router-page-button' color='blue'
-            disabled={billingReadonly || billingSubmitting}
-            onClick={openCreateManualModal}>
-            {t('channel.edit.billing.add_purchase_record')}
-          </AppButton>
-        ) : null}
-        {typeof onRefreshBilling === 'function' ? (
-          <AppButton
-            type='button'
-            className='router-page-button'
-            loading={billingLoading}
-            disabled={billingLoading || billingSubmitting}
-            onClick={onRefreshBilling}
-          >
-            {t('common.refresh')}
-          </AppButton>
-        ) : null}
-      </div>
-      <AppAlert type='info' showIcon className='router-section-message' title={t('channel.edit.billing.structure_hint')} />
-      {billingView === 'records' && (
-        <SnapshotRecordsTable
-          t={t}
-          purchaseRecords={purchaseRecords}
-          billingLoading={billingLoading}
-          billingReadonly={billingReadonly}
-          billingSubmitting={billingSubmitting}
-          timestamp2string={timestamp2string}
-          onEditRecord={openEditManualModal}
-          onDeleteRecord={deleteManualSnapshot}
-        />
-      )}
-      {showProcurementBatches && billingView === 'batches' && (
-        <ProcurementBatchTable
-          t={t}
-          procurementRows={procurementRows}
-          billingLoading={billingLoading}
-          billingReadonly={billingReadonly}
-          billingSubmitting={billingSubmitting}
-          timestamp2string={timestamp2string}
-          onViewConsumptions={openConsumptionModal}
-          onEditCost={openCostModal}
-          onUpdateStatus={updateProcurementBatchStatus}
-        />
-      )}
-      {costQuotes ? (
-        <CostQuoteReconcileTable
-          t={t}
-          costQuotes={costQuotes}
-          onSyncCostQuotes={onSyncCostQuotes}
-          syncSubmitting={billingSubmitting}
-        />
-      ) : null}
+          {billingView === 'records' && (
+            <SnapshotRecordsTable
+              t={t}
+              purchaseRecords={purchaseRecords}
+              billingLoading={billingLoading}
+              billingReadonly={billingReadonly}
+              billingSubmitting={billingSubmitting}
+              timestamp2string={timestamp2string}
+              onEditRecord={openEditManualModal}
+              onDeleteRecord={deleteManualSnapshot}
+            />
+          )}
+          {showProcurementBatches && billingView === 'batches' && (
+            <ProcurementBatchTable
+              t={t}
+              procurementRows={procurementRows}
+              billingLoading={billingLoading}
+              billingReadonly={billingReadonly}
+              billingSubmitting={billingSubmitting}
+              timestamp2string={timestamp2string}
+              onViewConsumptions={openConsumptionModal}
+              onEditCost={openCostModal}
+              onUpdateStatus={updateProcurementBatchStatus}
+            />
+          )}
+          {costQuotes ? (
+            <CostQuoteReconcileTable
+              t={t}
+              costQuotes={costQuotes}
+              onSyncCostQuotes={onSyncCostQuotes}
+              syncSubmitting={billingSubmitting}
+            />
+          ) : null}
         </>
       ) : null}
       <div>
@@ -524,6 +626,8 @@ const ChannelProcurementView = ({
             billingReadonly={billingReadonly}
             billingSubmitting={billingSubmitting}
             onChangePurchaseKind={changePurchaseKind}
+            onChangeProcurementEvent={changeProcurementEvent}
+            onChangeParentPurchaseRecord={changeParentPurchaseRecord}
             onToggleAdvanced={() => setAdvancedOpen((prev) => !prev)}
             onUpdateManualPurchaseRecord={updateManualPurchaseRecord}
             onUpdateManualValidityInput={updateManualValidityInput}

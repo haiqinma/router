@@ -6,28 +6,23 @@ import {
   AppCompact,
   AppField,
   AppFormRow,
+  AppIcon,
   AppInput,
   AppInputNumber,
   AppSegmented,
   AppSelect,
+  AppTooltip,
 } from '../../../router-ui';
 import {
+  availableSubscriptionQuotaTypes,
   ensureUnitOption,
   isPurchaseCurrencyCNY,
   MANUAL_CURRENCY_OPTIONS,
   PROCUREMENT_CURRENCY_OPTIONS,
   PURCHASE_KINDS,
-  resolveManualAmountLabel,
-  shouldShowManualAmountFields,
+  SUBSCRIPTION_QUOTA_TYPES,
 } from './channelBilling.helpers';
 
-// Create/edit form for a manual purchase snapshot. Organised around the two real
-// procurement kinds — 充值 (recharge) and 订阅 (subscription) — so the common path
-// stays short: a kind toggle, the purchase cost, one entitlement amount, and (for
-// subscriptions) a validity window defaulting to 00:00:00. Low-frequency power
-// (event types, upgrade lineage, multi-item entitlements, free resource-type
-// choice) lives behind a collapsible 高级选项 section. Pure presentational — all
-// draft state and mutators come from props.
 const ManualSnapshotForm = ({
   t,
   manualPurchaseRecord,
@@ -41,6 +36,8 @@ const ManualSnapshotForm = ({
   billingReadonly,
   billingSubmitting,
   onChangePurchaseKind,
+  onChangeProcurementEvent,
+  onChangeParentPurchaseRecord,
   onToggleAdvanced,
   onUpdateManualPurchaseRecord,
   onUpdateManualValidityInput,
@@ -50,10 +47,26 @@ const ManualSnapshotForm = ({
   onManualMessageChange,
 }) => {
   const purchaseKind = manualPurchaseRecord.purchase_kind || PURCHASE_KINDS[0];
+  const eventType = manualPurchaseRecord.event_type || 'purchase';
   const isSubscription = purchaseKind === 'subscription';
+  const isUpgrade = isSubscription && eventType === 'upgrade';
   const isEditing = Boolean(editingPurchaseRecord?.id);
-  const firstItem = manualItems[0] || {};
   const inputReadOnly = billingReadonly || billingSubmitting;
+  const firstItem = manualItems[0] || {};
+  const addableQuotaTypes = availableSubscriptionQuotaTypes(manualItems);
+  const showLegacyRechargeValidity =
+    !isSubscription &&
+    Boolean(
+      manualPurchaseRecord.valid_from_input ||
+        manualPurchaseRecord.valid_until_input
+    );
+
+  const formatValidityValue = (value, fallbackKey) => {
+    const normalized = (value || '').toString().trim();
+    return normalized
+      ? normalized.replace('T', ' ')
+      : t(`channel.edit.billing.${fallbackKey}`);
+  };
 
   const renderValidityFields = () => (
     <>
@@ -84,29 +97,115 @@ const ManualSnapshotForm = ({
     </>
   );
 
+  const renderAmountInput = (item, index, label) => (
+    <AppField label={label} required>
+      <AppCompact className='router-section-input-with-unit' block>
+        <AppInputNumber
+          className='router-section-input router-section-input-with-unit-field'
+          fluid
+          value={item.limit_amount}
+          min={0}
+          onChange={(e, { value }) =>
+            onUpdateManualItem(index, { limit_amount: value })
+          }
+          disabled={inputReadOnly}
+        />
+        <UnitDropdown
+          variant='inputUnit'
+          options={ensureUnitOption(
+            MANUAL_CURRENCY_OPTIONS,
+            item.currency || 'USD'
+          )}
+          value={item.currency || 'USD'}
+          onChange={(_, { value }) =>
+            onUpdateManualItem(index, {
+              currency: (value || 'USD').toString().trim().toUpperCase(),
+            })
+          }
+          disabled={inputReadOnly}
+          aria-label={t('channel.edit.billing.currency')}
+        />
+      </AppCompact>
+    </AppField>
+  );
+
   return (
-    <div>
-      <AppFormRow>
+    <div className='router-purchase-form'>
+      <div className='router-purchase-intent-grid'>
         <AppField label={t('channel.edit.billing.purchase_kind')} required>
           <AppSegmented
+            block
             options={PURCHASE_KINDS.map((value) => ({
               value,
               label: t(`channel.edit.billing.purchase_kinds.${value}`),
             }))}
             value={purchaseKind}
             onChange={(e, { value }) => onChangePurchaseKind(value)}
-            disabled={inputReadOnly}
+            disabled={inputReadOnly || isEditing}
           />
         </AppField>
-      </AppFormRow>
-      <div className='router-billing-manual-item-card'>
-        <div className='router-billing-manual-item-header'>
-          <div className='router-billing-manual-item-title'>
-            {t('channel.edit.billing.manual_purchase_title')}
-            <span className='router-billing-manual-item-title-hint'>
-              （{t('channel.edit.billing.manual_purchase_hint')}）
-            </span>
-          </div>
+        {isSubscription ? (
+          <AppField label={t('channel.edit.billing.purchase_action')} required>
+            <AppSegmented
+              block
+              options={[
+                {
+                  value: 'purchase',
+                  label: t('channel.edit.billing.procurement_events.purchase'),
+                },
+                {
+                  value: 'renewal',
+                  label: t('channel.edit.billing.procurement_events.renewal'),
+                },
+                {
+                  value: 'upgrade',
+                  label: t('channel.edit.billing.procurement_events.upgrade'),
+                },
+                {
+                  value: 'quota_adjustment',
+                  label: t(
+                    'channel.edit.billing.procurement_events.quota_adjustment'
+                  ),
+                },
+              ]}
+              value={eventType}
+              onChange={(e, { value }) => onChangeProcurementEvent(value)}
+              disabled={inputReadOnly || isEditing}
+            />
+          </AppField>
+        ) : null}
+      </div>
+
+      {isUpgrade ? (
+        <div className='router-purchase-upgrade-context'>
+          <AppField
+            label={t('channel.edit.billing.procurement_parent_record')}
+            required
+          >
+            <AppSelect
+              className='router-section-input'
+              search
+              options={parentPurchaseOptions}
+              value={manualPurchaseRecord.parent_snapshot_id}
+              placeholder={t(
+                'channel.edit.billing.procurement_parent_record_placeholder'
+              )}
+              onChange={(e, { value }) => onChangeParentPurchaseRecord(value)}
+              disabled={inputReadOnly || isEditing}
+            />
+          </AppField>
+          <AppAlert
+            type='info'
+            showIcon
+            className='router-section-message'
+            title={t('channel.edit.billing.upgrade_rule_hint')}
+          />
+        </div>
+      ) : null}
+
+      <section className='router-purchase-form-section'>
+        <div className='router-purchase-form-section-head'>
+          <h3>{t('channel.edit.billing.manual_purchase_title')}</h3>
         </div>
         <AppFormRow>
           {requireManualChannelSelect ? (
@@ -116,7 +215,9 @@ const ManualSnapshotForm = ({
                 search
                 options={manualChannelOptions}
                 value={manualPurchaseRecord.channel_id}
-                placeholder={t('channel.edit.billing.manual_channel_placeholder')}
+                placeholder={t(
+                  'channel.edit.billing.manual_channel_placeholder'
+                )}
                 onChange={(e, { value }) =>
                   onUpdateManualPurchaseRecord({
                     channel_id: (value || '').toString().trim(),
@@ -126,7 +227,10 @@ const ManualSnapshotForm = ({
               />
             </AppField>
           ) : null}
-          <AppField label={t('channel.edit.billing.manual_purchase_currency')} required>
+          <AppField
+            label={t('channel.edit.billing.manual_purchase_currency')}
+            required
+          >
             <AppSelect
               className='router-section-input'
               options={ensureUnitOption(
@@ -154,7 +258,10 @@ const ManualSnapshotForm = ({
               disabled={inputReadOnly}
             />
           </AppField>
-          <AppField label={t('channel.edit.billing.manual_purchase_amount')} required>
+          <AppField
+            label={t('channel.edit.billing.manual_purchase_amount')}
+            required
+          >
             <AppInputNumber
               className='router-section-input'
               fluid
@@ -163,7 +270,9 @@ const ManualSnapshotForm = ({
               onChange={(e, { value }) =>
                 onUpdateManualPurchaseRecord({
                   purchase_amount: Number(value || 0),
-                  purchase_cost_amount: isPurchaseCurrencyCNY(manualPurchaseRecord)
+                  purchase_cost_amount: isPurchaseCurrencyCNY(
+                    manualPurchaseRecord
+                  )
                     ? Number(value || 0)
                     : Number(value || 0) *
                       Number(manualPurchaseRecord.purchase_fx_rate || 0),
@@ -172,9 +281,12 @@ const ManualSnapshotForm = ({
               disabled={inputReadOnly}
             />
           </AppField>
-          {!isPurchaseCurrencyCNY(manualPurchaseRecord) && (
+          {!isPurchaseCurrencyCNY(manualPurchaseRecord) ? (
             <>
-              <AppField label={t('channel.edit.billing.manual_purchase_fx_rate')} required>
+              <AppField
+                label={t('channel.edit.billing.manual_purchase_fx_rate')}
+                required
+              >
                 <AppInputNumber
                   className='router-section-input'
                   fluid
@@ -191,7 +303,10 @@ const ManualSnapshotForm = ({
                   disabled={inputReadOnly}
                 />
               </AppField>
-              <AppField label={t('channel.edit.billing.manual_purchase_cost_amount')} required>
+              <AppField
+                label={t('channel.edit.billing.manual_purchase_cost_amount')}
+                required
+              >
                 <AppInputNumber
                   className='router-section-input'
                   fluid
@@ -206,235 +321,198 @@ const ManualSnapshotForm = ({
                 />
               </AppField>
             </>
-          )}
+          ) : null}
         </AppFormRow>
-      </div>
-      <div className='router-billing-manual-item-card'>
-        <div className='router-billing-manual-item-header'>
-          <div className='router-billing-manual-item-title'>
-            {t('channel.edit.billing.entitlement_info_title')}
-          </div>
+      </section>
+
+      <section className='router-purchase-form-section'>
+        <div className='router-purchase-form-section-head'>
+          <h3>{t('channel.edit.billing.entitlement_info_title')}</h3>
+          {isSubscription ? (
+            <AppButton
+              type='button'
+              className='router-page-button'
+              basic
+              icon={<AppIcon name='plus' />}
+              disabled={inputReadOnly || addableQuotaTypes.length === 0}
+              onClick={onAppendManualItem}
+            >
+              {t('channel.edit.billing.add_entitlement_item')}
+            </AppButton>
+          ) : null}
         </div>
+
         <AppFormRow>
           <AppField label={t('channel.edit.billing.entitlement_name')}>
             <AppInput
               className='router-section-input'
               value={manualPurchaseRecord.entitlement_name}
               onChange={(e, { value }) =>
-                onUpdateManualPurchaseRecord({ entitlement_name: (value || '').toString() })
+                onUpdateManualPurchaseRecord({
+                  entitlement_name: (value || '').toString(),
+                })
               }
               readOnly={inputReadOnly}
             />
           </AppField>
-          {isSubscription ? renderValidityFields() : null}
-          {!advancedOpen && shouldShowManualAmountFields(firstItem) ? (
-            <AppField label={resolveManualAmountLabel(firstItem, t)} required>
-              <AppCompact className='router-section-input-with-unit' block>
-                <AppInputNumber
-                  className='router-section-input router-section-input-with-unit-field'
-                  fluid
-                  value={firstItem.limit_amount}
-                  min={0}
-                  onChange={(e, { value }) =>
-                    onUpdateManualItem(0, { limit_amount: value })
-                  }
-                  disabled={inputReadOnly}
-                />
-                <UnitDropdown
-                  variant='inputUnit'
-                  options={ensureUnitOption(
-                    MANUAL_CURRENCY_OPTIONS,
-                    firstItem.currency || 'USD'
-                  )}
-                  value={firstItem.currency || 'USD'}
-                  onChange={(_, { value }) =>
-                    onUpdateManualItem(0, {
-                      currency: (value || 'USD').toString().trim().toUpperCase(),
-                    })
-                  }
-                  disabled={inputReadOnly}
-                  aria-label={t('channel.edit.billing.currency')}
-                />
-              </AppCompact>
-            </AppField>
-          ) : null}
+          {isSubscription && !isUpgrade ? renderValidityFields() : null}
         </AppFormRow>
-      </div>
-      <div className='router-billing-manual-item-header'>
+
+        {isUpgrade ? (
+          <div className='router-upgrade-validity-summary'>
+            <div>
+              <span>{t('channel.edit.billing.manual_valid_from')}</span>
+              <strong>
+                {formatValidityValue(
+                  manualPurchaseRecord.valid_from_input,
+                  'validity_immediate'
+                )}
+              </strong>
+            </div>
+            <div>
+              <span>{t('channel.edit.billing.manual_valid_until')}</span>
+              <strong>
+                {formatValidityValue(
+                  manualPurchaseRecord.valid_until_input,
+                  'no_expire'
+                )}
+              </strong>
+            </div>
+          </div>
+        ) : null}
+
+        {!isSubscription ? (
+          <div className='router-purchase-entitlement-row router-purchase-entitlement-row-recharge'>
+            {renderAmountInput(
+              firstItem,
+              0,
+              t('channel.edit.billing.manual_quota_limit_amount')
+            )}
+          </div>
+        ) : (
+          <div className='router-purchase-entitlement-list'>
+            {manualItems.map((item, index) => {
+              const quotaType = (item.quota_type || 'monthly')
+                .toString()
+                .trim()
+                .toLowerCase();
+              const availableTypes = availableSubscriptionQuotaTypes(
+                manualItems,
+                index
+              );
+              return (
+                <div
+                  key={`manual-quota-${index}`}
+                  className='router-purchase-entitlement-row'
+                >
+                  <AppField
+                    label={t('channel.edit.billing.subscription_quota_type')}
+                    required
+                  >
+                    <AppSelect
+                      className='router-section-input'
+                      options={SUBSCRIPTION_QUOTA_TYPES.map((value) => ({
+                        value,
+                        label: t(`channel.edit.billing.quota_types.${value}`),
+                        disabled:
+                          value !== quotaType &&
+                          !availableTypes.includes(value),
+                      }))}
+                      value={quotaType}
+                      onChange={(e, { value }) =>
+                        onUpdateManualItem(index, {
+                          resource_type: 'quota',
+                          quota_type: value,
+                        })
+                      }
+                      disabled={inputReadOnly}
+                    />
+                  </AppField>
+                  {renderAmountInput(
+                    item,
+                    index,
+                    t(
+                      isUpgrade
+                        ? 'channel.edit.billing.upgrade_increment_amount'
+                        : 'channel.edit.billing.manual_periodic_quota_amount'
+                    )
+                  )}
+                  <div className='router-purchase-entitlement-remove'>
+                    {manualItems.length > 1 ? (
+                      <AppTooltip
+                        title={t('channel.edit.billing.remove_quota_item')}
+                      >
+                        <AppButton
+                          type='button'
+                          className='router-page-button'
+                          basic
+                          danger
+                          icon={<AppIcon name='trash' />}
+                          aria-label={t(
+                            'channel.edit.billing.remove_quota_item'
+                          )}
+                          disabled={inputReadOnly}
+                          onClick={() => onRemoveManualItem(index)}
+                        />
+                      </AppTooltip>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
+      <div className='router-purchase-advanced-toggle'>
         <AppButton
           type='button'
           className='router-page-button'
           basic
+          icon={
+            <AppIcon
+              name='right chevron'
+              className={advancedOpen ? 'router-icon-rotate-90' : ''}
+            />
+          }
           onClick={onToggleAdvanced}
         >
-          {`${advancedOpen ? '▾' : '▸'} ${t('channel.edit.billing.advanced_options')}`}
+          {t('channel.edit.billing.advanced_options')}
         </AppButton>
       </div>
+
       {advancedOpen ? (
-        <>
-          <div className='router-billing-manual-item-card'>
-            <AppFormRow>
-              <AppField label={t('channel.edit.billing.manual_purchase_at')} required>
-                <AppInput
-                  className='router-section-input'
-                  type='datetime-local'
-                  value={manualPurchaseRecord.purchase_at_input}
-                  onChange={(e, { value }) =>
-                    onUpdateManualPurchaseRecord({
-                      purchase_at_input: (value || '').toString(),
-                    })
-                  }
-                  readOnly={inputReadOnly}
-                />
-              </AppField>
-              <AppField label={t('channel.edit.billing.message')}>
-                <AppInput
-                  className='router-section-input'
-                  value={manualMessage}
-                  onChange={(e, { value }) => onManualMessageChange((value || '').toString())}
-                  readOnly={inputReadOnly}
-                />
-              </AppField>
-            </AppFormRow>
-          </div>
-          {!isEditing ? (
-            <div className='router-billing-manual-item-card'>
-              <AppFormRow>
-                <AppField label={t('channel.edit.billing.procurement_event_type')} required>
-                  <AppSegmented
-                    options={[
-                      { value: 'purchase', label: t('channel.edit.billing.procurement_events.purchase') },
-                      { value: 'renewal', label: t('channel.edit.billing.procurement_events.renewal') },
-                      { value: 'upgrade', label: t('channel.edit.billing.procurement_events.upgrade') },
-                      { value: 'quota_adjustment', label: t('channel.edit.billing.procurement_events.quota_adjustment') },
-                    ]}
-                    value={manualPurchaseRecord.event_type}
-                    onChange={(e, { value }) =>
-                      onUpdateManualPurchaseRecord({
-                        event_type: value,
-                        parent_snapshot_id: value === 'upgrade' ? manualPurchaseRecord.parent_snapshot_id : '',
-                        old_batch_disposition: value === 'upgrade' ? manualPurchaseRecord.old_batch_disposition : 'keep',
-                      })
-                    }
-                    disabled={inputReadOnly}
-                  />
-                </AppField>
-              </AppFormRow>
-              {manualPurchaseRecord.event_type === 'upgrade' ? (
-                <AppFormRow>
-                  <AppField label={t('channel.edit.billing.procurement_parent_record')} required>
-                    <AppSelect
-                      className='router-section-input'
-                      search
-                      options={parentPurchaseOptions}
-                      value={manualPurchaseRecord.parent_snapshot_id}
-                      placeholder={t('channel.edit.billing.procurement_parent_record_placeholder')}
-                      onChange={(e, { value }) =>
-                        onUpdateManualPurchaseRecord({ parent_snapshot_id: (value || '').toString() })
-                      }
-                      disabled={inputReadOnly}
-                    />
-                  </AppField>
-                  <AppField label={t('channel.edit.billing.procurement_old_batch_disposition')} required>
-                    <AppSegmented
-                      options={[
-                        { value: 'keep', label: t('channel.edit.billing.procurement_old_batch_dispositions.keep') },
-                        { value: 'disable', label: t('channel.edit.billing.procurement_old_batch_dispositions.disable') },
-                      ]}
-                      value={manualPurchaseRecord.old_batch_disposition}
-                      onChange={(e, { value }) =>
-                        onUpdateManualPurchaseRecord({ old_batch_disposition: value })
-                      }
-                      disabled={inputReadOnly}
-                    />
-                  </AppField>
-                </AppFormRow>
-              ) : null}
-            </div>
-          ) : null}
-          {!isSubscription ? (
-            <div className='router-billing-manual-item-card'>
-              <AppFormRow>{renderValidityFields()}</AppFormRow>
-            </div>
-          ) : null}
-          <div className='router-billing-manual-item-header'>
-            <div className='router-billing-manual-item-title'>
-              {t('channel.edit.billing.entitlement_items_title')}
-            </div>
-            <AppButton
-              type='button'
-              className='router-page-button'
-              basic
-              disabled={inputReadOnly}
-              onClick={onAppendManualItem}
+        <section className='router-purchase-form-section router-purchase-form-section-advanced'>
+          <AppFormRow>
+            <AppField
+              label={t('channel.edit.billing.manual_purchase_at')}
+              required
             >
-              {t('channel.edit.billing.add_entitlement_item')}
-            </AppButton>
-          </div>
-          <AppAlert
-            type='info'
-            showIcon
-            className='router-section-message'
-            title={t('channel.edit.billing.manual_resource_hints.default')}
-          />
-          {manualItems.map((item, index) => (
-            <div key={`manual-quota-${index}`} className='router-billing-manual-item-card'>
-              <div className='router-billing-manual-item-header'>
-                <div className='router-billing-manual-item-title'>
-                  {t('channel.edit.billing.manual_item_title', { index: index + 1 })}
-                </div>
-                <div className='router-billing-manual-item-actions'>
-                  <AppButton
-                    type='button'
-                    className='router-page-button'
-                    basic
-                    danger
-                    disabled={inputReadOnly}
-                    onClick={() => onRemoveManualItem(index)}
-                  >
-                    {t('channel.edit.billing.remove_quota_item')}
-                  </AppButton>
-                </div>
-              </div>
-              <AppFormRow>
-                <AppField label={resolveManualAmountLabel(item, t)} required>
-                  <AppCompact className='router-section-input-with-unit' block>
-                    <AppInputNumber
-                      className='router-section-input router-section-input-with-unit-field'
-                      fluid
-                      value={item.limit_amount}
-                      min={0}
-                      onChange={(e, { value }) =>
-                        onUpdateManualItem(index, {
-                          limit_amount: value,
-                        })
-                      }
-                      disabled={inputReadOnly}
-                    />
-                    <UnitDropdown
-                      variant='inputUnit'
-                      options={ensureUnitOption(
-                        MANUAL_CURRENCY_OPTIONS,
-                        item.currency || 'USD'
-                      )}
-                      value={item.currency || 'USD'}
-                      onChange={(_, { value }) =>
-                        onUpdateManualItem(index, {
-                          currency: (value || 'USD')
-                            .toString()
-                            .trim()
-                            .toUpperCase(),
-                        })
-                      }
-                      disabled={inputReadOnly}
-                      aria-label={t('channel.edit.billing.currency')}
-                    />
-                  </AppCompact>
-                </AppField>
-              </AppFormRow>
-            </div>
-          ))}
-        </>
+              <AppInput
+                className='router-section-input'
+                type='datetime-local'
+                value={manualPurchaseRecord.purchase_at_input}
+                onChange={(e, { value }) =>
+                  onUpdateManualPurchaseRecord({
+                    purchase_at_input: (value || '').toString(),
+                  })
+                }
+                readOnly={inputReadOnly}
+              />
+            </AppField>
+            <AppField label={t('channel.edit.billing.message')}>
+              <AppInput
+                className='router-section-input'
+                value={manualMessage}
+                onChange={(e, { value }) =>
+                  onManualMessageChange((value || '').toString())
+                }
+                readOnly={inputReadOnly}
+              />
+            </AppField>
+            {showLegacyRechargeValidity ? renderValidityFields() : null}
+          </AppFormRow>
+        </section>
       ) : null}
     </div>
   );

@@ -92,7 +92,7 @@ const RouterGuideDoc = () => {
                     <div className='router-guide-grid'>
                       <div className='router-guide-card'>
                         <strong>统一入口</strong>
-                        <span>客户端面向 Router 调用，不需要直接管理每个上游厂商的 Key。</span>
+                        <span>客户端面向 Router 调用，不需要直接管理每个上游供应商的 Key。</span>
                       </div>
                       <div className='router-guide-card'>
                         <strong>模型可见性</strong>

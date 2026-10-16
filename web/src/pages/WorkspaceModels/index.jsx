@@ -1,4 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, {
+  Suspense,
+  lazy,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { API } from '../../helpers/api';
@@ -7,24 +14,30 @@ import { buildLogDrilldownPath } from '../../components/LogsTable.helpers';
 import { useIsAdmin } from '../../hooks/useAuth';
 import useUrlState from '../../hooks/useUrlState';
 import {
+  AppAlert,
   AppButton,
   AppFilterHeader,
   AppIcon,
   AppInput,
   AppPopover,
-  AppSegmented,
+  AppSelect,
   AppSection,
   AppSkeleton,
   AppSpin,
   AppTag,
+  AppTabs,
   AppTooltip,
   AppToolbar,
 } from '../../router-ui';
 import './WorkspaceModels.css';
+import '../../components/SectionTabs.css';
 import '../AdminDashboard/Dashboard.css';
 import '../AdminDashboard/AdminDashboard.css';
 
 const MODEL_HEALTH_HISTORY_SIZE = 60;
+const ModelOperationsSection = lazy(() =>
+  import('../AdminDashboard/sections/ModelOperationsSection'),
+);
 
 const POINT_COLORS = {
   success: '#22c55e',
@@ -237,13 +250,16 @@ const WorkspaceModels = () => {
   const hasAdminAccess = useIsAdmin();
   const [payload, setPayload] = useState(EMPTY_PAYLOAD);
   const [loading, setLoading] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   // Keyword / health / sort all persist to the URL so a refresh or back-nav
   // restores the operator's view, and cross-page CTAs (e.g. the admin dashboard
   // "at-risk models" headline) can deep-link straight to a filtered view.
-  const [
-    { keyword, healthFilter, sortBy },
-    patchFilters,
-  ] = useUrlState({
+  const [{ keyword, healthFilter, sortBy, tab }, patchFilters] = useUrlState({
+    tab: {
+      param: 'tab',
+      default: 'health',
+      parse: (raw) => (raw === 'operations' ? 'operations' : 'health'),
+    },
     keyword: { param: 'q', default: '' },
     healthFilter: {
       param: 'health',
@@ -262,6 +278,9 @@ const WorkspaceModels = () => {
       },
     },
   });
+  const showOperations = hasAdminAccess && tab === 'operations';
+  const activeSort =
+    !hasAdminAccess && sortBy === 'pass_rate' ? 'health' : sortBy;
   // Admins can jump straight from a model to the publish tab of a channel that
   // serves it (channel_ids comes from /api/v1/public/model/status). Single
   // channel → direct deep link; multiple → a popover of per-channel links.
@@ -343,21 +362,21 @@ const WorkspaceModels = () => {
       const res = await API.get('/api/v1/public/model/status');
       if (res.data?.success) {
         setPayload(normalizePayload(res.data.data || {}));
+        setLoadFailed(false);
       } else {
-        setPayload(EMPTY_PAYLOAD);
+        setLoadFailed(true);
       }
     } catch (error) {
       console.error('Failed to load workspace model status:', error);
-      showError(error);
-      setPayload(EMPTY_PAYLOAD);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (!showOperations) loadData();
+  }, [loadData, showOperations]);
 
   const healthFilterOptions = useMemo(
     () =>
@@ -370,11 +389,13 @@ const WorkspaceModels = () => {
 
   const sortOptions = useMemo(
     () =>
-      SORT_OPTIONS.map((value) => ({
+      SORT_OPTIONS.filter(
+        (value) => hasAdminAccess || value !== 'pass_rate',
+      ).map((value) => ({
         value,
         label: t(`workspace_models.sort.${value}`),
       })),
-    [t],
+    [hasAdminAccess, t],
   );
 
   const filteredModels = useMemo(() => {
@@ -397,16 +418,16 @@ const WorkspaceModels = () => {
         .includes(query);
     });
     rows.sort((left, right) => {
-      if (sortBy === 'name') {
+      if (activeSort === 'name') {
         return left.model.localeCompare(right.model);
       }
-      if (sortBy === 'latency') {
+      if (activeSort === 'latency') {
         const leftLatency = left.avg_latency_ms || Number.MAX_SAFE_INTEGER;
         const rightLatency = right.avg_latency_ms || Number.MAX_SAFE_INTEGER;
         if (leftLatency !== rightLatency) {
           return leftLatency - rightLatency;
         }
-      } else if (sortBy === 'pass_rate') {
+      } else if (activeSort === 'pass_rate') {
         if (left.pass_rate !== right.pass_rate) {
           return right.pass_rate - left.pass_rate;
         }
@@ -416,7 +437,7 @@ const WorkspaceModels = () => {
       return left.model.localeCompare(right.model);
     });
     return rows;
-  }, [healthFilter, keyword, payload.models, sortBy]);
+  }, [healthFilter, keyword, payload.models, activeSort]);
 
   const isFiltered = healthFilter !== 'all' || keyword.trim().length > 0;
 
@@ -446,242 +467,335 @@ const WorkspaceModels = () => {
     <div className='dashboard-container workspace-models-page'>
       <AppFilterHeader
         breadcrumbs={[
-          { key: 'service', label: t('header.service') },
-          { key: 'models', label: t('workspace_models.title'), active: true },
+          {
+            key: 'service',
+            label: t(hasAdminAccess ? 'header.supply' : 'header.service'),
+          },
+          {
+            key: 'models',
+            label: t(
+              hasAdminAccess ? 'header.model' : 'workspace_models.title',
+            ),
+            active: true,
+          },
         ]}
-        title={t('workspace_models.title')}
+        title={t(hasAdminAccess ? 'header.model' : 'workspace_models.title')}
       />
-      <AppSpin spinning={loading}>
-      <AppSection className='workspace-models-section'>
-        <div className='workspace-models-toolbar'>
-          <AppToolbar
-            className='workspace-models-controls'
-            start={
-              <div className='workspace-models-search-row'>
-                <AppInput
-                  className='workspace-models-search'
-                  value={keyword}
-                  placeholder={t('workspace_models.search_placeholder')}
-                  onChange={(e, { value }) => patchFilters({ keyword: value })}
-                />
-                <AppTooltip title={t('workspace_models.refresh')}>
-                  <AppButton
-                    type='button'
-                    className='router-inline-button workspace-models-refresh'
-                    aria-label={t('workspace_models.refresh')}
-                    loading={loading}
-                    onClick={loadData}
-                    icon={<AppIcon name='exchange' />}
-                  />
-                </AppTooltip>
-                <span className='workspace-models-count'>
-                  {isFiltered
-                    ? t('workspace_models.summary.count_filtered', {
-                        shown: formatCount(filteredModels.length),
-                        total: formatCount(summary.model_count),
-                      })
-                    : t('workspace_models.summary.count', {
-                        total: formatCount(summary.model_count),
-                      })}
-                </span>
-              </div>
-            }
-            end={
-              <div className='workspace-models-filter-row'>
-                <AppSegmented
-                  className='workspace-models-segmented'
-                  options={healthFilterOptions}
-                  value={healthFilter}
-                  onChange={(e, { value }) => patchFilters({ healthFilter: value })}
-                />
-                <AppSegmented
-                  className='workspace-models-segmented'
-                  options={sortOptions}
-                  value={sortBy}
-                  onChange={(e, { value }) => patchFilters({ sortBy: value })}
-                />
-              </div>
-            }
-          />
-          <div className='workspace-models-meta'>
-            {t('workspace_models.generated_at', {
-              time: formatUpdatedAt(payload.generated_at),
-            })}
-          </div>
-        </div>
-        <div className='workspace-models-legend'>
-          {['success', 'warning', 'failure', 'unknown'].map((state) => (
-            <span key={state} className='workspace-models-legend-item'>
-              <span
-                className='workspace-models-legend-dot'
-                style={{ background: POINT_COLORS[state] }}
+      {hasAdminAccess && (
+        <AppTabs
+          className='section-tabs'
+          activeKey={tab}
+          items={['health', 'operations'].map((key) => ({
+            key,
+            label: t(`workspace_models.tabs.${key}`),
+          }))}
+          onChange={(value) => patchFilters({ tab: value })}
+        />
+      )}
+      {showOperations ? (
+        <Suspense fallback={<AppSkeleton variant='list' count={3} />}>
+          <ModelOperationsSection />
+        </Suspense>
+      ) : (
+        <AppSpin spinning={loading}>
+          <AppSection className='workspace-models-section'>
+            {loadFailed && (
+              <AppAlert
+                type='error'
+                showIcon
+                title={t('workspace_models.load_failed')}
+                action={
+                  <AppButton size='small' loading={loading} onClick={loadData}>
+                    {t('workspace_models.retry')}
+                  </AppButton>
+                }
               />
-              {t(`workspace_models.history.${state}`)}
-            </span>
-          ))}
-        </div>
-        {filteredModels.length === 0 ? (
-          loading ? (
-            <AppSkeleton variant='list' count={6} />
-          ) : (
-            <div className='workspace-models-empty'>
-              {t('workspace_models.empty')}
-            </div>
-          )
-        ) : (
-          <div className='workspace-models-list'>
-            {filteredModels.map((item) => {
-              const history = buildHealthHistory(item.health_points);
-              return (
-                <div
-                  key={`${item.provider || 'unknown'}-${item.model}`}
-                  className='workspace-model-card'
-                >
-                  <div className='workspace-model-card-header'>
-                    <div className='workspace-model-card-title-block'>
-                      <div
-                        className='workspace-model-card-title'
-                        title={item.model}
-                      >
-                        {item.model || '-'}
-                      </div>
-                      <div className='workspace-model-card-subtitle'>
-                        <span>{item.provider || '-'}</span>
-                        {item.tags.map((tag) => (
-                          <AppTag
-                            key={`${item.model}-${tag}`}
-                            className='router-tag workspace-model-tag'
-                          >
-                            {tag}
-                          </AppTag>
-                        ))}
-                      </div>
-                    </div>
-                    <div className='workspace-model-card-status'>
-                      {renderHealthTag(item.health_level)}
-                      {renderHealthSource(item.health_source)}
-                    </div>
-                  </div>
-                  <div className='workspace-model-health-row'>
-                    <div className='workspace-model-health-strip-wrap'>
-                      <div
-                        className='workspace-model-health-strip'
-                        aria-label={t('workspace_models.history_label', {
-                          model: item.model,
-                        })}
-                      >
-                        {history.map((point, index) => {
-                          const stateLabel = point.observed
-                            ? t(`workspace_models.history.${point.state}`)
-                            : t('workspace_models.history.no_data');
-                          const title = point.observed
-                            ? renderHealthPointTooltip(
-                                point,
-                                stateLabel,
-                                t,
-                              )
-                            : t('workspace_models.tooltip.no_sample');
-                          return (
-                            <AppTooltip
-                              key={point.key}
-                              title={title}
-                              placement='top'
-                              color='#ffffff'
-                              classNames={{ root: 'workspace-model-health-tooltip-popup' }}
-                            >
-                              <span
-                                className={`workspace-model-health-cell workspace-model-health-cell-${point.state}`}
-                                style={{
-                                  background:
-                                    POINT_COLORS[point.state] ||
-                                    POINT_COLORS.unknown,
-                                }}
-                              />
-                            </AppTooltip>
-                          );
-                        })}
-                      </div>
-                      <div className='workspace-model-health-axis'>
-                        <span>{t('workspace_models.history.past')}</span>
-                        <span>{t('workspace_models.history.now')}</span>
-                      </div>
-                    </div>
-                    <div className='workspace-model-metrics'>
-                      <div className='workspace-model-metric'>
-                        <span>{t('workspace_models.card.health_score')}</span>
-                        <strong>{formatCount(item.health_score)}</strong>
-                      </div>
-                      <div className='workspace-model-metric'>
-                        <span>{t('workspace_models.card.pass_rate')}</span>
-                        <strong>{formatPercent(item.pass_rate)}</strong>
-                      </div>
-                      <div className='workspace-model-metric'>
-                        <span>{t('workspace_models.card.latency')}</span>
-                        <strong>
-                          {item.avg_latency_ms > 0
-                            ? `${formatCount(item.avg_latency_ms)} ms`
-                            : '-'}
-                        </strong>
-                      </div>
-                      <div className='workspace-model-metric'>
-                        <span>{t('workspace_models.card.channels')}</span>
-                        {renderChannelCount(item)}
-                      </div>
-                    </div>
-                  </div>
-                  <div className='workspace-model-footer'>
-                    <div className='workspace-model-endpoints'>
-                      {item.supported_endpoints.length > 0
-                        ? item.supported_endpoints.map((endpoint) => (
-                            <AppTag
-                              key={`${item.model}-${endpoint}`}
-                              className='router-tag workspace-model-endpoint-tag'
-                            >
-                              {endpoint}
-                            </AppTag>
-                          ))
-                        : t('workspace_models.card.no_endpoints')}
-                    </div>
-                    <div className='workspace-model-last-tested'>
-                      {t(`workspace_models.card.last_signal.${item.health_source}`, {
-                        time: formatUpdatedAt(item.last_signal_at),
-                      })}
-                    </div>
-                  </div>
-                  <div className='workspace-model-actions'>
-                    <AppButton
-                      size='small'
-                      className='router-inline-button'
-                      icon={<AppIcon name='copy outline' />}
-                      onClick={() => handleCopyModel(item.model)}
-                      disabled={!item.model}
-                    >
-                      {t('workspace_models.card.copy_model')}
-                    </AppButton>
-                    <AppButton
-                      size='small'
-                      className='router-inline-button'
-                      icon={<AppIcon name='book' />}
-                      onClick={() =>
-                        navigate(
-                          buildLogDrilldownPath(
-                            hasAdminAccess ? 'admin' : 'workspace',
-                            { model_name: item.model },
-                          ),
-                        )
+            )}
+            <div className='workspace-models-toolbar'>
+              <AppToolbar
+                className='workspace-models-controls'
+                start={
+                  <div className='workspace-models-search-row'>
+                    <AppInput
+                      className='workspace-models-search'
+                      value={keyword}
+                      aria-label={t('workspace_models.search_placeholder')}
+                      placeholder={t('workspace_models.search_placeholder')}
+                      onChange={(e, { value }) =>
+                        patchFilters({ keyword: value })
                       }
-                      disabled={!item.model}
-                    >
-                      {t('log.drilldown.view')}
-                    </AppButton>
+                    />
+                    <AppTooltip title={t('workspace_models.refresh')}>
+                      <AppButton
+                        type='button'
+                        className='router-inline-button workspace-models-refresh'
+                        aria-label={t('workspace_models.refresh')}
+                        loading={loading}
+                        onClick={loadData}
+                        icon={<AppIcon name='exchange' />}
+                      />
+                    </AppTooltip>
+                    <span className='workspace-models-count'>
+                      {isFiltered
+                        ? t('workspace_models.summary.count_filtered', {
+                            shown: formatCount(filteredModels.length),
+                            total: formatCount(summary.model_count),
+                          })
+                        : t('workspace_models.summary.count', {
+                            total: formatCount(summary.model_count),
+                          })}
+                    </span>
                   </div>
+                }
+                end={
+                  <div className='workspace-models-filter-row'>
+                    <AppSelect
+                      className='workspace-models-select'
+                      aria-label={t('workspace_models.health_filter')}
+                      options={healthFilterOptions}
+                      value={healthFilter}
+                      onChange={(e, { value }) =>
+                        patchFilters({ healthFilter: value })
+                      }
+                    />
+                    <AppSelect
+                      className='workspace-models-select'
+                      aria-label={t('workspace_models.sort_label')}
+                      options={sortOptions}
+                      value={activeSort}
+                      onChange={(e, { value }) =>
+                        patchFilters({ sortBy: value })
+                      }
+                    />
+                  </div>
+                }
+              />
+              <div className='workspace-models-meta'>
+                {t('workspace_models.generated_at', {
+                  time: formatUpdatedAt(payload.generated_at),
+                })}
+              </div>
+            </div>
+            {hasAdminAccess && (
+              <div className='workspace-models-legend'>
+                {['success', 'warning', 'failure', 'unknown'].map((state) => (
+                  <span key={state} className='workspace-models-legend-item'>
+                    <span
+                      className='workspace-models-legend-dot'
+                      style={{ background: POINT_COLORS[state] }}
+                    />
+                    {t(`workspace_models.history.${state}`)}
+                  </span>
+                ))}
+              </div>
+            )}
+            {filteredModels.length === 0 ? (
+              loading ? (
+                <AppSkeleton variant='list' count={6} />
+              ) : loadFailed ? null : (
+                <div className='workspace-models-empty'>
+                  {t(
+                    isFiltered
+                      ? 'workspace_models.no_matches'
+                      : 'workspace_models.empty',
+                  )}
+                  {isFiltered && (
+                    <AppButton
+                      type='link'
+                      onClick={() =>
+                        patchFilters({ keyword: '', healthFilter: 'all' })
+                      }
+                    >
+                      {t('workspace_models.clear_filters')}
+                    </AppButton>
+                  )}
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </AppSection>
-      </AppSpin>
+              )
+            ) : (
+              <div className='workspace-models-list'>
+                {filteredModels.map((item) => {
+                  const history = hasAdminAccess
+                    ? buildHealthHistory(item.health_points)
+                    : [];
+                  return (
+                    <div
+                      key={`${item.provider || 'unknown'}-${item.model}`}
+                      className='workspace-model-card'
+                    >
+                      <div className='workspace-model-card-header'>
+                        <div className='workspace-model-card-title-block'>
+                          <div
+                            className='workspace-model-card-title'
+                            title={item.model}
+                          >
+                            {item.model || '-'}
+                          </div>
+                          <div className='workspace-model-card-subtitle'>
+                            <span>{item.provider || '-'}</span>
+                            {item.tags.map((tag) => (
+                              <AppTag
+                                key={`${item.model}-${tag}`}
+                                className='router-tag workspace-model-tag'
+                              >
+                                {tag}
+                              </AppTag>
+                            ))}
+                          </div>
+                        </div>
+                        <div className='workspace-model-card-status'>
+                          {hasAdminAccess ? (
+                            renderHealthTag(item.health_level)
+                          ) : (
+                            <AppTooltip
+                              title={t('workspace_models.health_hint')}
+                            >
+                              {renderHealthTag(item.health_level)}
+                            </AppTooltip>
+                          )}
+                          {hasAdminAccess &&
+                            renderHealthSource(item.health_source)}
+                        </div>
+                      </div>
+                      {hasAdminAccess && (
+                        <div className='workspace-model-health-row'>
+                          <div className='workspace-model-health-strip-wrap'>
+                            <div
+                              className='workspace-model-health-strip'
+                              aria-label={t('workspace_models.history_label', {
+                                model: item.model,
+                              })}
+                            >
+                              {history.map((point, index) => {
+                                const stateLabel = point.observed
+                                  ? t(`workspace_models.history.${point.state}`)
+                                  : t('workspace_models.history.no_data');
+                                const title = point.observed
+                                  ? renderHealthPointTooltip(
+                                      point,
+                                      stateLabel,
+                                      t,
+                                    )
+                                  : t('workspace_models.tooltip.no_sample');
+                                return (
+                                  <AppTooltip
+                                    key={point.key}
+                                    title={title}
+                                    placement='top'
+                                    color='#ffffff'
+                                    classNames={{
+                                      root: 'workspace-model-health-tooltip-popup',
+                                    }}
+                                  >
+                                    <span
+                                      className={`workspace-model-health-cell workspace-model-health-cell-${point.state}`}
+                                      style={{
+                                        background:
+                                          POINT_COLORS[point.state] ||
+                                          POINT_COLORS.unknown,
+                                      }}
+                                    />
+                                  </AppTooltip>
+                                );
+                              })}
+                            </div>
+                            <div className='workspace-model-health-axis'>
+                              <span>{t('workspace_models.history.past')}</span>
+                              <span>{t('workspace_models.history.now')}</span>
+                            </div>
+                          </div>
+                          <div className='workspace-model-metrics'>
+                            <div className='workspace-model-metric'>
+                              <span>
+                                {t('workspace_models.card.health_score')}
+                              </span>
+                              <strong>{formatCount(item.health_score)}</strong>
+                            </div>
+                            <div className='workspace-model-metric'>
+                              <span>
+                                {t('workspace_models.card.pass_rate')}
+                              </span>
+                              <strong>{formatPercent(item.pass_rate)}</strong>
+                            </div>
+                            <div className='workspace-model-metric'>
+                              <span>{t('workspace_models.card.latency')}</span>
+                              <strong>
+                                {item.avg_latency_ms > 0
+                                  ? `${formatCount(item.avg_latency_ms)} ms`
+                                  : '-'}
+                              </strong>
+                            </div>
+                            <div className='workspace-model-metric'>
+                              <span>{t('workspace_models.card.channels')}</span>
+                              {renderChannelCount(item)}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      <div className='workspace-model-footer'>
+                        <div className='workspace-model-endpoints'>
+                          {item.supported_endpoints.length > 0
+                            ? item.supported_endpoints.map((endpoint) => (
+                                <AppTag
+                                  key={`${item.model}-${endpoint}`}
+                                  className='router-tag workspace-model-endpoint-tag'
+                                >
+                                  {endpoint}
+                                </AppTag>
+                              ))
+                            : t('workspace_models.card.no_endpoints')}
+                        </div>
+                        {hasAdminAccess && (
+                          <div className='workspace-model-last-tested'>
+                            {t(
+                              `workspace_models.card.last_signal.${item.health_source}`,
+                              {
+                                time: formatUpdatedAt(item.last_signal_at),
+                              },
+                            )}
+                          </div>
+                        )}
+                        {!hasAdminAccess && item.avg_latency_ms > 0 && (
+                          <div className='workspace-model-last-tested'>
+                            {t('workspace_models.card.latency')}:{' '}
+                            {formatCount(item.avg_latency_ms)} ms
+                          </div>
+                        )}
+                      </div>
+                      <div className='workspace-model-actions'>
+                        <AppButton
+                          size='small'
+                          className='router-inline-button'
+                          icon={<AppIcon name='copy outline' />}
+                          onClick={() => handleCopyModel(item.model)}
+                          disabled={!item.model}
+                        >
+                          {t('workspace_models.card.copy_model')}
+                        </AppButton>
+                        <AppButton
+                          size='small'
+                          className='router-inline-button'
+                          icon={<AppIcon name='book' />}
+                          onClick={() =>
+                            navigate(
+                              buildLogDrilldownPath(
+                                hasAdminAccess ? 'admin' : 'workspace',
+                                { model_name: item.model },
+                              ),
+                            )
+                          }
+                          disabled={!item.model}
+                        >
+                          {t('log.drilldown.view')}
+                        </AppButton>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </AppSection>
+        </AppSpin>
+      )}
     </div>
   );
 };

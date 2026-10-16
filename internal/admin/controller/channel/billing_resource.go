@@ -1072,6 +1072,44 @@ type normalizedManualBillingSnapshotRequest struct {
 	Message             string
 }
 
+func isSubscriptionPurchaseSnapshot(snapshot model.ChannelBillingSnapshot) bool {
+	if snapshot.ValidFrom > 0 || snapshot.ValidUntil > 0 {
+		return true
+	}
+	for _, item := range model.NormalizeChannelBillingSnapshotItems(snapshot.Items) {
+		if item.ResourceType != model.ChannelBillingResourceTypeQuota {
+			continue
+		}
+		switch strings.TrimSpace(strings.ToLower(item.QuotaType)) {
+		case "daily", "weekly", "monthly":
+			return true
+		}
+	}
+	return false
+}
+
+func applyUpgradeParentRules(req normalizedManualBillingSnapshotRequest, parent model.ChannelBillingSnapshot) (normalizedManualBillingSnapshotRequest, error) {
+	if req.EventType != "upgrade" {
+		return req, nil
+	}
+	if !isSubscriptionPurchaseSnapshot(parent) {
+		return normalizedManualBillingSnapshotRequest{}, fmt.Errorf("只能升级订阅采购记录")
+	}
+	req.ValidFrom = parent.ValidFrom
+	if req.ValidFrom <= 0 {
+		req.ValidFrom = parent.PurchaseAt
+	}
+	if req.ValidFrom <= 0 {
+		req.ValidFrom = parent.CreatedAt
+	}
+	req.ValidUntil = parent.ValidUntil
+	req.OldBatchDisposition = "keep"
+	for index := range req.Items {
+		req.Items[index].ExpiresAt = parent.ValidUntil
+	}
+	return req, nil
+}
+
 func normalizeManualBillingSnapshotRequest(req channelBillingManualSnapshotRequest, now int64) (normalizedManualBillingSnapshotRequest, error) {
 	purchaseCurrency := strings.TrimSpace(strings.ToUpper(req.PurchaseCurrency))
 	purchaseAmount := req.PurchaseAmount
@@ -1103,18 +1141,6 @@ func normalizeManualBillingSnapshotRequest(req channelBillingManualSnapshotReque
 	if purchaseAt <= 0 {
 		purchaseAt = now
 	}
-	validFrom := req.ValidFrom
-	validUntil := req.ValidUntil
-	if validFrom < 0 || validUntil < 0 {
-		return normalizedManualBillingSnapshotRequest{}, fmt.Errorf("有效期无效")
-	}
-	if validUntil > 0 && validFrom > 0 && validUntil <= validFrom {
-		return normalizedManualBillingSnapshotRequest{}, fmt.Errorf("有效期结束时间必须晚于开始时间")
-	}
-	entitlementName := strings.TrimSpace(req.EntitlementName)
-	if entitlementName == "" {
-		return normalizedManualBillingSnapshotRequest{}, fmt.Errorf("权益名称不能为空")
-	}
 	eventType := strings.TrimSpace(strings.ToLower(req.EventType))
 	if eventType == "" {
 		eventType = "purchase"
@@ -1123,6 +1149,20 @@ func normalizeManualBillingSnapshotRequest(req channelBillingManualSnapshotReque
 	case "purchase", "renewal", "upgrade", "downgrade", "quota_adjustment", "correction":
 	default:
 		return normalizedManualBillingSnapshotRequest{}, fmt.Errorf("采购变更类型无效")
+	}
+	validFrom := req.ValidFrom
+	validUntil := req.ValidUntil
+	if eventType != "upgrade" {
+		if validFrom < 0 || validUntil < 0 {
+			return normalizedManualBillingSnapshotRequest{}, fmt.Errorf("有效期无效")
+		}
+		if validUntil > 0 && validFrom > 0 && validUntil <= validFrom {
+			return normalizedManualBillingSnapshotRequest{}, fmt.Errorf("有效期结束时间必须晚于开始时间")
+		}
+	}
+	entitlementName := strings.TrimSpace(req.EntitlementName)
+	if entitlementName == "" {
+		return normalizedManualBillingSnapshotRequest{}, fmt.Errorf("权益名称不能为空")
 	}
 	parentSnapshotID := strings.TrimSpace(req.ParentSnapshotID)
 	oldBatchDisposition := strings.TrimSpace(strings.ToLower(req.OldBatchDisposition))
@@ -1259,6 +1299,10 @@ func CreateChannelBillingSnapshot(c *gin.Context) {
 			}
 			if strings.TrimSpace(parent.ChannelId) != channelRow.Id {
 				return fmt.Errorf("原采购记录不属于当前渠道")
+			}
+			normalizedReq, err = applyUpgradeParentRules(normalizedReq, parent)
+			if err != nil {
+				return err
 			}
 			if normalizedReq.OldBatchDisposition == "disable" {
 				if err := tx.Model(&model.ChannelProcurementBatch{}).

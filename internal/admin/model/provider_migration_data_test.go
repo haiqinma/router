@@ -1278,6 +1278,7 @@ func TestBuildProviderMigrationSeeds_DeprecatedStatusApplied(t *testing.T) {
 		"openai": {
 			"codex-mini-latest":  false,
 			"dall-e-3":           false,
+			"gpt-4o-2024-05-13":  false,
 			"gpt-4.1-nano":       false,
 			"gpt-5-codex":        false,
 			"gpt-5.1-codex":      false,
@@ -1289,10 +1290,12 @@ func TestBuildProviderMigrationSeeds_DeprecatedStatusApplied(t *testing.T) {
 			"gpt-image-1.5":      false,
 			"sora-2":             false,
 			"sora-2-pro":         false,
+			"gpt-5.4-cyber":      false,
 		},
 		"anthropic": {
-			"claude-3-5-haiku-20241022": false,
-			"claude-opus-4-1-20250805":  false,
+			"claude-3-5-haiku-20241022":  false,
+			"claude-opus-4-1-20250805":   false,
+			"claude-sonnet-4-5-20250929": false,
 		},
 		"deepseek": {
 			"deepseek-v4-flash": false,
@@ -1317,6 +1320,11 @@ func TestBuildProviderMigrationSeeds_DeprecatedStatusApplied(t *testing.T) {
 			}
 			if detail.Status != ProviderModelStatusDeprecated {
 				t.Fatalf("%s/%s status=%q, want deprecated", seed.Provider, detail.Model, detail.Status)
+			}
+			if detail.Model == "sora-2" || detail.Model == "sora-2-pro" || detail.Model == "gpt-5.4-cyber" {
+				if !detail.IsDeleted {
+					t.Fatalf("%s/%s is_deleted=false, want true", seed.Provider, detail.Model)
+				}
 			}
 			providerChecks[detail.Model] = true
 		}
