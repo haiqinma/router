@@ -20,7 +20,6 @@ import {
   AppIcon,
   AppQRCode,
   AppSpin,
-  AppTooltip,
 } from '../router-ui';
 import {
   rememberAuthRedirectPath,
@@ -366,6 +365,20 @@ const LoginForm = () => {
                   ? t('auth.login.identity_hint')
                   : t('auth.login.wallet_subtitle')}
               </p>
+              <AppButton
+                type='button'
+                className='router-login-mode-switch'
+                icon={
+                  <AppIcon
+                    name={authMode === 'identity' ? 'wallet' : 'qrcode'}
+                  />
+                }
+                onClick={toggleAuthMode}
+              >
+                {authMode === 'identity'
+                  ? t('auth.login.switch_to_wallet')
+                  : t('auth.login.switch_to_identity')}
+              </AppButton>
             </div>
             {authMode === 'wallet' && walletLoginEnabled ? (
               <>
@@ -444,26 +457,6 @@ const LoginForm = () => {
             ) : null}
           </div>
         </section>
-        <AppTooltip
-          title={
-            authMode === 'identity'
-              ? t('auth.login.switch_to_wallet')
-              : t('auth.login.switch_to_identity')
-          }
-        >
-          <AppButton
-            className='router-login-mode-corner'
-            aria-label={
-              authMode === 'identity'
-                ? t('auth.login.switch_to_wallet')
-                : t('auth.login.switch_to_identity')
-            }
-            icon={
-              <AppIcon name={authMode === 'identity' ? 'wallet' : 'qrcode'} />
-            }
-            onClick={toggleAuthMode}
-          />
-        </AppTooltip>
       </main>
     </div>
   );

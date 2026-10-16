@@ -4145,7 +4145,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
         .toString()
         .trim();
       if (targetChannelID !== '') {
-        navigate(`/admin/channel/detail/${targetChannelID}`, {
+        navigate(`/admin/channel/detail/${targetChannelID}?tab=models`, {
           replace: true,
         });
         return;
@@ -4583,18 +4583,27 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
           </div>
         )}
         {isCreateMode && (
-          <AppFormActions align='start' className='router-block-gap-sm'>
-            <AppButton className='router-page-button' onClick={handleCancel}>
-              {t('channel.edit.buttons.cancel')}
-            </AppButton>
-            <AppButton
-              className='router-page-button'
-              color='blue'
-              onClick={submit}
-            >
-              {t('channel.edit.buttons.submit')}
-            </AppButton>
-          </AppFormActions>
+          <>
+            <AppAlert
+              type='info'
+              showIcon
+              className='router-section-message router-block-gap-sm'
+              title={t('channel.edit.create_flow.title')}
+              description={t('channel.edit.create_flow.description')}
+            />
+            <AppFormActions align='start' className='router-block-gap-sm'>
+              <AppButton className='router-page-button' onClick={handleCancel}>
+                {t('channel.edit.buttons.cancel')}
+              </AppButton>
+              <AppButton
+                className='router-page-button'
+                color='blue'
+                onClick={submit}
+              >
+                {t('channel.edit.create_flow.continue')}
+              </AppButton>
+            </AppFormActions>
+          </>
         )}
         <AppSpin spinning={loading}>
           <div>

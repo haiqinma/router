@@ -631,7 +631,7 @@
       "name": "Channel",
       "group": "Group",
       "type": "Protocol Type",
-      "model_vendors": "Model Vendors",
+      "model_vendors": "Model Providers",
       "status": "Status",
       "created_time": "Created Time",
       "response_time": "Response Time",
@@ -1616,6 +1616,11 @@
         "step_model_tests": "Step 3: Model Test",
         "step_review": "Step 4: Publish Review",
         "step_advanced": "Step 5: Advanced Settings"
+      },
+      "create_flow": {
+        "title": "Create the channel, then configure its models",
+        "description": "After saving the connection, you will land on the channel's Models page. Select the models this channel supports, then test and publish them.",
+        "continue": "Create and configure models"
       },
       "aws_region_placeholder": "region, e.g.: us-west-2",
       "aws_ak_placeholder": "AWS IAM Access Key",
@@ -4404,10 +4409,21 @@
   },
   "workspace_models": {
     "title": "Available Models",
+    "tabs": {
+      "health": "Runtime Status",
+      "operations": "Operations Analytics"
+    },
+    "health_filter": "Recent status",
+    "sort_label": "Sort models",
+    "health_hint": "Summarized from recent traffic and channel checks; individual upstream channels may differ.",
+    "load_failed": "Could not load model status. Try again.",
+    "retry": "Retry",
+    "no_matches": "No models match your filters",
+    "clear_filters": "Clear filters",
     "refresh": "Refresh model status",
     "search_placeholder": "Search models, providers, endpoints, or tags",
     "generated_at": "Updated at: {{time}}",
-    "empty": "No available model status",
+    "empty": "No models are available in your group",
     "history_label": "{{model}} recent model status",
     "summary": {
       "count": "{{total}} models",
