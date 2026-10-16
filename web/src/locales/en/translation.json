@@ -958,6 +958,7 @@
           "recharge": "Recharge",
           "subscription": "Subscription"
         },
+        "purchase_action": "Purchase action",
         "advanced_options": "Advanced options",
         "manual_purchase_title": "Purchase Info",
         "procurement_event_type": "Procurement change",
@@ -968,7 +969,8 @@
           "quota_adjustment": "Quota adjustment"
         },
         "procurement_parent_record": "Prior purchase record",
-        "procurement_parent_record_placeholder": "Select the base plan being upgraded",
+        "procurement_parent_record_placeholder": "Select the subscription purchase to upgrade",
+        "upgrade_rule_hint": "An upgrade keeps the original validity window and capacity. Enter only the added quota in this record.",
         "procurement_old_batch_disposition": "Remaining base-plan capacity",
         "procurement_old_batch_dispositions": {
           "keep": "Keep until expiry",
@@ -986,7 +988,9 @@
         "entitlement_info_title": "Entitlement Information",
         "entitlement_name": "Entitlement Name",
         "entitlement_items_title": "Purchased Capacity",
-        "add_entitlement_item": "Add Capacity Item",
+        "add_entitlement_item": "Add periodic quota",
+        "subscription_quota_type": "Quota period",
+        "upgrade_increment_amount": "Added quota",
         "manual_snapshot_invalid": "Please provide at least one valid entitlement item",
         "manual_snapshot_success": "Purchase record saved",
         "manual_snapshot_failed": "Failed to save purchase record",

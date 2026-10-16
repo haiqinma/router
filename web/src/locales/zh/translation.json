@@ -958,6 +958,7 @@
           "recharge": "充值",
           "subscription": "订阅"
         },
+        "purchase_action": "采购动作",
         "advanced_options": "高级选项",
         "manual_purchase_title": "采购信息",
         "procurement_event_type": "采购变更类型",
@@ -968,7 +969,8 @@
           "quota_adjustment": "补量/校正"
         },
         "procurement_parent_record": "原采购记录",
-        "procurement_parent_record_placeholder": "选择被升级的基础套餐",
+        "procurement_parent_record_placeholder": "选择要升级的订阅采购记录",
+        "upgrade_rule_hint": "升级沿用原订阅有效期并保留原额度，本次只记录新增额度。",
         "procurement_old_batch_disposition": "旧套餐剩余额度",
         "procurement_old_batch_dispositions": {
           "keep": "保留至到期",
@@ -986,7 +988,9 @@
         "entitlement_info_title": "权益信息",
         "entitlement_name": "权益名称",
         "entitlement_items_title": "采购容量",
-        "add_entitlement_item": "新增容量项",
+        "add_entitlement_item": "添加周期额度",
+        "subscription_quota_type": "额度周期",
+        "upgrade_increment_amount": "新增额度",
         "manual_snapshot_invalid": "请至少填写一条有效权益项",
         "manual_snapshot_success": "采购记录保存成功",
         "manual_snapshot_failed": "采购记录保存失败",

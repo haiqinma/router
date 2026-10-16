@@ -23,7 +23,7 @@
   },
   "scripts": {
     "start": "vite",
-    "check": "npm run test:write-paged-rows && npm run test:wallet-session && npm run test:chart-theme && npm run test:theme-store && npm run test:csv && npm run test:billing-format && npm run check:router-ui && npm run check:popover-safety && npm run check:chart-palette && npm run check:i18n && npm run check:i18n-cjk && vite build",
+    "check": "npm run test:write-paged-rows && npm run test:wallet-session && npm run test:chart-theme && npm run test:theme-store && npm run test:csv && npm run test:billing-format && npm run test:channel-purchase && npm run check:router-ui && npm run check:popover-safety && npm run check:chart-palette && npm run check:i18n && npm run check:i18n-cjk && vite build",
     "build": "node ./scripts/check-router-ui-boundary.mjs && node ./scripts/check-popover-select-safety.mjs && node ./scripts/check-chart-palette.mjs && node ./scripts/check-i18n-line-align.mjs && node ./scripts/scan-hardcoded-i18n.mjs && vite build",
     "test:write-paged-rows": "node ./tests/write-paged-rows.test.mjs",
     "test:wallet-session": "node ./tests/wallet-session.test.mjs",
@@ -31,6 +31,7 @@
     "test:theme-store": "node ./tests/theme-store.test.mjs",
     "test:csv": "node ./tests/csv.test.mjs",
     "test:billing-format": "node ./tests/billing-format.test.mjs",
+    "test:channel-purchase": "node ./tests/channel-purchase.test.mjs",
     "check:router-ui": "node ./scripts/check-router-ui-boundary.mjs",
     "check:popover-safety": "node ./scripts/check-popover-select-safety.mjs",
     "check:chart-palette": "node ./scripts/check-chart-palette.mjs",
