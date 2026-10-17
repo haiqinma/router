@@ -270,31 +270,6 @@ const ChannelDetailOverviewTab = ({
         {addressRoutingFields}
         {protocolSpecificFields}
         <AppFormRow>
-          <AppField label={t('channel.edit.created_time')} readOnly>
-            <AppInput
-              className='router-section-input'
-              value={
-                inputs.created_time ? timestamp2string(inputs.created_time) : '-'
-              }
-              readOnly
-            />
-          </AppField>
-          <AppField label={t('channel.edit.updated_at')} readOnly>
-            <AppInput
-              className='router-section-input'
-              value={
-                inputs.updated_at ? timestamp2string(inputs.updated_at) : '-'
-              }
-              readOnly
-            />
-          </AppField>
-        </AppFormRow>
-      </AppDetailSection>
-      <AppDetailSection
-        title={t('channel.edit.billing.profile_title')}
-        titleTag='span'
-      >
-        <AppFormRow>
           <AppField label={t('channel.edit.billing.billing_source')}>
             {detailEditing ? (
               <AppSelect
@@ -318,13 +293,11 @@ const ChannelDetailOverviewTab = ({
             ) : (
               <AppInput
                 className='router-section-input'
-                value={
-                  formatBillingSourceLabel(
-                    t,
-                    billingProfile?.billing_source,
-                    billingAdapters
-                  )
-                }
+                value={formatBillingSourceLabel(
+                  t,
+                  billingProfile?.billing_source,
+                  billingAdapters
+                )}
                 readOnly
               />
             )}
@@ -333,7 +306,8 @@ const ChannelDetailOverviewTab = ({
         {billingCredentialFields.length > 0 ? (
           <AppFormRow>
             {billingCredentialFields.map((field) => {
-              const credentialValue = activeBillingCredentials[field.name] || '';
+              const credentialValue =
+                activeBillingCredentials[field.name] || '';
               return (
                 <AppField
                   key={field.name}
@@ -343,9 +317,7 @@ const ChannelDetailOverviewTab = ({
                   <AppInput
                     className='router-section-input'
                     type={
-                      detailEditing && field.secret
-                        ? 'password'
-                        : undefined
+                      detailEditing && field.secret ? 'password' : undefined
                     }
                     value={
                       detailEditing
@@ -375,6 +347,26 @@ const ChannelDetailOverviewTab = ({
         <div className='router-form-hint router-form-hint-section'>
           {t('channel.edit.billing.credential_hint')}
         </div>
+        <AppFormRow>
+          <AppField label={t('channel.edit.created_time')} readOnly>
+            <AppInput
+              className='router-section-input'
+              value={
+                inputs.created_time ? timestamp2string(inputs.created_time) : '-'
+              }
+              readOnly
+            />
+          </AppField>
+          <AppField label={t('channel.edit.updated_at')} readOnly>
+            <AppInput
+              className='router-section-input'
+              value={
+                inputs.updated_at ? timestamp2string(inputs.updated_at) : '-'
+              }
+              readOnly
+            />
+          </AppField>
+        </AppFormRow>
       </AppDetailSection>
       {billingSummary?.refresh_supported ? (
         <ChannelBillingAccountView

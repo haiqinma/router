@@ -872,7 +872,7 @@
       "group_addition": "You can add a group in Group Management:",
       "models": "Models",
       "models_placeholder": "Please select models supported by this channel",
-      "detail_basic_title": "Basic Info",
+      "detail_basic_title": "Channel Configuration",
       "detail_models_title": "Model Selection",
       "detail_tabs": {
         "overview": "Overview",
@@ -1176,6 +1176,7 @@
           "purchase_amount": "Paid Amount",
           "purchase_cost_amount": "Purchase Cost",
           "entitlement_name": "Entitlement Name",
+          "record_name": "Record Name",
           "validity": "Validity",
           "source_type": "Source",
           "quota_items": "Quota Items",

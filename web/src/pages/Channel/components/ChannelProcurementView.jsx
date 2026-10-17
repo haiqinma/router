@@ -10,6 +10,7 @@ import SnapshotRecordsTable from './SnapshotRecordsTable';
 import {
   applyPurchaseKindToItem,
   availableSubscriptionQuotaTypes,
+  buildAutomaticPurchaseRecordName,
   buildManualPurchaseRecord,
   buildManualPurchaseRecordFromSnapshot,
   buildManualQuotaItem,
@@ -179,9 +180,6 @@ const ChannelProcurementView = ({
         resolvePurchaseRecordValidFrom(parent)
       ),
       valid_until_input: toDateTimeLocalValueFromTimestamp(parent?.valid_until),
-      ...(parent?.entitlement_name
-        ? { entitlement_name: parent.entitlement_name }
-        : {}),
     });
     if (parent) {
       setManualItems(buildUpgradeQuotaItemsFromSnapshot(parent));
@@ -280,22 +278,12 @@ const ChannelProcurementView = ({
       purchaseCurrency === 'CNY'
         ? purchaseAmount
         : Number(manualPurchaseRecord.purchase_cost_amount || 0);
-    // 权益名称选填:留空时用「采购类型 + 采购日期」兜底(后端要求非空)。
     const trimmedName = (manualPurchaseRecord.entitlement_name || '')
       .toString()
       .trim();
     const entitlementName =
-      trimmedName ||
-      [
-        t(
-          `channel.edit.billing.purchase_kinds.${
-            manualPurchaseRecord.purchase_kind || 'recharge'
-          }`
-        ),
-        (manualPurchaseRecord.purchase_at_input || '').toString().slice(0, 10),
-      ]
-        .filter(Boolean)
-        .join(' ');
+      (editingPurchaseRecord?.id ? trimmedName : '') ||
+      buildAutomaticPurchaseRecordName(manualPurchaseRecord, t);
     const saved = await onManualSnapshotUpdate({
       channel_id: targetChannelID,
       id: editingPurchaseRecord?.id || '',
@@ -344,28 +332,6 @@ const ChannelProcurementView = ({
 
   return (
     <div className='router-billing-page'>
-      <div className='router-billing-workspace-toolbar'>
-        <AppButton
-          type='button'
-          className='router-page-button'
-          color='blue'
-          disabled={billingReadonly || billingSubmitting}
-          onClick={openCreateManualModal}
-        >
-          {t('channel.edit.billing.add_purchase_record')}
-        </AppButton>
-        {typeof onRefreshBilling === 'function' ? (
-          <AppButton
-            type='button'
-            className='router-page-button'
-            loading={billingLoading}
-            disabled={billingLoading || billingSubmitting}
-            onClick={onRefreshBilling}
-          >
-            {t('common.refresh')}
-          </AppButton>
-        ) : null}
-      </div>
       <SnapshotRecordsTable
         t={t}
         purchaseRecords={purchaseRecords}
@@ -380,6 +346,30 @@ const ChannelProcurementView = ({
           showSizeChanger: false,
           onChange: onProcurementPageChange,
         }}
+        actions={
+          <>
+            <AppButton
+              type='button'
+              className='router-page-button'
+              color='blue'
+              disabled={billingReadonly || billingSubmitting}
+              onClick={openCreateManualModal}
+            >
+              {t('channel.edit.billing.add_purchase_record')}
+            </AppButton>
+            {typeof onRefreshBilling === 'function' ? (
+              <AppButton
+                type='button'
+                className='router-page-button'
+                loading={billingLoading}
+                disabled={billingLoading || billingSubmitting}
+                onClick={onRefreshBilling}
+              >
+                {t('common.refresh')}
+              </AppButton>
+            ) : null}
+          </>
+        }
         onEditRecord={openEditManualModal}
         onDeleteRecord={deleteManualSnapshot}
       />

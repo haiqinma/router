@@ -342,21 +342,9 @@ const ManualSnapshotForm = ({
           ) : null}
         </div>
 
-        <AppFormRow>
-          <AppField label={t('channel.edit.billing.entitlement_name')}>
-            <AppInput
-              className='router-section-input'
-              value={manualPurchaseRecord.entitlement_name}
-              onChange={(e, { value }) =>
-                onUpdateManualPurchaseRecord({
-                  entitlement_name: (value || '').toString(),
-                })
-              }
-              readOnly={inputReadOnly}
-            />
-          </AppField>
-          {isSubscription && !isUpgrade ? renderValidityFields() : null}
-        </AppFormRow>
+        {isSubscription && !isUpgrade ? (
+          <AppFormRow>{renderValidityFields()}</AppFormRow>
+        ) : null}
 
         {isUpgrade ? (
           <div className='router-upgrade-validity-summary'>

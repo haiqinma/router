@@ -18,6 +18,7 @@ const SnapshotRecordsTable = ({
   billingSubmitting,
   timestamp2string,
   pagination,
+  actions,
   onEditRecord,
   onDeleteRecord,
 }) => (
@@ -27,12 +28,13 @@ const SnapshotRecordsTable = ({
     titleTag='span'
   >
     <div className='router-billing-subsection-header'>
-      <div>
-        <div className='router-billing-subsection-description'>
-          {t('channel.edit.billing.snapshots_hint')}
-        </div>
+      <div className='router-billing-subsection-description'>
+        {t('channel.edit.billing.snapshots_hint')}
       </div>
     </div>
+    {actions ? (
+      <div className='router-billing-workspace-toolbar'>{actions}</div>
+    ) : null}
     <AppTable
       className='router-detail-table'
       pagination={pagination || false}
@@ -78,7 +80,7 @@ const SnapshotRecordsTable = ({
             Number(value || 0) > 0 ? `${formatNumberText(value, 6)} CNY` : '-',
         },
         {
-          title: t('channel.edit.billing.snapshot_table.entitlement_name'),
+          title: t('channel.edit.billing.snapshot_table.record_name'),
           dataIndex: 'entitlement_name',
           key: 'entitlement_name',
           width: 180,

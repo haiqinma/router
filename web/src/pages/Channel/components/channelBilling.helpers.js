@@ -79,6 +79,34 @@ export const DEFAULT_PURCHASE_KIND = 'subscription';
 export const PURCHASE_KINDS = ['recharge', 'subscription'];
 export const SUBSCRIPTION_QUOTA_TYPES = ['daily', 'weekly', 'monthly'];
 
+export const buildAutomaticPurchaseRecordName = (record, t) => {
+  const translate = typeof t === 'function' ? t : (key) => key;
+  const purchaseKind =
+    normalizeBillingValue(record?.purchase_kind) === 'recharge'
+      ? 'recharge'
+      : 'subscription';
+  const purchaseDate = (record?.purchase_at_input || '')
+    .toString()
+    .slice(0, 10);
+  if (purchaseKind === 'recharge') {
+    return [
+      translate('channel.edit.billing.purchase_kinds.recharge'),
+      purchaseDate,
+    ]
+      .filter(Boolean)
+      .join(' ');
+  }
+  const eventType =
+    normalizeBillingValue(record?.event_type) || 'purchase';
+  return [
+    translate('channel.edit.billing.purchase_kinds.subscription'),
+    translate(`channel.edit.billing.procurement_events.${eventType}`),
+    purchaseDate,
+  ]
+    .filter(Boolean)
+    .join(' ');
+};
+
 // 充值是一笔可消耗总额度;订阅是一组按日/周/月重置的周期约束。周期项
 // 仍由采购批次按同一 scope/unit 分组,不会把一笔采购成本重复计算多次。
 export const purchaseKindItemDefaults = (kind, quotaType = '') => ({

@@ -872,7 +872,7 @@
       "group_addition": "可在分组管理页面新增分组：",
       "models": "模型",
       "models_placeholder": "请选择该渠道所支持的模型",
-      "detail_basic_title": "基础信息",
+      "detail_basic_title": "渠道配置",
       "detail_models_title": "模型选择",
       "detail_tabs": {
         "overview": "概览",
@@ -1176,6 +1176,7 @@
           "purchase_amount": "实付金额",
           "purchase_cost_amount": "采购成本",
           "entitlement_name": "权益名称",
+          "record_name": "记录名称",
           "validity": "有效期",
           "source_type": "来源",
           "quota_items": "额度项",
