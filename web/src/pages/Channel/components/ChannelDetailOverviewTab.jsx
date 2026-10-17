@@ -134,15 +134,15 @@ const ChannelDetailOverviewTab = ({
   inputs,
   currentProtocolOption,
   channelProtocolOptions,
-  detailBasicEditing,
-  detailBasicSaving,
-  detailBasicEditLocked,
+  detailEditing,
+  detailSaving,
+  detailEditLocked,
   detailBasicReadonly,
   channelIdentifierMaxLength,
   handleInputChange,
-  cancelDetailBasicEdit,
-  saveDetailBasicInfo,
-  setDetailBasicEditing,
+  onCancelEdit,
+  onSave,
+  onStartEdit,
   basicConnectionFields,
   addressRoutingFields,
   protocolSelectionHintContent,
@@ -153,20 +153,15 @@ const ChannelDetailOverviewTab = ({
   billingSummary,
   billingLoading,
   billingError,
-  detailBillingEditing,
   detailBillingDraft,
   billingSubmitting,
-  detailBillingEditLocked,
-  setDetailBillingEditing,
   onUpdateBillingProfileDraft,
-  onCancelBillingProfileEdit,
-  onSaveBillingProfile,
   onRefreshBilling,
   channelID,
   onNavigateTab,
 }) => {
-  const billingReadonly = !detailBillingEditing || billingSubmitting;
-  const selectedBillingSource = detailBillingEditing
+  const billingReadonly = !detailEditing || billingSubmitting;
+  const selectedBillingSource = detailEditing
     ? detailBillingDraft?.billing_source
     : billingProfile?.billing_source;
   const billingCredentialFields = resolveBillingAdapterCredentialFields(
@@ -174,7 +169,7 @@ const ChannelDetailOverviewTab = ({
     billingAdapters
   );
   const activeBillingCredentials = normalizeBillingCredentials(
-    detailBillingEditing
+    detailEditing
       ? detailBillingDraft?.billing_credentials
       : billingProfile?.billing_credentials
   );
@@ -185,13 +180,13 @@ const ChannelDetailOverviewTab = ({
         title={t('channel.edit.detail_basic_title')}
         titleTag='span'
         headerEnd={
-          detailBasicEditing ? (
+          detailEditing ? (
             <>
               <AppButton
                 type='button'
                 className='router-page-button'
-                onClick={cancelDetailBasicEdit}
-                disabled={detailBasicSaving}
+                onClick={onCancelEdit}
+                disabled={detailSaving}
               >
                 {t('channel.edit.buttons.cancel')}
               </AppButton>
@@ -199,9 +194,9 @@ const ChannelDetailOverviewTab = ({
                 type='button'
                 className='router-page-button'
                 color='blue'
-                loading={detailBasicSaving}
-                disabled={detailBasicSaving}
-                onClick={saveDetailBasicInfo}
+                loading={detailSaving}
+                disabled={detailSaving}
+                onClick={onSave}
               >
                 {t('channel.edit.buttons.save')}
               </AppButton>
@@ -211,8 +206,8 @@ const ChannelDetailOverviewTab = ({
               type='button'
               className='router-page-button'
               color='blue'
-              disabled={detailBasicEditLocked}
-              onClick={() => setDetailBasicEditing(true)}
+              disabled={detailEditLocked}
+              onClick={onStartEdit}
             >
               {t('common.edit')}
             </AppButton>
@@ -221,14 +216,14 @@ const ChannelDetailOverviewTab = ({
       >
         <AppFormRow>
           <AppField label={t('channel.edit.id')} readOnly>
-            <div className='router-action-group-tight'>
+            <div className='router-action-group-tight router-copyable-input-row'>
               <AppInput
                 className='router-section-input'
                 value={inputs.id || '-'}
                 readOnly
               />
               {inputs.id ? (
-                <CopyButton value={inputs.id} size='small' basic />
+                <CopyButton value={inputs.id} size='small' basic iconOnly />
               ) : null}
             </div>
           </AppField>
@@ -275,67 +270,8 @@ const ChannelDetailOverviewTab = ({
         {addressRoutingFields}
         {protocolSpecificFields}
         <AppFormRow>
-          <AppField label={t('channel.edit.created_time')} readOnly>
-            <AppInput
-              className='router-section-input'
-              value={
-                inputs.created_time ? timestamp2string(inputs.created_time) : '-'
-              }
-              readOnly
-            />
-          </AppField>
-          <AppField label={t('channel.edit.updated_at')} readOnly>
-            <AppInput
-              className='router-section-input'
-              value={
-                inputs.updated_at ? timestamp2string(inputs.updated_at) : '-'
-              }
-              readOnly
-            />
-          </AppField>
-        </AppFormRow>
-      </AppDetailSection>
-      <AppDetailSection
-        title={t('channel.edit.billing.profile_title')}
-        titleTag='span'
-        headerEnd={
-          detailBillingEditing ? (
-            <>
-              <AppButton
-                type='button'
-                className='router-page-button'
-                onClick={onCancelBillingProfileEdit}
-                disabled={billingSubmitting}
-              >
-                {t('channel.edit.buttons.cancel')}
-              </AppButton>
-              <AppButton
-                type='button'
-                className='router-page-button'
-                color='blue'
-                loading={billingSubmitting}
-                disabled={billingSubmitting}
-                onClick={onSaveBillingProfile}
-              >
-                {t('channel.edit.buttons.save')}
-              </AppButton>
-            </>
-          ) : (
-            <AppButton
-              type='button'
-              className='router-page-button'
-              color='blue'
-              disabled={detailBillingEditLocked}
-              onClick={() => setDetailBillingEditing(true)}
-            >
-              {t('common.edit')}
-            </AppButton>
-          )
-        }
-      >
-        <AppFormRow>
           <AppField label={t('channel.edit.billing.billing_source')}>
-            {detailBillingEditing ? (
+            {detailEditing ? (
               <AppSelect
                 className='router-section-input'
                 options={buildBillingSourceOptions(t, billingAdapters)}
@@ -357,13 +293,11 @@ const ChannelDetailOverviewTab = ({
             ) : (
               <AppInput
                 className='router-section-input'
-                value={
-                  formatBillingSourceLabel(
-                    t,
-                    billingProfile?.billing_source,
-                    billingAdapters
-                  )
-                }
+                value={formatBillingSourceLabel(
+                  t,
+                  billingProfile?.billing_source,
+                  billingAdapters
+                )}
                 readOnly
               />
             )}
@@ -372,22 +306,21 @@ const ChannelDetailOverviewTab = ({
         {billingCredentialFields.length > 0 ? (
           <AppFormRow>
             {billingCredentialFields.map((field) => {
-              const credentialValue = activeBillingCredentials[field.name] || '';
+              const credentialValue =
+                activeBillingCredentials[field.name] || '';
               return (
                 <AppField
                   key={field.name}
                   label={billingCredentialLabel(field)}
-                  required={detailBillingEditing && field.required}
+                  required={detailEditing && field.required}
                 >
                   <AppInput
                     className='router-section-input'
                     type={
-                      detailBillingEditing && field.secret
-                        ? 'password'
-                        : undefined
+                      detailEditing && field.secret ? 'password' : undefined
                     }
                     value={
-                      detailBillingEditing
+                      detailEditing
                         ? credentialValue
                         : field.secret
                           ? maskSecret(credentialValue)
@@ -414,6 +347,26 @@ const ChannelDetailOverviewTab = ({
         <div className='router-form-hint router-form-hint-section'>
           {t('channel.edit.billing.credential_hint')}
         </div>
+        <AppFormRow>
+          <AppField label={t('channel.edit.created_time')} readOnly>
+            <AppInput
+              className='router-section-input'
+              value={
+                inputs.created_time ? timestamp2string(inputs.created_time) : '-'
+              }
+              readOnly
+            />
+          </AppField>
+          <AppField label={t('channel.edit.updated_at')} readOnly>
+            <AppInput
+              className='router-section-input'
+              value={
+                inputs.updated_at ? timestamp2string(inputs.updated_at) : '-'
+              }
+              readOnly
+            />
+          </AppField>
+        </AppFormRow>
       </AppDetailSection>
       {billingSummary?.refresh_supported ? (
         <ChannelBillingAccountView

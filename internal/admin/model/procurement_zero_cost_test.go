@@ -231,7 +231,7 @@ func TestReconcileChannelCostTrackingModeToggles(t *testing.T) {
 	}
 }
 
-func TestResolveChannelModelProcurementReadinessForModeUntrackedIsSilent(t *testing.T) {
+func TestResolveChannelModelProcurementReadinessForModeLegacyUntrackedIsPending(t *testing.T) {
 	db := newFreeProcurementTestDB(t)
 	rows, err := ListChannelModelRowsByChannelIDWithDB(db, "channel-1")
 	if err != nil {
@@ -240,8 +240,8 @@ func TestResolveChannelModelProcurementReadinessForModeUntrackedIsSilent(t *test
 	row := rows[0]
 
 	untracked := ResolveChannelModelProcurementReadinessForMode(row, nil, ChannelCostTrackingModeUntracked)
-	if untracked.Status != ProcurementReadinessUntracked {
-		t.Fatalf("untracked status = %q, want %q", untracked.Status, ProcurementReadinessUntracked)
+	if untracked.Status != ProcurementReadinessMissing {
+		t.Fatalf("untracked status = %q, want %q", untracked.Status, ProcurementReadinessMissing)
 	}
 
 	// Free mode with auto-managed coverage resolves to ready.

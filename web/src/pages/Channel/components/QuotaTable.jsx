@@ -43,6 +43,7 @@ const QuotaTable = ({ t, quotaItems, billingLoading, timestamp2string }) => (
     loading={billingLoading}
     dataSource={Array.isArray(quotaItems) ? quotaItems : []}
     rowKey={(row) => buildQuotaItemRowKey(row)}
+    scroll={{ x: 1130 }}
     columns={[
       {
         title: t('channel.edit.billing.quota_table.entitlement_kind'),

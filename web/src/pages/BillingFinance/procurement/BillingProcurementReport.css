@@ -1,5 +1,8 @@
 .billing-procurement-report-page {
+  width: 100%;
+  min-width: 0;
   max-width: 1600px;
+  box-sizing: border-box;
 }
 
 .billing-procurement-report-filters {
@@ -26,7 +29,13 @@
 .billing-procurement-report-overview,
 .billing-procurement-report-detail {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
+}
+
+.billing-procurement-report-overview > *,
+.billing-procurement-report-detail > * {
+  min-width: 0;
 }
 
 .billing-procurement-report-health {

@@ -7,12 +7,44 @@ const helpers = await import(
 const {
   applyPurchaseKindToItem,
   availableSubscriptionQuotaTypes,
+  buildAutomaticPurchaseRecordName,
   buildManualQuotaItem,
   buildUpgradeQuotaItemsFromSnapshot,
   isSubscriptionPurchaseRecord,
   purchaseKindItemDefaults,
   resolvePurchaseRecordValidFrom,
 } = helpers;
+
+const translatePurchaseName = (key) =>
+  ({
+    'channel.edit.billing.purchase_kinds.recharge': '充值',
+    'channel.edit.billing.purchase_kinds.subscription': '订阅',
+    'channel.edit.billing.procurement_events.purchase': '新购',
+    'channel.edit.billing.procurement_events.upgrade': '升级',
+  })[key] || key;
+
+assert.equal(
+  buildAutomaticPurchaseRecordName(
+    {
+      purchase_kind: 'recharge',
+      event_type: 'purchase',
+      purchase_at_input: '2026-10-17T10:00',
+    },
+    translatePurchaseName
+  ),
+  '充值 2026-10-17'
+);
+assert.equal(
+  buildAutomaticPurchaseRecordName(
+    {
+      purchase_kind: 'subscription',
+      event_type: 'upgrade',
+      purchase_at_input: '2026-10-17T10:00',
+    },
+    translatePurchaseName
+  ),
+  '订阅 升级 2026-10-17'
+);
 
 assert.deepEqual(purchaseKindItemDefaults('recharge'), {
   resource_type: 'quota',

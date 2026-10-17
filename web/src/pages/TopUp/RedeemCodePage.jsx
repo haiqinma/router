@@ -57,6 +57,7 @@ const RedeemCodePage = ({ open, onClose, onRedeemed }) => {
                 value={recentResult.redemption_id}
                 size='small'
                 basic
+                iconOnly
               />
             </div>
           ) : (

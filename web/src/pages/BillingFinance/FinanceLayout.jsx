@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AppFilterHeader, AppSpin } from '../../router-ui';
@@ -6,22 +6,24 @@ import SectionTabs from '../../components/SectionTabs';
 import './BillingFinance.css';
 
 const BillingOverviewPage = lazy(() => import('./overview'));
-const BillingPricingAnalysisPage = lazy(() => import('./profit'));
 const BillingProcurementReportPage = lazy(() => import('./procurement'));
+const BillingReconciliationPage = lazy(() => import('./reconciliation'));
 const FinanceRecordsPage = lazy(() => import('./records'));
 
-// Single finance shell: overview / profit / procurement all live under
+// Single finance shell: finance results, accounting details, reconciliation,
+// and cash records share one stable route.
 // `/admin/finance?tab=...` so switching a tab only changes the query string —
 // the tab strip stays mounted and the body swaps in place instead of tearing
 // down a whole route (the old cross-route SectionTabs behavior).
 const TABS = [
   { key: 'overview', labelKey: 'billing.overview.title' },
-  { key: 'profit', labelKey: 'billing.pricing_analysis.title' },
-  { key: 'procurement', labelKey: 'billing.procurement_report.title' },
+  { key: 'accounting', labelKey: 'billing.accounting.title' },
+  { key: 'reconciliation', labelKey: 'billing.reconciliation.title' },
   { key: 'records', labelKey: 'billing.records.title' },
 ];
 
 const VALID_TABS = new Set(TABS.map((tab) => tab.key));
+const LEGACY_TAB_MAP = { profit: 'accounting', procurement: 'accounting' };
 
 // Resolve the source tab of a drill-down's `return_to`, tolerant of both the
 // new `?tab=` form and the legacy `/admin/finance/<seg>` pathname form so the
@@ -31,10 +33,16 @@ const returnToTab = (returnTo) => {
   const qIndex = returnTo.indexOf('?');
   const query = qIndex >= 0 ? returnTo.slice(qIndex + 1) : '';
   const fromQuery = new URLSearchParams(query).get('tab');
-  if (fromQuery && VALID_TABS.has(fromQuery)) return fromQuery;
+  const normalizedQueryTab = LEGACY_TAB_MAP[fromQuery] || fromQuery;
+  if (normalizedQueryTab && VALID_TABS.has(normalizedQueryTab)) {
+    return normalizedQueryTab;
+  }
   const path = qIndex >= 0 ? returnTo.slice(0, qIndex) : returnTo;
   const seg = path.split('/').filter(Boolean).pop();
-  if (seg && VALID_TABS.has(seg)) return seg;
+  const normalizedSegment = LEGACY_TAB_MAP[seg] || seg;
+  if (normalizedSegment && VALID_TABS.has(normalizedSegment)) {
+    return normalizedSegment;
+  }
   return null;
 };
 
@@ -43,14 +51,24 @@ const FinanceLayout = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const rawTab = searchParams.get('tab');
-  const activeTab = VALID_TABS.has(rawTab) ? rawTab : 'overview';
+  const activeTab = VALID_TABS.has(LEGACY_TAB_MAP[rawTab] || rawTab)
+    ? LEGACY_TAB_MAP[rawTab] || rawTab
+    : 'overview';
+
+  useEffect(() => {
+    const mappedTab = LEGACY_TAB_MAP[rawTab];
+    if (!mappedTab) return;
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', mappedTab);
+    navigate(`/admin/finance?${next.toString()}`, { replace: true });
+  }, [navigate, rawTab, searchParams]);
 
   const renderActive = () => {
     switch (activeTab) {
-      case 'profit':
-        return <BillingPricingAnalysisPage embedded />;
-      case 'procurement':
+      case 'accounting':
         return <BillingProcurementReportPage embedded />;
+      case 'reconciliation':
+        return <BillingReconciliationPage />;
       case 'records':
         return <FinanceRecordsPage />;
       case 'overview':

@@ -30,9 +30,9 @@ func newCostTrackingModeTestDB(t *testing.T) *gorm.DB {
 
 func TestNormalizeChannelCostTrackingMode(t *testing.T) {
 	cases := map[string]string{
-		"":                               ChannelCostTrackingModeUntracked,
-		"nonsense":                       ChannelCostTrackingModeUntracked,
-		ChannelCostTrackingModeUntracked: ChannelCostTrackingModeUntracked,
+		"":                               ChannelCostTrackingModeActual,
+		"nonsense":                       ChannelCostTrackingModeActual,
+		ChannelCostTrackingModeUntracked: ChannelCostTrackingModeActual,
 		ChannelCostTrackingModeFree:      ChannelCostTrackingModeFree,
 		ChannelCostTrackingModeActual:    ChannelCostTrackingModeActual,
 	}
@@ -69,7 +69,7 @@ func TestSaveChannelBillingProfileRoundTripsCostTrackingMode(t *testing.T) {
 		t.Fatalf("read mode = %q, want %q", mode, ChannelCostTrackingModeFree)
 	}
 
-	// Empty/invalid mode normalizes to untracked on save.
+	// Empty/invalid mode participates in actual accounting on save.
 	saved2, err := SaveChannelBillingProfileWithDB(db, ChannelBillingProfile{
 		ChannelId:     "channel-1",
 		BillingSource: ChannelBillingSourceManual,
@@ -77,19 +77,19 @@ func TestSaveChannelBillingProfileRoundTripsCostTrackingMode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("save profile 2: %v", err)
 	}
-	if saved2.CostTrackingMode != ChannelCostTrackingModeUntracked {
-		t.Fatalf("saved2 mode = %q, want %q", saved2.CostTrackingMode, ChannelCostTrackingModeUntracked)
+	if saved2.CostTrackingMode != ChannelCostTrackingModeActual {
+		t.Fatalf("saved2 mode = %q, want %q", saved2.CostTrackingMode, ChannelCostTrackingModeActual)
 	}
 }
 
-func TestGetChannelCostTrackingModeDefaultsToUntracked(t *testing.T) {
+func TestGetChannelCostTrackingModeDefaultsToActual(t *testing.T) {
 	db := newCostTrackingModeTestDB(t)
 	mode, err := GetChannelCostTrackingModeWithDB(db, "no-profile")
 	if err != nil {
 		t.Fatalf("get mode: %v", err)
 	}
-	if mode != ChannelCostTrackingModeUntracked {
-		t.Fatalf("mode = %q, want %q", mode, ChannelCostTrackingModeUntracked)
+	if mode != ChannelCostTrackingModeActual {
+		t.Fatalf("mode = %q, want %q", mode, ChannelCostTrackingModeActual)
 	}
 }
 

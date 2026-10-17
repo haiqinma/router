@@ -296,18 +296,9 @@ func ResolveChannelModelProcurementReadinessFromChannelBatches(row ChannelModel,
 }
 
 // ResolveChannelModelProcurementReadinessForMode layers the channel-level cost
-// tracking mode over the batch-derived readiness. In untracked mode cost is
-// deliberately not recorded, so readiness is reported as untracked (no warning,
-// treated as ready by the group badge) regardless of batches. Free and actual
-// modes fall through to the normal batch resolution — free channels carry
-// auto-managed global zero-cost batches, so they resolve to ready naturally.
+// mode over batch-derived readiness. Legacy untracked values normalize to actual,
+// while free channels carry explicit auto-managed zero-cost batches.
 func ResolveChannelModelProcurementReadinessForMode(row ChannelModel, channelBatches []ChannelProcurementBatch, mode string) ChannelModelProcurementReadiness {
-	if NormalizeChannelCostTrackingMode(mode) == ChannelCostTrackingModeUntracked {
-		return ChannelModelProcurementReadiness{
-			Status:        ProcurementReadinessUntracked,
-			RequiredUnits: channelModelProcurementCapacityUnits(row),
-		}
-	}
 	return ResolveChannelModelProcurementReadinessFromChannelBatches(row, channelBatches)
 }
 

@@ -332,7 +332,7 @@ const RedemptionDetail = () => {
                     </AppField>
                   )}
                   <AppField label={t('redemption.detail.code')} readOnly>
-                    <div className='router-action-group-tight'>
+                    <div className='router-action-group-tight router-copyable-input-row'>
                       <AppInput
                         className='router-section-input router-machine-input'
                         value={redemption?.code || ''}
@@ -343,6 +343,7 @@ const RedemptionDetail = () => {
                           value={redemption.code}
                           size='small'
                           basic
+                          iconOnly
                         />
                       ) : null}
                     </div>

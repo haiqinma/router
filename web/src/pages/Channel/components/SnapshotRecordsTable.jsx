@@ -4,6 +4,7 @@ import {
   AppPopconfirm,
   AppTable,
   AppTableActionButton,
+  AppTag,
 } from '../../../router-ui';
 import { formatNumberText, formatUsageText } from './channelBilling.helpers';
 
@@ -16,6 +17,8 @@ const SnapshotRecordsTable = ({
   billingReadonly,
   billingSubmitting,
   timestamp2string,
+  pagination,
+  actions,
   onEditRecord,
   onDeleteRecord,
 }) => (
@@ -25,19 +28,31 @@ const SnapshotRecordsTable = ({
     titleTag='span'
   >
     <div className='router-billing-subsection-header'>
-      <div>
-        <div className='router-billing-subsection-description'>
-          {t('channel.edit.billing.snapshots_hint')}
-        </div>
+      <div className='router-billing-subsection-description'>
+        {t('channel.edit.billing.snapshots_hint')}
       </div>
     </div>
+    {actions ? (
+      <div className='router-billing-workspace-toolbar'>{actions}</div>
+    ) : null}
     <AppTable
       className='router-detail-table'
-      pagination={false}
+      pagination={pagination || false}
       loading={billingLoading}
       dataSource={purchaseRecords}
       rowKey={(row) => row.id}
+      scroll={{ x: 1500 }}
       columns={[
+        {
+          title: t('channel.edit.billing.snapshot_table.source_type'),
+          dataIndex: 'source_type',
+          key: 'source_type',
+          width: 110,
+          render: (value) =>
+            t(`channel.edit.billing.purchase_sources.${value || 'manual'}`, {
+              defaultValue: value || '-',
+            }),
+        },
         {
           title: t('channel.edit.billing.snapshot_table.purchase_at'),
           dataIndex: 'purchase_at',
@@ -65,7 +80,7 @@ const SnapshotRecordsTable = ({
             Number(value || 0) > 0 ? `${formatNumberText(value, 6)} CNY` : '-',
         },
         {
-          title: t('channel.edit.billing.snapshot_table.entitlement_name'),
+          title: t('channel.edit.billing.snapshot_table.record_name'),
           dataIndex: 'entitlement_name',
           key: 'entitlement_name',
           width: 180,
@@ -110,34 +125,58 @@ const SnapshotRecordsTable = ({
           render: (value) => value || '-',
         },
         {
+          title: t('channel.edit.billing.snapshot_table.accounting_status'),
+          key: 'accounting_status',
+          width: 110,
+          render: (_, row) => {
+            const accounted = Number(row?.purchase_cost_amount || 0) > 0;
+            return (
+              <AppTag color={accounted ? 'green' : 'orange'}>
+                {t(
+                  accounted
+                    ? 'channel.edit.billing.accounting_status.accounted'
+                    : 'channel.edit.billing.accounting_status.pending'
+                )}
+              </AppTag>
+            );
+          },
+        },
+        {
           title: t('channel.edit.billing.snapshot_table.actions'),
           key: 'actions',
           width: 110,
-          render: (_, row) => (
-            <div className='router-table-actions-icon-compact'>
-              <AppTableActionButton
-                title={t('channel.edit.billing.edit_purchase_record')}
-                icon='edit'
-                disabled={billingReadonly || billingSubmitting}
-                onClick={() => onEditRecord(row)}
-              />
-              <AppPopconfirm
-                title={t('channel.edit.billing.delete_purchase_record_confirm')}
-                okText={t('common.confirm')}
-                cancelText={t('common.cancel')}
-                onConfirm={() => onDeleteRecord(row)}
-              >
-                <span>
-                  <AppTableActionButton
-                    title={t('channel.edit.billing.delete_purchase_record')}
-                    icon='trash'
-                    color='red'
-                    disabled={billingReadonly || billingSubmitting}
-                  />
-                </span>
-              </AppPopconfirm>
-            </div>
-          ),
+          render: (_, row) => {
+            if ((row?.source_type || 'manual') !== 'manual') {
+              return '-';
+            }
+            return (
+              <div className='router-table-actions-icon-compact'>
+                <AppTableActionButton
+                  title={t('channel.edit.billing.edit_purchase_record')}
+                  icon='edit'
+                  disabled={billingReadonly || billingSubmitting}
+                  onClick={() => onEditRecord(row)}
+                />
+                <AppPopconfirm
+                  title={t(
+                    'channel.edit.billing.delete_purchase_record_confirm'
+                  )}
+                  okText={t('common.confirm')}
+                  cancelText={t('common.cancel')}
+                  onConfirm={() => onDeleteRecord(row)}
+                >
+                  <span>
+                    <AppTableActionButton
+                      title={t('channel.edit.billing.delete_purchase_record')}
+                      icon='trash'
+                      color='red'
+                      disabled={billingReadonly || billingSubmitting}
+                    />
+                  </span>
+                </AppPopconfirm>
+              </div>
+            );
+          },
         },
       ]}
     />

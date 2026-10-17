@@ -176,7 +176,7 @@ func loadProcurementReportUnconfiguredModelChannels(summary model.ProcurementRep
 		query = query.Where("LOWER(TRIM(COALESCE(el.provider, ''))) = ?", strings.ToLower(summary.Provider))
 	}
 	err := query.
-		Group("model_key, channel_id").
+		Group("1, 2").
 		Order("model_key ASC, request_count DESC, last_request_at DESC").
 		Scan(&rows).Error
 	if err != nil || len(rows) == 0 {
@@ -497,7 +497,7 @@ func appendProcurementCostHealthIssues(response *billingHealthResponse) {
 		Title:   "近期请求未配置采购成本",
 		Message: message,
 		Count:   summary.UnconfiguredCostRequestCount,
-		Link:    "/admin/finance/procurement",
+		Link:    "/admin/finance?tab=accounting",
 	})
 }
 
@@ -506,8 +506,8 @@ func appendProcurementBatchHealthIssues(response *billingHealthResponse) {
 		appendBillingHealthIssue(response, billingHealthIssue{
 			Key:     "procurement_batch_db_unavailable",
 			Level:   "warning",
-			Title:   "采购批次检查不可用",
-			Message: "主数据库不可用，无法检查采购批次容量和成本数据。",
+			Title:   "成本归因检查不可用",
+			Message: "主数据库不可用，无法检查成本归因容量和成本数据。",
 		})
 		return
 	}
@@ -519,32 +519,32 @@ func appendProcurementBatchHealthIssues(response *billingHealthResponse) {
 	}{
 		{
 			key:     "procurement_batch_capacity_invalid",
-			title:   "采购批次容量异常",
-			message: "存在采购批次剩余容量大于有效容量或小于零。",
+			title:   "成本归因容量异常",
+			message: "存在成本归因记录的剩余容量大于有效容量或小于零。",
 			query:   `SELECT COUNT(1) FROM channel_procurement_batches WHERE capacity_remaining < 0 OR capacity_remaining > capacity_effective`,
 		},
 		{
 			key:     "procurement_batch_unit_cost_missing",
-			title:   "采购批次单位成本缺失",
-			message: "存在有效采购批次没有配置单位成本，不能参与正式成本分摊。",
+			title:   "成本归因单位成本缺失",
+			message: "存在有效成本归因记录没有配置单位成本，不能参与正式成本分摊。",
 			query:   `SELECT COUNT(1) FROM channel_procurement_batches WHERE cost_status = 'active' AND cost_source IN ('actual', 'estimated') AND capacity_effective > 0 AND cost_per_unit_amount <= 0`,
 		},
 		{
 			key:     "procurement_batch_expired_active",
-			title:   "过期采购批次仍处于有效状态",
-			message: "存在已过期但仍标记为 active 的采购批次。",
+			title:   "过期成本归因记录仍处于有效状态",
+			message: "存在已过期但仍标记为 active 的成本归因记录。",
 			query:   `SELECT COUNT(1) FROM channel_procurement_batches WHERE cost_status = 'active' AND expire_at > 0 AND expire_at < ?`,
 		},
 		{
 			key:     "procurement_batch_overconsumed",
-			title:   "采购批次容量超耗",
-			message: "存在请求消耗总量大于采购批次有效容量的批次。",
+			title:   "成本归因容量超耗",
+			message: "存在请求消耗总量大于成本归因有效容量的记录。",
 			query:   `SELECT COUNT(1) FROM (SELECT b.id FROM channel_procurement_batches b JOIN request_procurement_consumptions c ON c.procurement_batch_id = b.id GROUP BY b.id, b.capacity_effective HAVING COALESCE(SUM(c.consumed_quantity), 0) > b.capacity_effective) AS overconsumed`,
 		},
 		{
 			key:     "procurement_consumption_duplicate",
-			title:   "请求采购消耗可能重复",
-			message: "存在同一请求重复记录同一采购批次和容量单位的消耗。",
+			title:   "请求成本归因可能重复",
+			message: "存在同一请求重复记录同一成本归因记录和容量单位的消耗。",
 			query:   `SELECT COUNT(1) FROM (SELECT request_log_id, procurement_batch_id, capacity_unit FROM request_procurement_consumptions GROUP BY request_log_id, procurement_batch_id, capacity_unit HAVING COUNT(1) > 1) AS duplicates`,
 		},
 	}

@@ -309,7 +309,7 @@ const TopUpOrderDetailInner = () => {
         value: order?.id ? (
           <div className='router-action-group-tight'>
             <span>{order.id}</span>
-            <CopyButton value={order.id} size='small' basic />
+            <CopyButton value={order.id} size='small' basic iconOnly />
           </div>
         ) : (
           '-'

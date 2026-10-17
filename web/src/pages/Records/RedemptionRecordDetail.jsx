@@ -134,7 +134,12 @@ const RedemptionRecordDetail = () => {
                         {readOnlyText(record?.id || id)}
                       </pre>
                       {record?.id || id ? (
-                        <CopyButton value={record?.id || id} size='small' basic />
+                        <CopyButton
+                          value={record?.id || id}
+                          size='small'
+                          basic
+                          iconOnly
+                        />
                       ) : null}
                     </div>
                   </div>

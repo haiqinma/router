@@ -2245,6 +2245,25 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return upsertProviderMigrationProvidersWithDB(tx, "openai", "anthropic")
 			},
 		},
+		{
+			Version:     "202610161300_account_all_channel_costs",
+			Description: "make every channel participate in cost accounting and migrate legacy untracked profiles to pending actual cost",
+			Up: func(tx *gorm.DB) error {
+				if !tx.Migrator().HasTable(&ChannelBillingProfile{}) {
+					return nil
+				}
+				if err := tx.Model(&ChannelBillingProfile{}).
+					Where("cost_tracking_mode = ? OR cost_tracking_mode = ? OR cost_tracking_mode IS NULL", ChannelCostTrackingModeUntracked, "").
+					Update("cost_tracking_mode", ChannelCostTrackingModeActual).Error; err != nil {
+					return err
+				}
+				if tx.Dialector.Name() == "postgres" {
+					return tx.Exec(`ALTER TABLE ` + ChannelBillingProfilesTableName +
+						` ALTER COLUMN cost_tracking_mode SET DEFAULT 'actual'`).Error
+				}
+				return nil
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }
