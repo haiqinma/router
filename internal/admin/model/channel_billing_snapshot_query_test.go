@@ -13,10 +13,43 @@ func newChannelBillingSnapshotQueryTestDB(t *testing.T) *gorm.DB {
 	if err != nil {
 		t.Fatalf("open sqlite: %v", err)
 	}
-	if err := db.AutoMigrate(&ChannelBillingSnapshot{}); err != nil {
+	if err := db.AutoMigrate(&ChannelBillingSnapshot{}, &ChannelBillingSnapshotItem{}); err != nil {
 		t.Fatalf("auto migrate snapshot: %v", err)
 	}
 	return db
+}
+
+func TestListChannelProcurementEventsExcludesBalanceSnapshotsAndPaginates(t *testing.T) {
+	db := newChannelBillingSnapshotQueryTestDB(t)
+	rows := []ChannelBillingSnapshot{
+		{Id: "api-new", ChannelId: "channel-1", SourceType: ChannelBillingSnapshotSourceAPI, PurchaseAt: 500, CreatedAt: 500},
+		{Id: "manual-new", ChannelId: "channel-1", SourceType: ChannelBillingSnapshotSourceManual, PurchaseAt: 400, CreatedAt: 400},
+		{Id: "imported", ChannelId: "channel-1", SourceType: "imported", PurchaseAt: 300, CreatedAt: 300},
+		{Id: "manual-old", ChannelId: "channel-1", SourceType: ChannelBillingSnapshotSourceManual, PurchaseAt: 200, CreatedAt: 200},
+		{Id: "other-channel", ChannelId: "channel-2", SourceType: ChannelBillingSnapshotSourceManual, PurchaseAt: 600, CreatedAt: 600},
+	}
+	if err := db.Create(&rows).Error; err != nil {
+		t.Fatalf("seed snapshots: %v", err)
+	}
+
+	page, total, err := ListChannelProcurementEventsByChannelIDWithDB(db, "channel-1", 2, 0)
+	if err != nil {
+		t.Fatalf("list procurement events: %v", err)
+	}
+	if total != 3 {
+		t.Fatalf("total = %d, want 3", total)
+	}
+	if len(page) != 2 || page[0].Id != "manual-new" || page[1].Id != "imported" {
+		t.Fatalf("first page = %+v, want manual-new/imported", page)
+	}
+
+	secondPage, _, err := ListChannelProcurementEventsByChannelIDWithDB(db, "channel-1", 2, 2)
+	if err != nil {
+		t.Fatalf("list second procurement page: %v", err)
+	}
+	if len(secondPage) != 1 || secondPage[0].Id != "manual-old" {
+		t.Fatalf("second page = %+v, want manual-old", secondPage)
+	}
 }
 
 func TestGetLatestChannelBillingSnapshotCreatedAtByStatusWithDB(t *testing.T) {

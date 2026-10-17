@@ -1,6 +1,8 @@
 .billing-finance-page {
   display: flex;
   flex-direction: column;
+  width: 100%;
+  min-width: 0;
 }
 
 .billing-finance-loading {
@@ -18,4 +20,32 @@
   margin: 8px 0 0;
   color: var(--router-text-muted, #6b7280);
   font-size: 13px;
+}
+
+.billing-reconciliation-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.billing-reconciliation-page {
+  width: 100%;
+  min-width: 0;
+}
+
+.billing-reconciliation-channel-select {
+  width: min(320px, 100%);
+}
+
+.billing-reconciliation-purchase-link {
+  color: var(--router-link, #2563eb);
+  font-size: 13px;
+}
+
+@media (max-width: 560px) {
+  .billing-reconciliation-filters,
+  .billing-reconciliation-channel-select {
+    width: 100%;
+  }
 }

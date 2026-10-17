@@ -455,13 +455,13 @@ func TestResolveGroupBindingProcurementReadinessFollowsCostTrackingMode(t *testi
 	bindings := []GroupModelBindingItem{{Model: "model-1", ChannelId: "channel-1"}}
 	key := groupBindingReadinessKey("channel-1", "model-1")
 
-	// Default (no profile) resolves to untracked — silent, not a "missing" alert.
-	untracked, err := resolveGroupBindingProcurementReadiness(db, bindings)
+	// Default (no profile) participates in accounting and surfaces missing cost.
+	pending, err := resolveGroupBindingProcurementReadiness(db, bindings)
 	if err != nil {
-		t.Fatalf("resolve untracked: %v", err)
+		t.Fatalf("resolve default accounting: %v", err)
 	}
-	if got := untracked[key].Status; got != ProcurementReadinessUntracked {
-		t.Fatalf("untracked status = %q, want %q", got, ProcurementReadinessUntracked)
+	if got := pending[key].Status; got != ProcurementReadinessMissing {
+		t.Fatalf("default status = %q, want %q", got, ProcurementReadinessMissing)
 	}
 
 	// actual mode with no batches surfaces a real config gap.

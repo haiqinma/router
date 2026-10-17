@@ -52,63 +52,65 @@ const CostQuoteReconcileTable = ({ t, costQuotes, onSyncCostQuotes, syncSubmitti
           title={t('channel.edit.billing.cost_reconcile_empty_title')}
         />
       ) : (
-        <table className='router-cost-reconcile-table'>
-          <thead>
-            <tr>
-              <th>{t('channel.edit.billing.cost_reconcile_col.model')}</th>
-              <th>{t('channel.edit.billing.cost_reconcile_col.capacity_unit')}</th>
-              <th className='router-cost-reconcile-num'>
-                {t('channel.edit.billing.cost_reconcile_col.service_unit_cost')}
-              </th>
-              <th className='router-cost-reconcile-num'>
-                {t('channel.edit.billing.cost_reconcile_col.service_unit_cost_yyc')}
-              </th>
-              <th>{t('channel.edit.billing.cost_reconcile_col.service_confidence')}</th>
-              <th>{t('channel.edit.billing.cost_reconcile_col.local_readiness')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.model}>
-                <td className='router-monospace-value'>{row.model || '-'}</td>
-                <td>{row.capacity_unit || '-'}</td>
-                <td className='router-cost-reconcile-num'>
-                  {row.service_unit_cost ? Number(row.service_unit_cost).toFixed(4) : '-'}
-                  {row.service_currency ? ` ${row.service_currency}` : ''}
-                </td>
-                <td className='router-cost-reconcile-num'>
-                  {formatCreditAmount(row.service_unit_cost_yyc || 0, true)}
-                </td>
-                <td>
-                  <AppTag
-                    color={
-                      row.service_confidence === 'actual'
-                        ? 'green'
-                        : row.service_confidence === 'estimated'
-                          ? 'orange'
-                          : 'default'
-                    }
-                  >
-                    {row.service_confidence || '-'}
-                  </AppTag>
-                </td>
-                <td>
-                  <AppTag
-                    color={
-                      row.local_readiness === 'ready'
-                        ? 'green'
-                        : row.local_readiness === 'untracked'
-                          ? 'default'
-                          : 'orange'
-                    }
-                  >
-                    {row.local_readiness || '-'}
-                  </AppTag>
-                </td>
+        <div className='router-table-scroll-x'>
+          <table className='router-cost-reconcile-table'>
+            <thead>
+              <tr>
+                <th>{t('channel.edit.billing.cost_reconcile_col.model')}</th>
+                <th>{t('channel.edit.billing.cost_reconcile_col.capacity_unit')}</th>
+                <th className='router-cost-reconcile-num'>
+                  {t('channel.edit.billing.cost_reconcile_col.service_unit_cost')}
+                </th>
+                <th className='router-cost-reconcile-num'>
+                  {t('channel.edit.billing.cost_reconcile_col.service_unit_cost_yyc')}
+                </th>
+                <th>{t('channel.edit.billing.cost_reconcile_col.service_confidence')}</th>
+                <th>{t('channel.edit.billing.cost_reconcile_col.local_readiness')}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.model}>
+                  <td className='router-monospace-value'>{row.model || '-'}</td>
+                  <td>{row.capacity_unit || '-'}</td>
+                  <td className='router-cost-reconcile-num'>
+                    {row.service_unit_cost ? Number(row.service_unit_cost).toFixed(4) : '-'}
+                    {row.service_currency ? ` ${row.service_currency}` : ''}
+                  </td>
+                  <td className='router-cost-reconcile-num'>
+                    {formatCreditAmount(row.service_unit_cost_yyc || 0, true)}
+                  </td>
+                  <td>
+                    <AppTag
+                      color={
+                        row.service_confidence === 'actual'
+                          ? 'green'
+                          : row.service_confidence === 'estimated'
+                            ? 'orange'
+                            : 'default'
+                      }
+                    >
+                      {row.service_confidence || '-'}
+                    </AppTag>
+                  </td>
+                  <td>
+                    <AppTag
+                      color={
+                        row.local_readiness === 'ready'
+                          ? 'green'
+                          : row.local_readiness === 'untracked'
+                            ? 'default'
+                            : 'orange'
+                      }
+                    >
+                      {row.local_readiness || '-'}
+                    </AppTag>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </AppDetailSection>
   );

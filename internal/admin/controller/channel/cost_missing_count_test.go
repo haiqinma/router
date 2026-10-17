@@ -72,9 +72,9 @@ func TestCountChannelCostMissingModels(t *testing.T) {
 		t.Fatalf("create draft model: %v", err)
 	}
 
-	// untracked: cost is never recorded by design -> nothing missing.
-	if got, err := countChannelCostMissingModels("channel-1", model.ChannelCostTrackingModeUntracked); err != nil || got != 0 {
-		t.Fatalf("untracked count = %d, err = %v, want 0, nil", got, err)
+	// Legacy untracked values now participate in accounting as pending cost.
+	if got, err := countChannelCostMissingModels("channel-1", model.ChannelCostTrackingModeUntracked); err != nil || got != 2 {
+		t.Fatalf("legacy untracked count = %d, err = %v, want 2, nil", got, err)
 	}
 
 	// actual with no procurement batches: both published models are missing;

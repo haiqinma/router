@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -33,11 +34,9 @@ type channelBillingProfileData struct {
 	CostTrackingMode   string            `json:"cost_tracking_mode"`
 	BillingCredentials map[string]string `json:"billing_credentials"`
 	ActionCapabilities []string          `json:"action_capabilities"`
-	// CostMissingModelCount is how many of the channel's published models have no
-	// covering procurement cost under the current cost tracking mode. It is only
-	// ever > 0 in actual mode (untracked resolves to untracked, free carries
-	// auto-managed zero-cost batches), surfacing the downstream "cost missing"
-	// signal right where cost_tracking_mode is set.
+	// CostMissingModelCount is how many published models have no covering
+	// procurement cost. Explicit free channels carry zero-cost batches; all other
+	// channels surface missing cost as pending accounting work.
 	CostMissingModelCount int `json:"cost_missing_model_count"`
 }
 
@@ -171,8 +170,8 @@ func buildChannelBillingProfileData(channelRow *model.Channel, profile model.Cha
 }
 
 // countChannelCostMissingModels counts the channel's published models whose
-// procurement readiness is neither ready nor untracked under the given cost
-// tracking mode — i.e. models whose cost is unrecorded so margin cannot be
+// procurement readiness is not ready under the given cost mode, i.e. models
+// whose cost is unrecorded so margin cannot be
 // computed. "Published" uses the persisted PublishEnabled + PublishedAt columns
 // (IsChannelModelPublished relies on the transient PublishStatus, which is not
 // stored on table rows). Mirrors the readiness resolution in
@@ -180,10 +179,6 @@ func buildChannelBillingProfileData(channelRow *model.Channel, profile model.Cha
 func countChannelCostMissingModels(channelID string, mode string) (int, error) {
 	normalizedChannelID := strings.TrimSpace(channelID)
 	if normalizedChannelID == "" {
-		return 0, nil
-	}
-	// untracked never records cost by design, so nothing is "missing".
-	if model.NormalizeChannelCostTrackingMode(mode) == model.ChannelCostTrackingModeUntracked {
 		return 0, nil
 	}
 	rows, err := model.ListChannelModelRowsByChannelIDWithDB(model.DB, normalizedChannelID)
@@ -200,7 +195,7 @@ func countChannelCostMissingModels(channelID string, mode string) (int, error) {
 			continue
 		}
 		readiness := model.ResolveChannelModelProcurementReadinessForMode(row, batches, mode)
-		if readiness.Status != model.ProcurementReadinessReady && readiness.Status != model.ProcurementReadinessUntracked {
+		if readiness.Status != model.ProcurementReadinessReady {
 			count++
 		}
 	}
@@ -367,6 +362,38 @@ func GetChannelBillingSnapshots(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": channelBillingListData[model.ChannelBillingSnapshot]{Items: rows, Total: len(rows)}})
+}
+
+func GetChannelProcurementEvents(c *gin.Context) {
+	channelID := strings.TrimSpace(c.Param("id"))
+	if channelID == "" {
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": "渠道 ID 无效"})
+		return
+	}
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "20"))
+	if page < 1 {
+		page = 1
+	}
+	if pageSize < 1 || pageSize > 100 {
+		pageSize = 20
+	}
+	rows, total, err := model.ListChannelProcurementEventsByChannelIDWithDB(model.DB, channelID, pageSize, (page-1)*pageSize)
+	if err != nil {
+		logChannelAdminWarn(c, "list_procurement_events", stringField("channel_id", channelID), stringField("reason", err.Error()))
+		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data": gin.H{
+			"items":     rows,
+			"total":     total,
+			"page":      page,
+			"page_size": pageSize,
+		},
+	})
 }
 
 func GetChannelBillingActions(c *gin.Context) {

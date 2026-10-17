@@ -922,7 +922,7 @@
         "title": "Billing",
         "hint": "This section shows standardized channel billing entitlements, not upstream-specific raw fields. The system tracks quotas, balances, credits, and plan validity as structured entitlement items, and uses those normalized fields for refresh, alerts, and future automation.",
         "load_failed": "Failed to load channel billing data",
-        "profile_title": "Upstream Account",
+        "profile_title": "Billing Configuration",
         "billing_credentials": "Billing Credentials",
         "profile_update_success": "Billing profile updated",
         "profile_update_failed": "Failed to update billing profile",
@@ -996,6 +996,15 @@
         "manual_snapshot_failed": "Failed to save purchase record",
         "confirm_manual_snapshot": "Save",
         "add_purchase_record": "Add",
+        "purchase_sources": {
+          "manual": "Manual",
+          "imported": "Imported",
+          "synced": "External sync"
+        },
+        "accounting_status": {
+          "accounted": "Accounted",
+          "pending": "Pending cost"
+        },
         "edit_purchase_record": "Edit Purchase Record",
         "delete_purchase_record": "Delete Purchase Record",
         "delete_purchase_record_confirm": "Delete this purchase record?",
@@ -1171,6 +1180,7 @@
           "source_type": "Source",
           "quota_items": "Quota Items",
           "message": "Message",
+          "accounting_status": "Accounting Status",
           "actions": "Actions"
         },
         "action_table": {
@@ -4047,14 +4057,25 @@
       "success": "Exported {{count}} rows"
     },
     "records": {
-      "title": "Records",
-      "summary": "All money flows in one place: top-up orders, purchases, reconciliation and redemptions.",
+      "title": "Cash Flow",
+      "summary": "Review user-side top-ups, plan purchases, redemptions, and settlements.",
       "kinds": {
         "topup": "Top-ups",
         "purchase": "Purchases",
         "reconcile": "Reconcile",
         "redemption": "Redemptions"
       }
+    },
+    "accounting": {
+      "title": "Accounting Details"
+    },
+    "reconciliation": {
+      "title": "Cost Reconciliation",
+      "channel_placeholder": "Select channel",
+      "select_channel": "Select a channel to review service cost reconciliation",
+      "view_purchases": "View purchase records",
+      "load_failed": "Failed to load cost reconciliation",
+      "sync_failed": "Failed to sync cost quotes"
     },
     "pricing_analysis": {
       "nav": "Profit",
@@ -4107,9 +4128,9 @@
       "title": "Overview",
       "structure": {
         "title": "Finance board",
-        "summary": "Start with billed revenue, procurement cost, gross profit, and margin. Drill into Profit and Procurement only when something is off.",
-        "pricing": "View profit",
-        "procurement": "View procurement"
+        "summary": "Review formal accounting results, cost coverage, and exceptions, then drill into accounting details.",
+        "pricing": "View accounting",
+        "procurement": "View accounting"
       },
       "load_failed": "Failed to load finance data",
       "metrics": {
@@ -4131,7 +4152,8 @@
       "actions": {
         "drilldown": "Drill down",
         "profit": "Profit",
-        "procurement": "Procurement"
+        "accounting": "Accounting details",
+        "procurement": "Purchases"
       },
       "status": {
         "ok": "Healthy",
@@ -4205,12 +4227,12 @@
       },
       "configuration_risks": {
         "title": "Finance configuration risks",
-        "view_details": "View procurement",
+        "view_details": "View accounting",
         "empty": "No finance configuration risk"
       },
       "channels": {
         "title": "Channel Dimension",
-        "view_details": "Open procurement",
+        "view_details": "View accounting",
         "empty": "No channel data",
         "sorted_note": "Top 10 channels by procurement cost and billed revenue",
         "columns": {
@@ -4279,11 +4301,11 @@
       "model_placeholder": "Filter model"
     },
     "procurement_report": {
-      "nav": "Procurement",
-      "title": "Procurement",
-      "empty": "No procurement data",
+      "nav": "Accounting Details",
+      "title": "Accounting Details",
+      "empty": "No accounting data",
       "management": {
-        "title": "Procurement management"
+        "title": "Cost handling"
       },
       "health": {
         "status": {
@@ -4315,7 +4337,7 @@
         "group": "Filter group",
         "provider": "Filter provider",
         "model": "Filter model",
-        "channel": "Select a channel to enter procurement"
+        "channel": "Filter channel"
       },
       "summary": {
         "request_count": "Requests",

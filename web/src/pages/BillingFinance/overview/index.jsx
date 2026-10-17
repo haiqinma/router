@@ -115,13 +115,13 @@ const buildOperatingRiskItems = (items, t) => {
       text,
       target,
     });
-    if (unconfigured > 0) push('unconfigured', 'critical', unconfigured, unconfigured, t('billing.overview.operating_risks.unconfigured', { model, count: formatCount(unconfigured) }), 'procurement');
-    if (configured > 0 && profit < 0) push('loss', 'critical', configured, Math.abs(profit), t('billing.overview.operating_risks.loss', { model, amount: formatCNY(profit) }), 'profit');
-    else if (configured > 0 && margin < 0.1) push('low_margin', 'warning', configured, requestCount, t('billing.overview.operating_risks.low_margin', { model, margin: formatPercent(margin) }), 'profit');
-    if (floorCount > 0) push('floor', 'warning', floorCount, floorCount, t('billing.overview.operating_risks.floor', { model, count: formatCount(floorCount) }), 'profit');
-    if (estimated > 0) push('estimated', 'warning', estimated, estimated, t('billing.overview.operating_risks.estimated', { model, count: formatCount(estimated) }), 'procurement');
-    if (pending > 0) push('pending', 'warning', pending, pending, t('billing.overview.operating_risks.pending', { model, count: formatCount(pending) }), 'procurement');
-    if (retry > 0) push('retry', 'critical', retry, retry, t('billing.overview.operating_risks.retry', { model, count: formatCount(retry) }), 'procurement');
+    if (unconfigured > 0) push('unconfigured', 'critical', unconfigured, unconfigured, t('billing.overview.operating_risks.unconfigured', { model, count: formatCount(unconfigured) }), 'accounting');
+    if (configured > 0 && profit < 0) push('loss', 'critical', configured, Math.abs(profit), t('billing.overview.operating_risks.loss', { model, amount: formatCNY(profit) }), 'accounting');
+    else if (configured > 0 && margin < 0.1) push('low_margin', 'warning', configured, requestCount, t('billing.overview.operating_risks.low_margin', { model, margin: formatPercent(margin) }), 'accounting');
+    if (floorCount > 0) push('floor', 'warning', floorCount, floorCount, t('billing.overview.operating_risks.floor', { model, count: formatCount(floorCount) }), 'accounting');
+    if (estimated > 0) push('estimated', 'warning', estimated, estimated, t('billing.overview.operating_risks.estimated', { model, count: formatCount(estimated) }), 'accounting');
+    if (pending > 0) push('pending', 'warning', pending, pending, t('billing.overview.operating_risks.pending', { model, count: formatCount(pending) }), 'accounting');
+    if (retry > 0) push('retry', 'critical', retry, retry, t('billing.overview.operating_risks.retry', { model, count: formatCount(retry) }), 'accounting');
   });
   return risks.sort((left, right) => (
     left.level === right.level
@@ -252,7 +252,7 @@ function BillingOverview({ embedded = false }) {
     source: 'configuration',
     level: issue.level || 'warning',
     count: Number(issue.count || 0),
-    target: buildTarget('procurement'),
+    target: buildTarget('accounting'),
   }));
   const configurationRiskCount = Number(health.critical_count || 0) + Number(health.warning_count || 0);
   const operatingCriticalCount = operatingRiskItems.filter((item) => item.level === 'critical').length;
@@ -264,9 +264,9 @@ function BillingOverview({ embedded = false }) {
     ...operatingRiskItems.map((issue) => ({
       ...issue,
       source: 'operating',
-      target: buildTarget(issue.target === 'profit' ? 'profit' : 'procurement', {
+      target: buildTarget('accounting', {
         model: issue.model,
-        cost_scope: issue.target === 'procurement' && issue.type === 'unconfigured' ? 'unconfigured' : undefined,
+        cost_scope: issue.type === 'unconfigured' ? 'unconfigured' : undefined,
       }),
     })),
     ...configurationRisks,
@@ -280,7 +280,7 @@ function BillingOverview({ embedded = false }) {
       primary: t('billing.overview.dimensions.profitability.primary', { revenue: formatCNY(report.sell_base_amount), profit: formatCNY(report.gross_profit_base_amount) }),
       secondary: t('billing.overview.dimensions.profitability.secondary', { margin: formatPercent(report.gross_margin), requests: formatCount(report.request_count) }),
       level: !hasRequests ? 'empty' : report.gross_profit_base_amount < 0 ? 'critical' : report.gross_margin < 0.1 ? 'warning' : 'ok',
-      target: buildTarget('profit'),
+      target: buildTarget('accounting'),
     },
     {
       key: 'cost_coverage',
@@ -288,7 +288,7 @@ function BillingOverview({ embedded = false }) {
       primary: t('billing.overview.dimensions.cost_coverage.primary', { coverage: formatPercent(knownRatio) }),
       secondary: t('billing.overview.dimensions.cost_coverage.secondary', { configured: formatCount(report.configured_cost_request_count), unconfigured: formatCount(report.unconfigured_cost_request_count), pending: formatCount(report.pending_cost_request_count) }),
       level: !hasRequests ? 'empty' : report.unconfigured_cost_request_count > 0 || report.retry_cost_request_count > 0 ? 'critical' : knownRatio < 1 ? 'warning' : 'ok',
-      target: buildTarget('procurement', { cost_scope: report.unconfigured_cost_request_count > 0 ? 'unconfigured' : undefined }),
+      target: buildTarget('accounting', { cost_scope: report.unconfigured_cost_request_count > 0 ? 'unconfigured' : undefined }),
     },
     {
       key: 'channel',
@@ -296,7 +296,7 @@ function BillingOverview({ embedded = false }) {
       primary: t('billing.overview.dimensions.channel.primary', { count: formatCount(report.items.length), loss: formatCount(negativeChannelCount) }),
       secondary: t('billing.overview.dimensions.channel.secondary'),
       level: !hasRequests ? 'empty' : negativeChannelCount > 0 ? 'critical' : 'ok',
-      target: buildTarget('procurement'),
+      target: buildTarget('accounting'),
     },
     {
       key: 'model',
@@ -304,7 +304,7 @@ function BillingOverview({ embedded = false }) {
       primary: t('billing.overview.dimensions.model.primary', { count: formatCount(modelReport.items.length), low: formatCount(lowMarginModelCount) }),
       secondary: t('billing.overview.dimensions.model.secondary'),
       level: !hasRequests ? 'empty' : lowMarginModelCount > 0 ? 'warning' : 'ok',
-      target: buildTarget('profit'),
+      target: buildTarget('accounting'),
     },
     {
       key: 'operating',
@@ -312,7 +312,7 @@ function BillingOverview({ embedded = false }) {
       primary: t('billing.overview.dimensions.operating.primary', { count: formatCount(currentScopeRiskCount) }),
       secondary: t('billing.overview.dimensions.operating.secondary', { critical: formatCount(operatingCriticalCount), warning: formatCount(operatingWarningCount) }),
       level: riskLevel(operatingCriticalCount, operatingWarningCount),
-      target: operatingRiskItems[0]?.target === 'procurement' ? buildTarget('procurement', { model: operatingRiskItems[0]?.model, cost_scope: 'unconfigured' }) : buildTarget('profit', { model: operatingRiskItems[0]?.model }),
+      target: buildTarget('accounting', { model: operatingRiskItems[0]?.model }),
     },
     {
       key: 'configuration',
@@ -320,7 +320,7 @@ function BillingOverview({ embedded = false }) {
       primary: t('billing.overview.dimensions.configuration.primary', { count: formatCount(configurationRiskCount) }),
       secondary: t('billing.overview.dimensions.configuration.secondary', { critical: formatCount(health.critical_count || 0), warning: formatCount(health.warning_count || 0) }),
       level: riskLevel(health.critical_count, health.warning_count),
-      target: buildTarget('procurement'),
+      target: buildTarget('accounting'),
     },
   ];
 
@@ -361,7 +361,7 @@ function BillingOverview({ embedded = false }) {
     { title: t('billing.overview.priority.columns.level'), dataIndex: 'level', width: 88, render: (value) => <AppTag color={statusColor(value)}>{statusLabel(value)}</AppTag> },
     { title: t('billing.overview.priority.columns.issue'), key: 'issue', render: (_, row) => row.text || row.title || '-' },
     { title: t('billing.overview.priority.columns.impact'), key: 'impact', width: 120, align: 'right', render: (_, row) => formatCount(row.count) || '-' },
-    { title: t('billing.overview.priority.columns.action'), key: 'action', width: 110, render: (_, row) => <Link to={row.target}>{row.source === 'configuration' || row.target.includes('/procurement') ? t('billing.overview.actions.procurement') : t('billing.overview.actions.profit')}</Link> },
+    { title: t('billing.overview.priority.columns.action'), key: 'action', width: 110, render: (_, row) => <Link to={row.target}>{t('billing.overview.actions.accounting')}</Link> },
   ];
 
   const channelColumns = [
@@ -372,7 +372,7 @@ function BillingOverview({ embedded = false }) {
     { title: t('billing.overview.channels.columns.profit'), dataIndex: 'gross_profit_base_amount', width: 130, align: 'right', render: formatCNY },
     { title: t('billing.overview.channels.columns.margin'), dataIndex: 'gross_margin', width: 110, align: 'right', render: formatPercent },
     { title: t('billing.overview.channels.columns.coverage'), key: 'coverage', width: 130, align: 'right', render: (_, row) => formatPercent(Number(row.configured_cost_request_count || 0) / Math.max(Number(row.request_count || 0), 1)) },
-    { title: t('billing.overview.channels.columns.actions'), key: 'actions', width: 170, render: (_, row) => <div className='billing-overview-actions'><Link to={buildTarget('profit', { channel_id: row.dimension_key })}>{t('billing.overview.actions.profit')}</Link><Link to={`/admin/channel/detail/${encodeURIComponent(String(row.dimension_key || ''))}?tab=procurement`}>{t('billing.overview.actions.procurement')}</Link></div> },
+    { title: t('billing.overview.channels.columns.actions'), key: 'actions', width: 170, render: (_, row) => <div className='billing-overview-actions'><Link to={buildTarget('accounting', { channel_id: row.dimension_key })}>{t('billing.overview.actions.accounting')}</Link><Link to={`/admin/channel/detail/${encodeURIComponent(String(row.dimension_key || ''))}?tab=procurement`}>{t('billing.overview.actions.procurement')}</Link></div> },
   ];
 
   const modelColumns = [
@@ -381,7 +381,7 @@ function BillingOverview({ embedded = false }) {
     { title: t('billing.overview.models.columns.profit'), dataIndex: 'gross_profit_base_amount', width: 130, align: 'right', render: formatCNY },
     { title: t('billing.overview.models.columns.margin'), dataIndex: 'gross_margin', width: 110, align: 'right', render: formatPercent },
     { title: t('billing.overview.models.columns.coverage'), key: 'coverage', width: 130, align: 'right', render: (_, row) => formatPercent(Number(row.configured_cost_request_count || 0) / Math.max(Number(row.request_count || 0), 1)) },
-    { title: t('billing.overview.models.columns.actions'), key: 'actions', width: 170, render: (_, row) => <div className='billing-overview-actions'><Link to={buildTarget('profit', { model: row.dimension_key })}>{t('billing.overview.actions.profit')}</Link><Link to={buildTarget('procurement', { model: row.dimension_key })}>{t('billing.overview.actions.procurement')}</Link></div> },
+    { title: t('billing.overview.models.columns.actions'), key: 'actions', width: 170, render: (_, row) => <div className='billing-overview-actions'><Link to={buildTarget('accounting', { model: row.dimension_key })}>{t('billing.overview.actions.accounting')}</Link></div> },
   ];
 
   const activeDimensionRows = dimension === 'channel' ? report.items.slice(0, 10) : modelReport.items.slice(0, 10);
@@ -508,7 +508,7 @@ function BillingOverview({ embedded = false }) {
           )}
         </section>
         <section className='billing-overview-section'>
-          <div className='billing-overview-section-heading'><h2>{t(`billing.overview.${dimension === 'channel' ? 'channels' : 'models'}.title`)}</h2><div className='billing-overview-section-controls'><AppSegmented options={[{ value: 'channel', label: t('billing.overview.channels.title') }, { value: 'model', label: t('billing.overview.models.title') }]} value={dimension} onChange={(e, { value }) => setDimension(value)} /><Link to={buildTarget(dimension === 'channel' ? 'procurement' : 'profit')}>{t(`billing.overview.${dimension === 'channel' ? 'channels' : 'models'}.view_details`)}</Link></div></div>
+          <div className='billing-overview-section-heading'><h2>{t(`billing.overview.${dimension === 'channel' ? 'channels' : 'models'}.title`)}</h2><div className='billing-overview-section-controls'><AppSegmented options={[{ value: 'channel', label: t('billing.overview.channels.title') }, { value: 'model', label: t('billing.overview.models.title') }]} value={dimension} onChange={(e, { value }) => setDimension(value)} /><Link to={buildTarget('accounting')}>{t(`billing.overview.${dimension === 'channel' ? 'channels' : 'models'}.view_details`)}</Link></div></div>
           <div className='billing-overview-table-note'>{t(`billing.overview.${dimension === 'channel' ? 'channels' : 'models'}.sorted_note`)}</div>
           <AppTable className='router-detail-table router-table-cardify' size='small' pagination={false} rowKey={(row) => row.dimension_key} dataSource={activeDimensionRows} columns={withCardLabels(activeDimensionColumns)} scroll={{ x: dimension === 'channel' ? 1000 : 840 }} locale={{ emptyText: t(`billing.overview.${dimension === 'channel' ? 'channels' : 'models'}.empty`) }} />
         </section>

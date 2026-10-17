@@ -922,7 +922,7 @@
         "title": "账务",
         "hint": "这里展示的是渠道账务权益项，不是上游原始字段。系统统一按权益项维护额度、余额、信用额度、套餐有效期等信息，并基于这些标准字段做刷新、告警和后续自动化动作。",
         "load_failed": "加载渠道账务信息失败",
-        "profile_title": "上游账户",
+        "profile_title": "账务配置",
         "billing_credentials": "账务凭据",
         "profile_update_success": "账务配置保存成功",
         "profile_update_failed": "账务配置保存失败",
@@ -996,6 +996,15 @@
         "manual_snapshot_failed": "采购记录保存失败",
         "confirm_manual_snapshot": "保存",
         "add_purchase_record": "新增",
+        "purchase_sources": {
+          "manual": "人工录入",
+          "imported": "导入",
+          "synced": "外部同步"
+        },
+        "accounting_status": {
+          "accounted": "已核算",
+          "pending": "待核算"
+        },
         "edit_purchase_record": "编辑采购记录",
         "delete_purchase_record": "删除采购记录",
         "delete_purchase_record_confirm": "确认删除该采购记录？",
@@ -1171,6 +1180,7 @@
           "source_type": "来源",
           "quota_items": "额度项",
           "message": "备注",
+          "accounting_status": "核算状态",
           "actions": "操作"
         },
         "action_table": {
@@ -4047,14 +4057,25 @@
       "success": "已导出 {{count}} 行"
     },
     "records": {
-      "title": "流水/记录",
-      "summary": "全站资金流水:充值单、采购、对账与兑换记录集中查询。",
+      "title": "资金流水",
+      "summary": "集中查询用户侧充值、套餐购买、兑换与结算流水。",
       "kinds": {
         "topup": "充值单",
         "purchase": "采购",
         "reconcile": "对账",
         "redemption": "兑换"
       }
+    },
+    "accounting": {
+      "title": "核算明细"
+    },
+    "reconciliation": {
+      "title": "成本对账",
+      "channel_placeholder": "选择渠道",
+      "select_channel": "请选择渠道查看服务成本对账",
+      "view_purchases": "查看采购记录",
+      "load_failed": "成本对账加载失败",
+      "sync_failed": "成本报价同步失败"
     },
     "pricing_analysis": {
       "nav": "利润",
@@ -4107,9 +4128,9 @@
       "title": "总览",
       "structure": {
         "title": "财务看板",
-        "summary": "先看计费收入、采购成本、毛利和毛利率是否符合预期；异常时再下钻利润和采购。",
-        "pricing": "查看利润",
-        "procurement": "查看采购"
+        "summary": "查看正式核算结果、成本覆盖率和待处理异常，并下钻到核算明细。",
+        "pricing": "查看核算",
+        "procurement": "查看核算"
       },
       "load_failed": "财务数据加载失败",
       "metrics": {
@@ -4131,7 +4152,8 @@
       "actions": {
         "drilldown": "下钻",
         "profit": "利润",
-        "procurement": "采购"
+        "accounting": "核算明细",
+        "procurement": "采购记录"
       },
       "status": {
         "ok": "正常",
@@ -4205,12 +4227,12 @@
       },
       "configuration_risks": {
         "title": "财务配置风险",
-        "view_details": "查看采购",
+        "view_details": "查看核算",
         "empty": "未发现财务配置风险"
       },
       "channels": {
         "title": "渠道维度",
-        "view_details": "进入采购",
+        "view_details": "查看核算",
         "empty": "暂无渠道数据",
         "sorted_note": "按采购成本、计费收入排序，展示前 10 个渠道",
         "columns": {
@@ -4279,11 +4301,11 @@
       "model_placeholder": "筛选模型"
     },
     "procurement_report": {
-      "nav": "采购",
-      "title": "采购",
-      "empty": "暂无采购数据",
+      "nav": "核算明细",
+      "title": "核算明细",
+      "empty": "暂无核算数据",
       "management": {
-        "title": "采购管理"
+        "title": "成本处理"
       },
       "health": {
         "status": {
@@ -4315,7 +4337,7 @@
         "group": "筛选分组",
         "provider": "筛选供应商",
         "model": "筛选模型",
-        "channel": "选择渠道录入采购"
+        "channel": "筛选渠道"
       },
       "summary": {
         "request_count": "请求数",

@@ -26,10 +26,10 @@ const (
 	ChannelBillingSourceManual = "manual"
 
 	// Cost tracking mode declares, at the channel level, how per-request cost is
-	// valued for gross-margin reporting. It replaces the per-model "mark zero cost"
-	// escape hatch that used to live on the publish page.
-	//   untracked (default): cost is not tracked; requests stay unconfigured and are
-	//                         honestly omitted from margin (never faked as zero).
+	// valued for gross-margin reporting. The legacy untracked value is accepted for
+	// storage compatibility but normalizes to actual, so missing cost remains visible
+	// as pending instead of silently leaving the accounting population.
+	//   untracked (legacy): normalized to actual
 	//   free:                upstream is genuinely free; auto-managed global zero-cost
 	//                         batches make requests report cost 0 (full margin).
 	//   actual:              record real procurement batches (existing flow).
@@ -188,7 +188,7 @@ func SaveChannelProviderUsageSyncStateWithDB(db *gorm.DB, row ChannelProviderUsa
 type ChannelBillingProfile struct {
 	ChannelId          string `json:"channel_id" gorm:"type:char(36);primaryKey"`
 	BillingSource      string `json:"billing_source" gorm:"column:billing_source;type:varchar(64);not null;default:'manual'"`
-	CostTrackingMode   string `json:"cost_tracking_mode" gorm:"column:cost_tracking_mode;type:varchar(64);not null;default:'untracked'"`
+	CostTrackingMode   string `json:"cost_tracking_mode" gorm:"column:cost_tracking_mode;type:varchar(64);not null;default:'actual'"`
 	BillingConfig      string `json:"billing_config" gorm:"column:billing_config;type:text"`
 	ActionCapabilities string `json:"action_capabilities" gorm:"type:text"`
 	ActionConfig       string `json:"action_config" gorm:"type:text"`
@@ -201,17 +201,14 @@ func (ChannelBillingProfile) TableName() string {
 	return ChannelBillingProfilesTableName
 }
 
-// NormalizeChannelCostTrackingMode coerces any input to one of the three known
-// modes, defaulting empty/unknown values to untracked so a missing profile row
-// (or a legacy row without the column) reads as "cost not tracked".
+// NormalizeChannelCostTrackingMode keeps explicit free declarations and treats
+// every other value, including legacy untracked rows, as actual accounting.
 func NormalizeChannelCostTrackingMode(value string) string {
 	switch strings.TrimSpace(strings.ToLower(value)) {
 	case ChannelCostTrackingModeFree:
 		return ChannelCostTrackingModeFree
-	case ChannelCostTrackingModeActual:
-		return ChannelCostTrackingModeActual
 	default:
-		return ChannelCostTrackingModeUntracked
+		return ChannelCostTrackingModeActual
 	}
 }
 
@@ -481,6 +478,45 @@ func ListChannelBillingSnapshotsByChannelIDWithDB(db *gorm.DB, channelID string,
 		return nil, err
 	}
 	return rows, nil
+}
+
+// ListChannelProcurementEventsByChannelIDWithDB returns procurement facts only.
+// API snapshots are periodic balance observations and must never appear as
+// purchases. Other source types are retained so future imported or adapter-backed
+// purchase events automatically participate without changing the UI contract.
+func ListChannelProcurementEventsByChannelIDWithDB(db *gorm.DB, channelID string, limit int, offset int) ([]ChannelBillingSnapshot, int64, error) {
+	if db == nil {
+		return nil, 0, fmt.Errorf("database handle is nil")
+	}
+	normalizedChannelID := strings.TrimSpace(channelID)
+	if normalizedChannelID == "" {
+		return []ChannelBillingSnapshot{}, 0, nil
+	}
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	query := db.Model(&ChannelBillingSnapshot{}).
+		Where("channel_id = ?", normalizedChannelID).
+		Where("(source_type <> ? OR source_type IS NULL)", ChannelBillingSnapshotSourceAPI)
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	rows := make([]ChannelBillingSnapshot, 0, limit)
+	if err := query.
+		Order("purchase_at desc, created_at desc, id desc").
+		Limit(limit).
+		Offset(offset).
+		Find(&rows).Error; err != nil {
+		return nil, 0, err
+	}
+	if err := HydrateChannelBillingSnapshotsWithItemsWithDB(db, rows); err != nil {
+		return nil, 0, err
+	}
+	return rows, total, nil
 }
 
 func GetChannelBillingSnapshotByIDWithDB(db *gorm.DB, id string) (ChannelBillingSnapshot, error) {
@@ -855,16 +891,15 @@ func GetChannelBillingProfileByChannelIDWithDB(db *gorm.DB, channelID string) (C
 	return row, err
 }
 
-// GetChannelCostTrackingModeWithDB returns the channel's cost tracking mode,
-// defaulting to untracked when no profile row exists. Used by the readiness
-// resolvers so a channel with no billing profile is silently "not tracked".
+// GetChannelCostTrackingModeWithDB returns the channel's accounting mode.
+// Channels without a profile participate in actual accounting by default.
 func GetChannelCostTrackingModeWithDB(db *gorm.DB, channelID string) (string, error) {
 	row, err := GetChannelBillingProfileByChannelIDWithDB(db, channelID)
 	if err != nil {
 		if errorsIsRecordNotFound(err) {
-			return ChannelCostTrackingModeUntracked, nil
+			return ChannelCostTrackingModeActual, nil
 		}
-		return ChannelCostTrackingModeUntracked, err
+		return ChannelCostTrackingModeActual, err
 	}
 	return NormalizeChannelCostTrackingMode(row.CostTrackingMode), nil
 }
@@ -1243,7 +1278,7 @@ func BuildChannelBillingProfileFromChannelConfig(channel *Channel) (ChannelBilli
 	return ChannelBillingProfile{
 		ChannelId:          strings.TrimSpace(channel.Id),
 		BillingSource:      ChannelBillingSourceManual,
-		CostTrackingMode:   ChannelCostTrackingModeUntracked,
+		CostTrackingMode:   ChannelCostTrackingModeActual,
 		BillingConfig:      marshalJSONString(channelBillingConfig{}),
 		ActionCapabilities: marshalJSONString([]string{ChannelBillingCapabilityManualUpdateSnapshot}),
 	}, true

@@ -722,9 +722,7 @@ const normalizeChannelBillingSummary = (item) => {
 
 const normalizeChannelCostTrackingModeValue = (mode) => {
   const normalized = (mode || '').toString().trim().toLowerCase();
-  return normalized === 'free' || normalized === 'actual'
-    ? normalized
-    : 'untracked';
+  return normalized === 'free' ? 'free' : 'actual';
 };
 
 const normalizeChannelBillingProfile = (item) => {
@@ -1877,6 +1875,31 @@ const fetchChannelBillingSnapshots = async (channelId) => {
   return normalizeChannelBillingSnapshots(data?.items);
 };
 
+const fetchChannelProcurementEvents = async (
+  channelId,
+  page = 1,
+  pageSize = 20
+) => {
+  const normalizedChannelId = (channelId || '').toString().trim();
+  if (normalizedChannelId === '') {
+    return { items: [], total: 0, page: 1, page_size: pageSize };
+  }
+  const res = await API.get(
+    `/api/v1/admin/channel/${normalizedChannelId}/billing/procurement-events`,
+    { params: { page, page_size: pageSize } }
+  );
+  const { success, message, data } = res.data || {};
+  if (!success) {
+    throw new Error(message || 'fetch channel procurement events failed');
+  }
+  return {
+    items: normalizeChannelBillingSnapshots(data?.items),
+    total: Number(data?.total || 0),
+    page: Number(data?.page || page || 1),
+    page_size: Number(data?.page_size || pageSize),
+  };
+};
+
 const fetchChannelBillingActions = async (channelId) => {
   const normalizedChannelId = (channelId || '').toString().trim();
   if (normalizedChannelId === '') {
@@ -2272,6 +2295,7 @@ export {
   fetchChannelBillingAdapters,
   fetchChannelBillingProfile,
   fetchChannelBillingSnapshots,
+  fetchChannelProcurementEvents,
   fetchChannelBillingSummary,
   fetchChannelEndpointPolicies,
   fetchChannelEndpoints,

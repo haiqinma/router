@@ -4063,6 +4063,7 @@ html[data-theme='dark'] .router-provider-brand-monogram {
 
 .router-cost-reconcile-table {
     width: 100%;
+  min-width: 780px;
     border-collapse: collapse;
     font-size: 13px;
 }
@@ -6158,6 +6159,8 @@ html[data-theme='dark'] .router-ui-modal .ant-modal-close {
     display: flex;
     flex-direction: column;
     gap: 14px;
+    width: 100%;
+    min-width: 0;
 }
 
 .router-billing-workspace-toolbar {

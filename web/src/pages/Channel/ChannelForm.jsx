@@ -69,14 +69,10 @@ import {
   fetchChannelBillingActions,
   fetchChannelBillingAdapters,
   fetchChannelBillingProfile,
-  fetchChannelBillingSnapshots,
   fetchChannelBillingSummary,
+  fetchChannelProcurementEvents,
   fetchChannelEndpointPolicies,
   fetchChannelEndpoints,
-  fetchChannelProcurementBatchConsumptions,
-  fetchChannelProcurementBatches,
-  fetchChannelCostQuotes,
-  syncChannelCostQuotes,
   fetchChannelTests,
   fetchTaskById,
   filterBillingCredentialsByFields,
@@ -127,6 +123,8 @@ import {
   validateProtocolSpecificChannelConfig,
   VOLCENGINE_STANDARD_PROTOCOL,
 } from './ChannelForm.helpers';
+
+const CHANNEL_PROCUREMENT_PAGE_SIZE = 20;
 
 const ChannelForm = ({ mode = 'auto' } = {}) => {
   const { t } = useTranslation();
@@ -244,15 +242,9 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
   const [channelBillingProfile, setChannelBillingProfile] = useState(null);
   const [channelBillingAdapters, setChannelBillingAdapters] = useState([]);
   const [channelBillingSnapshots, setChannelBillingSnapshots] = useState([]);
+  const [channelProcurementPage, setChannelProcurementPage] = useState(1);
+  const [channelProcurementTotal, setChannelProcurementTotal] = useState(0);
   const [channelBillingActions, setChannelBillingActions] = useState([]);
-  const [channelProcurementBatches, setChannelProcurementBatches] = useState(
-    []
-  );
-  const [channelCostQuotes, setChannelCostQuotes] = useState({
-    service_available: false,
-    reason: '',
-    rows: [],
-  });
   const [channelBillingLoading, setChannelBillingLoading] = useState(false);
   const [channelBillingError, setChannelBillingError] = useState('');
   const [channelBillingSubmitting, setChannelBillingSubmitting] =
@@ -483,14 +475,6 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
       disabled: isAnyDetailSectionEditing && activeDetailTab !== 'procurement',
     },
   ];
-  const detailBasicEditLocked =
-    isDetailMode &&
-    !detailBasicEditing &&
-    (detailModelsEditing || detailBillingEditing);
-  const detailBillingEditLocked =
-    isDetailMode &&
-    !detailBillingEditing &&
-    (detailBasicEditing || detailModelsEditing);
   const detailModelsEditLocked =
     isDetailMode && (detailBasicEditing || detailBillingEditing);
   const detailTestingReadonly = isDetailMode && isAnyDetailSectionEditing;
@@ -1360,16 +1344,20 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     ]
   );
 
-  const saveDetailBasicInfo = useCallback(async () => {
+  const saveDetailBasicInfo = useCallback(async (options = {}) => {
+    const { closeEditing = true, showSuccessMessage = true } = options || {};
     const ok = await persistDetailChannel({
       loadingSetter: setDetailBasicSaving,
-      successMessage: t('channel.edit.messages.update_success'),
+      successMessage: showSuccessMessage
+        ? t('channel.edit.messages.update_success')
+        : '',
       validateBasic: true,
       includeModelState: false,
     });
-    if (ok) {
+    if (ok && closeEditing) {
       setDetailBasicEditing(false);
     }
+    return ok;
   }, [persistDetailChannel, t]);
 
   const saveDetailModelsConfig = useCallback(async () => {
@@ -1485,10 +1473,14 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     [t]
   );
 
-  const loadChannelBillingSnapshotsFromServer = useCallback(
-    async (targetChannelId) => {
+  const loadChannelProcurementEventsFromServer = useCallback(
+    async (targetChannelId, page = 1) => {
       try {
-        return await fetchChannelBillingSnapshots(targetChannelId);
+        return await fetchChannelProcurementEvents(
+          targetChannelId,
+          page,
+          CHANNEL_PROCUREMENT_PAGE_SIZE
+        );
       } catch (error) {
         throw new Error(
           error?.message || t('channel.edit.billing.load_failed')
@@ -1499,22 +1491,9 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
   );
 
   const loadChannelBillingActionsFromServer = useCallback(
-    async (targetChannelId) => {
+    async (targetChannelId, page = 1) => {
       try {
         return await fetchChannelBillingActions(targetChannelId);
-      } catch (error) {
-        throw new Error(
-          error?.message || t('channel.edit.billing.load_failed')
-        );
-      }
-    },
-    [t]
-  );
-
-  const loadChannelProcurementBatchesFromServer = useCallback(
-    async (targetChannelId) => {
-      try {
-        return await fetchChannelProcurementBatches(targetChannelId);
       } catch (error) {
         throw new Error(
           error?.message || t('channel.edit.billing.load_failed')
@@ -1560,34 +1539,23 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
   );
 
   const refreshChannelProcurementState = useCallback(
-    async (targetChannelId) => {
+    async (targetChannelId, page = 1) => {
       const normalizedChannelId = (targetChannelId || '').toString().trim();
       if (normalizedChannelId === '') {
         return;
       }
       setChannelBillingLoading(true);
       try {
-        const [snapshots, batches] = await Promise.all([
-          loadChannelBillingSnapshotsFromServer(normalizedChannelId),
-          loadChannelProcurementBatchesFromServer(normalizedChannelId),
-        ]);
-        setChannelBillingSnapshots(Array.isArray(snapshots) ? snapshots : []);
-        setChannelProcurementBatches(Array.isArray(batches) ? batches : []);
+        const events = await loadChannelProcurementEventsFromServer(
+          normalizedChannelId,
+          page
+        );
+        setChannelBillingSnapshots(
+          Array.isArray(events?.items) ? events.items : []
+        );
+        setChannelProcurementPage(Number(events?.page || page || 1));
+        setChannelProcurementTotal(Number(events?.total || 0));
         setChannelBillingError('');
-        // Cost-quote reconciliation is read-only and optional: a missing/errored
-        // billing service must never block the procurement view.
-        try {
-          const quotes = await fetchChannelCostQuotes(normalizedChannelId);
-          setChannelCostQuotes(
-            quotes || { service_available: false, reason: '', rows: [] }
-          );
-        } catch (quoteError) {
-          setChannelCostQuotes({
-            service_available: false,
-            reason: quoteError?.message || '',
-            rows: [],
-          });
-        }
       } catch (error) {
         setChannelBillingError(
           error?.message || t('channel.edit.billing.load_failed')
@@ -1597,8 +1565,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
       }
     },
     [
-      loadChannelBillingSnapshotsFromServer,
-      loadChannelProcurementBatchesFromServer,
+      loadChannelProcurementEventsFromServer,
       t,
     ]
   );
@@ -1984,127 +1951,13 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     ]
   );
 
-  const updateChannelProcurementBatchCost = useCallback(
-    async (batchId, payload) => {
-      const targetChannelId = (channelId || '').toString().trim();
-      const normalizedBatchId = (batchId || '').toString().trim();
-      if (targetChannelId === '' || normalizedBatchId === '') {
-        return false;
-      }
-      setChannelBillingSubmitting(true);
-      try {
-        const res = await API.put(
-          `/api/v1/admin/channel/${targetChannelId}/billing/procurement-batches/${normalizedBatchId}/cost`,
-          {
-            purchase_currency: (payload?.purchase_currency || '')
-              .toString()
-              .trim(),
-            purchase_amount: Number(payload?.purchase_amount || 0),
-            purchase_fx_rate: Number(payload?.purchase_fx_rate || 0),
-            purchase_cost_amount: Number(payload?.purchase_cost_amount || 0),
-            capacity_effective: Number(payload?.capacity_effective || 0),
-            cost_source: (payload?.cost_source || 'actual').toString().trim(),
-            cost_status: (payload?.cost_status || 'active').toString().trim(),
-            scope_type: (payload?.scope_type || 'global').toString().trim(),
-            scope_value: (payload?.scope_value || '').toString().trim(),
-          }
-        );
-        const { success, message: responseMessage } = res.data || {};
-        if (!success) {
-          showError(
-            responseMessage ||
-              t('channel.edit.billing.procurement_update_failed')
-          );
-          return false;
-        }
-        await refreshChannelBillingState(targetChannelId);
-        await refreshChannelProcurementState(targetChannelId);
-        showSuccess(t('channel.edit.billing.procurement_update_success'));
-        return true;
-      } catch (error) {
-        showError(
-          error?.message || t('channel.edit.billing.procurement_update_failed')
-        );
-        return false;
-      } finally {
-        setChannelBillingSubmitting(false);
-      }
-    },
-    [channelId, refreshChannelBillingState, refreshChannelProcurementState, t]
-  );
-
-  const updateChannelProcurementBatchStatus = useCallback(
-    async (batchId, costStatus) => {
-      const targetChannelId = (channelId || '').toString().trim();
-      const normalizedBatchId = (batchId || '').toString().trim();
-      if (targetChannelId === '' || normalizedBatchId === '') {
-        return false;
-      }
-      setChannelBillingSubmitting(true);
-      try {
-        const res = await API.put(
-          `/api/v1/admin/channel/${targetChannelId}/billing/procurement-batches/${normalizedBatchId}/status`,
-          {
-            cost_status: (costStatus || '').toString().trim(),
-          }
-        );
-        const { success, message: responseMessage } = res.data || {};
-        if (!success) {
-          showError(
-            responseMessage ||
-              t('channel.edit.billing.procurement_status_update_failed')
-          );
-          return false;
-        }
-        await refreshChannelBillingState(targetChannelId);
-        await refreshChannelProcurementState(targetChannelId);
-        showSuccess(
-          t('channel.edit.billing.procurement_status_update_success')
-        );
-        return true;
-      } catch (error) {
-        showError(
-          error?.message ||
-            t('channel.edit.billing.procurement_status_update_failed')
-        );
-        return false;
-      } finally {
-        setChannelBillingSubmitting(false);
-      }
-    },
-    [channelId, refreshChannelBillingState, refreshChannelProcurementState, t]
-  );
-
-  const loadChannelProcurementBatchConsumptions = useCallback(
-    async (batchId) => {
-      const targetChannelId = (channelId || '').toString().trim();
-      const normalizedBatchId = (batchId || '').toString().trim();
-      if (targetChannelId === '' || normalizedBatchId === '') {
-        return [];
-      }
-      try {
-        return await fetchChannelProcurementBatchConsumptions(
-          targetChannelId,
-          normalizedBatchId
-        );
-      } catch (error) {
-        showError(
-          error?.message ||
-            t('channel.edit.billing.procurement_consumptions_load_failed')
-        );
-        return [];
-      }
-    },
-    [channelId, t]
-  );
-
   const updateBillingProfileDraft = useCallback(
     (patch) => {
       setDetailBillingDraft((prev) => ({
         ...(prev || {
           channel_id: (channelId || '').toString().trim(),
           billing_source: 'manual',
-          cost_tracking_mode: 'untracked',
+          cost_tracking_mode: 'actual',
           billing_credentials: {},
           action_capabilities: [],
         }),
@@ -2119,10 +1972,11 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     setDetailBillingEditing(false);
   }, [channelBillingProfile]);
 
-  const saveDetailBillingProfile = useCallback(async () => {
+  const saveDetailBillingProfile = useCallback(async (options = {}) => {
+    const { closeEditing = true, showSuccessMessage = true } = options || {};
     const targetChannelId = (channelId || '').toString().trim();
     if (targetChannelId === '' || !detailBillingDraft) {
-      return;
+      return false;
     }
     const billingSource = resolveChannelBillingSourceValue(
       detailBillingDraft.billing_source,
@@ -2149,7 +2003,7 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
           field: missingCredentialField,
         })
       );
-      return;
+      return false;
     }
     setChannelBillingSubmitting(true);
     try {
@@ -2166,12 +2020,14 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
       const { success, message, data } = res.data || {};
       if (!success) {
         showError(message || t('channel.edit.billing.profile_update_failed'));
-        return;
+        return false;
       }
       const normalizedProfile = normalizeChannelBillingProfile(data);
       setChannelBillingProfile(normalizedProfile);
       setDetailBillingDraft(normalizedProfile);
-      setDetailBillingEditing(false);
+      if (closeEditing) {
+        setDetailBillingEditing(false);
+      }
       await refreshChannelBillingState(targetChannelId);
       if (
         Array.isArray(normalizedProfile?.action_capabilities) &&
@@ -2179,11 +2035,15 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
       ) {
         await submitChannelBillingRefresh(targetChannelId, { silent: true });
       }
-      showSuccess(t('channel.edit.billing.profile_update_success'));
+      if (showSuccessMessage) {
+        showSuccess(t('channel.edit.billing.profile_update_success'));
+      }
+      return true;
     } catch (error) {
       showError(
         error?.message || t('channel.edit.billing.profile_update_failed')
       );
+      return false;
     } finally {
       setChannelBillingSubmitting(false);
     }
@@ -2196,67 +2056,31 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     t,
   ]);
 
-  // Immediate-save for the cost-tracking mode switch that lives on the cost tab.
-  // Unlike the overview edit flow it has no edit/cancel state: it reuses the
-  // already-loaded billing source + credentials and only changes the mode, then
-  // reloads the profile (for the accurate cost-missing count) and procurement
-  // facts (free/actual change the auto-managed batches).
-  const saveChannelCostTrackingMode = useCallback(
-    async (mode) => {
-      const targetChannelId = (channelId || '').toString().trim();
-      if (targetChannelId === '') {
-        return;
-      }
-      const billingSource = resolveChannelBillingSourceValue(
-        channelBillingProfile?.billing_source,
-        channelBillingAdapters
-      );
-      const credentialFields = resolveBillingAdapterCredentialFields(
-        billingSource,
-        channelBillingAdapters
-      );
-      const billingCredentials =
-        billingSource === 'manual'
-          ? {}
-          : filterBillingCredentialsByFields(
-              channelBillingProfile?.billing_credentials,
-              credentialFields
-            );
-      setChannelBillingSubmitting(true);
-      try {
-        const res = await API.put(
-          `/api/v1/admin/channel/${targetChannelId}/billing/profile`,
-          {
-            billing_source: billingSource,
-            cost_tracking_mode: normalizeChannelCostTrackingModeValue(mode),
-            billing_credentials: billingCredentials,
-          }
-        );
-        const { success, message } = res.data || {};
-        if (!success) {
-          showError(message || t('channel.edit.billing.profile_update_failed'));
-          return;
-        }
-        await refreshChannelBillingState(targetChannelId);
-        await refreshChannelProcurementState(targetChannelId);
-        showSuccess(t('channel.edit.billing.profile_update_success'));
-      } catch (error) {
-        showError(
-          error?.message || t('channel.edit.billing.profile_update_failed')
-        );
-      } finally {
-        setChannelBillingSubmitting(false);
-      }
-    },
-    [
-      channelId,
-      channelBillingProfile,
-      channelBillingAdapters,
-      refreshChannelBillingState,
-      refreshChannelProcurementState,
-      t,
-    ]
-  );
+  const startDetailOverviewEdit = useCallback(() => {
+    setDetailBasicEditing(true);
+    setDetailBillingDraft(channelBillingProfile);
+    setDetailBillingEditing(true);
+  }, [channelBillingProfile]);
+
+  const saveDetailOverview = useCallback(async () => {
+    const basicSaved = await saveDetailBasicInfo({
+      closeEditing: false,
+      showSuccessMessage: false,
+    });
+    if (!basicSaved) {
+      return;
+    }
+    const billingSaved = await saveDetailBillingProfile({
+      closeEditing: false,
+      showSuccessMessage: false,
+    });
+    if (!billingSaved) {
+      return;
+    }
+    setDetailBasicEditing(false);
+    setDetailBillingEditing(false);
+    showSuccess(t('channel.edit.messages.update_success'));
+  }, [saveDetailBasicInfo, saveDetailBillingProfile, t]);
 
   const loadChannelById = useCallback(
     async (targetId, fromCreating = false) => {
@@ -2391,6 +2215,11 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
     setDetailBasicEditing(false);
     await loadChannelById(channelId, false, false);
   }, [channelId, isDetailMode, loadChannelById]);
+
+  const cancelDetailOverviewEdit = useCallback(async () => {
+    cancelDetailBillingEdit();
+    await cancelDetailBasicEdit();
+  }, [cancelDetailBasicEdit, cancelDetailBillingEdit]);
 
   const cancelDetailModelsEdit = useCallback(() => {
     if (!detailModelsEditing) {
@@ -4615,15 +4444,15 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
                 inputs={inputs}
                 currentProtocolOption={currentProtocolOption}
                 channelProtocolOptions={channelProtocolOptions}
-                detailBasicEditing={detailBasicEditing}
-                detailBasicSaving={detailBasicSaving}
-                detailBasicEditLocked={detailBasicEditLocked}
+                detailEditing={detailBasicEditing || detailBillingEditing}
+                detailSaving={detailBasicSaving || channelBillingSubmitting}
+                detailEditLocked={detailModelsEditing}
                 detailBasicReadonly={detailBasicReadonly}
                 channelIdentifierMaxLength={CHANNEL_IDENTIFIER_MAX_LENGTH}
                 handleInputChange={handleInputChange}
-                cancelDetailBasicEdit={cancelDetailBasicEdit}
-                saveDetailBasicInfo={saveDetailBasicInfo}
-                setDetailBasicEditing={setDetailBasicEditing}
+                onCancelEdit={cancelDetailOverviewEdit}
+                onSave={saveDetailOverview}
+                onStartEdit={startDetailOverviewEdit}
                 basicConnectionFields={renderConnectionFields()}
                 addressRoutingFields={renderAddressRoutingFields()}
                 protocolSelectionHintContent={
@@ -4640,14 +4469,9 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
                 billingSummary={channelBillingSummary}
                 billingLoading={channelBillingLoading}
                 billingError={channelBillingError}
-                detailBillingEditing={detailBillingEditing}
                 detailBillingDraft={detailBillingDraft}
                 billingSubmitting={channelBillingSubmitting}
-                detailBillingEditLocked={detailBillingEditLocked}
-                setDetailBillingEditing={setDetailBillingEditing}
                 onUpdateBillingProfileDraft={updateBillingProfileDraft}
-                onCancelBillingProfileEdit={cancelDetailBillingEdit}
-                onSaveBillingProfile={saveDetailBillingProfile}
                 onRefreshBilling={refreshChannelBillingNow}
                 channelID={channelId}
                 onNavigateTab={goToDetailTab}
@@ -4802,7 +4626,12 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
                 t={t}
                 billingLoading={channelBillingLoading}
                 billingSnapshots={channelBillingSnapshots}
-                procurementBatches={channelProcurementBatches}
+                procurementPage={channelProcurementPage}
+                procurementPageSize={CHANNEL_PROCUREMENT_PAGE_SIZE}
+                procurementTotal={channelProcurementTotal}
+                onProcurementPageChange={(page) =>
+                  refreshChannelProcurementState(channelId, page)
+                }
                 billingReadonly={false}
                 billingSubmitting={channelBillingSubmitting}
                 billingError={channelBillingError}
@@ -4811,42 +4640,8 @@ const ChannelForm = ({ mode = 'auto' } = {}) => {
                 }
                 onManualSnapshotUpdate={updateChannelManualBillingSnapshot}
                 onManualSnapshotDelete={deleteChannelManualBillingSnapshot}
-                onProcurementBatchCostUpdate={updateChannelProcurementBatchCost}
-                onProcurementBatchStatusUpdate={
-                  updateChannelProcurementBatchStatus
-                }
-                onProcurementBatchConsumptionsLoad={
-                  loadChannelProcurementBatchConsumptions
-                }
                 timestamp2string={timestamp2string}
                 channelID={channelId}
-                showProcurementBatches
-                costTrackingMode={
-                  channelBillingProfile?.cost_tracking_mode || 'untracked'
-                }
-                onCostTrackingModeChange={saveChannelCostTrackingMode}
-                costTrackingSubmitting={channelBillingSubmitting}
-                costMissingModelCount={
-                  channelBillingProfile?.cost_missing_model_count || 0
-                }
-                costQuotes={channelCostQuotes}
-                onSyncCostQuotes={async () => {
-                  try {
-                    const result = await syncChannelCostQuotes(channelId);
-                    showSuccess(
-                      t('channel.edit.billing.cost_reconcile_sync_done', {
-                        cached: result.cached,
-                        skipped: result.skipped,
-                      })
-                    );
-                    await refreshChannelProcurementState(channelId);
-                  } catch (error) {
-                    showError(
-                      error?.message ||
-                        t('channel.edit.billing.cost_reconcile_sync_failed')
-                    );
-                  }
-                }}
               />
             )}
           </div>

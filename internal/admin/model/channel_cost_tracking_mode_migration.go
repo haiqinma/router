@@ -11,7 +11,7 @@ import (
 // from its existing procurement batches so upgrading preserves current behavior:
 //   - any actual batch      -> actual (keep recording real cost)
 //   - else any zero_cost    -> free   (upstream declared free)
-//   - else                  -> untracked (column default; no row needed)
+//   - else                  -> actual (participates in accounting as pending)
 //
 // For channels resolved to free it also re-tags legacy per-model zero-cost sentinel
 // batches (created by the removed publish-page escape hatch) with the auto-free
@@ -50,14 +50,11 @@ func backfillChannelCostTrackingModeWithDB(db *gorm.DB) error {
 	}
 
 	for channelID, sources := range sourcesByChannel {
-		mode := ChannelCostTrackingModeUntracked
+		mode := ChannelCostTrackingModeActual
 		if _, ok := sources[ProcurementCostSourceActual]; ok {
 			mode = ChannelCostTrackingModeActual
 		} else if _, ok := sources[ProcurementCostSourceZeroCost]; ok {
 			mode = ChannelCostTrackingModeFree
-		}
-		if mode == ChannelCostTrackingModeUntracked {
-			continue
 		}
 		if err := upsertChannelCostTrackingModeWithDB(db, channelID, mode); err != nil {
 			return err

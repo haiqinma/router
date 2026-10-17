@@ -348,6 +348,7 @@ func SetApiRouter(engine *gin.Engine) {
 			adminChannelRoute.GET("/:id/billing/profile", channel.GetChannelBillingProfile)
 			adminChannelRoute.PUT("/:id/billing/profile", channel.UpdateChannelBillingProfile)
 			adminChannelRoute.GET("/:id/billing/snapshots", channel.GetChannelBillingSnapshots)
+			adminChannelRoute.GET("/:id/billing/procurement-events", channel.GetChannelProcurementEvents)
 			adminChannelRoute.POST("/:id/billing/usage/sync", channel.SyncChannelProviderUsage)
 			adminChannelRoute.GET("/:id/billing/usage", channel.GetChannelProviderUsage)
 			adminChannelRoute.GET("/:id/billing/usage/state", channel.GetChannelProviderUsageSyncState)

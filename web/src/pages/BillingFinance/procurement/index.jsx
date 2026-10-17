@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -155,6 +155,7 @@ function BillingProcurementReport({ embedded = false }) {
       groupBy: ['channel', 'model', 'endpoint'].includes(groupByValue) ? groupByValue : 'channel',
       costScope: ['all', 'unconfigured'].includes(costScopeValue) ? costScopeValue : 'all',
       groupID: params.get('group_id') || '',
+      channelID: params.get('channel_id') || '',
       provider: params.get('provider') || '',
       model: params.get('model') || '',
       returnTo: params.get('return_to') || '',
@@ -165,9 +166,11 @@ function BillingProcurementReport({ embedded = false }) {
   const [groupBy, setGroupBy] = useState(initialContext.groupBy);
   const [costScope, setCostScope] = useState(initialContext.costScope);
   const [groupID, setGroupID] = useState(initialContext.groupID);
+  const [channelID, setChannelID] = useState(initialContext.channelID);
   const [provider, setProvider] = useState(initialContext.provider);
   const [model, setModel] = useState(initialContext.model);
   const [groupOptions, setGroupOptions] = useState([]);
+  const [channelOptions, setChannelOptions] = useState([]);
   const [providerOptions, setProviderOptions] = useState([]);
   const [modelOptions, setModelOptions] = useState([]);
   const [startAt, setStartAt] = useState(initialContext.startAt);
@@ -187,24 +190,6 @@ function BillingProcurementReport({ embedded = false }) {
       )}?tab=procurement`,
     []
   );
-  // Legacy bookmarks pointed per-channel procurement at the finance tab
-  // (`?tab=procurement&channel_id=…`). That drill now lives in the channel
-  // detail tab, so redirect those old links on mount.
-  const legacyChannelRedirectedRef = useRef(false);
-  useEffect(() => {
-    if (legacyChannelRedirectedRef.current) {
-      return;
-    }
-    legacyChannelRedirectedRef.current = true;
-    const bookmarkedChannelID = new URLSearchParams(location.search).get(
-      'channel_id'
-    );
-    if (bookmarkedChannelID) {
-      navigate(channelProcurementPath(bookmarkedChannelID), { replace: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const loadRetries = useCallback(async () => {
     const startTimestamp = timestampFromDateTimeLocal(startAt);
     const endTimestamp = timestampFromDateTimeLocal(endAt);
@@ -215,6 +200,7 @@ function BillingProcurementReport({ embedded = false }) {
           start_at: startTimestamp,
           end_at: endTimestamp,
           group_id: groupID,
+          channel_id: channelID,
           provider,
           model,
           limit: 50,
@@ -234,7 +220,7 @@ function BillingProcurementReport({ embedded = false }) {
     } finally {
       setRetryLoading(false);
     }
-  }, [endAt, groupID, model, provider, startAt, t]);
+  }, [channelID, endAt, groupID, model, provider, startAt, t]);
 
   const loadGroups = async () => {
     try {
@@ -278,6 +264,7 @@ function BillingProcurementReport({ embedded = false }) {
           group_by: groupBy,
           cost_scope: costScope,
           group_id: groupID,
+          channel_id: channelID,
           provider,
           model,
         },
@@ -357,6 +344,23 @@ function BillingProcurementReport({ embedded = false }) {
 
   useEffect(() => {
     loadGroups().then();
+    API.get('/api/v1/admin/channels/', {
+      params: { page: 1, page_size: 500, compact: true },
+    })
+      .then((response) => {
+        if (!response.data?.success) return;
+        const items = Array.isArray(response.data?.data?.items)
+          ? response.data.data.items
+          : [];
+        setChannelOptions(
+          items.map((item) => ({
+            key: item.id,
+            value: String(item.id),
+            text: item.name || String(item.id),
+          }))
+        );
+      })
+      .catch(() => undefined);
     loadHealth().then();
     const loadProviders = async () => {
       try {
@@ -425,6 +429,7 @@ function BillingProcurementReport({ embedded = false }) {
     params.set('group_by', groupBy);
     params.set('cost_scope', costScope);
     if (groupID) params.set('group_id', groupID);
+    if (channelID) params.set('channel_id', channelID);
     if (provider) params.set('provider', provider);
     if (model) params.set('model', model);
     if (initialContext.returnTo) params.set('return_to', initialContext.returnTo);
@@ -433,12 +438,12 @@ function BillingProcurementReport({ embedded = false }) {
     const currentTab = new URLSearchParams(location.search).get('tab');
     if (currentTab) params.set('tab', currentTab);
     navigate({ pathname: location.pathname, search: `?${params.toString()}` }, { replace: true });
-  }, [costScope, endAt, groupBy, groupID, initialContext.returnTo, location.pathname, model, navigate, provider, startAt]);
+  }, [channelID, costScope, endAt, groupBy, groupID, initialContext.returnTo, location.pathname, model, navigate, provider, startAt]);
 
   useEffect(() => {
     loadReport().then();
     loadRetries().then();
-  }, [groupBy, costScope, groupID, model, provider, loadRetries]);
+  }, [channelID, groupBy, costScope, groupID, model, provider, loadRetries]);
 
   // 8 summary cards were collapsed into a single headline + side stats.
   // The two big numbers on the left are gross profit + margin (actionable);
@@ -927,6 +932,17 @@ function BillingProcurementReport({ embedded = false }) {
               value={groupID}
               placeholder={t('billing.procurement_report.filters.group')}
               onChange={(e, { value }) => setGroupID((value || '').toString())}
+            />
+            <AppSelect
+              className='router-section-input billing-procurement-report-group-select'
+              clearable
+              search
+              options={channelOptions}
+              value={channelID}
+              placeholder={t('billing.procurement_report.filters.channel')}
+              onChange={(e, { value }) =>
+                setChannelID((value || '').toString())
+              }
             />
             <AppSelect
               className='router-section-input billing-procurement-report-group-select'
