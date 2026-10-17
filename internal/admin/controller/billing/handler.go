@@ -176,7 +176,7 @@ func loadProcurementReportUnconfiguredModelChannels(summary model.ProcurementRep
 		query = query.Where("LOWER(TRIM(COALESCE(el.provider, ''))) = ?", strings.ToLower(summary.Provider))
 	}
 	err := query.
-		Group("model_key, channel_id").
+		Group("1, 2").
 		Order("model_key ASC, request_count DESC, last_request_at DESC").
 		Scan(&rows).Error
 	if err != nil || len(rows) == 0 {
