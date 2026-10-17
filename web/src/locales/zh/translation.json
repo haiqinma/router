@@ -1130,7 +1130,7 @@
           "manual_update_snapshot": "支持人工录入账务快照"
         },
         "sources": {
-          "manual": "不跟踪余额"
+          "manual": "未配置"
         },
         "quota_types": {
           "daily": "每日额度规则",

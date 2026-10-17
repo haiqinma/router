@@ -1299,14 +1299,14 @@ const UserDetail = () => {
               >
                 <AppFormRow>
                   <AppField label={t('user.detail.user_id')} readOnly>
-                    <div className='router-action-group-tight'>
+                    <div className='router-action-group-tight router-copyable-input-row'>
                       <AppInput
                         className='router-section-input router-machine-input'
                         value={readOnlyValue(userId)}
                         readOnly
                       />
                       {userId ? (
-                        <CopyButton value={userId} size='small' basic />
+                        <CopyButton value={userId} size='small' basic iconOnly />
                       ) : null}
                     </div>
                   </AppField>

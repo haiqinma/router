@@ -343,7 +343,12 @@ const PaymentRecordDetail = () => {
                         {readOnlyText(order?.id || id)}
                       </pre>
                       {order?.id || id ? (
-                        <CopyButton value={order?.id || id} size='small' basic />
+                        <CopyButton
+                          value={order?.id || id}
+                          size='small'
+                          basic
+                          iconOnly
+                        />
                       ) : null}
                     </div>
                   </div>
@@ -417,6 +422,7 @@ const PaymentRecordDetail = () => {
                           value={order.transaction_id}
                           size='small'
                           basic
+                          iconOnly
                         />
                       ) : null}
                     </div>
@@ -432,6 +438,7 @@ const PaymentRecordDetail = () => {
                           value={order.provider_order_id}
                           size='small'
                           basic
+                          iconOnly
                         />
                       ) : null}
                     </div>

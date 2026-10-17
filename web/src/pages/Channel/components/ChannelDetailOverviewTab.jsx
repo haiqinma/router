@@ -216,14 +216,14 @@ const ChannelDetailOverviewTab = ({
       >
         <AppFormRow>
           <AppField label={t('channel.edit.id')} readOnly>
-            <div className='router-action-group-tight'>
+            <div className='router-action-group-tight router-copyable-input-row'>
               <AppInput
                 className='router-section-input'
                 value={inputs.id || '-'}
                 readOnly
               />
               {inputs.id ? (
-                <CopyButton value={inputs.id} size='small' basic />
+                <CopyButton value={inputs.id} size='small' basic iconOnly />
               ) : null}
             </div>
           </AppField>
