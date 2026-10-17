@@ -614,11 +614,27 @@ const WorkspaceModels = () => {
                     >
                       <div className='workspace-model-card-header'>
                         <div className='workspace-model-card-title-block'>
-                          <div
-                            className='workspace-model-card-title'
-                            title={item.model}
-                          >
-                            {item.model || '-'}
+                          <div className='workspace-model-card-title-row'>
+                            <div
+                              className='workspace-model-card-title'
+                              title={item.model}
+                            >
+                              {item.model || '-'}
+                            </div>
+                            <AppTooltip
+                              title={t('workspace_models.card.copy_model')}
+                            >
+                              <AppButton
+                                type='button'
+                                className='workspace-model-card-icon-button'
+                                aria-label={t(
+                                  'workspace_models.card.copy_model',
+                                )}
+                                icon={<AppIcon name='copy outline' />}
+                                onClick={() => handleCopyModel(item.model)}
+                                disabled={!item.model}
+                              />
+                            </AppTooltip>
                           </div>
                           <div className='workspace-model-card-subtitle'>
                             <span>{item.provider || '-'}</span>
@@ -635,6 +651,23 @@ const WorkspaceModels = () => {
                         <div className='workspace-model-card-status'>
                           {renderHealthTag(item.health_level)}
                           {renderHealthSource(item.health_source)}
+                          <AppTooltip title={t('log.drilldown.view')}>
+                            <AppButton
+                              type='button'
+                              className='workspace-model-card-icon-button workspace-model-card-log-button'
+                              aria-label={t('log.drilldown.view')}
+                              icon={<AppIcon name='book' />}
+                              onClick={() =>
+                                navigate(
+                                  buildLogDrilldownPath(
+                                    hasAdminAccess ? 'admin' : 'workspace',
+                                    { model_name: item.model },
+                                  ),
+                                )
+                              }
+                              disabled={!item.model}
+                            />
+                          </AppTooltip>
                         </div>
                       </div>
                       <div className='workspace-model-health-row'>
@@ -725,33 +758,6 @@ const WorkspaceModels = () => {
                             },
                           )}
                         </div>
-                      </div>
-                      <div className='workspace-model-actions'>
-                        <AppButton
-                          size='small'
-                          className='router-inline-button'
-                          icon={<AppIcon name='copy outline' />}
-                          onClick={() => handleCopyModel(item.model)}
-                          disabled={!item.model}
-                        >
-                          {t('workspace_models.card.copy_model')}
-                        </AppButton>
-                        <AppButton
-                          size='small'
-                          className='router-inline-button'
-                          icon={<AppIcon name='book' />}
-                          onClick={() =>
-                            navigate(
-                              buildLogDrilldownPath(
-                                hasAdminAccess ? 'admin' : 'workspace',
-                                { model_name: item.model },
-                              ),
-                            )
-                          }
-                          disabled={!item.model}
-                        >
-                          {t('log.drilldown.view')}
-                        </AppButton>
                       </div>
                     </div>
                   );
