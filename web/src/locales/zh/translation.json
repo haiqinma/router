@@ -2018,7 +2018,7 @@
       "models_table_sources": "来源",
       "model_source_package": "套餐",
       "model_source_balance": "账户余额",
-	  "model_source_personal_provider": "个人供应商",
+      "model_source_personal_provider": "个人供应商",
       "models_table_empty": "暂无可选模型",
       "models_search_placeholder": "搜索模型名称",
       "models_search_empty": "没有匹配的模型",
@@ -3124,12 +3124,234 @@
       },
       "duty": {
         "title": "值班台",
-        "pending_alerts": "待处理严重告警",
-        "pending_alerts_hint": "另有 {{count}} 条未确认",
-        "risky_channels": "风险渠道",
-        "low_balance_channels": "低余额渠道",
-        "failed_tasks": "失败任务",
-        "net_amount": "净收支"
+        "overall": "当前运行态势",
+        "sources": "观测状态",
+        "observation_summary": "整体观测",
+        "impact_summary": "影响摘要",
+        "refreshed_at": "更新于 {{time}}",
+        "load_failed": "加载值班事件失败",
+        "refresh_failed": "自动刷新失败，当前显示上一次成功获取的数据",
+        "update_failed": "更新事件状态失败",
+        "update_success": "事件状态已更新",
+        "source_error_title": "{{count}} 个数据源不可用，统计可能不完整",
+        "source_error_item": "{{source}}：{{message}}",
+        "source_error_unknown": "暂时无法读取",
+        "status": {
+          "healthy": "运行平稳",
+          "warning": "存在待处理风险",
+          "critical": "存在关键事件",
+          "unknown": "运行状态未知"
+        },
+        "status_hint": {
+          "healthy": "核心对象状态正常，且当前观测信息足以支持判断。",
+          "warning": "请按优先级处理事件，并持续关注影响变化。",
+          "critical": "关键事件正在影响服务，请立即响应并记录处置进展。",
+          "unknown": "一个或多个数据源不可用，不能据此判断系统健康。"
+        },
+        "window": {
+          "1h": "近 1 小时",
+          "6h": "近 6 小时",
+          "24h": "近 24 小时"
+        },
+        "source": {
+          "channels": "渠道健康",
+          "models": "模型运行",
+          "alerts": "渠道告警",
+          "routes": "路由运行",
+          "tasks": "系统任务",
+          "finance": "财务检查",
+          "incident_states": "处置记录"
+        },
+        "source_status": {
+          "ready": "正常",
+          "empty": "已观测",
+          "error": "不可用"
+        },
+        "summary": {
+          "active": "当前事件",
+          "critical": "关键事件",
+          "affected_models": "影响模型",
+          "failures": "失败请求",
+          "fallbacks": "回退请求",
+          "failed_tasks": "失败任务",
+          "finance_issues": "财务问题",
+          "abnormal_objects": "异常对象",
+          "unknown_objects": "状态未知",
+          "findings": "巡检发现",
+          "coverage": "观测覆盖",
+          "unassigned": "未分配"
+        },
+        "console": {
+          "views": "工作视图",
+          "scopes": "对象范围",
+          "scope_all": "全部对象",
+          "needs_attention": "需要关注",
+          "result_count": "{{count}} 条结果",
+          "search": "搜索对象、事件或处理人",
+          "select_hint": "选择一条记录查看状态、影响和下一步操作。",
+          "empty_title": "当前视图没有匹配记录",
+          "empty_description": "可以调整对象范围、搜索条件或时间窗口。",
+          "object": "对象",
+          "health": "健康状态",
+          "first_seen": "首次发现",
+          "next_action": "下一步",
+          "open_incident": "打开关联事件",
+          "open_object": "前往专业工作台",
+          "finding_linked_hint": "该发现已经关联事件，请在事件中继续记录判断和处置进展。",
+          "finding_open_hint": "该发现尚未形成事件，请先进入对象工作台核实状态和影响。",
+          "total_objects": "对象总数",
+          "domain_summary": "{{total}} 个对象，{{findings}} 条发现",
+          "finding_domain_summary": "{{findings}} 条运行发现",
+          "domain_signal": "异常 {{abnormal}} / {{total}}",
+          "finding_domain_signal": "严重 {{critical}} · 警告 {{warning}}",
+          "domain_detail_hint": "查看该对象域的健康、观测覆盖和当前发现。",
+          "view": {
+            "attention": "待处理",
+            "objects": "核心对象",
+            "incidents": "当前事件",
+            "observation": "观测风险",
+            "resolved": "已解决事件"
+          },
+          "view_hint": {
+            "attention": "尚未处理的事件和未关联事件的巡检发现。",
+            "objects": "按对象域检查健康状态、覆盖范围和最近变化。",
+            "incidents": "需要持续跟进、记录进展并明确责任人的事件。",
+            "observation": "判断依据不足、陈旧或不可用的对象。",
+            "resolved": "已完成处置的事件记录，不代表对象一定已经恢复。"
+          },
+          "sort": {
+            "label": "排序",
+            "priority": "优先级优先",
+            "recent": "最近变化优先"
+          },
+          "columns": {
+            "item": "对象 / 问题",
+            "state": "状态",
+            "signal": "影响 / 信号",
+            "observation": "观测",
+            "changed": "最近变化"
+          }
+        },
+        "mode": {
+          "inspection": "巡检",
+          "incidents": "事件处置"
+        },
+        "mode_hint": {
+          "inspection": "检查核心对象状态，识别尚未形成事件的风险。",
+          "incidents": "处理已经发生并需要持续跟进的事件。"
+        },
+        "health_status": {
+          "healthy": "健康",
+          "warning": "警告",
+          "critical": "严重",
+          "unknown": "未知"
+        },
+        "observation_status": {
+          "ready": "观测充分",
+          "insufficient": "观测不足",
+          "stale": "数据陈旧",
+          "error": "观测失败"
+        },
+        "inspection": {
+          "title": "核心对象巡检",
+          "description": "健康表示对象当前状态，观测表示判断依据是否充分。",
+          "findings": "巡检发现",
+          "findings_count": "当前筛选 {{count}} 条发现",
+          "finding_count": "{{count}} 条发现",
+          "linked_incident": "已关联事件",
+          "view_critical": "查看 {{count}} 个关键事件",
+          "filter": {
+            "all": "全部",
+            "abnormal": "异常",
+            "unknown": "观测风险"
+          },
+          "columns": {
+            "domain": "对象域",
+            "health": "健康",
+            "count": "异常 / 总数",
+            "observation": "观测",
+            "changed": "最近变化"
+          },
+          "domain": {
+            "channels": "渠道",
+            "models": "模型",
+            "routes": "路由",
+            "tasks": "系统任务",
+            "finance": "财务"
+          },
+          "empty_title": "当前没有匹配的发现",
+          "empty_description": "可以切换筛选条件，或选择其他对象域继续巡检。"
+        },
+        "severity": {
+          "critical": "严重",
+          "warning": "警告"
+        },
+        "queue": {
+          "title": "事件队列",
+          "count": "{{count}} 个事件",
+          "order_hint": "按优先级与最近影响排序",
+          "filter": {
+            "open": "待处理",
+            "resolved": "已解决",
+            "all": "全部"
+          }
+        },
+        "incident": {
+          "detail": "事件详情",
+          "no_summary": "暂无补充信息",
+          "no_signals": "暂无关联信号",
+          "unassigned": "未分配",
+          "assignee": "当前处理人",
+          "last_seen": "最近发生",
+          "impact_title": "影响范围",
+          "impact_brief": "失败 {{failures}} · 任务 {{tasks}} · 财务 {{finance}}",
+          "channel": "渠道",
+          "models": "模型",
+          "endpoints": "端点",
+          "signals": "原因信号",
+          "tasks": "关联任务",
+          "finance": "财务问题",
+          "handling": "处置进展",
+          "note_placeholder": "记录判断、处理动作或恢复依据",
+          "action_hint": "提交后将记录当前处理人和更新时间。",
+          "drilldown": "前往专业工作台",
+          "select_hint": "从左侧选择一个事件查看影响和处置进展。",
+          "status": {
+            "active": "待响应",
+            "acknowledged": "已确认",
+            "investigating": "调查中",
+            "mitigated": "已缓解",
+            "resolved": "已解决"
+          },
+          "impact": {
+            "requests": "请求数",
+            "failures": "失败请求",
+            "failure_rate": "失败率",
+            "fallbacks": "回退请求",
+            "failed_tasks": "失败任务",
+            "finance": "财务问题"
+          },
+          "actions": {
+            "active": "重新打开",
+            "acknowledged": "确认事件",
+            "investigating": "开始调查",
+            "mitigated": "标记已缓解",
+            "resolved": "标记已解决"
+          }
+        },
+        "links": {
+          "channel": "渠道详情",
+          "alerts": "渠道告警",
+          "tasks": "系统任务",
+          "logs": "请求日志",
+          "models": "模型运营",
+          "finance": "财务管理"
+        },
+        "empty": {
+          "title": "当前筛选下没有事件",
+          "description": "可以切换时间窗口，或前往渠道健康查看实时运行情况。",
+          "open_channels": "查看渠道健康"
+        }
       },
       "period": {
         "label": "统计周期"

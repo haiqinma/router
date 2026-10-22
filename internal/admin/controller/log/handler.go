@@ -1,6 +1,7 @@
 package log
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -54,6 +55,20 @@ type routeAnomalyItem struct {
 	Endpoint       string  `json:"endpoint"`
 	ErrorType      string  `json:"error_type"`
 	ErrorCode      string  `json:"error_code"`
+	RequestCount   int64   `json:"request_count"`
+	FailureCount   int64   `json:"failure_count"`
+	FallbackCount  int64   `json:"fallback_count"`
+	SuccessCount   int64   `json:"success_count"`
+	FailureRate    float64 `json:"failure_rate"`
+	AvgLatencyMs   float64 `json:"avg_latency_ms"`
+	LastObservedAt int64   `json:"last_observed_at"`
+	LastError      string  `json:"last_error"`
+}
+
+type DutyRouteAnomaly struct {
+	ChannelID      string  `json:"channel_id"`
+	ChannelName    string  `json:"channel_name"`
+	Model          string  `json:"model"`
 	RequestCount   int64   `json:"request_count"`
 	FailureCount   int64   `json:"failure_count"`
 	FallbackCount  int64   `json:"fallback_count"`
@@ -508,6 +523,71 @@ func hydrateRouteAnomalyChannelNames(items []routeAnomalyItem) []routeAnomalyIte
 		}
 	}
 	return items
+}
+
+func ListDutyRouteAnomalies(startTimestamp int64, endTimestamp int64, limit int) ([]DutyRouteAnomaly, error) {
+	if model.LOG_DB == nil {
+		return nil, fmt.Errorf("log database handle is nil")
+	}
+	if endTimestamp <= 0 {
+		endTimestamp = helper.GetTimestamp()
+	}
+	if startTimestamp <= 0 || startTimestamp >= endTimestamp {
+		startTimestamp = endTimestamp - 6*60*60
+	}
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	rows := make([]routeAnomalyItem, 0, limit)
+	channelExpr := "COALESCE(NULLIF(TRIM(channel_id), ''), '-')"
+	if err := model.LOG_DB.Table(model.EventLogsTableName).
+		Select(`
+			`+channelExpr+` AS channel_id,
+			`+adminVisibleModelNameExpr+` AS model,
+			'-' AS endpoint,
+			'-' AS error_type,
+			'-' AS error_code,
+			COUNT(1) AS request_count,
+			COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) AS failure_count,
+			COALESCE(SUM(CASE WHEN fallback_count > 0 THEN 1 ELSE 0 END), 0) AS fallback_count,
+			COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) AS success_count,
+			COALESCE(AVG(elapsed_time), 0) AS avg_latency_ms,
+			COALESCE(MAX(created_at), 0) AS last_observed_at,
+			COALESCE(MAX(NULLIF(TRIM(relay_error_message), '')), '') AS last_error
+		`, model.LogTypeRelayFailure, model.LogTypeConsume).
+		Where("type IN ?", []int{model.LogTypeConsume, model.LogTypeRelayFailure}).
+		Where("created_at BETWEEN ? AND ?", startTimestamp, endTimestamp).
+		Where("(type <> ? OR ((relay_error_type IS NULL OR LOWER(TRIM(relay_error_type)) <> ?) AND (relay_error_code IS NULL OR LOWER(TRIM(relay_error_code)) <> ?)))", model.LogTypeRelayFailure, "client_abort", "request_aborted").
+		Group("channel_id, model").
+		Having("COALESCE(SUM(CASE WHEN type = ? THEN 1 ELSE 0 END), 0) > 0 OR COALESCE(SUM(CASE WHEN fallback_count > 0 THEN 1 ELSE 0 END), 0) > 0", model.LogTypeRelayFailure).
+		Order("failure_count DESC, fallback_count DESC, request_count DESC, last_observed_at DESC").
+		Limit(limit).
+		Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	for index := range rows {
+		if rows[index].RequestCount > 0 {
+			rows[index].FailureRate = float64(rows[index].FailureCount) / float64(rows[index].RequestCount)
+		}
+	}
+	rows = hydrateRouteAnomalyChannelNames(rows)
+	result := make([]DutyRouteAnomaly, 0, len(rows))
+	for _, row := range rows {
+		result = append(result, DutyRouteAnomaly{
+			ChannelID:      strings.TrimSpace(row.ChannelID),
+			ChannelName:    strings.TrimSpace(row.ChannelName),
+			Model:          strings.TrimSpace(row.Model),
+			RequestCount:   row.RequestCount,
+			FailureCount:   row.FailureCount,
+			FallbackCount:  row.FallbackCount,
+			SuccessCount:   row.SuccessCount,
+			FailureRate:    row.FailureRate,
+			AvgLatencyMs:   row.AvgLatencyMs,
+			LastObservedAt: row.LastObservedAt,
+			LastError:      strings.TrimSpace(row.LastError),
+		})
+	}
+	return result, nil
 }
 
 func GetRouteAnomalies(c *gin.Context) {

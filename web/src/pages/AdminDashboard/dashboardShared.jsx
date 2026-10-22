@@ -90,6 +90,7 @@ export const EMPTY_CHANNEL_HEALTH_SUMMARY = {
   risk_count: 0,
   active_circuit_breaker_count: 0,
   high_latency_count: 0,
+  low_balance_channel_count: 0,
 };
 
 export const EMPTY_USER_GROWTH_COMPARISON = {
@@ -327,6 +328,9 @@ export const normalizeAdminDashboardPayload = (payload) => {
         channelHealthSummary?.active_circuit_breaker_count || 0,
       ),
       high_latency_count: Number(channelHealthSummary?.high_latency_count || 0),
+      low_balance_channel_count: Number(
+        channelHealthSummary?.low_balance_channel_count || 0,
+      ),
     },
     usage_summary: {
       user_count: Number(usageSummary?.user_count || 0),
@@ -518,6 +522,7 @@ export const useAdminDashboardData = (
 ) => {
   const [dashboard, setDashboard] = useState(EMPTY_DASHBOARD);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const extraParamsKey = JSON.stringify(extraParams || {});
 
   const reload = useCallback(async () => {
@@ -525,6 +530,7 @@ export const useAdminDashboardData = (
       return;
     }
     setLoading(true);
+    setError(null);
     try {
       const params = { period, section, ...(extraParams || {}) };
       const res = await API.get('/api/v1/admin/dashboard/', { params });
@@ -532,11 +538,13 @@ export const useAdminDashboardData = (
         setDashboard(normalizeAdminDashboardPayload(res.data.data || {}));
       } else {
         setDashboard(EMPTY_DASHBOARD);
+        setError(new Error(res.data?.message || 'Failed to load admin dashboard'));
       }
     } catch (error) {
       console.error('Failed to load admin dashboard:', error);
       showError(error);
       setDashboard(EMPTY_DASHBOARD);
+      setError(error);
     } finally {
       setLoading(false);
     }
@@ -548,5 +556,5 @@ export const useAdminDashboardData = (
     reload();
   }, [reload]);
 
-  return { dashboard, loading, reload };
+  return { dashboard, loading, error, reload };
 };

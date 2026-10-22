@@ -46,6 +46,7 @@ import {
   DashboardOutlined,
   DeleteOutlined,
   EditOutlined,
+  LeftOutlined,
   RightOutlined,
   MoonOutlined,
   SunOutlined,
@@ -103,6 +104,7 @@ const ICON_MAP = {
   'user circle': UserOutlined,
   wallet: WalletOutlined,
   'right chevron': RightOutlined,
+  'left chevron': LeftOutlined,
   moon: MoonOutlined,
   sun: SunOutlined,
 };

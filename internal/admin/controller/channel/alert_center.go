@@ -1,6 +1,7 @@
 package channel
 
 import (
+	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
@@ -21,6 +22,8 @@ type channelAlertFeedItem struct {
 	Level          string `json:"level"`
 	ChannelID      string `json:"channel_id"`
 	ChannelName    string `json:"channel_name"`
+	Model          string `json:"model,omitempty"`
+	Endpoint       string `json:"endpoint,omitempty"`
 	CreatedAt      int64  `json:"created_at"`
 	Status         string `json:"status"`
 	AcknowledgedAt int64  `json:"acknowledged_at"`
@@ -36,6 +39,23 @@ type channelAlertFeedData struct {
 	Page     int                      `json:"page"`
 	PageSize int                      `json:"page_size"`
 	Summary  *channelAlertFeedSummary `json:"summary,omitempty"`
+}
+
+type DutyChannelAlert struct {
+	ID             string `json:"id"`
+	Type           string `json:"type"`
+	Title          string `json:"title"`
+	Summary        string `json:"summary"`
+	Detail         string `json:"detail"`
+	Level          string `json:"level"`
+	ChannelID      string `json:"channel_id"`
+	ChannelName    string `json:"channel_name"`
+	Model          string `json:"model,omitempty"`
+	Endpoint       string `json:"endpoint,omitempty"`
+	CreatedAt      int64  `json:"created_at"`
+	Status         string `json:"status"`
+	AcknowledgedAt int64  `json:"acknowledged_at"`
+	ResolvedAt     int64  `json:"resolved_at"`
 }
 
 // channelAlertBucket is one slice of a categorical distribution (by type or by channel).
@@ -198,61 +218,11 @@ func GetRecentChannelAlerts(c *gin.Context) {
 		// Scan a stable recent window so pagination, total and the summary are page-independent.
 		limit = channelAlertFeedScanLimit
 	}
-	billingRows, err := model.ListRecentChannelBillingAlertEventsWithDB(model.DB, limit)
+	items, err := loadChannelAlertFeedItems(limit)
 	if err != nil {
-		logChannelAdminWarn(c, "list_recent_channel_alerts", stringField("source", "billing"), stringField("reason", err.Error()))
+		logChannelAdminWarn(c, "list_recent_channel_alerts", stringField("reason", err.Error()))
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
 		return
-	}
-	circuitRows, err := model.ListRecentChannelCircuitBreakerEventsWithDB(model.DB, limit)
-	if err != nil {
-		logChannelAdminWarn(c, "list_recent_channel_alerts", stringField("source", "circuit"), stringField("reason", err.Error()))
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
-		return
-	}
-	modelRows, err := model.ListRecentDisabledChannelModelsWithDB(model.DB, limit)
-	if err != nil {
-		logChannelAdminWarn(c, "list_recent_channel_alerts", stringField("source", "models"), stringField("reason", err.Error()))
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
-		return
-	}
-	endpointRows, err := model.ListRecentDisabledChannelModelEndpointsWithDB(model.DB, limit)
-	if err != nil {
-		logChannelAdminWarn(c, "list_recent_channel_alerts", stringField("source", "endpoints"), stringField("reason", err.Error()))
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
-		return
-	}
-	channelNameByID, err := loadChannelNameByIDForAlertFeed(channelIDsForAlertFeed(billingRows, circuitRows, modelRows, endpointRows))
-	if err != nil {
-		logChannelAdminWarn(c, "list_recent_channel_alerts", stringField("source", "channels"), stringField("reason", err.Error()))
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
-		return
-	}
-	items := buildChannelAlertFeedItems(billingRows, circuitRows, modelRows, endpointRows, channelNameByID)
-	refs := make([]model.ChannelAlertStateRef, 0, len(items))
-	for _, item := range items {
-		refs = append(refs, model.ChannelAlertStateRef{
-			AlertType: item.Type,
-			AlertKey:  item.ID,
-		})
-	}
-	stateByRef, err := model.GetChannelAlertStatesByRefsWithDB(model.DB, refs)
-	if err != nil {
-		logChannelAdminWarn(c, "list_recent_channel_alerts", stringField("source", "states"), stringField("reason", err.Error()))
-		c.JSON(http.StatusOK, gin.H{"success": false, "message": err.Error()})
-		return
-	}
-	for i := range items {
-		if state, ok := stateByRef[items[i].Type+"::"+items[i].ID]; ok {
-			items[i].Status = state.Status
-			items[i].AcknowledgedAt = state.AcknowledgedAt
-			items[i].AcknowledgedBy = state.AcknowledgedBy
-			items[i].ResolvedAt = state.ResolvedAt
-			items[i].ResolvedBy = state.ResolvedBy
-			items[i].OperatorNote = state.LastOperatorNote
-		} else {
-			items[i].Status = model.ChannelAlertStatusActive
-		}
 	}
 	items = filterChannelAlertFeedItems(items, filters)
 	total := len(items)
@@ -269,6 +239,78 @@ func GetRecentChannelAlerts(c *gin.Context) {
 			Summary:  &summary,
 		},
 	})
+}
+
+func loadChannelAlertFeedItems(limit int) ([]channelAlertFeedItem, error) {
+	billingRows, err := model.ListRecentChannelBillingAlertEventsWithDB(model.DB, limit)
+	if err != nil {
+		return nil, fmt.Errorf("load billing alerts: %w", err)
+	}
+	circuitRows, err := model.ListRecentChannelCircuitBreakerEventsWithDB(model.DB, limit)
+	if err != nil {
+		return nil, fmt.Errorf("load circuit alerts: %w", err)
+	}
+	modelRows, err := model.ListRecentDisabledChannelModelsWithDB(model.DB, limit)
+	if err != nil {
+		return nil, fmt.Errorf("load model alerts: %w", err)
+	}
+	endpointRows, err := model.ListRecentDisabledChannelModelEndpointsWithDB(model.DB, limit)
+	if err != nil {
+		return nil, fmt.Errorf("load endpoint alerts: %w", err)
+	}
+	channelNameByID, err := loadChannelNameByIDForAlertFeed(channelIDsForAlertFeed(billingRows, circuitRows, modelRows, endpointRows))
+	if err != nil {
+		return nil, fmt.Errorf("load alert channels: %w", err)
+	}
+	items := buildChannelAlertFeedItems(billingRows, circuitRows, modelRows, endpointRows, channelNameByID)
+	refs := make([]model.ChannelAlertStateRef, 0, len(items))
+	for _, item := range items {
+		refs = append(refs, model.ChannelAlertStateRef{AlertType: item.Type, AlertKey: item.ID})
+	}
+	stateByRef, err := model.GetChannelAlertStatesByRefsWithDB(model.DB, refs)
+	if err != nil {
+		return nil, fmt.Errorf("load alert states: %w", err)
+	}
+	for i := range items {
+		if state, ok := stateByRef[items[i].Type+"::"+items[i].ID]; ok {
+			items[i].Status = state.Status
+			items[i].AcknowledgedAt = state.AcknowledgedAt
+			items[i].AcknowledgedBy = state.AcknowledgedBy
+			items[i].ResolvedAt = state.ResolvedAt
+			items[i].ResolvedBy = state.ResolvedBy
+			items[i].OperatorNote = state.LastOperatorNote
+		} else {
+			items[i].Status = model.ChannelAlertStatusActive
+		}
+	}
+	return items, nil
+}
+
+func ListDutyChannelAlerts(limit int) ([]DutyChannelAlert, error) {
+	items, err := loadChannelAlertFeedItems(limit)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]DutyChannelAlert, 0, len(items))
+	for _, item := range items {
+		result = append(result, DutyChannelAlert{
+			ID:             item.ID,
+			Type:           item.Type,
+			Title:          item.Title,
+			Summary:        item.Summary,
+			Detail:         item.Detail,
+			Level:          item.Level,
+			ChannelID:      item.ChannelID,
+			ChannelName:    item.ChannelName,
+			Model:          item.Model,
+			Endpoint:       item.Endpoint,
+			CreatedAt:      item.CreatedAt,
+			Status:         item.Status,
+			AcknowledgedAt: item.AcknowledgedAt,
+			ResolvedAt:     item.ResolvedAt,
+		})
+	}
+	return result, nil
 }
 
 func ResolveChannelAlert(c *gin.Context) {
@@ -434,6 +476,7 @@ func buildChannelAlertFeedItems(billingRows []model.ChannelBillingAlertEvent, ci
 			Level:       "warning",
 			ChannelID:   channelID,
 			ChannelName: strings.TrimSpace(channelNameByID[channelID]),
+			Model:       strings.TrimSpace(row.Model),
 			CreatedAt:   row.DisabledAt,
 		})
 	}
@@ -448,6 +491,8 @@ func buildChannelAlertFeedItems(billingRows []model.ChannelBillingAlertEvent, ci
 			Level:       "warning",
 			ChannelID:   channelID,
 			ChannelName: strings.TrimSpace(channelNameByID[channelID]),
+			Model:       strings.TrimSpace(row.Model),
+			Endpoint:    strings.TrimSpace(row.Endpoint),
 			CreatedAt:   row.DisabledAt,
 		})
 	}

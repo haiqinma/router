@@ -319,6 +319,48 @@ func ListAsyncTasksPageWithDB(db *gorm.DB, filter AsyncTaskFilter, page int, pag
 	return rows, total, nil
 }
 
+// ListDutyAttentionTasksWithDB returns tasks in the selected observation window
+// plus pending/running tasks that have exceeded the duty stale threshold. Unlike
+// the paged admin list, the duty station needs the complete matching set so an
+// older stuck task cannot disappear behind a page-size limit.
+func ListDutyAttentionTasksWithDB(db *gorm.DB, startAt int64, endAt int64, staleBefore int64) ([]AsyncTask, int64, error) {
+	if db == nil {
+		return nil, 0, fmt.Errorf("database handle is nil")
+	}
+	if startAt <= 0 || endAt < startAt {
+		return nil, 0, fmt.Errorf("invalid duty task window")
+	}
+	query := db.Model(&AsyncTask{}).Where(
+		`((status IN ? AND created_at BETWEEN ? AND ?) OR
+		(status = ? AND created_at BETWEEN ? AND ?) OR
+		(status = ? AND created_at <= ?) OR
+		(status = ? AND COALESCE(NULLIF(started_at, 0), created_at) <= ?))`,
+		[]string{AsyncTaskStatusPending, AsyncTaskStatusRunning}, startAt, endAt,
+		AsyncTaskStatusFailed, startAt, endAt,
+		AsyncTaskStatusPending, staleBefore,
+		AsyncTaskStatusRunning, staleBefore,
+	)
+	total := int64(0)
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	rows := make([]AsyncTask, 0, total)
+	if err := query.Order("created_at DESC, id DESC").Find(&rows).Error; err != nil {
+		return nil, 0, err
+	}
+	for i := range rows {
+		normalizeAsyncTaskRow(&rows[i])
+	}
+	rowPointers := make([]*AsyncTask, 0, len(rows))
+	for i := range rows {
+		rowPointers = append(rowPointers, &rows[i])
+	}
+	if err := hydrateAsyncTaskChannelNames(db, rowPointers); err != nil {
+		return nil, 0, err
+	}
+	return rows, total, nil
+}
+
 func CreateOrReuseAsyncTaskWithDB(db *gorm.DB, task AsyncTask) (AsyncTask, bool, error) {
 	if db == nil {
 		return AsyncTask{}, false, fmt.Errorf("database handle is nil")

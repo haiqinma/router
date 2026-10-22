@@ -909,7 +909,7 @@ func channelHealthLevelSortRank(level string) int {
 	}
 }
 
-func listDashboardChannels() ([]channelHealthItem, channelHealthSummaryData, error) {
+func listDashboardChannelsWithLimit(limit int) ([]channelHealthItem, channelHealthSummaryData, error) {
 	rows := make([]*model.Channel, 0)
 	err := model.DB.Model(&model.Channel{}).
 		Order("used_quota desc, created_time desc").
@@ -1025,10 +1025,14 @@ func listDashboardChannels() ([]channelHealthItem, channelHealthSummaryData, err
 		}
 		return items[i].Name < items[j].Name
 	})
-	if channelDashboardListLimit > 0 && len(items) > channelDashboardListLimit {
-		items = items[:channelDashboardListLimit]
+	if limit > 0 && len(items) > limit {
+		items = items[:limit]
 	}
 	return items, healthSummary, nil
+}
+
+func listDashboardChannels() ([]channelHealthItem, channelHealthSummaryData, error) {
+	return listDashboardChannelsWithLimit(channelDashboardListLimit)
 }
 
 func countChannelSummary() (int64, int64, int64, error) {
