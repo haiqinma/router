@@ -479,7 +479,12 @@ func RefreshTopupOrderStatusWithDB(db *gorm.DB, orderID string, userID string) (
 		return order, nil
 	}
 
-	queryResult, err := queryTopupOrderByExternalPayAPI(order)
+	var queryResult topupExternalPayQueryResult
+	if isNodeTopupOrder(order) {
+		queryResult, err = queryTopupOrderByNode(order)
+	} else {
+		queryResult, err = queryTopupOrderByExternalPayAPI(order)
+	}
 	if err != nil {
 		return TopupOrder{}, err
 	}
@@ -556,6 +561,11 @@ func CancelTopupOrderWithDB(db *gorm.DB, orderID string, userID string) (TopupOr
 		return order, nil
 	case TopupOrderStatusFailed:
 		return TopupOrder{}, fmt.Errorf("订单已关闭，无法取消")
+	}
+	if isNodeTopupOrder(order) && strings.TrimSpace(order.ProviderOrderID) != "" {
+		if err := cancelTopupOrderByNode(order); err != nil {
+			return TopupOrder{}, err
+		}
 	}
 
 	result := TopupOrder{}

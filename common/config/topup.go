@@ -8,6 +8,7 @@ import (
 const (
 	TopUpModeRedirect = "redirect"
 	TopUpModeAPI      = "api"
+	TopUpModeNode     = "node"
 )
 
 func normalizeTopUpExternalPayURL(raw string) string {
@@ -25,6 +26,8 @@ func normalizeTopUpExternalPayURL(raw string) string {
 
 func EffectiveTopUpMode() string {
 	switch strings.TrimSpace(strings.ToLower(TopUpMode)) {
+	case TopUpModeNode:
+		return TopUpModeNode
 	case TopUpModeAPI:
 		return TopUpModeAPI
 	case TopUpModeRedirect:
@@ -83,6 +86,9 @@ func ResolvedTopUpAPIQueryURL() string {
 }
 
 func TopUpAvailabilityEndpoint() string {
+	if EffectiveTopUpMode() == TopUpModeNode {
+		return strings.TrimSpace(TopUpNodeURL)
+	}
 	if EffectiveTopUpMode() == TopUpModeAPI {
 		return ResolvedTopUpAPICreateURL()
 	}
@@ -120,6 +126,8 @@ func ConfiguredTopUpCallbackToken() string {
 func TopUpModeIssues() []string {
 	issues := make([]string, 0, 1)
 	switch EffectiveTopUpMode() {
+	case TopUpModeNode:
+		issues = append(issues, TopUpNodeConfigIssues()...)
 	case TopUpModeAPI:
 		if strings.TrimSpace(ResolvedTopUpAPICreateURL()) == "" {
 			issues = append(issues, "operation.top_up_api_create_url is empty")
@@ -137,7 +145,7 @@ func TopUpCreateIssues() []string {
 	if strings.TrimSpace(ServerAddress) == "" {
 		issues = append(issues, "server.public_url is empty")
 	}
-	if strings.TrimSpace(TopUpSignSecret) == "" {
+	if EffectiveTopUpMode() != TopUpModeNode && strings.TrimSpace(TopUpSignSecret) == "" {
 		issues = append(issues, "operation.top_up_sign_secret is empty")
 	}
 	return issues
@@ -145,6 +153,12 @@ func TopUpCreateIssues() []string {
 
 func TopUpCallbackIssues() []string {
 	issues := make([]string, 0, 1)
+	if EffectiveTopUpMode() == TopUpModeNode {
+		if strings.TrimSpace(TopUpNodeMerchantSecret) == "" {
+			issues = append(issues, "PAYMENT_NODE_MERCHANT_SECRET is empty")
+		}
+		return issues
+	}
 	if strings.TrimSpace(ConfiguredTopUpCallbackToken()) == "" {
 		issues = append(issues, "operation.top_up_callback_token is empty")
 	}
@@ -159,4 +173,18 @@ func TopUpConfigIssues() []string {
 
 func TopUpFeatureEnabled() bool {
 	return len(TopUpCreateIssues()) == 0
+}
+
+func TopUpNodeConfigIssues() []string {
+	issues := make([]string, 0, 3)
+	if strings.TrimSpace(TopUpNodeURL) == "" {
+		issues = append(issues, "operation.top_up_node_url is empty")
+	}
+	if strings.TrimSpace(TopUpNodeMerchantID) == "" {
+		issues = append(issues, "operation.top_up_node_merchant_id is empty")
+	}
+	if strings.TrimSpace(TopUpNodeMerchantSecret) == "" {
+		issues = append(issues, "PAYMENT_NODE_MERCHANT_SECRET is empty")
+	}
+	return issues
 }

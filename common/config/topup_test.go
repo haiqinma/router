@@ -64,3 +64,34 @@ func TestResolvedTopUpAPIQueryURLNormalizesBackendPHP(t *testing.T) {
 		t.Fatalf("unexpected normalized query url: %q", got)
 	}
 }
+
+func TestTopUpNodeModeRequiresNodeCredentials(t *testing.T) {
+	previousMode := TopUpMode
+	previousURL := TopUpNodeURL
+	previousMerchantID := TopUpNodeMerchantID
+	previousMerchantSecret := TopUpNodeMerchantSecret
+	previousServerAddress := ServerAddress
+	previousSignSecret := TopUpSignSecret
+	t.Cleanup(func() {
+		TopUpMode = previousMode
+		TopUpNodeURL = previousURL
+		TopUpNodeMerchantID = previousMerchantID
+		TopUpNodeMerchantSecret = previousMerchantSecret
+		ServerAddress = previousServerAddress
+		TopUpSignSecret = previousSignSecret
+	})
+
+	TopUpMode = TopUpModeNode
+	TopUpNodeURL = "https://node.example.com"
+	TopUpNodeMerchantID = "pm_test"
+	TopUpNodeMerchantSecret = "merchant-secret"
+	ServerAddress = "https://router.example.com"
+	TopUpSignSecret = ""
+	if got := TopUpConfigIssues(); len(got) != 0 {
+		t.Fatalf("valid Node configuration has issues: %v", got)
+	}
+	TopUpNodeMerchantSecret = ""
+	if got := TopUpCallbackIssues(); len(got) != 1 || got[0] != "PAYMENT_NODE_MERCHANT_SECRET is empty" {
+		t.Fatalf("missing Node secret issues = %v", got)
+	}
+}
