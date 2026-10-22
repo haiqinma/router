@@ -30,8 +30,12 @@ nohup.out
 /Codex/
 /LifeForm/*
 
-# Project skill task binding (never commit; no secrets but local-only)
+# Project skill local task state
 .project-task.json
 .project-lifecycle.json
 .project-execution.json
 .project-execution/
+.project-task-*.json
+.project-lifecycle-*.json
+.project-execution-*.json
+.project-execution-*/

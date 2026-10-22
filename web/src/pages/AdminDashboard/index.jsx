@@ -1,440 +1,1189 @@
-import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts';
-import {
+  AppAlert,
+  AppButton,
+  AppEmpty,
+  AppErrorState,
   AppFilterHeader,
-  AppSection,
+  AppIcon,
+  AppInput,
   AppSegmented,
+  AppSelect,
   AppSpin,
-  AppToolbar,
-  chartAxisStyle,
-  chartCategoricalPalette,
-  chartGridStyle,
-  chartStatusPalette,
-  chartTooltipStyle,
-  chartTooltipLabelStyle,
-  chartTooltipItemStyle,
+  AppTag,
+  AppTextarea,
+  AppTooltip,
 } from '../../router-ui';
-import { API } from '../../helpers';
-import useChannelAlertSummary from '../../hooks/useChannelAlertSummary';
-import { adaptListResponse } from '../../hooks/useList';
+import { API, showError, showSuccess } from '../../helpers';
+import { formatUpdatedAt } from './dashboardShared';
 import './Dashboard.css';
-import {
-  PERIOD_OPTIONS,
-  TREND_METRIC_OPTIONS,
-  EMPTY_CHANNEL_HEALTH_SUMMARY,
-  formatCount,
-  useAdminDashboardData,
-  useUsdFormatter,
-} from './dashboardShared';
-import { DashboardSectionControls } from './DashboardSectionControls';
 import './AdminDashboard.css';
+import './DutyStation.css';
 
-// 两个重面板延后到值班状态条首绘之后再加载,保住首屏首字节的处置信号(磁贴数字)
-// 尽快点亮;告警面板与健康概览随后填入(AppSpin 占位)。
-const AdminChannelAlertsPanel = lazy(() =>
-  import('../../components/AdminChannelAlertsPanel'),
-);
-const ChannelHealthSection = lazy(() => import('./sections/ChannelHealthSection'));
-const RouteAnomaliesSection = lazy(() => import('./sections/RouteAnomaliesSection'));
-// 经营大盘(模型运营)由原「可用模型 / 经营」双 TAB 合并下沉而来,自包含取数,
-// 与收支大盘同属值班台底部的经营板块;延后加载,不与首屏排障信号争首字节。
-const ModelOperationsSection = lazy(() =>
-  import('./sections/ModelOperationsSection'),
+const DUTY_WINDOWS = ['1h', '6h', '24h'];
+const WORK_VIEWS = [
+  'attention',
+  'objects',
+  'incidents',
+  'observation',
+  'resolved',
+];
+const SORT_MODES = ['priority', 'recent'];
+const OPEN_STATUSES = new Set([
+  'active',
+  'acknowledged',
+  'investigating',
+  'mitigated',
+]);
+const NEXT_STATUS = {
+  active: 'acknowledged',
+  acknowledged: 'investigating',
+  investigating: 'mitigated',
+  mitigated: 'resolved',
+  resolved: 'active',
+};
+
+const EMPTY_DUTY_DASHBOARD = {
+  overall_status: 'unknown',
+  window: '6h',
+  generated_at: 0,
+  summary: {
+    active_incidents: 0,
+    critical_incidents: 0,
+    warning_incidents: 0,
+    unassigned_incidents: 0,
+    affected_models: 0,
+    failure_count: 0,
+    fallback_count: 0,
+    failed_task_count: 0,
+    finance_issue_count: 0,
+  },
+  sources: [],
+  inspection: {
+    health_status: 'unknown',
+    observation_status: 'insufficient',
+    coverage_rate: 0,
+    abnormal_object_count: 0,
+    unknown_object_count: 0,
+    finding_count: 0,
+    domains: [],
+    findings: [],
+  },
+  incidents: [],
+};
+
+const normalizeDutyDashboard = (payload) => ({
+  ...EMPTY_DUTY_DASHBOARD,
+  ...(payload || {}),
+  summary: { ...EMPTY_DUTY_DASHBOARD.summary, ...(payload?.summary || {}) },
+  sources: Array.isArray(payload?.sources) ? payload.sources : [],
+  inspection: {
+    ...EMPTY_DUTY_DASHBOARD.inspection,
+    ...(payload?.inspection || {}),
+    domains: Array.isArray(payload?.inspection?.domains)
+      ? payload.inspection.domains
+      : [],
+    findings: Array.isArray(payload?.inspection?.findings)
+      ? payload.inspection.findings
+      : [],
+  },
+  incidents: Array.isArray(payload?.incidents) ? payload.incidents : [],
+});
+
+const formatCount = (value) => {
+  const count = Number(value || 0);
+  return Number.isFinite(count) ? count.toLocaleString() : '0';
+};
+
+const formatPercent = (value) => {
+  const percent = Number(value || 0) * 100;
+  return Number.isFinite(percent)
+    ? `${percent.toFixed(percent >= 10 ? 1 : 2)}%`
+    : '-';
+};
+
+const statusTone = (status) => {
+  if (status === 'critical' || status === 'error') return 'danger';
+  if (status === 'warning' || status === 'insufficient' || status === 'stale')
+    return 'warning';
+  if (status === 'healthy' || status === 'ready') return 'success';
+  return 'neutral';
+};
+
+const priorityTone = (priority) => {
+  if (priority === 'P0') return 'danger';
+  if (priority === 'P1') return 'warning';
+  return 'info';
+};
+
+const severityRank = (value) => {
+  if (value === 'critical') return 3;
+  if (value === 'warning') return 2;
+  if (value === 'unknown') return 1;
+  return 0;
+};
+
+const DutyTag = ({ children, tone = 'neutral', className = '' }) => (
+  <AppTag className={`duty-tag duty-tag-${tone} ${className}`.trim()}>
+    {children}
+  </AppTag>
 );
 
-// 首屏 = 值班台:顶部一排可点击状态磁贴(火/供给/失败任务/收支)让运营者一眼
-// 看清「今天有没有事」并直接下钻到处置现场;其下内嵌排障三件套——告警面板(就地
-// ack/resolve)、渠道健康概览、路由异常排名,把「出问题去哪看」收敛到一个入口;
-// 经营大盘下沉到最底。这些小件自包含、零/注入 props、各自轮询或取数。
-const AdminDashboard = () => {
+const resolveIncidentDomain = (incident) => {
+  if (incident?.scope_type === 'channel') return 'channels';
+  if (incident?.scope_type === 'model') return 'models';
+  if (incident?.scope_type === 'finance') return 'finance';
+  if (incident?.tasks?.length > 0) return 'tasks';
+  return 'routes';
+};
+
+function AdminDashboard() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { formatUsd } = useUsdFormatter();
-  const [period, setPeriod] = useState('last_7_days');
-  const [trendMetric, setTrendMetric] = useState('spend_amount');
+  const [windowValue, setWindowValue] = useState('6h');
+  const [dashboard, setDashboard] = useState(EMPTY_DUTY_DASHBOARD);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
+  const [workView, setWorkView] = useState('attention');
+  const [domainScope, setDomainScope] = useState('all');
+  const [sortMode, setSortMode] = useState('priority');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedItemID, setSelectedItemID] = useState('');
+  const [mobileDetail, setMobileDetail] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [actionNote, setActionNote] = useState('');
 
-  const { dashboard, loading, reload } = useAdminDashboardData('spending', {
-    period,
-  });
-
-  // 值班状态条数据源(均复用既有接口,无新后端):
-  // - 告警摘要:与侧栏红点共用的 hook(60s 轮询)。
-  const { unresolvedCritical, unacknowledged } = useChannelAlertSummary();
-  // - 渠道健康摘要:复用 dashboard?section=channels 的 channel_health_summary。
-  //   同一份结果注入内嵌 <ChannelHealthSection>,避免它再取一次同 section。
-  const {
-    dashboard: channelsDashboard,
-    loading: channelsLoading,
-    reload: channelsReload,
-  } = useAdminDashboardData('channels');
-  const channelHealthSummary = useMemo(
-    () => ({
-      ...EMPTY_CHANNEL_HEALTH_SUMMARY,
-      ...(channelsDashboard.channel_health_summary || {}),
-    }),
-    [channelsDashboard.channel_health_summary],
+  const loadDashboard = useCallback(
+    async ({ silent = false } = {}) => {
+      if (silent) setRefreshing(true);
+      else setLoading(true);
+      try {
+        const response = await API.get('/api/v1/admin/duty/incidents', {
+          params: { window: windowValue },
+        });
+        if (response?.data?.success !== true) {
+          throw new Error(
+            response?.data?.message || t('dashboard.admin.duty.load_failed')
+          );
+        }
+        setDashboard(normalizeDutyDashboard(response?.data?.data));
+        setError('');
+      } catch (loadError) {
+        setError(loadError?.message || t('dashboard.admin.duty.load_failed'));
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [t, windowValue]
   );
-  // - 失败任务数:轻量拉一页系统任务(status=failed)取 total。
-  const [failedTaskCount, setFailedTaskCount] = useState(0);
+
   useEffect(() => {
-    let active = true;
-    API.get('/api/v1/admin/tasks', {
-      params: { status: 'failed', page: 1, page_size: 1 },
-    })
-      .then((response) => {
-        if (!active || response?.data?.success !== true) return;
-        const { total } = adaptListResponse(response.data);
-        setFailedTaskCount(Number(total || 0));
-      })
-      .catch(() => {
-        // 值班条为概览信号,失败静默降级为 0,不打断首屏。
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
+    loadDashboard();
+    const timer = window.setInterval(
+      () => loadDashboard({ silent: true }),
+      30000
+    );
+    return () => window.clearInterval(timer);
+  }, [loadDashboard]);
 
-  const dutyTitle = t('dashboard.admin.duty.title');
-
-  const periodOptions = useMemo(
-    () =>
-      PERIOD_OPTIONS.map((value) => ({
-        key: value,
-        value,
-        text: t(`dashboard.spending.period.${value}`),
-      })),
-    [t],
+  const sourceErrors = dashboard.sources.filter(
+    (source) => source.status === 'error'
+  );
+  const openIncidents = dashboard.incidents.filter((incident) =>
+    OPEN_STATUSES.has(incident.status)
+  );
+  const resolvedIncidents = dashboard.incidents.filter(
+    (incident) => incident.status === 'resolved'
+  );
+  const unlinkedFindings = dashboard.inspection.findings.filter(
+    (finding) => !finding.incident_id
+  );
+  const observationFindings = dashboard.inspection.findings.filter(
+    (finding) =>
+      finding.health_status === 'unknown' ||
+      finding.observation_status !== 'ready'
   );
 
-  const trendMetricOptions = useMemo(
-    () =>
-      TREND_METRIC_OPTIONS.map((metric) => ({
-        value: metric,
-        label: t(`dashboard.admin.trend.metrics.${metric}`),
-      })),
-    [t],
-  );
-
-  const trendLineColor = useMemo(() => {
-    switch (trendMetric) {
-      case 'topup_amount':
-        return chartStatusPalette.success;
-      case 'request_count':
-        return chartCategoricalPalette[0];
-      case 'active_user_count':
-        return chartCategoricalPalette[3];
-      default:
-        return chartCategoricalPalette[1];
-    }
-  }, [trendMetric]);
-
-  const trendFormatter = (value) => {
-    if (trendMetric === 'spend_amount' || trendMetric === 'topup_amount') {
-      return formatUsd(value);
-    }
-    return formatCount(value);
+  const workViewCounts = {
+    attention: openIncidents.length + unlinkedFindings.length,
+    objects: dashboard.inspection.domains.length,
+    incidents: openIncidents.length,
+    observation: observationFindings.length,
+    resolved: resolvedIncidents.length,
   };
 
-  const spendingInsightData = useMemo(() => {
-    const trendRows = Array.isArray(dashboard.trend) ? dashboard.trend : [];
-    const peakSpend = trendRows.reduce(
-      (best, item) =>
-        Number(item.spend_amount || 0) > Number(best?.spend_amount || 0) ? item : best,
-      null,
-    );
-    const peakTopup = trendRows.reduce(
-      (best, item) =>
-        Number(item.topup_amount || 0) > Number(best?.topup_amount || 0) ? item : best,
-      null,
-    );
-    const peakActiveUsers = trendRows.reduce(
-      (best, item) =>
-        Number(item.active_user_count || 0) > Number(best?.active_user_count || 0)
-          ? item
-          : best,
-      null,
-    );
-    const netAmount = Number(dashboard.summary.net_amount || 0);
-    return {
-      net: {
-        label:
-          netAmount >= 0
-            ? t('dashboard.admin.spending.insights.net_positive')
-            : t('dashboard.admin.spending.insights.net_negative'),
-        value: formatUsd(Math.abs(netAmount)),
-        hint:
-          netAmount >= 0
-            ? t('dashboard.admin.spending.insights.net_positive_hint')
-            : t('dashboard.admin.spending.insights.net_negative_hint'),
-        tone: netAmount >= 0 ? 'green' : 'red',
-      },
-      peakSpend: {
-        label: t('dashboard.admin.spending.insights.peak_spend'),
-        value: peakSpend ? formatUsd(peakSpend.spend_amount) : '-',
-        hint: peakSpend?.bucket || '-',
-      },
-      peakTopup: {
-        label: t('dashboard.admin.spending.insights.peak_topup'),
-        value: peakTopup ? formatUsd(peakTopup.topup_amount) : '-',
-        hint: peakTopup?.bucket || '-',
-      },
-      activeUsers: {
-        label: t('dashboard.admin.spending.insights.peak_active_users'),
-        value: peakActiveUsers ? formatCount(peakActiveUsers.active_user_count) : '-',
-        hint: peakActiveUsers?.bucket || '-',
-      },
-    };
-  }, [dashboard.summary.net_amount, dashboard.trend, formatUsd, t]);
+  const queueItems = useMemo(() => {
+    const incidentItems = (incidents) =>
+      incidents.map((incident) => ({
+        id: `incident:${incident.id}`,
+        kind: 'incident',
+        domain: resolveIncidentDomain(incident),
+        title: incident.title || incident.id,
+        summary: incident.summary,
+        severity: incident.severity,
+        healthStatus: incident.severity,
+        observationStatus: 'ready',
+        status: incident.status,
+        priority: incident.priority,
+        priorityScore:
+          Number(incident.priority_score || 0) * 10 +
+          severityRank(incident.severity),
+        owner: incident.assignee_username,
+        lastSeenAt: incident.last_seen_at,
+        incident,
+      }));
+    const findingItems = (findings) =>
+      findings.map((finding) => ({
+        id: `finding:${finding.id}`,
+        kind: 'finding',
+        domain: finding.domain,
+        title: finding.title || finding.object_name,
+        summary: finding.summary,
+        severity: finding.severity,
+        healthStatus: finding.health_status,
+        observationStatus: finding.observation_status,
+        status: finding.incident_id ? 'linked' : 'new',
+        priority: finding.severity === 'critical' ? 'P1' : 'P2',
+        priorityScore:
+          severityRank(finding.severity) * 10 +
+          (finding.observation_status === 'error' ? 3 : 0),
+        lastSeenAt: finding.last_seen_at,
+        finding,
+      }));
+    const domainItems = dashboard.inspection.domains.map((domain) => ({
+      id: `domain:${domain.key}`,
+      kind: 'domain',
+      domain: domain.key,
+      title: t(`dashboard.admin.duty.inspection.domain.${domain.key}`),
+      summary:
+        domain.metric_kind === 'findings'
+          ? t('dashboard.admin.duty.console.finding_domain_summary', {
+              findings: domain.finding_count || 0,
+            })
+          : t('dashboard.admin.duty.console.domain_summary', {
+              findings: domain.finding_count || 0,
+              total: domain.total_count || 0,
+            }),
+      severity: domain.health_status,
+      healthStatus: domain.health_status,
+      observationStatus: domain.observation_status,
+      status: domain.health_status,
+      priority: '',
+      priorityScore: severityRank(domain.health_status) * 10,
+      lastSeenAt: domain.last_changed_at,
+      metricKind: domain.metric_kind,
+      domainItem: domain,
+    }));
 
-  const renderPageHeader = () => (
-    <AppFilterHeader
-      className='admin-dashboard-toolbar'
-      breadcrumbs={[
-        { key: 'admin', label: t('header.admin_workspace') },
-        { key: 'dashboard', label: t('header.dashboard') },
-        { key: 'duty', label: dutyTitle, active: true },
-      ]}
-      title={dutyTitle}
-    />
-  );
+    if (workView === 'objects') return domainItems;
+    if (workView === 'incidents') return incidentItems(openIncidents);
+    if (workView === 'observation') return findingItems(observationFindings);
+    if (workView === 'resolved') return incidentItems(resolvedIncidents);
+    return [...incidentItems(openIncidents), ...findingItems(unlinkedFindings)];
+  }, [
+    dashboard.inspection.domains,
+    observationFindings,
+    openIncidents,
+    resolvedIncidents,
+    t,
+    unlinkedFindings,
+    workView,
+  ]);
 
-  const renderDutyStrip = () => {
-    const riskyChannels =
-      Number(channelHealthSummary.risk_count || 0) +
-      Number(channelHealthSummary.active_circuit_breaker_count || 0);
-    const tiles = [
-      {
-        key: 'pending_alerts',
-        label: t('dashboard.admin.duty.pending_alerts'),
-        value: unresolvedCritical,
-        hint: t('dashboard.admin.duty.pending_alerts_hint', {
-          count: unacknowledged,
-        }),
-        tone: 'critical',
-        to: '/admin/channel?tab=alerts',
-      },
-      {
-        key: 'risky_channels',
-        label: t('dashboard.admin.duty.risky_channels'),
-        value: riskyChannels,
-        tone: 'critical',
-        to: '/admin/channel?tab=health',
-      },
-      {
-        key: 'low_balance_channels',
-        label: t('dashboard.admin.duty.low_balance_channels'),
-        value: Number(channelHealthSummary.low_balance_channel_count || 0),
-        tone: 'warning',
-        to: '/admin/channel',
-      },
-      {
-        key: 'failed_tasks',
-        label: t('dashboard.admin.duty.failed_tasks'),
-        value: failedTaskCount,
-        tone: 'warning',
-        to: '/admin/channel?tab=tasks',
-      },
-      {
-        key: 'net_amount',
-        label: t('dashboard.admin.duty.net_amount'),
-        display: formatUsd(dashboard.summary.net_amount),
-        tone: 'info',
-        to: '/admin/finance',
-      },
-    ];
+  const visibleItems = useMemo(() => {
+    const normalizedSearch = searchQuery.trim().toLowerCase();
+    const filtered = queueItems.filter((item) => {
+      if (domainScope !== 'all' && item.domain !== domainScope) return false;
+      if (!normalizedSearch) return true;
+      return [item.title, item.summary, item.owner, item.domain]
+        .filter(Boolean)
+        .some((value) =>
+          String(value).toLowerCase().includes(normalizedSearch)
+        );
+    });
+    return filtered.sort((left, right) => {
+      if (sortMode === 'recent')
+        return Number(right.lastSeenAt || 0) - Number(left.lastSeenAt || 0);
+      if (right.priorityScore !== left.priorityScore)
+        return right.priorityScore - left.priorityScore;
+      return Number(right.lastSeenAt || 0) - Number(left.lastSeenAt || 0);
+    });
+  }, [domainScope, queueItems, searchQuery, sortMode]);
+
+  useEffect(() => {
+    if (visibleItems.some((item) => item.id === selectedItemID)) return;
+    setSelectedItemID(visibleItems[0]?.id || '');
+    setMobileDetail(false);
+  }, [selectedItemID, visibleItems]);
+
+  const selectedItem =
+    visibleItems.find((item) => item.id === selectedItemID) || null;
+  const selectedIncident = selectedItem?.incident || null;
+
+  useEffect(() => {
+    setActionNote(selectedIncident?.last_note || '');
+  }, [selectedIncident?.id, selectedIncident?.last_note]);
+
+  const updateIncidentStatus = useCallback(async () => {
+    if (!selectedIncident || actionLoading) return;
+    const nextStatus = NEXT_STATUS[selectedIncident.status] || 'acknowledged';
+    setActionLoading(true);
+    try {
+      const response = await API.post(
+        `/api/v1/admin/duty/incidents/${encodeURIComponent(
+          selectedIncident.id
+        )}/status`,
+        { status: nextStatus, note: actionNote.trim() },
+        { params: { window: windowValue } }
+      );
+      if (response?.data?.success !== true) {
+        throw new Error(
+          response?.data?.message || t('dashboard.admin.duty.update_failed')
+        );
+      }
+      showSuccess(t('dashboard.admin.duty.update_success'));
+      await loadDashboard({ silent: true });
+    } catch (updateError) {
+      showError(
+        updateError?.message || t('dashboard.admin.duty.update_failed')
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  }, [
+    actionLoading,
+    actionNote,
+    loadDashboard,
+    selectedIncident,
+    t,
+    windowValue,
+  ]);
+
+  const windowOptions = DUTY_WINDOWS.map((value) => ({
+    value,
+    label: t(`dashboard.admin.duty.window.${value}`),
+  }));
+  const domainOptions = [
+    { value: 'all', label: t('dashboard.admin.duty.console.scope_all') },
+    ...dashboard.inspection.domains.map((domain) => ({
+      value: domain.key,
+      label: t(`dashboard.admin.duty.inspection.domain.${domain.key}`),
+    })),
+  ];
+  const sortOptions = SORT_MODES.map((value) => ({
+    value,
+    label: t(`dashboard.admin.duty.console.sort.${value}`),
+  }));
+
+  const renderLinkButton = (key, link) => {
+    if (!link) return null;
     return (
-      <div className='admin-dashboard-duty-strip'>
-        {tiles.map((tile) => (
-          <button
-            type='button'
-            key={tile.key}
-            className={`admin-dashboard-channel-bell admin-dashboard-channel-bell-cta is-${tile.tone}${
-              tile.value > 0 ? ' is-active' : ''
-            }`}
-            onClick={() => navigate(tile.to)}
-          >
-            <div className='admin-dashboard-channel-bell-value'>
-              {tile.display !== undefined ? tile.display : tile.value}
-            </div>
-            <div className='admin-dashboard-channel-bell-label'>{tile.label}</div>
-            {tile.hint ? (
-              <div className='admin-dashboard-duty-tile-hint'>{tile.hint}</div>
-            ) : null}
-          </button>
-        ))}
-      </div>
+      <AppButton
+        key={key}
+        basic
+        size='small'
+        icon={<AppIcon name='right chevron' />}
+        onClick={() => navigate(link)}
+      >
+        {t(`dashboard.admin.duty.links.${key}`)}
+      </AppButton>
     );
   };
 
-  const renderSpendingSection = () => (
-    <AppSection className='admin-dashboard-section'>
-      <div className='admin-dashboard-subsection-header'>
-        <div className='admin-dashboard-subsection-header-main'>
-          <div className='admin-dashboard-subsection-title admin-dashboard-subsection-title-strong'>
-            {t('dashboard.admin.sections.spending')}
-          </div>
-        </div>
-        <AppToolbar
-          className='admin-dashboard-section-toolbar'
-          end={
-            <DashboardSectionControls
-              period={period}
-              periodOptions={periodOptions}
-              onPeriodChange={setPeriod}
-              generatedAt={dashboard.generated_at}
-              loading={loading}
-              onRefresh={reload}
-            />
-          }
-        />
-      </div>
-      <div className='admin-dashboard-spending-headline'>
-        <div className='admin-dashboard-spending-headline-main'>
-          <div className='admin-dashboard-spending-headline-label'>
-            {t('dashboard.admin.spending.headline.net')}
-          </div>
-          <div
-            className={`admin-dashboard-spending-headline-value admin-dashboard-spending-headline-value-${spendingInsightData.net.tone}`}
-          >
-            {spendingInsightData.net.value}
-          </div>
-          <div className='admin-dashboard-spending-headline-hint'>
-            {spendingInsightData.net.hint}
-          </div>
-        </div>
-        <div className='admin-dashboard-spending-headline-side'>
-          <div className='admin-dashboard-spending-headline-row'>
-            <span>{t('dashboard.admin.metrics.consume')}</span>
-            <strong>{formatUsd(dashboard.summary.spend_amount)}</strong>
-          </div>
-          <div className='admin-dashboard-spending-headline-row'>
-            <span>{t('dashboard.admin.metrics.topup')}</span>
-            <strong>{formatUsd(dashboard.summary.topup_amount)}</strong>
-          </div>
-          <div className='admin-dashboard-spending-headline-row'>
-            <span>{t('dashboard.admin.metrics.request_count')}</span>
-            <strong>{formatCount(dashboard.summary.request_count)}</strong>
-          </div>
-          <div className='admin-dashboard-spending-headline-row'>
-            <span>{t('dashboard.admin.metrics.active_user_count')}</span>
-            <strong>{formatCount(dashboard.summary.active_user_count)}</strong>
-          </div>
-        </div>
-      </div>
-      <div className='admin-dashboard-trend-block'>
-        <div className='admin-dashboard-subsection-header admin-dashboard-trend-block-header'>
-          <div className='admin-dashboard-subsection-header-main'>
-            <div className='admin-dashboard-subsection-title'>
-              {t('dashboard.admin.spending.trend_title')}
-            </div>
-            <div className='admin-dashboard-subsection-description'>
-              {t('dashboard.admin.spending.insights.trend_hint')}
-            </div>
-          </div>
-          <AppToolbar
-            className='admin-dashboard-trend-toolbar'
-            end={
-              <AppSegmented
-                className='admin-dashboard-segmented'
-                options={trendMetricOptions}
-                value={trendMetric}
-                onChange={(e, { value }) => setTrendMetric(value)}
-              />
-            }
-          />
-        </div>
-        {dashboard.trend.length === 0 ? (
-          <div className='admin-dashboard-empty'>
-            {t('dashboard.admin.empty.trend')}
-          </div>
-        ) : (
-          <div className='chart-container'>
-            <ResponsiveContainer width='100%' height={240}>
-              <LineChart data={dashboard.trend}>
-                <CartesianGrid {...chartGridStyle()} />
-                <XAxis
-                  dataKey='bucket'
-                  {...chartAxisStyle()}
-                  minTickGap={8}
-                />
-                <YAxis {...chartAxisStyle()} />
-                <Tooltip
-                  contentStyle={chartTooltipStyle()}
-                  labelStyle={chartTooltipLabelStyle()}
-                  itemStyle={chartTooltipItemStyle()}
-                  formatter={(value) => [
-                    trendFormatter(value),
-                    t(`dashboard.admin.trend.metrics.${trendMetric}`),
-                  ]}
-                  labelFormatter={(label) =>
-                    `${t('dashboard.statistics.tooltip.date')}: ${label}`
-                  }
-                />
-                <Line
-                  type='monotone'
-                  dataKey={trendMetric}
-                  stroke={trendLineColor}
-                  strokeWidth={2}
-                  dot={false}
-                  activeDot={{ r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </div>
-    </AppSection>
-  );
+  const openIncidentFromFinding = (finding) => {
+    setWorkView('incidents');
+    setDomainScope('all');
+    window.requestAnimationFrame(() => {
+      setSelectedItemID(`incident:${finding.incident_id}`);
+      setMobileDetail(true);
+    });
+  };
 
   return (
-    <div className='dashboard-container admin-dashboard-container'>
-      {renderPageHeader()}
-      {renderDutyStrip()}
-      <Suspense
-        fallback={
-          <AppSpin spinning className='admin-dashboard-content-spin' />
+    <div className='dashboard-container admin-dashboard-container duty-station'>
+      <AppFilterHeader
+        className='admin-dashboard-toolbar duty-toolbar'
+        breadcrumbs={[
+          { key: 'overview', label: t('dashboard.admin.title') },
+          { key: 'duty', label: t('dashboard.admin.duty.title'), active: true },
+        ]}
+        picker={
+          <AppSegmented
+            className='duty-window-control'
+            options={windowOptions}
+            value={windowValue}
+            onChange={(_, data) => setWindowValue(data.value)}
+          />
         }
-      >
-        <AdminChannelAlertsPanel />
-        <ChannelHealthSection
-          injectedData={{
-            dashboard: channelsDashboard,
-            loading: channelsLoading,
-            reload: channelsReload,
-          }}
+        actions={
+          <div className='duty-refresh-control'>
+            <span>
+              {t('dashboard.admin.duty.refreshed_at', {
+                time: formatUpdatedAt(dashboard.generated_at),
+              })}
+            </span>
+            <AppTooltip title={t('dashboard.admin.buttons.refresh')}>
+              <AppButton
+                className='duty-icon-button'
+                basic
+                aria-label={t('dashboard.admin.buttons.refresh')}
+                icon={<AppIcon name='exchange' />}
+                loading={refreshing}
+                onClick={() => loadDashboard({ silent: true })}
+              />
+            </AppTooltip>
+          </div>
+        }
+      />
+
+      {error && dashboard.generated_at > 0 ? (
+        <AppAlert
+          className='duty-stale-alert'
+          type='warning'
+          showIcon
+          title={t('dashboard.admin.duty.refresh_failed')}
+          description={error}
         />
-        <RouteAnomaliesSection />
-      </Suspense>
-      <div className='admin-dashboard-board-divider'>
-        <div className='admin-dashboard-board-divider-title'>
-          {t('dashboard.admin.board.operations_title')}
-        </div>
-        <div className='admin-dashboard-board-divider-hint'>
-          {t('dashboard.admin.board.operations_hint')}
-        </div>
-      </div>
-      <AppSpin spinning={loading} className='admin-dashboard-content-spin'>
-        {renderSpendingSection()}
-      </AppSpin>
-      <Suspense
-        fallback={
-          <AppSpin spinning className='admin-dashboard-content-spin' />
-        }
-      >
-        <ModelOperationsSection />
-      </Suspense>
+      ) : null}
+
+      {loading && dashboard.generated_at <= 0 ? (
+        <AppSpin className='admin-dashboard-content-spin' />
+      ) : error && dashboard.generated_at <= 0 ? (
+        <AppErrorState
+          className='duty-page-error'
+          message={error}
+          onRetry={() => loadDashboard()}
+          retryText={t('common.retry')}
+        />
+      ) : (
+        <>
+          {sourceErrors.length > 0 ? (
+            <AppAlert
+              className='duty-source-alert'
+              type='error'
+              showIcon
+              title={t('dashboard.admin.duty.source_error_title', {
+                count: sourceErrors.length,
+              })}
+              description={sourceErrors
+                .map((source) =>
+                  t('dashboard.admin.duty.source_error_item', {
+                    source: t(`dashboard.admin.duty.source.${source.key}`),
+                    message:
+                      source.message ||
+                      t('dashboard.admin.duty.source_error_unknown'),
+                  })
+                )
+                .join(' ')}
+            />
+          ) : null}
+
+          <section
+            className='duty-brief'
+            aria-label={t('dashboard.admin.duty.overall')}
+          >
+            <span
+              className={`duty-brief-mark duty-mark-${statusTone(
+                dashboard.overall_status
+              )}`}
+              aria-hidden='true'
+            />
+            <div className='duty-brief-copy'>
+              <strong>
+                {t(`dashboard.admin.duty.status.${dashboard.overall_status}`)}
+              </strong>
+              <span>
+                {t(
+                  `dashboard.admin.duty.status_hint.${dashboard.overall_status}`
+                )}
+              </span>
+            </div>
+            <dl className='duty-brief-facts'>
+              <div>
+                <dt>{t('dashboard.admin.duty.console.needs_attention')}</dt>
+                <dd>{formatCount(workViewCounts.attention)}</dd>
+              </div>
+              <div>
+                <dt>{t('dashboard.admin.duty.summary.active')}</dt>
+                <dd>{formatCount(dashboard.summary.active_incidents)}</dd>
+              </div>
+              <div>
+                <dt>{t('dashboard.admin.duty.summary.coverage')}</dt>
+                <dd>{formatPercent(dashboard.inspection.coverage_rate)}</dd>
+              </div>
+            </dl>
+          </section>
+
+          <section
+            className={`duty-console ${mobileDetail ? 'is-mobile-detail' : ''}`}
+          >
+            <aside className='duty-console-nav'>
+              <div className='duty-nav-group'>
+                <h2>{t('dashboard.admin.duty.console.views')}</h2>
+                <div className='duty-view-list'>
+                  {WORK_VIEWS.map((view) => (
+                    <button
+                      key={view}
+                      type='button'
+                      className={workView === view ? 'is-active' : ''}
+                      onClick={() => {
+                        setWorkView(view);
+                        setMobileDetail(false);
+                      }}
+                    >
+                      <span>
+                        {t(`dashboard.admin.duty.console.view.${view}`)}
+                      </span>
+                      <strong>{formatCount(workViewCounts[view])}</strong>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className='duty-nav-group duty-domain-nav'>
+                <h2>{t('dashboard.admin.duty.console.scopes')}</h2>
+                <button
+                  type='button'
+                  className={domainScope === 'all' ? 'is-active' : ''}
+                  onClick={() => setDomainScope('all')}
+                >
+                  <span>{t('dashboard.admin.duty.console.scope_all')}</span>
+                </button>
+                {dashboard.inspection.domains.map((domain) => (
+                  <button
+                    key={domain.key}
+                    type='button'
+                    className={domainScope === domain.key ? 'is-active' : ''}
+                    onClick={() => setDomainScope(domain.key)}
+                  >
+                    <span>
+                      <i
+                        className={`duty-domain-mark duty-mark-${statusTone(
+                          domain.health_status
+                        )}`}
+                        aria-hidden='true'
+                      />
+                      {t(
+                        `dashboard.admin.duty.inspection.domain.${domain.key}`
+                      )}
+                    </span>
+                    <strong>{formatCount(domain.finding_count)}</strong>
+                  </button>
+                ))}
+              </div>
+
+              <div className='duty-observation-note'>
+                <span>{t('dashboard.admin.duty.observation_summary')}</span>
+                <strong>
+                  {t(
+                    `dashboard.admin.duty.observation_status.${dashboard.inspection.observation_status}`
+                  )}{' '}
+                  · {formatPercent(dashboard.inspection.coverage_rate)}
+                </strong>
+              </div>
+            </aside>
+
+            <div className='duty-console-main'>
+              <header className='duty-list-header'>
+                <div>
+                  <h1>{t(`dashboard.admin.duty.console.view.${workView}`)}</h1>
+                  <p>
+                    {t(`dashboard.admin.duty.console.view_hint.${workView}`)}
+                  </p>
+                </div>
+                <span className='duty-result-count'>
+                  {t('dashboard.admin.duty.console.result_count', {
+                    count: visibleItems.length,
+                  })}
+                </span>
+              </header>
+
+              <div className='duty-list-controls'>
+                <AppInput
+                  className='duty-search-input'
+                  fluid
+                  icon='search'
+                  value={searchQuery}
+                  placeholder={t('dashboard.admin.duty.console.search')}
+                  aria-label={t('dashboard.admin.duty.console.search')}
+                  onChange={(_, data) => setSearchQuery(data.value)}
+                />
+                <AppSelect
+                  className='duty-mobile-scope'
+                  compact
+                  options={domainOptions}
+                  value={domainScope}
+                  aria-label={t('dashboard.admin.duty.console.scopes')}
+                  onChange={(_, data) => setDomainScope(data.value)}
+                />
+                <AppSelect
+                  className='duty-sort-select'
+                  compact
+                  options={sortOptions}
+                  value={sortMode}
+                  aria-label={t('dashboard.admin.duty.console.sort.label')}
+                  onChange={(_, data) => setSortMode(data.value)}
+                />
+              </div>
+
+              <div className='duty-table-header' aria-hidden='true'>
+                <span>{t('dashboard.admin.duty.console.columns.item')}</span>
+                <span>{t('dashboard.admin.duty.console.columns.state')}</span>
+                <span>{t('dashboard.admin.duty.console.columns.signal')}</span>
+                <span>
+                  {t('dashboard.admin.duty.console.columns.observation')}
+                </span>
+                <span>{t('dashboard.admin.duty.console.columns.changed')}</span>
+                <span />
+              </div>
+
+              {visibleItems.length > 0 ? (
+                <div className='duty-table-body'>
+                  {visibleItems.map((item) => (
+                    <button
+                      key={item.id}
+                      type='button'
+                      className={`duty-table-row ${
+                        item.id === selectedItemID ? 'is-selected' : ''
+                      }`}
+                      onClick={() => {
+                        setSelectedItemID(item.id);
+                        setMobileDetail(true);
+                      }}
+                    >
+                      <span className='duty-item-cell'>
+                        <span className='duty-item-title'>
+                          <i
+                            className={`duty-domain-mark duty-mark-${statusTone(
+                              item.healthStatus
+                            )}`}
+                            aria-hidden='true'
+                          />
+                          <strong>{item.title}</strong>
+                        </span>
+                        <small>
+                          {t(
+                            `dashboard.admin.duty.inspection.domain.${item.domain}`
+                          )}{' '}
+                          ·{' '}
+                          {item.summary ||
+                            t('dashboard.admin.duty.incident.no_summary')}
+                        </small>
+                      </span>
+                      <span className='duty-state-cell'>
+                        {item.kind === 'incident' ? (
+                          <>
+                            <DutyTag tone={priorityTone(item.priority)}>
+                              {item.priority}
+                            </DutyTag>
+                            <small>
+                              {t(
+                                `dashboard.admin.duty.incident.status.${item.status}`
+                              )}
+                            </small>
+                          </>
+                        ) : (
+                          <DutyTag tone={statusTone(item.healthStatus)}>
+                            {t(
+                              `dashboard.admin.duty.health_status.${item.healthStatus}`
+                            )}
+                          </DutyTag>
+                        )}
+                      </span>
+                      <span className='duty-signal-cell'>
+                        {item.kind === 'incident'
+                          ? t('dashboard.admin.duty.incident.impact_brief', {
+                              failures: formatCount(
+                                item.incident.impact?.failure_count
+                              ),
+                              tasks: formatCount(
+                                item.incident.impact?.failed_task_count
+                              ),
+                              finance: formatCount(
+                                item.incident.impact?.finance_issue_count
+                              ),
+                            })
+                          : item.kind === 'domain'
+                          ? item.metricKind === 'findings'
+                            ? t(
+                                'dashboard.admin.duty.console.finding_domain_signal',
+                                {
+                                  critical: item.domainItem.critical_count || 0,
+                                  warning: item.domainItem.warning_count || 0,
+                                }
+                              )
+                            : t('dashboard.admin.duty.console.domain_signal', {
+                                abnormal:
+                                  Number(item.domainItem.warning_count || 0) +
+                                  Number(item.domainItem.critical_count || 0) +
+                                  Number(item.domainItem.unknown_count || 0),
+                                total: item.domainItem.total_count || 0,
+                              })
+                          : t(`dashboard.admin.duty.severity.${item.severity}`)}
+                      </span>
+                      <span className='duty-observation-cell'>
+                        <DutyTag tone={statusTone(item.observationStatus)}>
+                          {t(
+                            `dashboard.admin.duty.observation_status.${item.observationStatus}`
+                          )}
+                        </DutyTag>
+                      </span>
+                      <time className='duty-time-cell'>
+                        {item.lastSeenAt
+                          ? formatUpdatedAt(item.lastSeenAt)
+                          : '-'}
+                      </time>
+                      <AppIcon name='right chevron' />
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <AppEmpty className='duty-console-empty'>
+                  <strong>
+                    {t('dashboard.admin.duty.console.empty_title')}
+                  </strong>
+                  <span>
+                    {t('dashboard.admin.duty.console.empty_description')}
+                  </span>
+                </AppEmpty>
+              )}
+            </div>
+
+            <aside className='duty-context-panel'>
+              <AppButton
+                className='duty-mobile-only duty-back-button'
+                basic
+                icon={<AppIcon name='left chevron' />}
+                aria-label={t('common.back')}
+                onClick={() => setMobileDetail(false)}
+              />
+              {selectedItem?.kind === 'incident' ? (
+                <IncidentDetail
+                  incident={selectedItem.incident}
+                  actionLoading={actionLoading}
+                  actionNote={actionNote}
+                  setActionNote={setActionNote}
+                  updateIncidentStatus={updateIncidentStatus}
+                  renderLinkButton={renderLinkButton}
+                  navigate={navigate}
+                  t={t}
+                />
+              ) : selectedItem?.kind === 'finding' ? (
+                <FindingDetail
+                  finding={selectedItem.finding}
+                  openIncident={openIncidentFromFinding}
+                  navigate={navigate}
+                  t={t}
+                />
+              ) : selectedItem?.kind === 'domain' ? (
+                <DomainDetail
+                  domain={selectedItem.domainItem}
+                  findings={dashboard.inspection.findings.filter(
+                    (finding) => finding.domain === selectedItem.domain
+                  )}
+                  navigate={navigate}
+                  t={t}
+                />
+              ) : (
+                <AppEmpty className='duty-detail-empty'>
+                  {t('dashboard.admin.duty.console.select_hint')}
+                </AppEmpty>
+              )}
+            </aside>
+          </section>
+        </>
+      )}
     </div>
   );
-};
+}
+
+function DetailHeader({ badges, title, summary }) {
+  return (
+    <header className='duty-detail-header'>
+      <div className='duty-detail-badges'>{badges}</div>
+      <h2>{title}</h2>
+      <p>{summary}</p>
+    </header>
+  );
+}
+
+function IncidentDetail({
+  incident,
+  actionLoading,
+  actionNote,
+  setActionNote,
+  updateIncidentStatus,
+  renderLinkButton,
+  navigate,
+  t,
+}) {
+  return (
+    <div className='duty-detail'>
+      <DetailHeader
+        badges={
+          <>
+            <DutyTag tone={priorityTone(incident.priority)}>
+              {incident.priority}
+            </DutyTag>
+            <DutyTag tone={statusTone(incident.severity)}>
+              {t(`dashboard.admin.duty.severity.${incident.severity}`)}
+            </DutyTag>
+            <DutyTag tone='neutral'>
+              {t(`dashboard.admin.duty.incident.status.${incident.status}`)}
+            </DutyTag>
+          </>
+        }
+        title={incident.title || incident.id}
+        summary={
+          incident.summary || t('dashboard.admin.duty.incident.no_summary')
+        }
+      />
+      <dl className='duty-detail-meta'>
+        <div>
+          <dt>{t('dashboard.admin.duty.incident.assignee')}</dt>
+          <dd>
+            {incident.assignee_username ||
+              t('dashboard.admin.duty.incident.unassigned')}
+          </dd>
+        </div>
+        <div>
+          <dt>{t('dashboard.admin.duty.incident.last_seen')}</dt>
+          <dd>{formatUpdatedAt(incident.last_seen_at)}</dd>
+        </div>
+      </dl>
+
+      <section className='duty-detail-block'>
+        <h3>{t('dashboard.admin.duty.incident.impact_title')}</h3>
+        <div className='duty-detail-metrics'>
+          {[
+            ['requests', incident.impact?.request_count],
+            ['failures', incident.impact?.failure_count],
+            ['failure_rate', formatPercent(incident.impact?.failure_rate)],
+            ['fallbacks', incident.impact?.fallback_count],
+            ['failed_tasks', incident.impact?.failed_task_count],
+            ['finance', incident.impact?.finance_issue_count],
+          ].map(([key, value]) => (
+            <div key={key}>
+              <span>{t(`dashboard.admin.duty.incident.impact.${key}`)}</span>
+              <strong>
+                {typeof value === 'string' ? value : formatCount(value)}
+              </strong>
+            </div>
+          ))}
+        </div>
+        <div className='duty-scope-lines'>
+          {incident.channel_name ? (
+            <p>
+              <span>{t('dashboard.admin.duty.incident.channel')}</span>
+              {incident.channel_name}
+            </p>
+          ) : null}
+          {incident.models?.length > 0 ? (
+            <p>
+              <span>{t('dashboard.admin.duty.incident.models')}</span>
+              {incident.models.join(', ')}
+            </p>
+          ) : null}
+          {incident.endpoints?.length > 0 ? (
+            <p>
+              <span>{t('dashboard.admin.duty.incident.endpoints')}</span>
+              {incident.endpoints.join(', ')}
+            </p>
+          ) : null}
+        </div>
+      </section>
+
+      <section className='duty-detail-block'>
+        <h3>{t('dashboard.admin.duty.incident.signals')}</h3>
+        {incident.signals?.length > 0 ? (
+          <div className='duty-detail-list'>
+            {incident.signals.map((signal) => (
+              <div className='duty-detail-list-item' key={signal.id}>
+                <span
+                  className={`duty-signal-mark duty-signal-${signal.level}`}
+                  aria-hidden='true'
+                />
+                <div>
+                  <strong>{signal.title}</strong>
+                  <p>
+                    {signal.summary ||
+                      t('dashboard.admin.duty.incident.no_summary')}
+                  </p>
+                  <time>{formatUpdatedAt(signal.created_at)}</time>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <AppEmpty>{t('dashboard.admin.duty.incident.no_signals')}</AppEmpty>
+        )}
+      </section>
+
+      {incident.tasks?.length > 0 ? (
+        <section className='duty-detail-block'>
+          <h3>{t('dashboard.admin.duty.incident.tasks')}</h3>
+          <div className='duty-detail-list'>
+            {incident.tasks.map((task) => (
+              <button
+                key={task.id}
+                type='button'
+                className='duty-related-row'
+                onClick={() => navigate(task.link)}
+              >
+                <span>
+                  <strong>{task.type}</strong>
+                  <small>{task.model || task.id}</small>
+                </span>
+                <DutyTag tone={task.status === 'failed' ? 'danger' : 'info'}>
+                  {task.status}
+                </DutyTag>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {incident.finance_issues?.length > 0 ? (
+        <section className='duty-detail-block'>
+          <h3>{t('dashboard.admin.duty.incident.finance')}</h3>
+          <div className='duty-detail-list'>
+            {incident.finance_issues.map((issue) => (
+              <button
+                key={issue.key}
+                type='button'
+                className='duty-related-row'
+                onClick={() => navigate(issue.link)}
+              >
+                <span>
+                  <strong>{issue.title}</strong>
+                  <small>{issue.message}</small>
+                </span>
+                <DutyTag tone={statusTone(issue.level)}>
+                  {t(`dashboard.admin.duty.severity.${issue.level}`)}
+                </DutyTag>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section className='duty-detail-block duty-detail-actions'>
+        <h3>{t('dashboard.admin.duty.incident.handling')}</h3>
+        <AppTextarea
+          value={actionNote}
+          rows={3}
+          maxLength={1000}
+          placeholder={t('dashboard.admin.duty.incident.note_placeholder')}
+          onChange={(_, data) => setActionNote(data.value)}
+        />
+        <div className='duty-action-row'>
+          <span>{t('dashboard.admin.duty.incident.action_hint')}</span>
+          <AppButton
+            color={incident.status === 'resolved' ? undefined : 'blue'}
+            basic={incident.status === 'resolved'}
+            loading={actionLoading}
+            onClick={updateIncidentStatus}
+          >
+            {t(
+              `dashboard.admin.duty.incident.actions.${
+                NEXT_STATUS[incident.status] || 'acknowledged'
+              }`
+            )}
+          </AppButton>
+        </div>
+      </section>
+
+      <section className='duty-detail-block duty-drilldown'>
+        <h3>{t('dashboard.admin.duty.incident.drilldown')}</h3>
+        <div className='duty-link-row'>
+          {Object.entries(incident.links || {}).map(([key, link]) =>
+            renderLinkButton(key, link)
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function FindingDetail({ finding, openIncident, navigate, t }) {
+  return (
+    <div className='duty-detail'>
+      <DetailHeader
+        badges={
+          <>
+            <DutyTag tone={statusTone(finding.severity)}>
+              {t(`dashboard.admin.duty.severity.${finding.severity}`)}
+            </DutyTag>
+            <DutyTag tone={statusTone(finding.observation_status)}>
+              {t(
+                `dashboard.admin.duty.observation_status.${finding.observation_status}`
+              )}
+            </DutyTag>
+          </>
+        }
+        title={finding.title || finding.object_name}
+        summary={
+          finding.summary || t('dashboard.admin.duty.incident.no_summary')
+        }
+      />
+      <dl className='duty-detail-meta duty-finding-meta'>
+        <div>
+          <dt>{t('dashboard.admin.duty.console.object')}</dt>
+          <dd>{finding.object_name || finding.object_id}</dd>
+        </div>
+        <div>
+          <dt>{t('dashboard.admin.duty.console.health')}</dt>
+          <dd>
+            {t(`dashboard.admin.duty.health_status.${finding.health_status}`)}
+          </dd>
+        </div>
+        <div>
+          <dt>{t('dashboard.admin.duty.console.first_seen')}</dt>
+          <dd>
+            {finding.first_seen_at
+              ? formatUpdatedAt(finding.first_seen_at)
+              : '-'}
+          </dd>
+        </div>
+        <div>
+          <dt>{t('dashboard.admin.duty.incident.last_seen')}</dt>
+          <dd>
+            {finding.last_seen_at ? formatUpdatedAt(finding.last_seen_at) : '-'}
+          </dd>
+        </div>
+      </dl>
+      <section className='duty-detail-block duty-detail-actions'>
+        <h3>{t('dashboard.admin.duty.console.next_action')}</h3>
+        <p className='duty-detail-guidance'>
+          {finding.incident_id
+            ? t('dashboard.admin.duty.console.finding_linked_hint')
+            : t('dashboard.admin.duty.console.finding_open_hint')}
+        </p>
+        <div className='duty-link-row'>
+          {finding.incident_id ? (
+            <AppButton color='blue' onClick={() => openIncident(finding)}>
+              {t('dashboard.admin.duty.console.open_incident')}
+            </AppButton>
+          ) : null}
+          {finding.link ? (
+            <AppButton basic onClick={() => navigate(finding.link)}>
+              {t('dashboard.admin.duty.console.open_object')}
+            </AppButton>
+          ) : null}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function DomainDetail({ domain, findings, navigate, t }) {
+  const affectedCount =
+    Number(domain.warning_count || 0) +
+    Number(domain.critical_count || 0) +
+    Number(domain.unknown_count || 0);
+  return (
+    <div className='duty-detail'>
+      <DetailHeader
+        badges={
+          <>
+            <DutyTag tone={statusTone(domain.health_status)}>
+              {t(`dashboard.admin.duty.health_status.${domain.health_status}`)}
+            </DutyTag>
+            <DutyTag tone={statusTone(domain.observation_status)}>
+              {t(
+                `dashboard.admin.duty.observation_status.${domain.observation_status}`
+              )}
+            </DutyTag>
+          </>
+        }
+        title={t(`dashboard.admin.duty.inspection.domain.${domain.key}`)}
+        summary={t('dashboard.admin.duty.console.domain_detail_hint')}
+      />
+      <div className='duty-detail-metrics duty-domain-metrics'>
+        {domain.metric_kind === 'findings' ? (
+          <>
+            <div>
+              <span>{t('dashboard.admin.duty.summary.findings')}</span>
+              <strong>{formatCount(domain.finding_count)}</strong>
+            </div>
+            <div>
+              <span>{t('dashboard.admin.duty.severity.critical')}</span>
+              <strong>{formatCount(domain.critical_count)}</strong>
+            </div>
+            <div>
+              <span>{t('dashboard.admin.duty.severity.warning')}</span>
+              <strong>{formatCount(domain.warning_count)}</strong>
+            </div>
+            <div>
+              <span>{t('dashboard.admin.duty.summary.unknown_objects')}</span>
+              <strong>{formatCount(domain.unknown_count)}</strong>
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <span>{t('dashboard.admin.duty.summary.abnormal_objects')}</span>
+              <strong>{formatCount(affectedCount)}</strong>
+            </div>
+            <div>
+              <span>{t('dashboard.admin.duty.console.total_objects')}</span>
+              <strong>{formatCount(domain.total_count)}</strong>
+            </div>
+            <div>
+              <span>{t('dashboard.admin.duty.summary.findings')}</span>
+              <strong>{formatCount(domain.finding_count)}</strong>
+            </div>
+            <div>
+              <span>{t('dashboard.admin.duty.summary.coverage')}</span>
+              <strong>{formatPercent(domain.coverage_rate)}</strong>
+            </div>
+          </>
+        )}
+      </div>
+      <section className='duty-detail-block'>
+        <h3>{t('dashboard.admin.duty.inspection.findings')}</h3>
+        {findings.length > 0 ? (
+          <div className='duty-detail-list'>
+            {findings.slice(0, 6).map((finding) => (
+              <div className='duty-detail-list-item' key={finding.id}>
+                <span
+                  className={`duty-signal-mark duty-signal-${finding.severity}`}
+                  aria-hidden='true'
+                />
+                <div>
+                  <strong>{finding.title || finding.object_name}</strong>
+                  <p>
+                    {finding.summary ||
+                      t('dashboard.admin.duty.incident.no_summary')}
+                  </p>
+                  <time>
+                    {finding.last_seen_at
+                      ? formatUpdatedAt(finding.last_seen_at)
+                      : '-'}
+                  </time>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <AppEmpty>
+            {t('dashboard.admin.duty.inspection.empty_title')}
+          </AppEmpty>
+        )}
+      </section>
+      {domain.link ? (
+        <section className='duty-detail-block duty-drilldown'>
+          <AppButton basic onClick={() => navigate(domain.link)}>
+            {t('dashboard.admin.duty.console.open_object')}
+          </AppButton>
+        </section>
+      ) : null}
+    </div>
+  );
+}
 
 export default AdminDashboard;

@@ -12,6 +12,7 @@ import {
   YAxis,
 } from 'recharts';
 import {
+  AppErrorState,
   AppSection,
   AppSegmented,
   AppSpin,
@@ -47,9 +48,12 @@ const ModelOperationsSection = () => {
   const [period, setPeriod] = useState('last_7_days');
   const [modelSort, setModelSort] = useState('spend');
 
-  const { dashboard, loading, reload } = useAdminDashboardData('models', {
-    period,
-  });
+  const { dashboard, loading, error, reload } = useAdminDashboardData(
+    'models',
+    {
+      period,
+    }
+  );
 
   const periodOptions = useMemo(
     () =>
@@ -58,7 +62,7 @@ const ModelOperationsSection = () => {
         value,
         text: t(`dashboard.spending.period.${value}`),
       })),
-    [t],
+    [t]
   );
 
   const modelSortOptions = useMemo(
@@ -67,7 +71,7 @@ const ModelOperationsSection = () => {
         value,
         label: t(`dashboard.admin.models.sort.${value}`),
       })),
-    [t],
+    [t]
   );
 
   const renderHealthTag = useCallback(
@@ -77,10 +81,10 @@ const ModelOperationsSection = () => {
         normalized === 'healthy'
           ? 'green'
           : normalized === 'warning'
-            ? 'orange'
-            : normalized === 'critical'
-              ? 'red'
-              : 'grey';
+          ? 'orange'
+          : normalized === 'critical'
+          ? 'red'
+          : 'grey';
       return (
         <AppTag color={color} className='router-tag'>
           {t(`dashboard.admin.health.level.${normalized}`, {
@@ -89,11 +93,13 @@ const ModelOperationsSection = () => {
         </AppTag>
       );
     },
-    [t],
+    [t]
   );
 
   const sortedModels = useMemo(() => {
-    const items = Array.isArray(dashboard.top_models) ? [...dashboard.top_models] : [];
+    const items = Array.isArray(dashboard.top_models)
+      ? [...dashboard.top_models]
+      : [];
     items.sort((left, right) => {
       if (modelSort === 'requests') {
         if (left.request_count !== right.request_count) {
@@ -143,7 +149,7 @@ const ModelOperationsSection = () => {
         color: HEALTH_LEVEL_COLORS.critical,
       },
     ],
-    [dashboard.model_summary, t],
+    [dashboard.model_summary, t]
   );
 
   const modelLeaderboardData = useMemo(() => {
@@ -175,6 +181,18 @@ const ModelOperationsSection = () => {
       };
     });
   }, [formatUsd, modelSort, sortedModels, t]);
+
+  if (error && !loading) {
+    return (
+      <AppSection className='admin-dashboard-section'>
+        <AppErrorState
+          message={error?.message || t('common.load_failed')}
+          onRetry={reload}
+          retryText={t('common.retry')}
+        />
+      </AppSection>
+    );
+  }
 
   return (
     <AppSpin spinning={loading} className='admin-dashboard-content-spin'>
@@ -234,19 +252,25 @@ const ModelOperationsSection = () => {
           </div>
           <div className='admin-dashboard-spending-headline-side'>
             <div className='admin-dashboard-spending-headline-row'>
-              <span>{t('dashboard.admin.models.summary.selected_model_count')}</span>
+              <span>
+                {t('dashboard.admin.models.summary.selected_model_count')}
+              </span>
               <strong>
                 {formatCount(dashboard.model_summary.selected_model_count)}
               </strong>
             </div>
             <div className='admin-dashboard-spending-headline-row'>
-              <span>{t('dashboard.admin.models.summary.tested_model_count')}</span>
+              <span>
+                {t('dashboard.admin.models.summary.tested_model_count')}
+              </span>
               <strong>
                 {formatCount(dashboard.model_summary.tested_model_count)}
               </strong>
             </div>
             <div className='admin-dashboard-spending-headline-row'>
-              <span>{t('dashboard.admin.models.summary.healthy_model_count')}</span>
+              <span>
+                {t('dashboard.admin.models.summary.healthy_model_count')}
+              </span>
               <button
                 type='button'
                 className='admin-dashboard-spending-headline-row-cta'
@@ -361,8 +385,8 @@ const ModelOperationsSection = () => {
                           onClick={() =>
                             navigate(
                               `/workspace/service/models?q=${encodeURIComponent(
-                                item.model || '',
-                              )}`,
+                                item.model || ''
+                              )}`
                             )
                           }
                         >
@@ -442,7 +466,9 @@ const ModelOperationsSection = () => {
                           {t('dashboard.admin.models.card.avg_latency')}
                         </div>
                         <div className='admin-dashboard-model-metric-value'>
-                          {item.avg_latency_ms > 0 ? `${item.avg_latency_ms} ms` : '-'}
+                          {item.avg_latency_ms > 0
+                            ? `${item.avg_latency_ms} ms`
+                            : '-'}
                         </div>
                       </div>
                       <div className='admin-dashboard-model-metric'>
@@ -462,7 +488,7 @@ const ModelOperationsSection = () => {
                           navigate(
                             buildLogDrilldownPath('admin', {
                               model_name: item.model,
-                            }),
+                            })
                           )
                         }
                       >

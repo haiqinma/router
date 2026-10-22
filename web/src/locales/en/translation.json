@@ -2018,7 +2018,7 @@
       "models_table_sources": "Sources",
       "model_source_package": "Package",
       "model_source_balance": "Account Balance",
-	  "model_source_personal_provider": "Personal Provider",
+      "model_source_personal_provider": "Personal Provider",
       "models_table_empty": "No available models",
       "models_search_placeholder": "Search models",
       "models_search_empty": "No matching models",
@@ -3124,12 +3124,234 @@
       },
       "duty": {
         "title": "Duty Station",
-        "pending_alerts": "Unresolved Critical",
-        "pending_alerts_hint": "{{count}} more unacknowledged",
-        "risky_channels": "Risky Channels",
-        "low_balance_channels": "Low-Balance Channels",
-        "failed_tasks": "Failed Tasks",
-        "net_amount": "Net"
+        "overall": "Current operating state",
+        "sources": "Observation status",
+        "observation_summary": "Overall observation",
+        "impact_summary": "Impact summary",
+        "refreshed_at": "Updated {{time}}",
+        "load_failed": "Failed to load duty incidents",
+        "refresh_failed": "Refresh failed. The last successfully loaded data is still shown.",
+        "update_failed": "Failed to update incident status",
+        "update_success": "Incident status updated",
+        "source_error_title": "{{count}} data sources are unavailable; totals may be incomplete",
+        "source_error_item": "{{source}}: {{message}}",
+        "source_error_unknown": "Temporarily unavailable",
+        "status": {
+          "healthy": "Operating normally",
+          "warning": "Risks need attention",
+          "critical": "Critical incidents active",
+          "unknown": "Operating state unknown"
+        },
+        "status_hint": {
+          "healthy": "Core objects are healthy and current observations are sufficient to support that assessment.",
+          "warning": "Work the queue by priority and keep watching the impact.",
+          "critical": "Critical incidents are affecting service. Respond now and record progress.",
+          "unknown": "One or more data sources are unavailable, so system health cannot be confirmed."
+        },
+        "window": {
+          "1h": "Last hour",
+          "6h": "Last 6 hours",
+          "24h": "Last 24 hours"
+        },
+        "source": {
+          "channels": "Channel health",
+          "models": "Model runtime",
+          "alerts": "Channel alerts",
+          "routes": "Route runtime",
+          "tasks": "System tasks",
+          "finance": "Finance checks",
+          "incident_states": "Handling records"
+        },
+        "source_status": {
+          "ready": "Ready",
+          "empty": "Observed",
+          "error": "Unavailable"
+        },
+        "summary": {
+          "active": "Active incidents",
+          "critical": "Critical incidents",
+          "affected_models": "Affected models",
+          "failures": "Failed requests",
+          "fallbacks": "Fallbacks",
+          "failed_tasks": "Failed tasks",
+          "finance_issues": "Finance issues",
+          "abnormal_objects": "Abnormal objects",
+          "unknown_objects": "Unknown state",
+          "findings": "Findings",
+          "coverage": "Observation coverage",
+          "unassigned": "Unassigned"
+        },
+        "console": {
+          "views": "Work views",
+          "scopes": "Object scope",
+          "scope_all": "All objects",
+          "needs_attention": "Needs attention",
+          "result_count": "{{count}} results",
+          "search": "Search objects, incidents, or owners",
+          "select_hint": "Select a record to inspect its state, impact, and next action.",
+          "empty_title": "No records match this view",
+          "empty_description": "Change the object scope, search, or time window.",
+          "object": "Object",
+          "health": "Health",
+          "first_seen": "First observed",
+          "next_action": "Next action",
+          "open_incident": "Open linked incident",
+          "open_object": "Open specialist workspace",
+          "finding_linked_hint": "This finding is linked to an incident. Continue investigation and progress updates there.",
+          "finding_open_hint": "This finding has not become an incident. Verify its state and impact in the specialist workspace.",
+          "total_objects": "Total objects",
+          "domain_summary": "{{total}} objects, {{findings}} findings",
+          "finding_domain_summary": "{{findings}} runtime findings",
+          "domain_signal": "{{abnormal}} / {{total}} abnormal",
+          "finding_domain_signal": "{{critical}} critical · {{warning}} warning",
+          "domain_detail_hint": "Inspect health, observation coverage, and current findings for this object domain.",
+          "view": {
+            "attention": "Needs attention",
+            "objects": "Core objects",
+            "incidents": "Active incidents",
+            "observation": "Observation risks",
+            "resolved": "Resolved incidents"
+          },
+          "view_hint": {
+            "attention": "Open incidents and inspection findings that are not linked to an incident.",
+            "objects": "Inspect health, coverage, and recent changes by object domain.",
+            "incidents": "Incidents that need continued ownership, investigation, and progress updates.",
+            "observation": "Objects whose evidence is insufficient, stale, or unavailable.",
+            "resolved": "Completed incident records. Resolution does not necessarily mean the object recovered."
+          },
+          "sort": {
+            "label": "Sort",
+            "priority": "Priority first",
+            "recent": "Recent change first"
+          },
+          "columns": {
+            "item": "Object / issue",
+            "state": "State",
+            "signal": "Impact / signal",
+            "observation": "Observation",
+            "changed": "Last change"
+          }
+        },
+        "mode": {
+          "inspection": "Inspection",
+          "incidents": "Incident response"
+        },
+        "mode_hint": {
+          "inspection": "Inspect core object status and catch risks before they become incidents.",
+          "incidents": "Work incidents that have occurred and require continued ownership."
+        },
+        "health_status": {
+          "healthy": "Healthy",
+          "warning": "Warning",
+          "critical": "Critical",
+          "unknown": "Unknown"
+        },
+        "observation_status": {
+          "ready": "Sufficient",
+          "insufficient": "Insufficient",
+          "stale": "Stale",
+          "error": "Failed"
+        },
+        "inspection": {
+          "title": "Core object inspection",
+          "description": "Health describes the object; observation shows whether the evidence is sufficient.",
+          "findings": "Inspection findings",
+          "findings_count": "{{count}} findings in this view",
+          "finding_count": "{{count}} findings",
+          "linked_incident": "Linked to incident",
+          "view_critical": "View {{count}} critical incidents",
+          "filter": {
+            "all": "All",
+            "abnormal": "Abnormal",
+            "unknown": "Observation risk"
+          },
+          "columns": {
+            "domain": "Domain",
+            "health": "Health",
+            "count": "Abnormal / total",
+            "observation": "Observation",
+            "changed": "Last change"
+          },
+          "domain": {
+            "channels": "Channels",
+            "models": "Models",
+            "routes": "Routes",
+            "tasks": "System tasks",
+            "finance": "Finance"
+          },
+          "empty_title": "No findings match this filter",
+          "empty_description": "Change the filter or select another domain to continue inspection."
+        },
+        "severity": {
+          "critical": "Critical",
+          "warning": "Warning"
+        },
+        "queue": {
+          "title": "Incident queue",
+          "count": "{{count}} incidents",
+          "order_hint": "Ordered by priority and latest impact",
+          "filter": {
+            "open": "Open",
+            "resolved": "Resolved",
+            "all": "All"
+          }
+        },
+        "incident": {
+          "detail": "Incident details",
+          "no_summary": "No additional details",
+          "no_signals": "No related signals",
+          "unassigned": "Unassigned",
+          "assignee": "Current owner",
+          "last_seen": "Last observed",
+          "impact_title": "Impact",
+          "impact_brief": "Failures {{failures}} · tasks {{tasks}} · finance {{finance}}",
+          "channel": "Channel",
+          "models": "Models",
+          "endpoints": "Endpoints",
+          "signals": "Contributing signals",
+          "tasks": "Related tasks",
+          "finance": "Finance issues",
+          "handling": "Response progress",
+          "note_placeholder": "Record findings, actions taken, or recovery evidence",
+          "action_hint": "Submitting records the current operator and update time.",
+          "drilldown": "Open specialist workspace",
+          "select_hint": "Select an incident to inspect its impact and response progress.",
+          "status": {
+            "active": "Needs response",
+            "acknowledged": "Acknowledged",
+            "investigating": "Investigating",
+            "mitigated": "Mitigated",
+            "resolved": "Resolved"
+          },
+          "impact": {
+            "requests": "Requests",
+            "failures": "Failed requests",
+            "failure_rate": "Failure rate",
+            "fallbacks": "Fallbacks",
+            "failed_tasks": "Failed tasks",
+            "finance": "Finance issues"
+          },
+          "actions": {
+            "active": "Reopen",
+            "acknowledged": "Acknowledge incident",
+            "investigating": "Start investigating",
+            "mitigated": "Mark mitigated",
+            "resolved": "Mark resolved"
+          }
+        },
+        "links": {
+          "channel": "Channel details",
+          "alerts": "Channel alerts",
+          "tasks": "System tasks",
+          "logs": "Request logs",
+          "models": "Model operations",
+          "finance": "Finance management"
+        },
+        "empty": {
+          "title": "No incidents match this filter",
+          "description": "Change the time window or open channel health for the live operating view.",
+          "open_channels": "Open channel health"
+        }
       },
       "period": {
         "label": "Period"

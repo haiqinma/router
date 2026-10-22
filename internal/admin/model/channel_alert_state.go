@@ -206,3 +206,47 @@ func ResolveChannelAlertStateWithDB(db *gorm.DB, ref ChannelAlertStateRef, chann
 	}
 	return row, nil
 }
+
+func ReopenChannelAlertStateWithDB(db *gorm.DB, ref ChannelAlertStateRef, channelID string, note string) (ChannelAlertState, error) {
+	if db == nil {
+		return ChannelAlertState{}, fmt.Errorf("database handle is nil")
+	}
+	if !isChannelAlertStatesTableReady(db) {
+		return ChannelAlertState{}, fmt.Errorf("channel alert state table is not ready")
+	}
+	alertType := normalizeChannelAlertType(ref.AlertType)
+	alertKey := strings.TrimSpace(ref.AlertKey)
+	if alertType == "" || alertKey == "" {
+		return ChannelAlertState{}, fmt.Errorf("invalid alert reference")
+	}
+	now := helper.GetTimestamp()
+	row := ChannelAlertState{}
+	err := db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("alert_type = ? AND alert_key = ?", alertType, alertKey).First(&row).Error; err != nil {
+			if err != gorm.ErrRecordNotFound {
+				return err
+			}
+			row = ChannelAlertState{
+				AlertType: alertType,
+				AlertKey:  alertKey,
+				ChannelId: strings.TrimSpace(channelID),
+				CreatedAt: now,
+			}
+		}
+		row.ChannelId = strings.TrimSpace(channelID)
+		row.Status = ChannelAlertStatusActive
+		row.AcknowledgedAt = 0
+		row.AcknowledgedBy = ""
+		row.ResolvedAt = 0
+		row.ResolvedBy = ""
+		if normalizedNote := strings.TrimSpace(note); normalizedNote != "" {
+			row.LastOperatorNote = normalizedNote
+		}
+		row.UpdatedAt = now
+		return tx.Save(&row).Error
+	})
+	if err != nil {
+		return ChannelAlertState{}, err
+	}
+	return row, nil
+}

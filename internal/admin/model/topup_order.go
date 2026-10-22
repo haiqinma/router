@@ -707,6 +707,9 @@ func topupOrderCallbackURL() string {
 	if baseURL == "" {
 		return ""
 	}
+	if config.EffectiveTopUpMode() == config.TopUpModeNode {
+		return strings.TrimRight(baseURL, "/") + "/api/v1/public/payment/node/webhook"
+	}
 	return strings.TrimRight(baseURL, "/") + "/api/v1/public/topup/callback"
 }
 
@@ -943,7 +946,7 @@ func CreateTopupOrderWithDB(db *gorm.DB, userID string, username string, input C
 	if order.CallbackURL == "" {
 		return TopupOrder{}, fmt.Errorf("回调地址未配置")
 	}
-	if config.EffectiveTopUpMode() == config.TopUpModeAPI {
+	if config.EffectiveTopUpMode() == config.TopUpModeAPI || config.EffectiveTopUpMode() == config.TopUpModeNode {
 		order.Source = TopupOrderSourceTopUpAPI
 	} else {
 		redirectURL, err = buildTopupOrderRedirectURL(config.TopUpLink, order)
@@ -968,7 +971,12 @@ func CreateTopupOrderWithDB(db *gorm.DB, userID string, username string, input C
 			return TopupOrder{}, err
 		}
 		logTopupOrderLifecycle("created", order, "", "created local order before calling external payment api")
-		createResult, err := createTopupOrderByExternalPayAPI(order, input.ClientType)
+		var createResult topupExternalPayCreateResult
+		if config.EffectiveTopUpMode() == config.TopUpModeNode {
+			createResult, err = createTopupOrderByNode(order, input.ClientType)
+		} else {
+			createResult, err = createTopupOrderByExternalPayAPI(order, input.ClientType)
+		}
 		if err != nil {
 			updateTime := helper.GetTimestamp()
 			updateErr := db.Model(&TopupOrder{}).

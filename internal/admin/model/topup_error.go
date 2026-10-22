@@ -15,6 +15,9 @@ const (
 	TopupErrorPaymentQueryFailed          = "payment_query_failed"
 	TopupErrorPaymentQueryHTTPFailed      = "payment_query_http_failed"
 	TopupErrorPaymentQueryUpstreamFailed  = "payment_query_upstream_failed"
+	TopupErrorPaymentCancelFailed         = "payment_cancel_failed"
+	TopupErrorPaymentCancelHTTPFailed     = "payment_cancel_http_failed"
+	TopupErrorPaymentCancelUpstreamFailed = "payment_cancel_upstream_failed"
 	TopupErrorPaymentResponseInvalid      = "payment_response_invalid"
 	TopupErrorPaymentCallbackInvalid      = "payment_callback_invalid"
 )

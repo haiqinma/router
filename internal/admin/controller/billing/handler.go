@@ -107,6 +107,16 @@ type billingHealthResponse struct {
 	Issues        []billingHealthIssue `json:"issues"`
 }
 
+type DutyFinanceIssue struct {
+	Key       string `json:"key"`
+	Level     string `json:"level"`
+	Title     string `json:"title"`
+	Message   string `json:"message"`
+	Count     int64  `json:"count,omitempty"`
+	Link      string `json:"link,omitempty"`
+	CheckedAt int64  `json:"checked_at"`
+}
+
 func parseBillingReportTimestamp(value string) int64 {
 	parsed, err := strconv.ParseInt(strings.TrimSpace(value), 10, 64)
 	if err != nil || parsed < 0 {
@@ -604,11 +614,12 @@ func appendPricingPolicyHealthIssues(response *billingHealthResponse) {
 	}
 }
 
-func GetBillingHealth(c *gin.Context) {
+func loadBillingHealthResponse() billingHealthResponse {
 	const cacheKey = "billing_health"
 	if cached, ok := billingReportCache.Get(cacheKey); ok {
-		c.JSON(http.StatusOK, gin.H{"success": true, "message": "", "data": cached})
-		return
+		if response, valid := cached.(billingHealthResponse); valid {
+			return response
+		}
 	}
 	now := helper.GetTimestamp()
 	response := billingHealthResponse{
@@ -634,6 +645,28 @@ func GetBillingHealth(c *gin.Context) {
 		response.Status = "warning"
 	}
 	billingReportCache.Set(cacheKey, response, billingReportCacheTTL)
+	return response
+}
+
+func ListDutyFinanceIssues() ([]DutyFinanceIssue, int64) {
+	response := loadBillingHealthResponse()
+	issues := make([]DutyFinanceIssue, 0, len(response.Issues))
+	for _, issue := range response.Issues {
+		issues = append(issues, DutyFinanceIssue{
+			Key:       strings.TrimSpace(issue.Key),
+			Level:     strings.TrimSpace(issue.Level),
+			Title:     strings.TrimSpace(issue.Title),
+			Message:   strings.TrimSpace(issue.Message),
+			Count:     issue.Count,
+			Link:      strings.TrimSpace(issue.Link),
+			CheckedAt: response.CheckedAt,
+		})
+	}
+	return issues, response.CheckedAt
+}
+
+func GetBillingHealth(c *gin.Context) {
+	response := loadBillingHealthResponse()
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",

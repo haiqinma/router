@@ -12,6 +12,7 @@ import {
 } from 'recharts';
 import {
   AppButton,
+  AppErrorState,
   AppIcon,
   AppInput,
   AppSection,
@@ -65,7 +66,7 @@ const UserAnalyticsSection = () => {
     return params;
   }, [userGrowthGranularity, usageKeyword]);
 
-  const { dashboard, loading, reload } = useAdminDashboardData('users', {
+  const { dashboard, loading, error, reload } = useAdminDashboardData('users', {
     period,
     extraParams,
   });
@@ -77,7 +78,7 @@ const UserAnalyticsSection = () => {
         value,
         text: t(`dashboard.spending.period.${value}`),
       })),
-    [t],
+    [t]
   );
 
   const userGrowthGranularityOptions = useMemo(
@@ -86,7 +87,7 @@ const UserAnalyticsSection = () => {
         value,
         label: t(`dashboard.admin.users.growth.granularity.${value}`),
       })),
-    [t],
+    [t]
   );
 
   const userGrowthLineConfig = useMemo(
@@ -96,7 +97,7 @@ const UserAnalyticsSection = () => {
         label: t(`dashboard.admin.users.growth.lines.${key}`),
         color: USER_GROWTH_LINE_COLORS[key],
       })),
-    [t],
+    [t]
   );
 
   const formatGrowthRate = useCallback(
@@ -112,7 +113,7 @@ const UserAnalyticsSection = () => {
       if (!Number.isFinite(rate) || rate === 0) return '0.0%';
       return `${rate > 0 ? '+' : ''}${(rate * 100).toFixed(1)}%`;
     },
-    [t],
+    [t]
   );
 
   const userGrowthSummary = useMemo(
@@ -120,11 +121,15 @@ const UserAnalyticsSection = () => {
       ...EMPTY_USER_GROWTH_SUMMARY,
       ...(dashboard.user_growth_summary || {}),
     }),
-    [dashboard.user_growth_summary],
+    [dashboard.user_growth_summary]
   );
 
   const resolvedUserGrowthGranularity = useMemo(() => {
-    const value = (userGrowthSummary?.granularity || userGrowthGranularity || '')
+    const value = (
+      userGrowthSummary?.granularity ||
+      userGrowthGranularity ||
+      ''
+    )
       .toString()
       .trim()
       .toLowerCase();
@@ -136,7 +141,7 @@ const UserAnalyticsSection = () => {
       resolvedUserGrowthGranularity === 'month'
         ? t('dashboard.admin.users.growth.period_labels.current_month')
         : t('dashboard.admin.users.growth.period_labels.current_week'),
-    [resolvedUserGrowthGranularity, t],
+    [resolvedUserGrowthGranularity, t]
   );
 
   const userGrowthPreviousLabel = useMemo(
@@ -144,7 +149,7 @@ const UserAnalyticsSection = () => {
       resolvedUserGrowthGranularity === 'month'
         ? t('dashboard.admin.users.growth.period_labels.previous_month')
         : t('dashboard.admin.users.growth.period_labels.previous_week'),
-    [resolvedUserGrowthGranularity, t],
+    [resolvedUserGrowthGranularity, t]
   );
 
   const userGrowthComparisonLabel = useMemo(
@@ -152,7 +157,7 @@ const UserAnalyticsSection = () => {
       resolvedUserGrowthGranularity === 'month'
         ? t('dashboard.admin.users.growth.period_labels.compare_previous_month')
         : t('dashboard.admin.users.growth.period_labels.compare_previous_week'),
-    [resolvedUserGrowthGranularity, t],
+    [resolvedUserGrowthGranularity, t]
   );
 
   const userGrowthCards = useMemo(
@@ -163,9 +168,10 @@ const UserAnalyticsSection = () => {
         value: Number(userGrowthSummary.current?.new_user_count || 0),
         previousValue: Number(userGrowthSummary.previous?.new_user_count || 0),
         comparison: userGrowthSummary.new_users,
-        tone: Number(userGrowthSummary.new_users?.delta || 0) > 0
-          ? 'positive'
-          : Number(userGrowthSummary.new_users?.delta || 0) < 0
+        tone:
+          Number(userGrowthSummary.new_users?.delta || 0) > 0
+            ? 'positive'
+            : Number(userGrowthSummary.new_users?.delta || 0) < 0
             ? 'negative'
             : 'neutral',
       },
@@ -173,11 +179,14 @@ const UserAnalyticsSection = () => {
         key: 'active_users',
         label: t('dashboard.admin.users.growth.metrics.active_users'),
         value: Number(userGrowthSummary.current?.active_user_count || 0),
-        previousValue: Number(userGrowthSummary.previous?.active_user_count || 0),
+        previousValue: Number(
+          userGrowthSummary.previous?.active_user_count || 0
+        ),
         comparison: userGrowthSummary.active_users,
-        tone: Number(userGrowthSummary.active_users?.delta || 0) > 0
-          ? 'positive'
-          : Number(userGrowthSummary.active_users?.delta || 0) < 0
+        tone:
+          Number(userGrowthSummary.active_users?.delta || 0) > 0
+            ? 'positive'
+            : Number(userGrowthSummary.active_users?.delta || 0) < 0
             ? 'negative'
             : 'neutral',
       },
@@ -185,16 +194,19 @@ const UserAnalyticsSection = () => {
         key: 'topup_users',
         label: t('dashboard.admin.users.growth.metrics.topup_users'),
         value: Number(userGrowthSummary.current?.topup_user_count || 0),
-        previousValue: Number(userGrowthSummary.previous?.topup_user_count || 0),
+        previousValue: Number(
+          userGrowthSummary.previous?.topup_user_count || 0
+        ),
         comparison: userGrowthSummary.topup_users,
-        tone: Number(userGrowthSummary.topup_users?.delta || 0) > 0
-          ? 'positive'
-          : Number(userGrowthSummary.topup_users?.delta || 0) < 0
+        tone:
+          Number(userGrowthSummary.topup_users?.delta || 0) > 0
+            ? 'positive'
+            : Number(userGrowthSummary.topup_users?.delta || 0) < 0
             ? 'negative'
             : 'neutral',
       },
     ],
-    [t, userGrowthSummary],
+    [t, userGrowthSummary]
   );
 
   const userGrowthTrendData = useMemo(
@@ -203,29 +215,26 @@ const UserAnalyticsSection = () => {
         ...item,
         label: formatPeriodRange(item.start_timestamp, item.end_timestamp),
       })),
-    [dashboard.user_growth_trend],
+    [dashboard.user_growth_trend]
   );
 
   const userGrowthKpis = useMemo(() => {
     const activeUsers = Number(
-      userGrowthSummary.current?.active_user_count || 0,
+      userGrowthSummary.current?.active_user_count || 0
     );
-    const topupUsers = Number(
-      userGrowthSummary.current?.topup_user_count || 0,
-    );
+    const topupUsers = Number(userGrowthSummary.current?.topup_user_count || 0);
     const previousActiveUsers = Number(
-      userGrowthSummary.previous?.active_user_count || 0,
+      userGrowthSummary.previous?.active_user_count || 0
     );
     const previousTopupUsers = Number(
-      userGrowthSummary.previous?.topup_user_count || 0,
+      userGrowthSummary.previous?.topup_user_count || 0
     );
     const spendAmount = Number(dashboard.usage_totals?.spend_amount || 0);
     const balanceTotal = dashboard.usage_rank.reduce(
       (sum, item) => sum + Number(item?.balance_amount || 0),
-      0,
+      0
     );
-    const paidConversion =
-      activeUsers > 0 ? topupUsers / activeUsers : 0;
+    const paidConversion = activeUsers > 0 ? topupUsers / activeUsers : 0;
     const previousPaidConversion =
       previousActiveUsers > 0 ? previousTopupUsers / previousActiveUsers : 0;
     const arpu = activeUsers > 0 ? spendAmount / activeUsers : 0;
@@ -266,14 +275,16 @@ const UserAnalyticsSection = () => {
         key: 'user',
         width: 180,
         ellipsis: true,
-        render: (_, record) => (
+        render: (_, record) =>
           record.user_id ? (
             <button
               type='button'
               className='admin-dashboard-user-link admin-dashboard-rank-user'
               title={record.username || record.user_id || '-'}
               onClick={() =>
-                navigate(`/admin/user/detail/${encodeURIComponent(record.user_id)}`)
+                navigate(
+                  `/admin/user/detail/${encodeURIComponent(record.user_id)}`
+                )
               }
             >
               {record.username || record.user_id || '-'}
@@ -285,8 +296,7 @@ const UserAnalyticsSection = () => {
             >
               {record.username || record.user_id || '-'}
             </span>
-          )
-        ),
+          ),
       },
       {
         title: t('dashboard.admin.usage_rank.columns.requests'),
@@ -325,7 +335,7 @@ const UserAnalyticsSection = () => {
                 style={{
                   '--admin-dashboard-share-width': `${Math.max(
                     4,
-                    toPercent(value),
+                    toPercent(value)
                   )}%`,
                 }}
               />
@@ -341,7 +351,7 @@ const UserAnalyticsSection = () => {
         render: (value) => formatUpdatedAt(value),
       },
     ],
-    [formatUsd, navigate, t],
+    [formatUsd, navigate, t]
   );
 
   const applyUsageKeyword = useCallback(() => {
@@ -360,7 +370,7 @@ const UserAnalyticsSection = () => {
         ...new Set(
           rows
             .map((item) => (item?.user_id || '').toString().trim())
-            .filter(Boolean),
+            .filter(Boolean)
         ),
       ].slice(0, USER_SEGMENT_FOCUS_LIMIT);
       if (ids.length === 0) {
@@ -372,48 +382,67 @@ const UserAnalyticsSection = () => {
       params.set('focus_total', String(rows.length));
       navigate(`/admin/user?${params.toString()}`);
     },
-    [navigate],
+    [navigate]
   );
 
   const userSegments = useMemo(() => {
     const rows = Array.isArray(dashboard.usage_rank)
-      ? dashboard.usage_rank.filter((item) => (item?.user_id || '').toString().trim() !== '')
+      ? dashboard.usage_rank.filter(
+          (item) => (item?.user_id || '').toString().trim() !== ''
+        )
       : [];
-    const activeRows = rows.filter((item) => Number(item.request_count || 0) > 0);
+    const activeRows = rows.filter(
+      (item) => Number(item.request_count || 0) > 0
+    );
     const requestTotal = activeRows.reduce(
       (sum, item) => sum + Number(item.request_count || 0),
-      0,
+      0
     );
     const tokenTotal = activeRows.reduce(
       (sum, item) => sum + Number(item.total_tokens || 0),
-      0,
+      0
     );
-    const averageRequests = activeRows.length > 0 ? requestTotal / activeRows.length : 0;
-    const averageTokens = activeRows.length > 0 ? tokenTotal / activeRows.length : 0;
+    const averageRequests =
+      activeRows.length > 0 ? requestTotal / activeRows.length : 0;
+    const averageTokens =
+      activeRows.length > 0 ? tokenTotal / activeRows.length : 0;
     const bySpendDesc = (left, right) =>
       Number(right.spend_amount || 0) - Number(left.spend_amount || 0) ||
       Number(right.request_count || 0) - Number(left.request_count || 0);
     const highSpendRows = rows
-      .filter((item) => Number(item.spend_amount || 0) > 0 && Number(item.share_rate || 0) >= 0.1)
+      .filter(
+        (item) =>
+          Number(item.spend_amount || 0) > 0 &&
+          Number(item.share_rate || 0) >= 0.1
+      )
       .sort(bySpendDesc);
     const activeUserRows = activeRows
       .filter((item) => Number(item.request_count || 0) > averageRequests)
-      .sort((left, right) => Number(right.request_count || 0) - Number(left.request_count || 0));
+      .sort(
+        (left, right) =>
+          Number(right.request_count || 0) - Number(left.request_count || 0)
+      );
     const longTailRows = rows
       .filter(
         (item) =>
           Number(item.spend_amount || 0) > 0 &&
           Number(item.share_rate || 0) < 0.03 &&
-          Number(item.total_tokens || 0) <= averageTokens,
+          Number(item.total_tokens || 0) <= averageTokens
       )
-      .sort((left, right) => Number(left.spend_amount || 0) - Number(right.spend_amount || 0));
+      .sort(
+        (left, right) =>
+          Number(left.spend_amount || 0) - Number(right.spend_amount || 0)
+      );
     const balanceRiskRows = activeRows
       .filter((item) => {
         const spend = Number(item.spend_amount || 0);
         const balance = Number(item.balance_amount || 0);
         return spend > 0 && balance <= spend;
       })
-      .sort((left, right) => Number(left.balance_amount || 0) - Number(right.balance_amount || 0));
+      .sort(
+        (left, right) =>
+          Number(left.balance_amount || 0) - Number(right.balance_amount || 0)
+      );
     return [
       {
         key: 'high_spend',
@@ -441,6 +470,18 @@ const UserAnalyticsSection = () => {
       },
     ];
   }, [dashboard.usage_rank, t]);
+
+  if (error && !loading) {
+    return (
+      <AppSection className='admin-dashboard-section'>
+        <AppErrorState
+          message={error?.message || t('common.load_failed')}
+          onRetry={reload}
+          retryText={t('common.retry')}
+        />
+      </AppSection>
+    );
+  }
 
   return (
     <AppSpin spinning={loading} className='admin-dashboard-content-spin'>
@@ -493,9 +534,12 @@ const UserAnalyticsSection = () => {
                   {userGrowthPreviousLabel} {formatCount(item.previousValue)}
                 </span>
               </div>
-              <div className={`admin-dashboard-user-growth-card-delta admin-dashboard-user-growth-card-delta-${item.tone}`}>
+              <div
+                className={`admin-dashboard-user-growth-card-delta admin-dashboard-user-growth-card-delta-${item.tone}`}
+              >
                 <span>
-                  {userGrowthComparisonLabel} {formatSignedCount(item.comparison?.delta)}
+                  {userGrowthComparisonLabel}{' '}
+                  {formatSignedCount(item.comparison?.delta)}
                 </span>
                 <span>{formatGrowthRate(item.comparison)}</span>
               </div>
@@ -512,7 +556,7 @@ const UserAnalyticsSection = () => {
             </strong>
             <span
               className={`admin-dashboard-user-monetization-delta admin-dashboard-kpi-delta-${deltaTone(
-                userGrowthKpis.paid_conversion_delta,
+                userGrowthKpis.paid_conversion_delta
               )}`}
             >
               {formatSignedPercent(userGrowthKpis.paid_conversion_delta)}
@@ -545,7 +589,7 @@ const UserAnalyticsSection = () => {
                 {t('dashboard.admin.users.growth.current_period', {
                   range: formatPeriodRange(
                     userGrowthSummary.current?.start_timestamp,
-                    userGrowthSummary.current?.end_timestamp,
+                    userGrowthSummary.current?.end_timestamp
                   ),
                 })}
               </div>
@@ -553,14 +597,17 @@ const UserAnalyticsSection = () => {
                 {t('dashboard.admin.users.growth.previous_period', {
                   range: formatPeriodRange(
                     userGrowthSummary.previous?.start_timestamp,
-                    userGrowthSummary.previous?.end_timestamp,
+                    userGrowthSummary.previous?.end_timestamp
                   ),
                 })}
               </div>
             </div>
             <div className='admin-dashboard-user-growth-legend'>
               {userGrowthLineConfig.map((item) => (
-                <span key={item.dataKey} className='admin-dashboard-user-growth-legend-item'>
+                <span
+                  key={item.dataKey}
+                  className='admin-dashboard-user-growth-legend-item'
+                >
                   <span
                     className='admin-dashboard-user-growth-legend-dot'
                     style={{ background: item.color }}
@@ -579,11 +626,7 @@ const UserAnalyticsSection = () => {
               <ResponsiveContainer width='100%' height={240}>
                 <LineChart data={userGrowthTrendData}>
                   <CartesianGrid {...chartGridStyle()} />
-                  <XAxis
-                    dataKey='label'
-                    {...chartAxisStyle()}
-                    minTickGap={8}
-                  />
+                  <XAxis dataKey='label' {...chartAxisStyle()} minTickGap={8} />
                   <YAxis {...chartAxisStyle()} allowDecimals={false} />
                   <Tooltip
                     contentStyle={chartTooltipStyle()}
@@ -591,7 +634,7 @@ const UserAnalyticsSection = () => {
                     itemStyle={chartTooltipItemStyle()}
                     formatter={(value, name) => {
                       const config = userGrowthLineConfig.find(
-                        (item) => item.dataKey === name,
+                        (item) => item.dataKey === name
                       );
                       return [formatCount(value), config?.label || name];
                     }}
@@ -628,10 +671,15 @@ const UserAnalyticsSection = () => {
           </div>
           <div className='admin-dashboard-user-segment-grid'>
             {userSegments.map((segment) => {
-              const count = Array.isArray(segment.rows) ? segment.rows.length : 0;
+              const count = Array.isArray(segment.rows)
+                ? segment.rows.length
+                : 0;
               const isLimited = count > USER_SEGMENT_FOCUS_LIMIT;
               return (
-                <div key={segment.key} className='admin-dashboard-user-segment-card'>
+                <div
+                  key={segment.key}
+                  className='admin-dashboard-user-segment-card'
+                >
                   <div className='admin-dashboard-user-segment-main'>
                     <div className='admin-dashboard-user-segment-label'>
                       {segment.label}
@@ -680,7 +728,9 @@ const UserAnalyticsSection = () => {
                   <AppInput
                     className='admin-dashboard-usage-rank-search'
                     value={usageKeywordInput}
-                    placeholder={t('dashboard.admin.usage_rank.search.placeholder')}
+                    placeholder={t(
+                      'dashboard.admin.usage_rank.search.placeholder'
+                    )}
                     onChange={(e, { value }) => setUsageKeywordInput(value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
@@ -688,7 +738,11 @@ const UserAnalyticsSection = () => {
                       }
                     }}
                   />
-                  <AppButton color='blue' type='button' onClick={applyUsageKeyword}>
+                  <AppButton
+                    color='blue'
+                    type='button'
+                    onClick={applyUsageKeyword}
+                  >
                     {t('dashboard.admin.usage_rank.search.submit')}
                   </AppButton>
                   {usageKeyword ? (

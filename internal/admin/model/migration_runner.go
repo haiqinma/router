@@ -2264,6 +2264,13 @@ func runMainVersionedMigrations(db *gorm.DB) error {
 				return nil
 			},
 		},
+		{
+			Version:     "202610171200_duty_incident_states",
+			Description: "persist duty incident ownership and lifecycle state for the operator workbench",
+			Up: func(tx *gorm.DB) error {
+				return tx.AutoMigrate(&DutyIncidentState{})
+			},
+		},
 	}
 	return runVersionedMigrations(db, migrationScopeMain, migrations)
 }

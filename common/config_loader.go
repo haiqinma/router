@@ -129,6 +129,8 @@ type OperationConfig struct {
 	TopUpAPITimeoutSeconds int    `yaml:"top_up_api_timeout_seconds"`
 	TopUpSignSecret        string `yaml:"top_up_sign_secret"`
 	TopUpCallbackToken     string `yaml:"top_up_callback_token"`
+	TopUpNodeURL           string `yaml:"top_up_node_url"`
+	TopUpNodeMerchantID    string `yaml:"top_up_node_merchant_id"`
 	ChatLink               string `yaml:"chat_link"`
 }
 
@@ -270,6 +272,8 @@ func defaultAppConfig() AppConfig {
 			TopUpAPITimeoutSeconds: 15,
 			TopUpSignSecret:        "",
 			TopUpCallbackToken:     "",
+			TopUpNodeURL:           "",
+			TopUpNodeMerchantID:    "",
 			ChatLink:               "",
 		},
 		Notify: NotifyConfig{
@@ -377,6 +381,9 @@ func ApplyAppConfig(cfg *AppConfig, portFlagSet bool, logDirFlagSet bool) error 
 	config.TopUpAPITimeoutSeconds = cfg.Operation.TopUpAPITimeoutSeconds
 	config.TopUpSignSecret = strings.TrimSpace(cfg.Operation.TopUpSignSecret)
 	config.TopUpCallbackToken = strings.TrimSpace(cfg.Operation.TopUpCallbackToken)
+	config.TopUpNodeURL = strings.TrimRight(strings.TrimSpace(cfg.Operation.TopUpNodeURL), "/")
+	config.TopUpNodeMerchantID = strings.TrimSpace(cfg.Operation.TopUpNodeMerchantID)
+	config.TopUpNodeMerchantSecret = strings.TrimSpace(os.Getenv("PAYMENT_NODE_MERCHANT_SECRET"))
 	config.ChatLink = strings.TrimSpace(cfg.Operation.ChatLink)
 	config.NotifyProvider = strings.ToLower(strings.TrimSpace(cfg.Notify.Provider))
 	config.NotifyWebhookURL = strings.TrimSpace(cfg.Notify.WebhookURL)

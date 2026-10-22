@@ -10,6 +10,7 @@ import (
 	channel "github.com/yeying-community/router/internal/admin/controller/channel"
 	communityofferrouting "github.com/yeying-community/router/internal/admin/controller/communityofferrouting"
 	dashboard "github.com/yeying-community/router/internal/admin/controller/dashboard"
+	duty "github.com/yeying-community/router/internal/admin/controller/duty"
 	entitlement "github.com/yeying-community/router/internal/admin/controller/entitlement"
 	flow "github.com/yeying-community/router/internal/admin/controller/flow"
 	group "github.com/yeying-community/router/internal/admin/controller/group"
@@ -60,6 +61,7 @@ func SetApiRouter(engine *gin.Engine) {
 		publicRouter.GET("/about", admin.GetAbout)
 		publicRouter.GET("/home_page_content", admin.GetHomePageContent)
 		publicRouter.POST("/topup/callback", admin.ProcessTopupCallback)
+		publicRouter.POST("/payment/node/webhook", admin.ProcessNodePaymentWebhook)
 		publicRouter.GET("/model/status", middleware.UserAuth(), admin.GetUserModelStatus)
 
 		// 仅保留密码找回，无额外人机验证
@@ -329,6 +331,13 @@ func SetApiRouter(engine *gin.Engine) {
 			adminBillingRoute.PUT("/currencies/:code", middleware.RootAuth(), adminbilling.UpdateBillingCurrency)
 			adminBillingRoute.DELETE("/currencies/:code", middleware.RootAuth(), adminbilling.DeleteBillingCurrency)
 			adminBillingRoute.POST("/fx/sync", middleware.RootAuth(), adminbilling.SyncBillingCurrenciesFromFX)
+		}
+
+		adminDutyRoute := adminRouter.Group("/duty")
+		adminDutyRoute.Use(middleware.AdminAuth())
+		{
+			adminDutyRoute.GET("/incidents", duty.GetDutyIncidents)
+			adminDutyRoute.POST("/incidents/:id/status", duty.UpdateDutyIncident)
 		}
 
 		adminChannelRoute := adminRouter.Group("/channel")

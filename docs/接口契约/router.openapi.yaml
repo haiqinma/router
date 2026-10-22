@@ -20,6 +20,7 @@ tags:
   - name: Relay
   - name: Admin Users
   - name: Admin Billing
+  - name: Admin Duty
   - name: Admin Channels
   - name: Admin Tasks
   - name: Admin Groups
@@ -139,6 +140,53 @@ paths:
       requestBody: { $ref: "#/components/requestBodies/JSONBody" }
       responses:
         "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/public/payment/node/webhook:
+    post:
+      tags: [Public User]
+      summary: Receive signed Node payment webhook
+      description: Unauthenticated callback authenticated by Node merchant HMAC headers. Re-delivery of a valid event is idempotent.
+      security: []
+      parameters:
+        - name: X-Yeying-Payment-Event
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Yeying-Payment-Timestamp
+          in: header
+          required: true
+          schema: { type: string, pattern: '^[0-9]{10,13}$' }
+        - name: X-Yeying-Payment-Nonce
+          in: header
+          required: true
+          schema: { type: string }
+        - name: X-Yeying-Payment-Signature
+          in: header
+          required: true
+          schema: { type: string, pattern: '^sha256=[a-f0-9]{64}$' }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [eventId, type, merchantId, tradeNo, externalOrderId, amountMinor, currency, providerOrderId, paidAt]
+              properties:
+                eventId: { type: string }
+                type: { type: string, enum: [payment.succeeded] }
+                merchantId: { type: string }
+                tradeNo: { type: string }
+                externalOrderId: { type: string, description: Router topup order ID }
+                amountMinor: { type: string, pattern: '^[1-9][0-9]*$' }
+                currency: { type: string }
+                provider: { type: string }
+                providerOrderId: { type: string }
+                paidAt: { type: string, format: date-time }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+        "400": { $ref: "#/components/responses/ErrorResponse" }
+        "401": { $ref: "#/components/responses/ErrorResponse" }
+        "404": { $ref: "#/components/responses/ErrorResponse" }
+        "500": { $ref: "#/components/responses/ErrorResponse" }
   /api/v1/public/reset_password:
     get:
       tags: [Public User]
@@ -1368,6 +1416,33 @@ paths:
         - $ref: "#/components/parameters/Period"
       responses:
         "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/duty/incidents:
+    get:
+      tags: [Admin Duty]
+      summary: Get administrator duty station inspection and incident queue
+      parameters:
+        - name: window
+          in: query
+          schema: { type: string, enum: [1h, 6h, 24h], default: 6h }
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
+  /api/v1/admin/duty/incidents/{id}/status:
+    post:
+      tags: [Admin Duty]
+      summary: Update duty station incident state and handling note
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, maxLength: 255 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DutyIncidentUpdateRequest"
+      responses:
+        "200": { $ref: "#/components/responses/APIResponse" }
   /api/v1/admin/billing/currencies:
     get:
       tags: [Admin Billing]
@@ -2455,6 +2530,17 @@ components:
           schema:
             $ref: "#/components/schemas/OpenAIModel"
   schemas:
+    DutyIncidentUpdateRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [active, acknowledged, investigating, mitigated, resolved]
+        note:
+          type: string
+          maxLength: 1000
+      additionalProperties: false
     APIResponse:
       type: object
       properties:
