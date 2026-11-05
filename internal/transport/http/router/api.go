@@ -43,7 +43,7 @@ func SetApiRouter(engine *gin.Engine) {
 		web3AuthRouter.POST("/refresh", middleware.CriticalRateLimit(), auth.WalletRefreshWeb3)
 		web3AuthRouter.POST("/logout", middleware.CriticalRateLimit(), auth.WalletLogoutWeb3)
 		web3AuthRouter.POST("/identity/passkey/login/session", middleware.CriticalRateLimit(), auth.CreateIdentityPasskeyLoginSession)
-		web3AuthRouter.GET("/identity/passkey/login/status", middleware.CriticalRateLimit(), auth.IdentityPasskeyLoginStatus)
+		web3AuthRouter.GET("/identity/passkey/login/status", auth.IdentityPasskeyLoginStatus)
 		web3AuthRouter.POST("/identity/login/session", middleware.CriticalRateLimit(), auth.CreateIdentityLoginSession)
 		web3AuthRouter.POST("/identity/login/verify", middleware.CriticalRateLimit(), auth.VerifyIdentityWalletLogin)
 	}

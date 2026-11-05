@@ -129,7 +129,7 @@ const LoginForm = () => {
 
   const pollIdentityLogin = async () => {
     const sessionId = identitySessionRef.current;
-    if (!sessionId) return;
+    if (!sessionId) return false;
     try {
       const response = await API.get(
         '/api/v1/public/auth/identity/passkey/login/status',
@@ -142,12 +142,12 @@ const LoginForm = () => {
           loading: false,
           message: payload.message || t('auth.login.identity_failed'),
         }));
-        return;
+        return true;
       }
       const result = payload.data || {};
       if (result.status === 'complete') {
         finishIdentityLogin(result.user);
-        return;
+        return false;
       }
       if (['expired', 'failed', 'unbound'].includes(result.status)) {
         if (identityPollTimerRef.current)
@@ -158,13 +158,28 @@ const LoginForm = () => {
           loading: false,
           message: result.message || t(`auth.login.identity_${result.status}`),
         }));
+        return false;
       }
+      return true;
     } catch (error) {
+      if (error?.response?.status === 429) {
+        if (identityPollTimerRef.current) {
+          window.clearInterval(identityPollTimerRef.current);
+          identityPollTimerRef.current = null;
+        }
+        setIdentityLogin((current) => ({
+          ...current,
+          loading: false,
+          message: t('common.rate_limit'),
+        }));
+        return false;
+      }
       setIdentityLogin((current) => ({
         ...current,
         loading: false,
         message: error.message || t('auth.login.identity_failed'),
       }));
+      return true;
     }
   };
 
@@ -221,7 +236,8 @@ const LoginForm = () => {
         message: '',
         success: false,
       });
-      await pollIdentityLogin();
+      const shouldContinuePolling = await pollIdentityLogin();
+      if (!shouldContinuePolling) return;
       identityPollTimerRef.current = window.setInterval(
         pollIdentityLogin,
         (Number(finalPayload.data.poll_interval) || 2) * 1000
