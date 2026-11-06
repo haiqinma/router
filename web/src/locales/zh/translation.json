@@ -2295,6 +2295,7 @@
       "add": "添加条件",
       "none": "当前未添加附加筛选条件",
       "range_separator": "至",
+      "editor_range_separator": "-",
       "start_time": "开始时间",
       "end_time": "截止时间",
       "invalid_time_range": "开始时间不能晚于截止时间",

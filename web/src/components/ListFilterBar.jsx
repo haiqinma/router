@@ -116,6 +116,9 @@ function ListFilterBar({
               }
             />
           </label>
+          <span className='router-log-filter-editor-range-separator'>
+            {t('log.filters.editor_range_separator')}
+          </span>
           <label className='router-log-filter-editor-range-field'>
             <span>{t('log.filters.end_time')}</span>
             <input
@@ -206,7 +209,13 @@ function ListFilterBar({
               ))}
             </div>
             {draftKey !== '' && (
-              <div className='router-log-filter-editor'>
+              <div
+                className={`router-log-filter-editor${
+                  draftType === 'time_range'
+                    ? ' router-log-filter-editor-time-range'
+                    : ''
+                }`}
+              >
                 <div className='router-log-filter-editor-title'>
                   {draftConfig?.label}
                 </div>
