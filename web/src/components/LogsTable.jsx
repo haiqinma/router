@@ -687,6 +687,10 @@ const LogsTable = () => {
           showError(t('log.filters.empty'));
           return false;
         }
+        if (nextStart !== '' && nextEnd !== '' && nextStart > nextEnd) {
+          showError(t('log.filters.invalid_time_range'));
+          return false;
+        }
         setInputs((prev) => ({
           ...prev,
           start_timestamp: nextStart,

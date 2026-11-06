@@ -103,20 +103,32 @@ function ListFilterBar({
     if (draftType === 'time_range') {
       return (
         <div className='router-log-filter-editor-range'>
-          <input
-            type='datetime-local'
-            value={draft.start_timestamp}
-            onChange={(e) =>
-              setDraft((prev) => ({ ...prev, start_timestamp: e.target.value }))
-            }
-          />
-          <input
-            type='datetime-local'
-            value={draft.end_timestamp}
-            onChange={(e) =>
-              setDraft((prev) => ({ ...prev, end_timestamp: e.target.value }))
-            }
-          />
+          <label className='router-log-filter-editor-range-field'>
+            <span>{t('log.filters.start_time')}</span>
+            <input
+              type='datetime-local'
+              value={draft.start_timestamp}
+              onChange={(e) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  start_timestamp: e.target.value,
+                }))
+              }
+            />
+          </label>
+          <label className='router-log-filter-editor-range-field'>
+            <span>{t('log.filters.end_time')}</span>
+            <input
+              type='datetime-local'
+              value={draft.end_timestamp}
+              onChange={(e) =>
+                setDraft((prev) => ({
+                  ...prev,
+                  end_timestamp: e.target.value,
+                }))
+              }
+            />
+          </label>
         </div>
       );
     }

@@ -2295,6 +2295,9 @@
       "add": "Add Filter",
       "none": "No additional filters selected",
       "range_separator": "to",
+      "start_time": "Start time",
+      "end_time": "End time",
+      "invalid_time_range": "Start time must be earlier than or equal to end time",
       "empty": "Unset",
       "remove": "Remove"
     },

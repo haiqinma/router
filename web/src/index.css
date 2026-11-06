@@ -5395,6 +5395,15 @@ html[data-theme='dark'] .router-ui-modal .ant-modal-close {
     gap: 8px;
 }
 
+.router-log-filter-editor-range-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: #4b5563;
+    font-size: 12px;
+    font-weight: 600;
+}
+
 .router-log-filter-editor-actions {
     display: flex;
     justify-content: flex-end;
